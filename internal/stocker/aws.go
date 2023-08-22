@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/pkg/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
