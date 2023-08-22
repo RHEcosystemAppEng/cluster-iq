@@ -10,7 +10,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o aws_scanner ./src/aws_scan
 
 ## Run
 ####################
-FROM scratch
+FROM registry.access.redhat.com/ubi8/ubi-micro:8.8-5
 
 # Arguments
 ARG VERSION="0.1-alpha"
