@@ -1,4 +1,5 @@
 # Cluster IQ
+
 Cluster IQ is a tool for making stock of the Openshift Clusters and its
 resources running on the most common cloud providers and collects relevant
 information about the compute resources, access routes and billing.
@@ -7,8 +8,8 @@ Metrics and monitoring is not part of the scope of this project, the main
 purpose is to maintain and updated inventory of the clusters and offer a easier
 way to identify, manage, and estimate costs.
 
-
 ## Supported cloud providers
+
 The scope of the project is to cover make stock on the most common public cloud
 providers, but as the component dedicated to scrape data is decoupled, more
 providers could be included in the future.
@@ -23,33 +24,38 @@ available for every cloud provider:
 | GCP            | No                | No      | No       |
 
 ## Architecture
+
 The following graph shows the architecture of this project:
 ![CLUSTER_IQ_ARCH](./doc/arch.png)
 
+## Getting started
 
-### Scanners
-As each cloud provider has a different API and because of this, a specific
-scanner adapted to the provider is required.
+### Credentials file
 
-To build every available scanner, use the following makefile rules:
-```sh
-make build-scanners
+The file containing the access credentials to the cloud provider accounts
+should look like this:
+
+```text
+[appeng]
+provider = aws/gcp/azure
+user = XXXXXXX
+key = YYYYYYY
 ```
 
-By default, every build rule will be performed using the Dockerfile for each
-specific scanner
+The credentials file must be located on the path `secrets/credentials` to work with `docker-compose`.
 
-
-#### AWS Scanner
-The scanner should run periodically to keep the inventory up to date.
+To manage this on Openshift, a secret containing this information is needed.
+Once you prepared your credentials file, run the following command to create the
+secret:
 
 ```shell
-# Building
-make build-aws-scanner
+oc create secret generic credentials \
+  -n <NAMESPACE> \
+  --from-file=credentials=<CREDENTIALS_FILE>
 ```
 
-
 ### Configuration
+
 Available configuration via Env Vars:
 | Key                  | Value                         | Description                               |
 |----------------------|-------------------------------|-------------------------------------------|
@@ -62,26 +68,45 @@ Available configuration via Env Vars:
 | CIQ_CREDS_FILE       | string (Default: "")          | Cloud providers accounts credentials file |
 
 These variables are defined in `./<PROJECT_FOLDER>/.env` to be used on Makefile
-and on `./<PROJECT_FOLDER>/manifests/config.yaml` to deploy it on Openshift.
+and on `./<PROJECT_FOLDER>/deploy/openshift/config.yaml` to deploy it on Openshift.
 
-### Credentials file
-The file containing the access credentials to the cloud provider accounts
-should look like this:
+### Run local development environment
 
-```text
-[appeng]
-provider = aws/gcp/azure
-user = XXXXXXX
-key = YYYYYYY
+```shell
+make start-dev
 ```
 
-To manage this on Openshift, a secret containing this information is needed.
-Once you prepared your credentials file, run the following command to create the
-secret:
-```sh
-oc create secret generic credentials \
-  -n <NAMESPACE> \
-  --from-file=credentials=<CREDENTIALS_FILE>
+The local environment is started via `docker-compose`.
+
+The following services are available:
+
+| Service        | URL                   |
+|----------------|-----------------------|
+| UI             | <http://localhost:8080> |
+| API            | <http://localhost:9000/clusters> |
+| Redis          | 0.0.0.0:6379          |
+
+### Scanners
+
+As each cloud provider has a different API and because of this, a specific
+scanner adapted to the provider is required.
+
+To build every available scanner, use the following makefile rules:
+
+```shell
+make build-scanners
+```
+
+By default, every build rule will be performed using the Dockerfile for each
+specific scanner
+
+#### AWS Scanner
+
+The scanner should run periodically to keep the inventory up to date.
+
+```shell
+# Building
+make build-aws-scanner
 ```
 
 ## API Server
