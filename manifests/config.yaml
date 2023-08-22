@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+  labels:
+    app: cluster-iq
+    component: config
+data:
+  CIQ_API_HOST: "0.0.0.0"
+  CIQ_API_PORT: "8080"
+  CIQ_API_PUBLIC_ENDPOINT: "API_URL"
+  CIQ_DB_HOST: "redis"
+  CIQ_DB_PORT: "6379"
+  CIQ_DB_PASS: ""
+  CIQ_CREDS_FILE: "/credentials/credentials"

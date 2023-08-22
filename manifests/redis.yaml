@@ -1,0 +1,48 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: cluster-iq
+    component: db
+spec:
+  selector:
+    matchLabels:
+      app: cluster-iq
+      component: db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cluster-iq
+        component: db
+    spec:
+      containers:
+        - name: redis
+          image: registry.redhat.io/rhel8/redis-6@sha256:39c7fb6fa745e5e56bc2fb315917f83fe2f338f526e61e3c959495818c79ffa9
+          envFrom:
+            - configMapRef:
+                name: config
+          ports:
+            - containerPort: 6379
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    app: cluster-iq
+    component: db
+spec:
+  selector:
+    app: cluster-iq
+    component: db
+  ports:
+    - name: redis
+      protocol: TCP
+      port: 6379
+      targetPort: 6379
+

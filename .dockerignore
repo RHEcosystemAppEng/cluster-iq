@@ -1,0 +1,11 @@
+# Ignore all files and directories
+**
+
+# Include Go and mod files
+!*.go
+!*.mod
+!*.sum
+
+# Include specific folders
+!pkg/
+!src/

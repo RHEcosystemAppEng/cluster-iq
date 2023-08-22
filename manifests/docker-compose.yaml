@@ -1,0 +1,46 @@
+version: '3.7'
+services:
+  console:
+    image: quay.io/ecosystem-appeng/cluster-iq-console:latest
+    container_name: console
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      CIQ_API_HOST: "0.0.0.0"
+      CIQ_API_PORT: "8080"
+      CIQ_DB_HOST: "redis"
+      CIQ_DB_PORT: "6379"
+      CIQ_DB_PASS: ""
+  api:
+    image: quay.io/ecosystem-appeng/cluster-iq-api:latest
+    container_name: api
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      CIQ_API_HOST: "0.0.0.0"
+      CIQ_API_PORT: "8080"
+      CIQ_DB_HOST: "redis"
+      CIQ_DB_PORT: "6379"
+      CIQ_DB_PASS: ""
+
+  scanner:
+    image: quay.io/ecosystem-appeng/cluster-iq-aws-scanner:latest
+    container_name: aws_scanner
+    restart: "no"
+    environment:
+      CIQ_DB_HOST: "redis"
+      CIQ_DB_PORT: "6379"
+      CIQ_DB_PASS: ""
+      CIQ_CREDS_FILE: "/credentials"
+      AWS_SHARED_CREDENTIALS_FILE: "/credentials"
+    volumes:
+      - ../secrets/credentials:/credentials:ro
+
+  redis:
+    image: registry.redhat.io/rhel8/redis-6@sha256:39c7fb6fa745e5e56bc2fb315917f83fe2f338f526e61e3c959495818c79ffa9
+    container_name: redis
+    restart: always
+    ports:
+      - 6379:6379

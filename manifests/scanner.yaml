@@ -1,0 +1,39 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scanner
+  labels:
+    app: cluster-iq
+    component: api
+spec:
+  schedule: '*/5 * * * *'
+  jobTemplate:
+    spec:
+      successfulJobsHistoryLimit: 1
+      failedJobsHistoryLimit: 5
+      template:
+        spec:
+          containers:
+            - name: scanner
+              image: quay.io/ecosystem-appeng/cluster-iq-aws-scanner:0.1-alpha
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "250m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "500m"
+              envFrom:
+                - configMapRef:
+                    name: config
+              volumeMounts:
+                - name: credentials
+                  mountPath: /credentials
+                  readOnly: true
+          restartPolicy: OnFailure
+          volumes:
+            - name: credentials
+              secret:
+                secretName: credentials
+
