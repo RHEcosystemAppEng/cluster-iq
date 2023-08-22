@@ -1,4 +1,4 @@
-module github.com/cluster-iq
+module github.com/RHEcosystemAppEng/cluster-iq
 
 go 1.18
 

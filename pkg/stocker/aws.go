@@ -6,12 +6,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/pkg/inventory"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/cluster-iq/pkg/inventory"
 )
 
 // AWSStocker object to make stock on AWS

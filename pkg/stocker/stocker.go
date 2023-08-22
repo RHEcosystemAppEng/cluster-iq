@@ -1,6 +1,6 @@
 package stocker
 
-import "github.com/cluster-iq/pkg/inventory"
+import "github.com/RHEcosystemAppEng/cluster-iq/pkg/inventory"
 
 // Stocker interface
 type Stocker interface {
