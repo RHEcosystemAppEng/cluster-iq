@@ -27,6 +27,6 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifi
 # Default config
 ENV CIQ_DB_HOST="redis"
 ENV CIQ_DB_PORT="6379"
-ENV CIQ_DB_PASSWORD=""
+ENV CIQ_DB_PASS=""
 
 ENTRYPOINT ["/aws_scanner"]

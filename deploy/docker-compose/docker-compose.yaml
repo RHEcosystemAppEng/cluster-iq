@@ -8,7 +8,7 @@ services:
       - 8080:8080
     environment:
       CIQ_API_HOST: "0.0.0.0"
-      CIQ_API_PORT: "8080"
+      CIQ_API_PORT: "9000"
       CIQ_DB_HOST: "redis"
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
@@ -17,10 +17,10 @@ services:
     container_name: api
     restart: always
     ports:
-      - 8080:8080
+      - 9000:9000
     environment:
       CIQ_API_HOST: "0.0.0.0"
-      CIQ_API_PORT: "8080"
+      CIQ_API_PORT: "9000"
       CIQ_DB_HOST: "redis"
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
@@ -34,7 +34,6 @@ services:
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
       CIQ_CREDS_FILE: "/credentials"
-      AWS_SHARED_CREDENTIALS_FILE: "/credentials"
     volumes:
       - ../secrets/credentials:/credentials:ro
 

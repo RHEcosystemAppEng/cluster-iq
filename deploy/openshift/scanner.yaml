@@ -8,10 +8,10 @@ metadata:
     component: api
 spec:
   schedule: '*/5 * * * *'
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 5
   jobTemplate:
     spec:
-      successfulJobsHistoryLimit: 1
-      failedJobsHistoryLimit: 5
       template:
         spec:
           containers:

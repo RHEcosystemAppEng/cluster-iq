@@ -28,8 +28,8 @@ func init() {
 	// Getting config
 	dbHost := os.Getenv("CIQ_DB_HOST")
 	dbPort := os.Getenv("CIQ_DB_PORT")
-	dbPass = os.Getenv("CIQ_DB_PASSWORD")
-	credsFile = os.Getenv("CIQ_CLOUD_CREDS")
+	dbPass = os.Getenv("CIQ_DB_PASS")
+	credsFile = os.Getenv("CIQ_CREDS_FILE")
 	dbURL = fmt.Sprintf("%s:%s", dbHost, dbPort)
 }
 

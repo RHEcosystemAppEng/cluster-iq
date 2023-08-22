@@ -1,6 +1,7 @@
 VERSION := $(shell cat VERSION)
 IMAGE_TAG := $(shell git rev-parse --short=7 HEAD)
 CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
+K8S_CLI ?= $(shell which oc >/dev/null 2>&1 && echo oc || echo kubectl)
 REGISTRY ?= quay.io
 PROJECT_NAME ?= cluster-iq
 REGISTRY_REPO ?= ecosystem-appeng
@@ -16,6 +17,7 @@ export
 # Help message
 define HELP_MSG
 Makefile Rules:
+	deploy: Deploys the application on the current context configured on Openshift/Kubernetes CLI
 	clean: Removes local container images
 	build: Builds every component it the repo: (API, AWS-Scanner)
 	build-api: Builds every component it the repo: (API, AWS-Scanner)
@@ -30,6 +32,10 @@ Makefile Rules:
 	help: Displays this message
 endef
 export HELP_MSG
+
+.PHONY: deploy
+deploy:
+	@$(K8S_CLI) apply -f deploy/openshift
 
 clean:
 	@echo "### [Cleanning Docker images] ###"
@@ -67,11 +73,11 @@ push-aws-scanner:
 
 start-dev: build
 	@echo "### [Starting dev environment] ###"
-	@$(CONTAINER_ENGINE)-compose -f manifests/docker-compose.yaml up &
+	@$(CONTAINER_ENGINE)-compose -f deploy/docker-compose/docker-compose.yaml up &
 
 stop-dev:
 	@echo "### [Stopping dev environment] ###"
-	@$(CONTAINER_ENGINE)-compose -f manifests/docker-compose.yaml down
+	@$(CONTAINER_ENGINE)-compose -f deploy/docker-compose/docker-compose.yaml down
 
 help:
 	@echo "$$HELP_MSG"
