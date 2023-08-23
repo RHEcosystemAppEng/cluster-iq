@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/pkg/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/pkg/stocker"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/ini.v1"
 )

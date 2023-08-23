@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/pkg/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
