@@ -30,9 +30,9 @@ func AsInstanceState(status string) InstanceState {
 		return Stopped
 	case "stopped":
 		return Stopped
-	case "Terminated":
+	case "terminated":
 		return Terminated
-	case "Unknown":
+	case "unknown":
 		return Unknown
 	default:
 		return Unknown

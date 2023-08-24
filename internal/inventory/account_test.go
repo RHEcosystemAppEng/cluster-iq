@@ -5,7 +5,6 @@ import (
 )
 
 func TestNewAccount(t *testing.T) {
-	var acc Account
 	var provider CloudProvider
 
 	name := "testAccount"
@@ -13,7 +12,7 @@ func TestNewAccount(t *testing.T) {
 	user := "user"
 	password := "password"
 
-	acc = NewAccount(name, provider, user, password)
+	acc := NewAccount(name, provider, user, password)
 
 	if acc.Name != name {
 		t.Errorf("Account's Name do not match. Have: %s ; Expected: %s", acc.Name, name)
@@ -38,7 +37,7 @@ func TestGetCluster(t *testing.T) {
 		t.Errorf("Wrong cluster returned: [%v][%s]", &cluster, cluster)
 	}
 
-	newCluster := NewCluster("testCluster-1", "testAccount", AWSProvider, "eu-west-1", "https://url.com")
+	newCluster := NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
 	acc.AddCluster(newCluster)
 	cluster = acc.GetCluster("testCluster-1")
 	if cluster == nil {
@@ -52,7 +51,7 @@ func TestAddCluster(t *testing.T) {
 	var err error
 
 	// First Insert
-	cluster = NewCluster("testCluster-1", "testAccount", AWSProvider, "eu-west-1", "https://url.com")
+	cluster = NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -66,7 +65,7 @@ func TestAddCluster(t *testing.T) {
 
 	}
 	// Second Insert
-	cluster = NewCluster("testCluster-2", "testAccount", AWSProvider, "eu-west-1", "https://url.com")
+	cluster = NewCluster("testCluster-2", AWSProvider, "eu-west-1", "https://url.com")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -81,7 +80,7 @@ func TestAddCluster(t *testing.T) {
 	}
 
 	// Repeated Insert
-	cluster = NewCluster("testCluster-1", "testAccount", AWSProvider, "eu-west-1", "https://url.com")
+	cluster = NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -101,7 +100,7 @@ func TestAddCluster(t *testing.T) {
 
 func TestPrintAccount(t *testing.T) {
 	acc := NewAccount("testAccount", AWSProvider, "user", "password")
-	cluster := NewCluster("testCluster-1", "testAccount", AWSProvider, "eu-west-1", "https://url.com")
+	cluster := NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
 	acc.AddCluster(cluster)
 	acc.PrintAccount()
 }

@@ -1,2 +1,6 @@
-*.swp
+# ViM temp files
+.*.sw*
+
+
 secrets/
+test/

@@ -2,23 +2,33 @@ package inventory
 
 import "fmt"
 
-// Cluster stores the cluster properties in the stock
-// TODO: doc variables
+const minInstances int = 3
+
+// Cluster is the object to store Openshift Clusters and its properties
 type Cluster struct {
-	Name        string        `redis:"name" json:"name"`
-	AccountName string        `redis:"accountName" json:"accountName"`
-	Provider    CloudProvider `redis:"provider" json:"provider"`
-	Status      InstanceState `redis:"status" json:"status"`
-	Region      string        `redis:"region" json:"region"`
-	ConsoleLink string        `redis:"consoleLink" json:"consoleLink"`
-	Instances   []Instance    `redis:"instances" json:"instances"`
+	// Cluster's Name. Must be unique per Account
+	Name string `redis:"name" json:"name"`
+
+	// Infrastructure provider identifier.
+	Provider CloudProvider `redis:"provider" json:"provider"`
+
+	// Defines the status of the cluster if its infrastructure is running or not
+	Status InstanceState `redis:"status" json:"status"`
+
+	// The region of the infrastructure provider in which the cluster is deployed
+	Region string `redis:"region" json:"region"`
+
+	// Openshift Console URL. Might not be accesible if its protected
+	ConsoleLink string `redis:"consoleLink" json:"consoleLink"`
+
+	// Cluster's instance (nodes) lists
+	Instances []Instance `redis:"instances" json:"instances"`
 }
 
 // NewCluster creates a new cluster instance
-func NewCluster(name string, accountName string, provider CloudProvider, region string, consoleLink string) Cluster {
+func NewCluster(name string, provider CloudProvider, region string, consoleLink string) Cluster {
 	return Cluster{
 		Name:        name,
-		AccountName: accountName,
 		Provider:    provider,
 		Status:      Unknown,
 		Region:      region,
@@ -27,44 +37,51 @@ func NewCluster(name string, accountName string, provider CloudProvider, region 
 	}
 }
 
-// TODO: doc
-func (c Cluster) checkStatus(state InstanceState) bool {
-	instancesNum := len(c.Instances)
-	count := 0
-	for _, instance := range c.Instances {
-		if instance.State == state {
-			count++
-		}
-	}
-
-	if count >= (instancesNum / 2) {
+// isClusterStopped checks if the Cluster is Stopped
+func (c Cluster) isClusterStopped() bool {
+	if c.Status == Stopped {
 		return true
 	}
-
 	return false
 }
 
-// TODO: doc
-func (c Cluster) isClusterStopped() bool {
-	return c.checkStatus(Stopped)
-}
-
-// TODO: doc
+// isClusterRunning checks if the Cluster is Running
 func (c Cluster) isClusterRunning() bool {
-	return c.checkStatus(Running)
+	if c.Status == Running {
+		return true
+	}
+	return false
 }
 
-// UpdateStatus checks the instance list and updates the cluster status based
-// on its instances status. If half or more of the nodes are on the same
-// status, cluster will have the same
+// UpdateStatus evaluate the status of the cluster checking how many of the
+// nodes are in Running or Stopped status. As Openshift needs at lease 3 nodes
+// running to be considered correctly Running (3 master nodes), but we cant'
+// figure out which Instance is a master node, if at least 3 of the Cluster
+// instances are running, Cluster will be considered as Running also.
+// If the instances count is less than minInstances, Cluster would be
+// considered as Unknown status
+// TODO: find out a more trustable approach to evaluate cluster status
 func (c *Cluster) UpdateStatus() {
-	if c.isClusterRunning() {
-		c.Status = Running
-	} else if c.isClusterStopped() {
-		c.Status = Stopped
-	} else {
+	instancesNum := len(c.Instances)
+
+	// Check minimun instances
+	if instancesNum < minInstances {
 		c.Status = Unknown
+		return
 	}
+
+	count := 0
+	for _, instance := range c.Instances {
+		if instance.State == Running {
+			count++
+		}
+		if count >= minInstances {
+			c.Status = Running
+			return
+		}
+	}
+
+	c.Status = Stopped
 }
 
 // AddInstance add a new instance to a cluster
@@ -75,7 +92,7 @@ func (c *Cluster) AddInstance(instance Instance) {
 
 // PrintCluster prints cluster info
 func (c Cluster) PrintCluster() {
-	fmt.Printf("\tCluster: %s -- [%s][%s](Instances: %d)\n", c.Name, c.ConsoleLink, c.AccountName, len(c.Instances))
+	fmt.Printf("\tCluster: %s -- [%s](Instances: %d)\n", c.Name, c.ConsoleLink, len(c.Instances))
 	for _, instance := range c.Instances {
 		instance.PrintInstance()
 	}

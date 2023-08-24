@@ -7,26 +7,31 @@ import (
 // Instance model a cloud provider instance
 // TODO: doc variables
 type Instance struct {
-	ID           string        `redis:"id" json:"id"`
-	Name         string        `redis:"name" json:"name"`
-	Region       string        `redis:"region" json:"region"`
-	InstanceType string        `redis:"instanceType" json:"instanceType"`
-	State        InstanceState `redis:"state" json:"state"`
-	Provider     CloudProvider `redis:"provider" json:"provider"`
-	Tags         []Tag         `redis:"tags" json:"tags"`
+	// Uniq Identifier of the instance
+	ID string `redis:"id" json:"id"`
+
+	// Instance Name. In some Cloud Providers, the name is managed as a Tag
+	Name string `redis:"name" json:"name"`
+
+	// Region/Availability Zone in which the instance is running on
+	Region string `redis:"region" json:"region"`
+
+	// Instance type/size/flavour
+	InstanceType string `redis:"instanceType" json:"instanceType"`
+
+	// Instance State
+	State InstanceState `redis:"state" json:"state"`
+
+	// Instance provider (public/private cloud provider)
+	Provider CloudProvider `redis:"provider" json:"provider"`
+
+	// Instance Tags as key-value array
+	Tags []Tag `redis:"tags" json:"tags"`
 }
 
 // NewInstance returns a new Instance object
-func NewInstance(
-	id string,
-	name string,
-	region string,
-	instanceType string,
-	state InstanceState,
-	provider CloudProvider,
-	tags []Tag,
-) Instance {
-	return Instance{
+func NewInstance(id string, name string, region string, instanceType string, state InstanceState, provider CloudProvider, tags []Tag) *Instance {
+	return &Instance{
 		ID:           id,
 		Name:         name,
 		Region:       region,

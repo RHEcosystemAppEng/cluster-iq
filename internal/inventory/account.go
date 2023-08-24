@@ -2,19 +2,28 @@ package inventory
 
 import "fmt"
 
-// Account defines a public cloud provider account (non personal accounts)
-// TODO: doc variables
+// Account defines an infrastructure provider account
 type Account struct {
-	Name     string              `redis:"name" json:"name"`
-	Provider CloudProvider       `redis:"provider" json:"provider"`
+	// Account's name. It's considered as an uniq key. Two accounts with same
+	// name can't belong to same Inventory
+	Name string `redis:"name" json:"name"`
+
+	// Infrastructure provider identifier.
+	Provider CloudProvider `redis:"provider" json:"provider"`
+
+	// List of clusters deployed on this account indexed by Cluster's name
 	Clusters map[string]*Cluster `redis:"clusters" json:"clusters"`
-	user     string
+
+	// Account's username
+	user string
+
+	// Account's password
 	password string
 }
 
 // NewAccount create a new Could Provider account to store its instances
-func NewAccount(name string, provider CloudProvider, user string, password string) Account {
-	return Account{Name: name, Provider: provider, Clusters: make(map[string]*Cluster), user: user, password: password}
+func NewAccount(name string, provider CloudProvider, user string, password string) *Account {
+	return &Account{Name: name, Provider: provider, Clusters: make(map[string]*Cluster), user: user, password: password}
 }
 
 // GetUser returns the username value

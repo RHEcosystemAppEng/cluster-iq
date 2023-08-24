@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	inven    inventory.Inventory
+	inven    *inventory.Inventory
 	router   *gin.Engine
 	apiURL   string
 	dbURL    string
