@@ -6,7 +6,8 @@ FROM golang:1.18.3 AS builder
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o aws_scanner ./src/aws_scanner/scanner.go
+RUN ls
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o aws_scanner ./cmd/scanners/aws/scanner.go
 
 ## Run
 ####################
