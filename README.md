@@ -1,5 +1,8 @@
 # Cluster IQ
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/RHEcosystemAppEng/cluster-iq)](https://goreportcard.com/report/github.com/RHEcosystemAppEng/cluster-iq)
+[![Go Reference](https://pkg.go.dev/badge/github.com/RHEcosystemAppEng/cluster-iq.svg)](https://pkg.go.dev/github.com/RHEcosystemAppEng/cluster-iq)
+
 Cluster IQ is a tool for making stock of the Openshift Clusters and its
 resources running on the most common cloud providers and collects relevant
 information about the compute resources, access routes and billing.
@@ -23,10 +26,12 @@ available for every cloud provider:
 | Azure          | No                | No      | No       |
 | GCP            | No                | No      | No       |
 
+
 ## Architecture
 
 The following graph shows the architecture of this project:
-![CLUSTER_IQ_ARCH](./doc/arch.png)
+![ClusterIQ architecture diagram](./doc/arch.png)
+
 
 ## Getting started
 
@@ -42,7 +47,7 @@ user = XXXXXXX
 key = YYYYYYY
 ```
 
-The credentials file must be located on the path `secrets/credentials` to work with `docker-compose`.
+The credentials file must be located on the path `secrets/credentials` to work with `docker/podman-compose`.
 
 To manage this on Openshift, a secret containing this information is needed.
 Once you prepared your credentials file, run the following command to create the
@@ -87,7 +92,6 @@ The following services are available:
 | Redis          | 0.0.0.0:6379          |
 
 ### Scanners
-
 As each cloud provider has a different API and because of this, a specific
 scanner adapted to the provider is required.
 
@@ -108,6 +112,8 @@ The scanner should run periodically to keep the inventory up to date.
 # Building
 make build-aws-scanner
 ```
+
+
 
 ## API Server
 
