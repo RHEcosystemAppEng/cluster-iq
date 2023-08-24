@@ -32,12 +32,12 @@ define HELP_MSG
 Makefile Rules:
 	deploy: Deploys the application on the current context configured on Openshift/Kubernetes CLI
 	clean: Removes local container images
-	build: Builds every component it the repo: (API, AWS-Scanner)
-	build-api: Builds every component it the repo: (API, AWS-Scanner)
+	build: Builds every component image in the repo: (API, AWS-Scanner)
+	build-api: Builds API image.
 	build-scanners: Builds the scanners for each supported cloud provider
 	build-aws-scanner: Builds the scanner for AWS
 	local-build: Builds every component it the repo in your local environment: (API, AWS-Scanner)
-	local-build-api: Builds every component it the repo in your local environment: (API, AWS-Scanner)
+	local-build-api: Builds API binary in your local environment.
 	local-build-scanners: Builds in your local environment the scanners for each supported cloud provider
 	local-build-aws-scanner: Builds in your local environment the scanner for AWS
 	push: Pushes every container image into remote repo
@@ -65,7 +65,7 @@ build: build-scanners build-api
 
 build-api:
 	@echo "### [Building API] ###"
-	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-api-arg="VERSION=${VERSION}" .
+	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-api --build-arg="VERSION=${VERSION}" .
 	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(VERSION)
 	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(IMAGE_TAG)
 
@@ -97,7 +97,7 @@ local-build-aws-scanner:
 
 
 # Publish images
-push: push-api push-scanner
+push: push-api push-scanners
 
 push-api:
 	$(CONTAINER_ENGINE) push $(API_IMAGE):latest
@@ -121,5 +121,7 @@ stop-dev:
 	@echo "### [Stopping dev environment] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/docker-compose/docker-compose.yaml down
 
+# Set the default target to "help"
+.DEFAULT_GOAL := help
 help:
 	@echo "$$HELP_MSG"
