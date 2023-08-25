@@ -2,5 +2,7 @@
 .*.sw*
 
 
+# Exclude project folders
 secrets/
 test/
+build/

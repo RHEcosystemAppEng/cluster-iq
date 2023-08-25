@@ -1,0 +1,33 @@
+## Build
+####################
+FROM golang:1.18.3 AS builder
+
+# Code copy
+WORKDIR /app
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api ./cmd/api/*.go
+
+## Run
+####################
+FROM scratch
+
+# Arguments
+ARG VERSION="0.1-alpha"
+
+# Labels
+LABEL version=$VERSION
+LABEL description="Openshift Inventory API"
+
+# Binary
+COPY --from=builder /app/cluster-iq-api /cluster-iq-api
+
+ENV CIQ_API_HOST="0.0.0.0"
+ENV CIQ_API_PORT="8080"
+ENV CIQ_DB_HOST="127.0.0.1"
+ENV CIQ_DB_PORT="6379"
+ENV CIQ_DB_PASS=""
+
+EXPOSE 8080
+
+ENTRYPOINT ["/cluster-iq-api"]

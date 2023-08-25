@@ -1,0 +1,33 @@
+## Build
+####################
+FROM golang:1.18.3 AS builder
+
+# Code copy
+WORKDIR /app
+COPY . .
+
+RUN ls
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o aws_scanner ./cmd/scanners/aws/scanner.go
+
+## Run
+####################
+FROM registry.access.redhat.com/ubi8/ubi-micro:8.8-5
+
+# Arguments
+ARG VERSION="0.1-alpha"
+
+# Labels
+LABEL version=$VERSION
+LABEL description="Openshift Inventory AWS Scanner"
+
+# Binary
+COPY --from=builder /app/aws_scanner /aws_scanner
+# CA Certs to access AWS domains
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+# Default config
+ENV CIQ_DB_HOST="redis"
+ENV CIQ_DB_PORT="6379"
+ENV CIQ_DB_PASS=""
+
+ENTRYPOINT ["/aws_scanner"]
