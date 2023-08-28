@@ -87,14 +87,13 @@ local-build: local-build-scanners local-build-api
 
 local-build-api:
 	@echo "### [Building API] ###"
-	@cd ./cmd/api/ ; go build -o ../../$(BIN_DIR)/api/api ; cd ../..
+	@go build -o $(BIN_DIR)/api/api ./cmd/api/
 
 local-build-scanners: local-build-api local-build-aws-scanner
 
 local-build-aws-scanner:
 	@echo "### [Building AWS Scanner] ###"
-	@cd ./cmd/api/ ; go build -o ../../$(BIN_DIR)/scanners/aws_scanner ; cd ../..
-
+	@go build -o $(BIN_DIR)/scanners/aws_scanner ./cmd/scanners/aws
 
 # Publish images
 push: push-api push-scanners
