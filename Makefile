@@ -127,7 +127,7 @@ stop-dev:
 .PHONY: test
 test:
 	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
-	@go test ./... -coverprofile $(TEST_DIR)/cover.out
+	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out
 
 cover:
 	@go tool cover -func $(TEST_DIR)/cover.out
