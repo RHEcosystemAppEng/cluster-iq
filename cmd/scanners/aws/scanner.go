@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	inven     inventory.Inventory
+	inven     *inventory.Inventory
 	stockers  []stocker.Stocker
 	dbURL     string
 	dbPass    string
@@ -64,7 +64,7 @@ func GetCloudProviderAccounts() []inventory.Account {
 			account.Key("user").String(),
 			account.Key("key").String(),
 		)
-		accounts = append(accounts, newAccount)
+		accounts = append(accounts, *newAccount)
 	}
 
 	return accounts

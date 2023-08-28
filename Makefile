@@ -14,6 +14,7 @@ API_IMG_NAME ?= $(PROJECT_NAME)-api
 API_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${API_IMG_NAME}
 SCANNER_IMG_NAME ?= $(PROJECT_NAME)-aws-scanner
 SCANNER_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${SCANNER_IMG_NAME}
+TEST_DIR ?= ./test
 BUILD_DIR ?= ./build
 BIN_DIR ?= $(BUILD_DIR)/bin
 CMD_DIR ?= ./cmd
@@ -120,6 +121,18 @@ stop-dev:
 	@echo "### [Stopping dev environment] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/docker-compose/docker-compose.yaml down
 
+
+# Tests
+.PHONY: test
+test:
+	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
+	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out
+
+cover:
+	@go tool cover -func $(TEST_DIR)/cover.out
+
+
+# Help
 # Set the default target to "help"
 .DEFAULT_GOAL := help
 help:

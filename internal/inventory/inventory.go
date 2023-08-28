@@ -5,17 +5,18 @@ import (
 	"time"
 )
 
-// Inventory struct to store found resources
+// Inventory object to store inventored resources
 type Inventory struct {
-	// Cluster map by cluster name
+	// Accounts map indexed by Account's Name
 	Accounts map[string]Account `redis:"accounts" json:"accounts"`
+
 	// Date of Inventory creation/update
 	CreationTimestamp time.Time `redis:"creationTimestamp" json:"creationTimestamp"`
 }
 
 // NewInventory creates a new Inventory variable
-func NewInventory() Inventory {
-	return Inventory{Accounts: make(map[string]Account), CreationTimestamp: time.Now()}
+func NewInventory() *Inventory {
+	return &Inventory{Accounts: make(map[string]Account), CreationTimestamp: time.Now()}
 }
 
 // IsAccountOnInventory checks if a cluster is already in the Inventory

@@ -24,7 +24,7 @@ type AWSStocker struct {
 // NewAWSStocker TODO
 func NewAWSStocker(account inventory.Account) AWSStocker {
 	st := AWSStocker{region: "eu-west-1"}
-	st.Account = inventory.NewAccount(account.Name, inventory.AWSProvider, account.GetUser(), account.GetPassword())
+	st.Account = *inventory.NewAccount(account.Name, inventory.AWSProvider, account.GetUser(), account.GetPassword())
 	st.CreateSession()
 	return st
 }
@@ -180,11 +180,11 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 			newInstance := inventory.NewInstance(*id, name, *region, *instanceType, state, provider, inventory.ConvertEC2TagtoTag(tags))
 
 			if !s.Account.IsClusterOnAccount(clusterName) {
-				cluster := inventory.NewCluster(clusterName, s.Account.Name, provider, *region, "")
+				cluster := inventory.NewCluster(clusterName, provider, *region, "")
 				// TODO Missed error checking
 				s.Account.AddCluster(cluster)
 			}
-			s.Account.Clusters[clusterName].AddInstance(newInstance)
+			s.Account.Clusters[clusterName].AddInstance(*newInstance)
 		}
 	}
 }
