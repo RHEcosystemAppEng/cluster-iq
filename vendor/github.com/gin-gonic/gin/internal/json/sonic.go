@@ -3,6 +3,10 @@
 // license that can be found in the LICENSE file.
 
 //go:build sonic && avx && (linux || windows || darwin) && amd64
+// +build sonic
+// +build avx
+// +build linux windows darwin
+// +build amd64
 
 package json
 

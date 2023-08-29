@@ -10,6 +10,7 @@ import (
 
 const (
 	DatabaseConnectionTimeout = 10 * time.Second
+	DataExpirationTTL = 0
 )
 
 func InitDatabase(address, password string) (*redis.Client, error) {

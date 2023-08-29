@@ -14,8 +14,6 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-const DataExpirationTTL = 0
-
 var (
 	inven     *inventory.Inventory
 	stockers  []stocker.Stocker
@@ -65,7 +63,7 @@ func main() {
 
 	log.Println("Writing results into Redis...")
 	// TODO Refactor into dedicated function
-	err = rdb.Set(ctx, "Stock", string(b), DataExpirationTTL).Err()
+	err = rdb.Set(ctx, "Stock", string(b), redis.DataExpirationTTL).Err()
 	if err != nil {
 		log.Printf("failed to write results into database: %v", err)
 		return

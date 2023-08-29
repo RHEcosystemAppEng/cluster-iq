@@ -103,7 +103,7 @@ func CustomRecoveryWithWriter(out io.Writer, handle RecoveryFunc) HandlerFunc {
 	}
 }
 
-func defaultHandleRecovery(c *Context, _ any) {
+func defaultHandleRecovery(c *Context, err any) {
 	c.AbortWithStatus(http.StatusInternalServerError)
 }
 
@@ -164,7 +164,7 @@ func function(pc uintptr) []byte {
 	if period := bytes.Index(name, dot); period >= 0 {
 		name = name[period+1:]
 	}
-	name = bytes.ReplaceAll(name, centerDot, dot)
+	name = bytes.Replace(name, centerDot, dot, -1)
 	return name
 }
 
