@@ -1,7 +1,7 @@
 ## Build
 # vim: set ft=dockerfile :
 ####################
-FROM golang:1.18.3 AS builder
+FROM golang:1.19.12 AS builder
 
 # Code copy
 WORKDIR /app

@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 var (
@@ -22,9 +24,13 @@ var (
 	rdb      *redis.Client
 	ctx      context.Context
 	redisKey = "Stock"
+	logger   *zap.Logger
 )
 
 func init() {
+	// Logging config
+	logger, _ = zap.NewProduction()
+
 	// Getting config
 	apiHost := os.Getenv("CIQ_API_HOST")
 	apiPort := os.Getenv("CIQ_API_PORT")
@@ -37,6 +43,8 @@ func init() {
 	// Initializaion global vars
 	inven = inventory.NewInventory()
 	router = gin.Default()
+	// Configure GIN to use ZAP
+	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 }
 
 func addHeaders(c *gin.Context) {
@@ -45,12 +53,14 @@ func addHeaders(c *gin.Context) {
 
 // getAccounts returns every account in Stock
 func getAccountsCount(c *gin.Context) {
+	logger.Debug("Retrieving accounts count")
 	updateStock()
 	c.PureJSON(http.StatusOK, len(inven.Accounts))
 }
 
 // getAccounts returns every account in Stock
 func getClusters(c *gin.Context) {
+	logger.Debug("Retrieving complete cluster inventory")
 	updateStock()
 	addHeaders(c)
 
@@ -66,6 +76,7 @@ func getClusters(c *gin.Context) {
 
 // getAccounts returns every account in Stock
 func getAccounts(c *gin.Context) {
+	logger.Debug("Retrieving complete accounts inventory")
 	updateStock()
 	addHeaders(c)
 	c.PureJSON(http.StatusOK, inven.Accounts)
@@ -73,6 +84,7 @@ func getAccounts(c *gin.Context) {
 
 // getAccountsByName returns an account by its name in Stock
 func getAccountsByName(c *gin.Context) {
+	logger.Debug("Retrieving accounts by name")
 	updateStock()
 	addHeaders(c)
 	name := c.Param("name")
@@ -90,7 +102,7 @@ func updateStock() {
 	// Getting Redis Results
 	val, err := rdb.Get(ctx, redisKey).Result()
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("Can't update Inventory", zap.Error(err))
 	}
 
 	// Unmarshall from JSON to inventory.Inventory type
@@ -98,9 +110,10 @@ func updateStock() {
 }
 
 func main() {
-	log.Println("Starting Openshift Inventory API")
-	log.Println("API URL: ", apiURL)
-	log.Println("DB URL: ", dbURL)
+	defer logger.Sync()
+	logger.Info("Starting Openshift Inventory API")
+	logger.Info("API URL: ", zap.String("API-URL", apiURL))
+	logger.Info("DB URL: ", zap.String("DB-URL", dbURL))
 
 	// Preparing API Endpoints
 	router.GET("/accounts", getAccounts)
@@ -118,6 +131,6 @@ func main() {
 	})
 
 	// Start API
-	log.Println("API Ready to serve")
+	logger.Info("API Ready to serve")
 	router.Run(apiURL)
 }
