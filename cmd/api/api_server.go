@@ -27,6 +27,18 @@ var (
 	logger   *zap.Logger
 )
 
+// ClusterListResponse models the Cluster list response returned by this API
+type ClusterListResponse struct {
+	Count    int                 `json:"count"`
+	Clusters []inventory.Cluster `json:"clusters"`
+}
+
+// AccountListResponse model the Accounts list response returned by this API
+type AccountListResponse struct {
+	Count    int                 `json:"count"`
+	Accounts []inventory.Account `json:"accounts"`
+}
+
 func init() {
 	// Logging config
 	logger, _ = zap.NewProduction()
@@ -42,9 +54,11 @@ func init() {
 
 	// Initializaion global vars
 	inven = inventory.NewInventory()
-	router = gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	router = gin.New()
 	// Configure GIN to use ZAP
 	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
+
 }
 
 func addHeaders(c *gin.Context) {
@@ -71,7 +85,12 @@ func getClusters(c *gin.Context) {
 		}
 	}
 
-	c.PureJSON(http.StatusOK, clusters)
+	response := ClusterListResponse{
+		Count:    len(clusters),
+		Clusters: clusters,
+	}
+
+	c.PureJSON(http.StatusOK, response)
 }
 
 // getAccounts returns every account in Stock
@@ -79,7 +98,17 @@ func getAccounts(c *gin.Context) {
 	logger.Debug("Retrieving complete accounts inventory")
 	updateStock()
 	addHeaders(c)
-	c.PureJSON(http.StatusOK, inven.Accounts)
+
+	var accounts []inventory.Account
+	for _, account := range inven.Accounts {
+		accounts = append(accounts, account)
+	}
+
+	response := AccountListResponse{
+		Count:    len(accounts),
+		Accounts: accounts,
+	}
+	c.PureJSON(http.StatusOK, response)
 }
 
 // getAccountsByName returns an account by its name in Stock
@@ -112,15 +141,15 @@ func updateStock() {
 func main() {
 	defer logger.Sync()
 	logger.Info("Starting Openshift Inventory API")
-	logger.Info("API URL: ", zap.String("API-URL", apiURL))
-	logger.Info("DB URL: ", zap.String("DB-URL", dbURL))
+	logger.Info("API URL: ", zap.String("api_url", apiURL))
+	logger.Info("DB URL: ", zap.String("db_url", dbURL))
 
 	// Preparing API Endpoints
 	router.GET("/accounts", getAccounts)
 	router.GET("/accounts/:name", getAccountsByName)
-	router.GET("/accountsCount", getAccountsCount)
 	router.GET("/clusters", getClusters)
-	router.GET("/mock", getMockCluster)
+	router.GET("/mockedClusters", getMockClusters)
+	router.GET("/mockedAccounts", getMockAccounts)
 
 	// RedisDB connection
 	ctx = context.Background()
