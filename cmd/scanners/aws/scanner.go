@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/redis"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
-	"github.com/redis/go-redis/v9"
 	"gopkg.in/ini.v1"
 )
 
@@ -20,8 +20,6 @@ var (
 	dbURL     string
 	dbPass    string
 	credsFile string
-	rdb       *redis.Client
-	ctx       context.Context
 )
 
 func init() {
@@ -31,6 +29,47 @@ func init() {
 	dbPass = os.Getenv("CIQ_DB_PASS")
 	credsFile = os.Getenv("CIQ_CREDS_FILE")
 	dbURL = fmt.Sprintf("%s:%s", dbHost, dbPort)
+}
+
+func main() {
+	rdb, err := redis.InitDatabase(dbURL, dbPass)
+	if err != nil {
+		log.Fatal("failed to establish database connection:", err)
+	}
+	// Prepare New Stock
+	inven = inventory.NewInventory()
+
+	// Get Cloud Accounts from credentials file
+	accounts := GetCloudProviderAccounts()
+
+	// Running Stockers
+	// TODO Handle error properly
+	createStockers(accounts)
+	err = startStockers()
+	if err != nil {
+		log.Printf("failed to run stockers: %v", err)
+		return
+	}
+
+	inven.PrintInventory()
+	log.Println("stock maker finished")
+
+	b, err := json.Marshal(inven)
+	if err != nil {
+		log.Printf("failed to marshal inventory into JSON: %v", err)
+		return
+	}
+	ctx := context.Background()
+
+	log.Println("Writing results into Redis...")
+	// TODO Refactor into dedicated function
+	err = rdb.Set(ctx, "Stock", string(b), redis.DataExpirationTTL).Err()
+	if err != nil {
+		log.Printf("failed to write results into database: %v", err)
+		return
+	}
+
+	log.Println("done!")
 }
 
 // getProvider return a inventory.CloudProvider based on a string
@@ -81,6 +120,7 @@ func createStockers(accounts []inventory.Account) error {
 			log.Println(err)
 			return err
 		case inventory.AzureProvider:
+
 			err := fmt.Errorf("Microsoft Azure Stocker not implemented! Account %s will not be scanned", account.Name)
 			log.Println(err)
 			return err
@@ -96,47 +136,8 @@ func startStockers() error {
 		if err != nil {
 			return err
 		}
-
+		// TODO handle error properly
 		inven.AddAccount(stockerInstance.GetResults())
 	}
 	return nil
-}
-
-func main() {
-	// Prepare New Stock
-	inven = inventory.NewInventory()
-
-	// Get Cloud Accounts from credentials file
-	accounts := GetCloudProviderAccounts()
-
-	// Running Stockers
-	createStockers(accounts)
-	err := startStockers()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	inven.PrintInventory()
-	fmt.Println("Stock Maker Finished")
-
-	// TODO move redis module
-	ctx := context.Background()
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     dbURL,
-		Password: dbPass,
-		DB:       0,
-	})
-
-	b, err := json.Marshal(inven)
-	if err != nil {
-		return
-	}
-
-	log.Println("Writing results into Redis...")
-	err = rdb.Set(ctx, "Stock", string(b), 0).Err()
-	if err != nil {
-		panic(err)
-	}
-
-	log.Println("Done!")
 }
