@@ -17,6 +17,11 @@ import (
 )
 
 var (
+	// version reflects the current version of the API
+	version string
+	// commit reflects the git short-hash of the compiled version
+	commit string
+	// TODO: comment rest of global vars
 	inven    *inventory.Inventory
 	router   *gin.Engine
 	apiURL   string
@@ -93,9 +98,9 @@ func init() {
 	inven = inventory.NewInventory()
 	gin.SetMode(gin.ReleaseMode)
 	router = gin.New()
+
 	// Configure GIN to use ZAP
 	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
-
 }
 
 func addHeaders(c *gin.Context) {
@@ -155,7 +160,7 @@ func updateStock() {
 	// Getting Redis Results
 	val, err := rdb.Get(ctx, redisKey).Result()
 	if err != nil {
-		logger.Error("Can't update Inventory", zap.Error(err))
+		logger.Error("Can't connect to DB for inventory updating", zap.Error(err))
 	}
 
 	// Unmarshall from JSON to inventory.Inventory type
@@ -164,7 +169,7 @@ func updateStock() {
 
 func main() {
 	defer logger.Sync()
-	logger.Info("Starting Openshift Inventory API")
+	logger.Info("Starting Openshift Inventory API", zap.String("version", version), zap.String("commit", commit))
 	logger.Info("API URL: ", zap.String("api_url", apiURL))
 	logger.Info("DB URL: ", zap.String("db_url", dbURL))
 
@@ -172,6 +177,7 @@ func main() {
 	router.GET("/accounts", getAccounts)
 	router.GET("/accounts/:name", getAccountsByName)
 	router.GET("/clusters", getClusters)
+	// Mocked endpoints
 	router.GET("/mockedClusters", getMockClusters)
 	router.GET("/mockedAccounts", getMockAccounts)
 
