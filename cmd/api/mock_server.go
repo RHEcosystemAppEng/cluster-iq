@@ -3,39 +3,69 @@ package main
 import (
 	"net/http"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/gin-gonic/gin"
 )
 
-// MockCluster only for testint purposes
-type MockCluster struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Infrastructure string `json:"infrastructure"`
-	Status         string `json:"status"`
-}
-
 // getMockCluster returns mocked cluster object for testing
-func getMockCluster(c *gin.Context) {
-	c.Header("Access-Control-Allow-Origin", "*")
-	clusters := []MockCluster{
+func getMockClusters(c *gin.Context) {
+	addHeaders(c)
+	clusters := []inventory.Cluster{
 		{
-			ID:             "1",
-			Name:           "Cluster 1",
-			Infrastructure: "AWS",
-			Status:         "Active",
+			Name:   "Cluster 1",
+			Status: "Active",
 		},
 		{
-			ID:             "2",
-			Name:           "Cluster 2",
-			Infrastructure: "GCP",
-			Status:         "Inactive",
+			Name:   "Cluster 2",
+			Status: "Inactive",
 		},
 		{
-			ID:             "3",
-			Name:           "Cluster 3",
-			Infrastructure: "Azure",
-			Status:         "Active",
+			Name:   "Cluster 3",
+			Status: "Active",
 		},
 	}
-	c.PureJSON(http.StatusOK, clusters)
+
+	response := ClusterListResponse{
+		Count:    len(clusters),
+		Clusters: clusters,
+	}
+	c.PureJSON(http.StatusOK, response)
+}
+
+func getMockAccounts(c *gin.Context) {
+	addHeaders(c)
+
+	clusterA := inventory.NewCluster("clusterA", inventory.AWSProvider, "eu-west-1", "http://console.com")
+	clusterB := inventory.NewCluster("clusterB", inventory.AWSProvider, "eu-west-1", "http://console.com")
+	clusterC := inventory.NewCluster("clusterC", inventory.GCPProvider, "eu-west-1", "http://console.com")
+
+	accounts := []inventory.Account{
+		{
+			Name:     "MockCluster1",
+			Provider: inventory.AWSProvider,
+			Clusters: map[string]*inventory.Cluster{
+				"ClusterA": &clusterA,
+				"ClusterB": &clusterB,
+			},
+		},
+		{
+			Name:     "MockCluster2",
+			Provider: inventory.GCPProvider,
+			Clusters: map[string]*inventory.Cluster{
+				"ClusterC": &clusterC,
+			},
+		},
+		{
+			Name:     "MockCluster3",
+			Provider: inventory.AzureProvider,
+			Clusters: map[string]*inventory.Cluster{},
+		},
+	}
+
+	response := AccountListResponse{
+		Count:    len(accounts),
+		Accounts: accounts,
+	}
+
+	c.PureJSON(http.StatusOK, response)
 }

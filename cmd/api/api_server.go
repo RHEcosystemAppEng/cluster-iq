@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 var (
@@ -22,9 +24,61 @@ var (
 	rdb      *redis.Client
 	ctx      context.Context
 	redisKey = "Stock"
+	logger   *zap.Logger
 )
 
+// ClusterListResponse represents the API response containing a list of clusters
+type ClusterListResponse struct {
+	Count    int                 `json:"count"`
+	Clusters []inventory.Cluster `json:"clusters"`
+}
+
+// NewClusterListResponse creates a new ClusterListResponse instance and
+// controls if there is any cluster in the incoming list
+func NewClusterListResponse(clusters []inventory.Cluster) *ClusterListResponse {
+	numClusters := len(clusters)
+
+	// If there is no clusters, an empty array is returned instead of null
+	if numClusters == 0 {
+		clusters = []inventory.Cluster{}
+	}
+
+	response := ClusterListResponse{
+		Count:    numClusters,
+		Clusters: clusters,
+	}
+
+	return &response
+}
+
+// AccountListResponse represents the API response containing a list of accounts
+type AccountListResponse struct {
+	Count    int                 `json:"count"`
+	Accounts []inventory.Account `json:"accounts"`
+}
+
+// NewAccountListResponse creates a new ClusterListResponse instance and
+// controls if there is any cluster in the incoming list
+func NewAccountListResponse(accounts []inventory.Account) *AccountListResponse {
+	numAccounts := len(accounts)
+
+	// If there is no clusters, an empty array is returned instead of null
+	if numAccounts == 0 {
+		accounts = []inventory.Account{}
+	}
+
+	response := AccountListResponse{
+		Count:    numAccounts,
+		Accounts: accounts,
+	}
+
+	return &response
+}
+
 func init() {
+	// Logging config
+	logger, _ = zap.NewProduction()
+
 	// Getting config
 	apiHost := os.Getenv("CIQ_API_HOST")
 	apiPort := os.Getenv("CIQ_API_PORT")
@@ -36,7 +90,11 @@ func init() {
 
 	// Initializaion global vars
 	inven = inventory.NewInventory()
-	router = gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	router = gin.New()
+	// Configure GIN to use ZAP
+	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
+
 }
 
 func addHeaders(c *gin.Context) {
@@ -44,13 +102,8 @@ func addHeaders(c *gin.Context) {
 }
 
 // getAccounts returns every account in Stock
-func getAccountsCount(c *gin.Context) {
-	updateStock()
-	c.PureJSON(http.StatusOK, len(inven.Accounts))
-}
-
-// getAccounts returns every account in Stock
 func getClusters(c *gin.Context) {
+	logger.Debug("Retrieving complete cluster inventory")
 	updateStock()
 	addHeaders(c)
 
@@ -61,18 +114,29 @@ func getClusters(c *gin.Context) {
 		}
 	}
 
-	c.PureJSON(http.StatusOK, clusters)
+	response := NewClusterListResponse(clusters)
+	c.PureJSON(http.StatusOK, response)
 }
 
 // getAccounts returns every account in Stock
 func getAccounts(c *gin.Context) {
+	logger.Debug("Retrieving complete accounts inventory")
 	updateStock()
 	addHeaders(c)
-	c.PureJSON(http.StatusOK, inven.Accounts)
+
+	var accounts []inventory.Account
+
+	for _, account := range inven.Accounts {
+		accounts = append(accounts, account)
+	}
+
+	response := NewAccountListResponse(accounts)
+	c.PureJSON(http.StatusOK, response)
 }
 
 // getAccountsByName returns an account by its name in Stock
 func getAccountsByName(c *gin.Context) {
+	logger.Debug("Retrieving accounts by name")
 	updateStock()
 	addHeaders(c)
 	name := c.Param("name")
@@ -90,7 +154,7 @@ func updateStock() {
 	// Getting Redis Results
 	val, err := rdb.Get(ctx, redisKey).Result()
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("Can't update Inventory", zap.Error(err))
 	}
 
 	// Unmarshall from JSON to inventory.Inventory type
@@ -98,16 +162,17 @@ func updateStock() {
 }
 
 func main() {
-	log.Println("Starting Openshift Inventory API")
-	log.Println("API URL: ", apiURL)
-	log.Println("DB URL: ", dbURL)
+	defer logger.Sync()
+	logger.Info("Starting Openshift Inventory API")
+	logger.Info("API URL: ", zap.String("api_url", apiURL))
+	logger.Info("DB URL: ", zap.String("db_url", dbURL))
 
 	// Preparing API Endpoints
 	router.GET("/accounts", getAccounts)
 	router.GET("/accounts/:name", getAccountsByName)
-	router.GET("/accountsCount", getAccountsCount)
 	router.GET("/clusters", getClusters)
-	router.GET("/mock", getMockCluster)
+	router.GET("/mockedClusters", getMockClusters)
+	router.GET("/mockedAccounts", getMockAccounts)
 
 	// RedisDB connection
 	ctx = context.Background()
@@ -118,6 +183,6 @@ func main() {
 	})
 
 	// Start API
-	log.Println("API Ready to serve")
+	logger.Info("API Ready to serve")
 	router.Run(apiURL)
 }
