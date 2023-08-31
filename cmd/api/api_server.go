@@ -169,7 +169,7 @@ func updateStock() {
 
 func main() {
 	defer logger.Sync()
-	logger.Info("Starting Openshift Inventory API", zap.String("version", version), zap.String("commit", commit))
+	logger.Info("Starting ClusterIQ API", zap.String("version", version), zap.String("commit", commit))
 	logger.Info("API URL: ", zap.String("api_url", apiURL))
 	logger.Info("DB URL: ", zap.String("db_url", dbURL))
 
