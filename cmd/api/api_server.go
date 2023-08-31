@@ -102,13 +102,6 @@ func addHeaders(c *gin.Context) {
 }
 
 // getAccounts returns every account in Stock
-func getAccountsCount(c *gin.Context) {
-	logger.Debug("Retrieving accounts count")
-	updateStock()
-	c.PureJSON(http.StatusOK, len(inven.Accounts))
-}
-
-// getAccounts returns every account in Stock
 func getClusters(c *gin.Context) {
 	logger.Debug("Retrieving complete cluster inventory")
 	updateStock()
