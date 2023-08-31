@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -77,7 +78,7 @@ func NewAccountListResponse(accounts []inventory.Account) *AccountListResponse {
 
 func init() {
 	// Logging config
-	logger, _ = zap.NewProduction()
+	logger = ciqLogger.NewLogger()
 
 	// Getting config
 	apiHost := os.Getenv("CIQ_API_HOST")
