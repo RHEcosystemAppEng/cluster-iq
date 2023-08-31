@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// NewLogger returns a new instance of a ClusterIQ logger
+// NewLogger returns a customized instance of zap.Logger for ClusterIQ components
 func NewLogger() *zap.Logger {
 	encoderCfg := zap.NewProductionEncoderConfig()
 	encoderCfg.TimeKey = "timestamp"
@@ -27,6 +27,7 @@ func NewLogger() *zap.Logger {
 		},
 	}
 
+	// Checking debug level config env var
 	logLevel := strings.ToLower(os.Getenv("CIQ_LOG_LEVEL"))
 	if logLevel == "debug" {
 		loggerConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
@@ -35,6 +36,5 @@ func NewLogger() *zap.Logger {
 	}
 
 	logger := zap.Must(loggerConfig.Build())
-
 	return logger
 }
