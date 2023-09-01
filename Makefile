@@ -3,10 +3,13 @@
 ################################################################################
 
 # Global Vars
+#
 VERSION := $(shell cat VERSION)
 IMAGE_TAG := $(shell git rev-parse --short=7 HEAD)
+
 CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
 K8S_CLI ?= $(shell which oc >/dev/null 2>&1 && echo oc || echo kubectl)
+
 REGISTRY ?= quay.io
 PROJECT_NAME ?= cluster-iq
 REGISTRY_REPO ?= ecosystem-appeng
@@ -14,6 +17,9 @@ API_IMG_NAME ?= $(PROJECT_NAME)-api
 API_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${API_IMG_NAME}
 SCANNER_IMG_NAME ?= $(PROJECT_NAME)-aws-scanner
 SCANNER_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${SCANNER_IMG_NAME}
+
+LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(IMAGE_TAG)"
+
 TEST_DIR ?= ./test
 BUILD_DIR ?= ./build
 BIN_DIR ?= $(BUILD_DIR)/bin
@@ -88,13 +94,13 @@ local-build: local-build-scanners local-build-api
 
 local-build-api:
 	@echo "### [Building API] ###"
-	@go build -o $(BIN_DIR)/api/api ./cmd/api/
+	@go build -o $(BIN_DIR)/api/api $(LDFLAGS) ./cmd/api/
 
 local-build-scanners: local-build-api local-build-aws-scanner
 
 local-build-aws-scanner:
 	@echo "### [Building AWS Scanner] ###"
-	@go build -o $(BIN_DIR)/scanners/aws_scanner ./cmd/scanners/aws
+	@go build -o $(BIN_DIR)/scanners/aws_scanner $(LDFLAGS) ./cmd/scanners/aws
 
 # Publish images
 push: push-api push-scanners
