@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: quay.io/ecosystem-appeng/cluster-iq-console:0.1-alpha
+          image: quay.io/ecosystem-appeng/cluster-iq-console:latest
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
