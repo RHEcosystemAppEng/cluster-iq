@@ -7,9 +7,11 @@
 VERSION := $(shell cat VERSION)
 IMAGE_TAG := $(shell git rev-parse --short=7 HEAD)
 
+# Binary vars
 CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
 K8S_CLI ?= $(shell which oc >/dev/null 2>&1 && echo oc || echo kubectl)
 
+# Container images vars
 REGISTRY ?= quay.io
 PROJECT_NAME ?= cluster-iq
 REGISTRY_REPO ?= ecosystem-appeng
@@ -18,8 +20,10 @@ API_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${API_IMG_NAME}
 SCANNER_IMG_NAME ?= $(PROJECT_NAME)-aws-scanner
 SCANNER_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${SCANNER_IMG_NAME}
 
+# Building vars
 LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(IMAGE_TAG)"
 
+# Project directories
 TEST_DIR ?= ./test
 BUILD_DIR ?= ./build
 BIN_DIR ?= $(BUILD_DIR)/bin
