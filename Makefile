@@ -3,6 +3,7 @@
 ################################################################################
 
 # Global Vars
+#
 VERSION := $(shell cat VERSION)
 IMAGE_TAG := $(shell git rev-parse --short=7 HEAD)
 
