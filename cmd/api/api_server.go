@@ -33,6 +33,30 @@ var (
 	logger   *zap.Logger
 )
 
+// InstanceListResponse represents the API response containing a list of clusters
+type InstanceListResponse struct {
+	Count     int                  `json:"count"`
+	Instances []inventory.Instance `json:"instances"`
+}
+
+// NewInstanceListResponse creates a new InstanceListResponse instance and
+// controls if there is any Instance in the incoming list
+func NewInstanceListResponse(instances []inventory.Instance) *InstanceListResponse {
+	numInstances := len(instances)
+
+	// If there is no clusters, an empty array is returned instead of null
+	if numInstances == 0 {
+		instances = []inventory.Instance{}
+	}
+
+	response := InstanceListResponse{
+		Count:     numInstances,
+		Instances: instances,
+	}
+
+	return &response
+}
+
 // ClusterListResponse represents the API response containing a list of clusters
 type ClusterListResponse struct {
 	Count    int                 `json:"count"`
@@ -108,6 +132,25 @@ func addHeaders(c *gin.Context) {
 }
 
 // getAccounts returns every account in Stock
+func getInstances(c *gin.Context) {
+	logger.Debug("Retrieving complete instance inventory")
+	updateStock()
+	addHeaders(c)
+
+	var instances []inventory.Instance
+	for _, account := range inven.Accounts {
+		for _, cluster := range account.Clusters {
+			for _, instance := range cluster.Instances {
+				instances = append(instances, instance)
+			}
+		}
+	}
+
+	response := NewInstanceListResponse(instances)
+	c.PureJSON(http.StatusOK, response)
+}
+
+// getAccounts returns every account in Stock
 func getClusters(c *gin.Context) {
 	logger.Debug("Retrieving complete cluster inventory")
 	updateStock()
@@ -177,6 +220,7 @@ func main() {
 	router.GET("/accounts", getAccounts)
 	router.GET("/accounts/:name", getAccountsByName)
 	router.GET("/clusters", getClusters)
+	router.GET("/instances", getInstances)
 	// Mocked endpoints
 	router.GET("/mockedClusters", getMockClusters)
 	router.GET("/mockedAccounts", getMockAccounts)

@@ -56,8 +56,6 @@ func (s AWSStocker) MakeStock() error {
 		}
 	}
 
-	log.Println("stock making finished")
-
 	return nil
 }
 
@@ -91,12 +89,10 @@ func (s AWSStocker) getRegions() []string {
 }
 
 // TODO: doc
-func (s *AWSStocker) getConsoleLink() {
+func (s *AWSStocker) getConsoleLink() error {
 	hostedZones, err := s.getHostedZones()
 	if err != nil {
-		log.Println("can't retrieve DNS hosted zones", err)
-
-		return
+		return err
 	}
 
 	for _, cluster := range s.Account.Clusters {
@@ -109,7 +105,6 @@ func (s *AWSStocker) getConsoleLink() {
 			}
 
 			if strings.Contains(*zone.Name, clusterName) {
-				log.Println("MATCHED ", *zone.Name, "--", clusterName)
 				cl := s.Account.Clusters[cluster.Name]
 				cl.ConsoleLink = fmt.Sprintf("https://console-openshift-console.apps.%s", *zone.Name)
 				s.Account.Clusters[cluster.Name] = cl
@@ -117,6 +112,8 @@ func (s *AWSStocker) getConsoleLink() {
 			}
 		}
 	}
+
+	return nil
 }
 
 // TODO: doc
@@ -143,8 +140,13 @@ func (s *AWSStocker) processRegion(region string) error {
 		return fmt.Errorf("couldn't retrieve EC2 instances in region %s: %v", s.region, err)
 	}
 
+	// convert instances from ec2 to inventory.Instance
 	s.processInstances(instances)
-	s.getConsoleLink()
+
+	// Lookup Openshift console URL
+	if err := s.getConsoleLink(); err != nil {
+		return err
+	}
 
 	return nil
 }
