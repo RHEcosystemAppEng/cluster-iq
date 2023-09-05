@@ -30,10 +30,10 @@ var (
 )
 
 func init() {
-	// Logging config
+	// Initialize logging configuration.
 	logger = ciqLogger.NewLogger()
 
-	// Getting config
+	// Load configuration from environment variables.
 	dbHost := os.Getenv("CIQ_DB_HOST")
 	dbPort := os.Getenv("CIQ_DB_PORT")
 	dbPass = os.Getenv("CIQ_DB_PASS")
@@ -41,7 +41,6 @@ func init() {
 	dbURL = fmt.Sprintf("%s:%s", dbHost, dbPort)
 }
 
-// getProvider return a inventory.CloudProvider based on a string
 func getProvider(provider string) inventory.CloudProvider {
 	switch strings.ToUpper(provider) {
 	case "AWS":
@@ -54,17 +53,17 @@ func getProvider(provider string) inventory.CloudProvider {
 	return inventory.UnknownProvider
 }
 
-// GetCloudProviderAccounts TODO
-func GetCloudProviderAccounts() []inventory.Account {
+// getCloudProviderAccounts retrieves cloud provider accounts from a credentials file.
+func getCloudProviderAccounts() ([]inventory.Account, error) {
 	accounts := make([]inventory.Account, 0)
 
-	// Getting cloud accounts credentials file
+	// Load cloud accounts credentials file.
 	cfg, err := ini.Load(credsFile)
 	if err != nil {
-		logger.Fatal("Can't Open credentials file", zap.Error(err))
+		return nil, fmt.Errorf("%w", err)
 	}
 
-	// Reading INI file content
+	// Read INI file content.
 	for _, account := range cfg.Sections() {
 		newAccount := inventory.NewAccount(
 			account.Name(),
@@ -75,27 +74,32 @@ func GetCloudProviderAccounts() []inventory.Account {
 		accounts = append(accounts, *newAccount)
 	}
 
-	return accounts
+	return accounts, nil
 }
 
-// createStockers creates and configures a stocker instance for each Account to be scraped
+// createStockers creates and configures stocker instances for each provided account to be inventoried.
 func createStockers(accounts []inventory.Account) error {
 	for _, account := range accounts {
 		switch account.Provider {
 		case inventory.AWSProvider:
-			logger.Info("Adding AWS account to be inventored\n", zap.String("account", account.Name))
+			logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
 			stockers = append(stockers, stocker.NewAWSStocker(account))
 		case inventory.GCPProvider:
-			err := fmt.Errorf("Google Cloud Platform (GCP) Stocker not implemented! Account %s will not be scanned", account.Name)
-			logger.Error("Can't scan GCP account", zap.Error(err))
-			return err
+			logger.Warn("Failed to scan GCP account",
+				zap.String("account", account.Name),
+				zap.String("reason", "not implemented"),
+			)
 		case inventory.AzureProvider:
-			err := fmt.Errorf("Microsoft Azure Stocker not implemented! Account %s will not be scanned", account.Name)
-			logger.Error("Can't scan Azure account", zap.Error(err))
-			return err
+			logger.Warn("Failed to scan Azure account",
+				zap.String("account", account.Name),
+				zap.String("reason", "not implemented"),
+			)
 		}
 	}
 
+	if len(stockers) == 0 {
+		return fmt.Errorf("no valid stockers created")
+	}
 	return nil
 }
 
@@ -106,45 +110,55 @@ func startStockers() error {
 		if err != nil {
 			return err
 		}
-		// TODO handle error properly
 		inven.AddAccount(stockerInstance.GetResults())
 	}
 	return nil
 }
 
 func main() {
-	defer logger.Sync()
+	// Ignore Logger sync error
+	defer func() { _ = logger.Sync() }()
+
 	rdb, err := redis.InitDatabase(dbURL, dbPass)
 	if err != nil {
-		logger.Error("Failed to establish database connection", zap.Error(err))
+		logger.Fatal("Failed to establish database connection", zap.Error(err))
 	}
 	// Prepare New Stock
 	inven = inventory.NewInventory()
 
 	// Get Cloud Accounts from credentials file
-	accounts := GetCloudProviderAccounts()
+	accounts, err := getCloudProviderAccounts()
+	if err != nil {
+		logger.Error("Failed to get cloud provider accounts", zap.Error(err))
+		return
+	}
 
-	// Running Stockers
-	// TODO Handle error properly
-	createStockers(accounts)
+	// Run Stockers
+	err = createStockers(accounts)
+
+	if err != nil {
+		logger.Error("Failed to add stockers", zap.Error(err))
+		return
+	}
+
 	err = startStockers()
 	if err != nil {
-		logger.Fatal("Failed to start up stocker instances", zap.Error(err))
+		logger.Error("Failed to start up stocker instances", zap.Error(err))
 		return
 	}
 
 	b, err := json.Marshal(inven)
 	if err != nil {
-		logger.Fatal("Failed to marshal inventory data from DB", zap.Error(err))
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
 		return
 	}
 
 	ctx := context.Background()
-	logger.Info("Writing scraped resources into redis")
+	logger.Info("Saving results to the database")
 	// TODO Refactor into dedicated function
 	err = rdb.Set(ctx, "Stock", string(b), redis.DataExpirationTTL).Err()
 	if err != nil {
-		logger.Fatal("Failed to write results into DB", zap.Error(err))
+		logger.Error("Failed to write results to the database", zap.Error(err))
 		return
 	}
 

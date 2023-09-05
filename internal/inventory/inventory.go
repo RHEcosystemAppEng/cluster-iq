@@ -28,6 +28,7 @@ func (s Inventory) IsAccountOnInventory(name string) bool {
 // AddAccount adds a new account into the Inventory
 func (s *Inventory) AddAccount(account Account) error {
 	if s.IsAccountOnInventory(account.Name) {
+		// TODO Should not be error?
 		return fmt.Errorf("Account %s already exists on Inventory", account.Name)
 	}
 	s.Accounts[account.Name] = account

@@ -2,16 +2,17 @@ package stocker
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"go.uber.org/zap"
 )
 
 // AWSStocker object to make stock on AWS
@@ -20,6 +21,8 @@ type AWSStocker struct {
 	session *session.Session
 	Account inventory.Account
 }
+
+var logger = ciqLogger.NewLogger()
 
 // NewAWSStocker TODO
 func NewAWSStocker(account inventory.Account) AWSStocker {
@@ -36,7 +39,7 @@ func (s *AWSStocker) CreateSession() {
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(s.region)
 	s.session, err = session.NewSession(awsConfig)
 	if err != nil {
-		log.Fatalf("failed to initialize new session: %v", err)
+		logger.Error("Failed to initialize new session", zap.Error(err))
 		return
 	}
 }
@@ -50,7 +53,10 @@ func (s AWSStocker) MakeStock() error {
 	for _, region := range regions {
 		err := s.processRegion(region)
 		if err != nil {
-			log.Printf("error processing region %s: %v", region, err)
+			logger.Warn("error processing region",
+				zap.String("region", region),
+				zap.String("reason", err.Error()),
+			)
 			// Continue to the next region even if an error occurs
 			continue
 		}
@@ -75,7 +81,7 @@ func (s AWSStocker) getRegions() []string {
 
 	regions, err := ec2Client.DescribeRegions(&ec2.DescribeRegionsInput{})
 	if err != nil {
-		log.Fatal(err.Error())
+		logger.Warn("Failed to retrieve AWS regions", zap.String("reason", err.Error()))
 		return nil
 	}
 
@@ -132,12 +138,11 @@ func (s *AWSStocker) processRegion(region string) error {
 	s.region = region
 	s.CreateSession()
 	ec2Client := ec2.New(s.session)
-	log.Printf("scraping region [%s] on account [%s]\n", s.region, s.Account.Name)
+	logger.Info("Scraping region", zap.String("region", s.region), zap.String("account", s.Account.Name))
 
 	instances, err := getInstances(ec2Client)
 	if err != nil {
-		// TODO wrap error?
-		return fmt.Errorf("couldn't retrieve EC2 instances in region %s: %v", s.region, err)
+		return fmt.Errorf("couldn't retrieve EC2 instances in region %s: %w", s.region, err)
 	}
 
 	// convert instances from ec2 to inventory.Instance
