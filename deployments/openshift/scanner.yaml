@@ -16,7 +16,7 @@ spec:
         spec:
           containers:
             - name: scanner
-              image: quay.io/ecosystem-appeng/cluster-iq-aws-scanner:0.1-alpha
+              image: quay.io/ecosystem-appeng/cluster-iq-aws-scanner:latest
               resources:
                 requests:
                   memory: "64Mi"

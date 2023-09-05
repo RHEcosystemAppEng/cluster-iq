@@ -92,6 +92,8 @@ The following services are available:
 | Redis          | 0.0.0.0:6379          |
 
 ### Scanners
+[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner)
+
 As each cloud provider has a different API and because of this, a specific
 scanner adapted to the provider is required.
 
@@ -116,6 +118,7 @@ make build-aws-scanner
 
 
 ## API Server
+[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-api/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-api)
 
 The API server interacts between the UI and the DB.
 
