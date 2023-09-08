@@ -1,26 +1,26 @@
 openapi: 3.0.3
 info:
-  title: Inventory API
+  title: ClusterIQ API
   contact:
     email: fake@io.io
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 1.0.11
+  version: 0.1-alpha
 servers:
   - url: https://fake.swagger.io/api/v1
 tags:
-  - name: account
+  - name: Accounts
     description: Everything about accounts
-  - name: cluster
+  - name: Clusters
     description: Everything about clusters
-  - name: instance
-    description: Everything about cluster instances
+  - name: Instances
+    description: Everything about cluster instances (nodes)
 paths:
   /accounts:
     get:
       tags:
-        - account
+        - Accounts
       summary: Retrieves the list of accounts.
       operationId: findAccounts
       responses:
@@ -37,7 +37,7 @@ paths:
   /accounts/{accountId}:
     get:
       tags:
-        - account
+        - Accounts
       summary: Find account by ID
       description: Returns a single account
       operationId: getAccountById
@@ -60,12 +60,48 @@ paths:
           description: Invalid ID supplied
         '404':
           description: Account not found
-  /clusters:
+  /accounts/{accountName}:
     get:
       tags:
-        - cluster
-      summary: Retrieves the list of clusters.
-      operationId: findClusters
+        - Accounts
+      summary: Find account by Name
+      description: Returns a list of accounts by name
+      operationId: getAccountByName
+      parameters:
+        - name: accountName
+          in: path
+          description: ID of account to return
+          required: true
+          schema:
+            type: string
+            format: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'          
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Account not found
+
+  /clusters/{clusterId}/poweroff:
+    post:
+      tags:
+        - Clusters
+      summary: Power Off Cluster
+      operationId: Powers off the specified cluster
+      parameters:
+        - name: clusterId
+          in: path
+          description: ID of account to return
+          required: true
+          schema:
+            type: string
+            format: string
+
       responses:
         '200':
           description: successful operation
@@ -77,10 +113,37 @@ paths:
                   $ref: '#/components/schemas/Cluster'          
         '400':
           description: Invalid status value
+  /clusters/{clusterId}/poweron:
+    post:
+      tags:
+        - Clusters
+      summary: Power On Cluster
+      operationId: Powers on the specified cluster
+      parameters:
+        - name: clusterId
+          in: path
+          description: ID of account to return
+          required: true
+          schema:
+            type: string
+            format: string
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cluster'          
+        '400':
+          description: Invalid status value
+
   /clusters/{clusterId}:
     get:
       tags:
-        - cluster
+        - Clusters
       summary: Find cluster by ID
       description: Returns a single cluster
       operationId: getClusterById
@@ -106,7 +169,7 @@ paths:
   /instances:
     get:
       tags:
-        - instance
+        - Instances
       summary: Retrieves the list of instances.
       operationId: findInstances
       parameters:
@@ -138,21 +201,30 @@ components:
     Account:
       required:
         - id
+        - name
+        - provider
       type: object
       properties:
         id:
           type: string
           example: CyberNexa
+        name:
+          type: string
+          example: CyberNexa
         provider:
           type: string
-          example: AWS
+          example: AWS2
         clusters:
           type: array
           items:
             $ref: '#/components/schemas/Cluster'
+        lastScanTimestamp:
+          type: string
+          example: 2017-07-21T17:32:28Z
     Instance:
       required:
         - id
+        - provider
       type: object
       properties:
         id:
@@ -180,6 +252,8 @@ components:
     Cluster:
       required:
         - id
+        - name
+        - provider
       type: object
       properties:
         id:
@@ -201,3 +275,5 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Instance'
+
+
