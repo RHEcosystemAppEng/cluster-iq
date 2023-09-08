@@ -13,6 +13,7 @@ services:
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
   api:
+    depends_on: redis
     image: quay.io/ecosystem-appeng/cluster-iq-api:latest
     container_name: api
     restart: always
@@ -24,16 +25,19 @@ services:
       CIQ_DB_HOST: "redis"
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
+      CIQ_LOG_LEVEL: "DEBUG"
 
   scanner:
-    image: quay.io/ecosystem-appeng/cluster-iq-aws-scanner:latest
-    container_name: aws_scanner
+    image: quay.io/ecosystem-appeng/cluster-iq-scanner:latest
+    depends_on: redis
+    container_name: scanner
     restart: "no"
     environment:
       CIQ_DB_HOST: "redis"
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
       CIQ_CREDS_FILE: "/credentials"
+      CIQ_LOG_LEVEL: "DEBUG"
     volumes:
       - ../../secrets/credentials:/credentials:ro
 
