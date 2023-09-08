@@ -211,10 +211,11 @@ func updateStock() {
 }
 
 func main() {
-	defer logger.Sync()
+	// Ignore Logger sync error
+	defer func() { _ = logger.Sync() }()
+
 	logger.Info("Starting ClusterIQ API", zap.String("version", version), zap.String("commit", commit))
-	logger.Info("API URL: ", zap.String("api_url", apiURL))
-	logger.Info("DB URL: ", zap.String("db_url", dbURL))
+	logger.Info("Connection properties", zap.String("api_url", apiURL), zap.String("db_url", dbURL))
 
 	// Preparing API Endpoints
 	router.GET("/accounts", getAccounts)
