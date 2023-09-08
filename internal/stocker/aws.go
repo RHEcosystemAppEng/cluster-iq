@@ -187,7 +187,7 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 			newInstance := inventory.NewInstance(*id, name, *region, *instanceType, state, provider, inventory.ConvertEC2TagtoTag(tags))
 
 			if !s.Account.IsClusterOnAccount(clusterName) {
-				cluster := inventory.NewCluster(clusterName, provider, *region, "")
+				cluster := inventory.NewCluster(clusterName, provider, *region, s.Account.Name, "Unknown Console Link")
 				// TODO Missed error checking
 				s.Account.AddCluster(cluster)
 			}

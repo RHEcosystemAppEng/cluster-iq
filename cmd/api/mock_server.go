@@ -35,9 +35,9 @@ func getMockClusters(c *gin.Context) {
 func getMockAccounts(c *gin.Context) {
 	addHeaders(c)
 
-	clusterA := inventory.NewCluster("clusterA", inventory.AWSProvider, "eu-west-1", "http://console.com")
-	clusterB := inventory.NewCluster("clusterB", inventory.AWSProvider, "eu-west-1", "http://console.com")
-	clusterC := inventory.NewCluster("clusterC", inventory.GCPProvider, "eu-west-1", "http://console.com")
+	clusterA := inventory.NewCluster("clusterA", inventory.AWSProvider, "eu-west-1", "AccountName", "http://console.com")
+	clusterB := inventory.NewCluster("clusterB", inventory.AWSProvider, "eu-west-1", "AccountName", "http://console.com")
+	clusterC := inventory.NewCluster("clusterC", inventory.GCPProvider, "eu-west-1", "AccountName", "http://console.com")
 
 	accounts := []inventory.Account{
 		{

@@ -37,7 +37,7 @@ func TestGetCluster(t *testing.T) {
 		t.Errorf("Wrong cluster returned: [%v][%s]", &cluster, cluster)
 	}
 
-	newCluster := NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
+	newCluster := NewCluster("testCluster-1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
 	acc.AddCluster(newCluster)
 	cluster = acc.GetCluster("testCluster-1")
 	if cluster == nil {
@@ -51,7 +51,7 @@ func TestAddCluster(t *testing.T) {
 	var err error
 
 	// First Insert
-	cluster = NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
+	cluster = NewCluster("testCluster-1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -65,7 +65,7 @@ func TestAddCluster(t *testing.T) {
 
 	}
 	// Second Insert
-	cluster = NewCluster("testCluster-2", AWSProvider, "eu-west-1", "https://url.com")
+	cluster = NewCluster("testCluster-2", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -80,7 +80,7 @@ func TestAddCluster(t *testing.T) {
 	}
 
 	// Repeated Insert
-	cluster = NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
+	cluster = NewCluster("testCluster-1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -100,7 +100,7 @@ func TestAddCluster(t *testing.T) {
 
 func TestPrintAccount(t *testing.T) {
 	acc := NewAccount("testAccount", AWSProvider, "user", "password")
-	cluster := NewCluster("testCluster-1", AWSProvider, "eu-west-1", "https://url.com")
+	cluster := NewCluster("testCluster-1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
 	acc.AddCluster(cluster)
 	acc.PrintAccount()
 }
