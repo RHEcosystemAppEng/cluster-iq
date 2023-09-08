@@ -7,21 +7,22 @@ FROM golang:1.19.12 AS builder
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o aws_scanner ./cmd/scanners/aws/scanner.go
+# Arguments
+ARG VERSION=""
+ARG COMMIT=""
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-scanner -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/scanner/scanner.go 
 
 ## Run
 ####################
 FROM registry.access.redhat.com/ubi8/ubi-micro:8.8-5
 
-# Arguments
-ARG VERSION="0.1-alpha"
-
 # Labels
 LABEL version=$VERSION
-LABEL description="Openshift Inventory AWS Scanner"
+LABEL description="ClusterIQ cloud scanner"
 
 # Binary
-COPY --from=builder /app/aws_scanner /aws_scanner
+COPY --from=builder /app/cluster-iq-scanner /cluster-iq-scanner
 # CA Certs to access AWS domains
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
@@ -30,4 +31,4 @@ ENV CIQ_DB_HOST="redis"
 ENV CIQ_DB_PORT="6379"
 ENV CIQ_DB_PASS=""
 
-ENTRYPOINT ["/aws_scanner"]
+ENTRYPOINT ["/cluster-iq-scanner"]
