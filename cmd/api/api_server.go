@@ -150,7 +150,7 @@ func getInstances(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// getAccounts returns every account in Stock
+// getClusters returns every cluster in Stock
 func getClusters(c *gin.Context) {
 	logger.Debug("Retrieving complete cluster inventory")
 	updateStock()
@@ -160,6 +160,26 @@ func getClusters(c *gin.Context) {
 	for _, account := range inven.Accounts {
 		for _, cluster := range account.Clusters {
 			clusters = append(clusters, *cluster)
+		}
+	}
+
+	response := NewClusterListResponse(clusters)
+	c.PureJSON(http.StatusOK, response)
+}
+
+// getClusters returns the clusters in Stock with the requested name
+func getClustersByName(c *gin.Context) {
+	name := c.Param("name")
+	logger.Debug("Retrieving clusters by name", zap.String("clusterName", name))
+	updateStock()
+	addHeaders(c)
+
+	var clusters []inventory.Cluster
+	for _, account := range inven.Accounts {
+		for _, cluster := range account.Clusters {
+			if cluster.Name == name {
+				clusters = append(clusters, *cluster)
+			}
 		}
 	}
 
@@ -185,10 +205,10 @@ func getAccounts(c *gin.Context) {
 
 // getAccountsByName returns an account by its name in Stock
 func getAccountsByName(c *gin.Context) {
-	logger.Debug("Retrieving accounts by name")
+	name := c.Param("name")
+	logger.Debug("Retrieving accounts by name", zap.String("accountName", name))
 	updateStock()
 	addHeaders(c)
-	name := c.Param("name")
 
 	account, ok := inven.Accounts[name]
 	if ok {
@@ -220,6 +240,7 @@ func main() {
 	router.GET("/accounts", getAccounts)
 	router.GET("/accounts/:name", getAccountsByName)
 	router.GET("/clusters", getClusters)
+	router.GET("/clusters/:name", getClustersByName)
 	router.GET("/instances", getInstances)
 	// Mocked endpoints
 	router.GET("/mockedClusters", getMockClusters)
