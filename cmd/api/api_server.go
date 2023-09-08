@@ -221,9 +221,6 @@ func main() {
 	router.GET("/accounts/:name", getAccountsByName)
 	router.GET("/clusters", getClusters)
 	router.GET("/instances", getInstances)
-	// Mocked endpoints
-	router.GET("/mockedClusters", getMockClusters)
-	router.GET("/mockedAccounts", getMockAccounts)
 
 	// RedisDB connection
 	ctx = context.Background()
