@@ -1,0 +1,203 @@
+openapi: 3.0.3
+info:
+  title: Inventory API
+  contact:
+    email: fake@io.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.11
+servers:
+  - url: https://fake.swagger.io/api/v1
+tags:
+  - name: account
+    description: Everything about accounts
+  - name: cluster
+    description: Everything about clusters
+  - name: instance
+    description: Everything about cluster instances
+paths:
+  /accounts:
+    get:
+      tags:
+        - account
+      summary: Retrieves the list of accounts.
+      operationId: findAccounts
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        '400':
+          description: Invalid status value
+  /accounts/{accountId}:
+    get:
+      tags:
+        - account
+      summary: Find account by ID
+      description: Returns a single account
+      operationId: getAccountById
+      parameters:
+        - name: accountId
+          in: path
+          description: ID of account to return
+          required: true
+          schema:
+            type: string
+            format: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'          
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Account not found
+  /clusters:
+    get:
+      tags:
+        - cluster
+      summary: Retrieves the list of clusters.
+      operationId: findClusters
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cluster'          
+        '400':
+          description: Invalid status value
+  /clusters/{clusterId}:
+    get:
+      tags:
+        - cluster
+      summary: Find cluster by ID
+      description: Returns a single cluster
+      operationId: getClusterById
+      parameters:
+        - name: clusterId
+          in: path
+          description: ID of cluster to return
+          required: true
+          schema:
+            type: string
+            format: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'          
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Account not found
+  /instances:
+    get:
+      tags:
+        - instance
+      summary: Retrieves the list of instances.
+      operationId: findInstances
+      parameters:
+        - name: account
+          in: query
+          description: ID of the account to which the cluster belongs
+          required: false
+          schema:
+            type: string
+        - name: cluster
+          in: query
+          description: ID of the cluster to which the instance belongs
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Instance'          
+        '400':
+          description: Invalid status value
+components:
+  schemas:
+    Account:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+          example: CyberNexa
+        provider:
+          type: string
+          example: AWS
+        clusters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cluster'
+    Instance:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+          example: i-0758b6e0dc9a7esd
+        name:
+          type: string
+          example: i-0758b6e0dc9a7esd
+        region:
+          type: string
+          example: eu-north-1a
+        instanceType:
+          type: string
+          example: t3.medium
+        state:
+          type: string
+          example: Running
+        provider:
+          type: string
+          example: AWS
+        tags:
+          type: array
+          items:
+            type: string
+    Cluster:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+          example: cluster-24gsd
+        provider:
+          type: string
+          example: AWS
+        status:
+          type: string
+          example: Running
+        region:
+          type: string
+          example: ca-central-1d
+        consoleLink:
+          type: string
+          example: https://console.fake.io
+        instances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Instance'
