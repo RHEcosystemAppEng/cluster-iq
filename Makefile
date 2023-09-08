@@ -17,7 +17,7 @@ PROJECT_NAME ?= cluster-iq
 REGISTRY_REPO ?= ecosystem-appeng
 API_IMG_NAME ?= $(PROJECT_NAME)-api
 API_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${API_IMG_NAME}
-SCANNER_IMG_NAME ?= $(PROJECT_NAME)-aws-scanner
+SCANNER_IMG_NAME ?= $(PROJECT_NAME)-scanner
 SCANNER_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${SCANNER_IMG_NAME}
 
 # Building vars
@@ -36,25 +36,22 @@ include .env
 export
 
 # PHONY rules
-.PHONY: deploy
+.PHONY: deploy test
 
 # Help message
 define HELP_MSG
 Makefile Rules:
 	deploy: Deploys the application on the current context configured on Openshift/Kubernetes CLI
 	clean: Removes local container images
-	build: Builds every component image in the repo: (API, AWS-Scanner)
-	build-api: Builds API image.
-	build-scanners: Builds the scanners for each supported cloud provider
-	build-aws-scanner: Builds the scanner for AWS
-	local-build: Builds every component it the repo in your local environment: (API, AWS-Scanner)
+	build: Builds every component image in the repo: (API, scanner)
+	build-api: Builds API container image
+	build-scanner: Builds the cluster-iq scanner container image
+	local-build: Builds every component it the repo in your local environment: (API, scanner)
 	local-build-api: Builds API binary in your local environment.
-	local-build-scanners: Builds in your local environment the scanners for each supported cloud provider
-	local-build-aws-scanner: Builds in your local environment the scanner for AWS
+	local-build-scanner: Builds in your local environment the cluster-iq scanner
 	push: Pushes every container image into remote repo
 	push-api: Pushes API container image
-	push-scanner: Pushes every supported scanner image
-	push-aws-scanner: Pushes AWS scanner image
+	push-scanner: Pushes cluster-iq-scanner container image
 	start-dev: Starts a local environment using 'docker/podman-compose'
 	stop-dev: Stops the local environment using 'docker/podman-compose'
 	help: Displays this message
@@ -70,21 +67,19 @@ deploy:
 # Building using containers:
 clean:
 	@echo "### [Cleanning Docker images] ###"
-	@$(CONTAINER_ENGINE) images | grep $(PROJECT_NAME) | awk '{print $3}' | xargs $(CONTAINER_ENGINE) rmi -f
+	@$(CONTAINER_ENGINE) images | grep $(PROJECT_NAME) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
-build: build-scanners build-api
+build: build-scanner build-api
 
 build-api:
 	@echo "### [Building API] ###"
-	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-api --build-arg="VERSION=${VERSION}" .
+	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-api --build-arg="VERSION=${VERSION}" --build-arg="COMMIT=${IMAGE_TAG}" .
 	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(VERSION)
 	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(IMAGE_TAG)
 
-build-scanners: build-aws-scanner
-
-build-aws-scanner:
-	@echo "### [Building AWS Scanner] ###"
-	@$(CONTAINER_ENGINE) build -t $(SCANNER_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-scanner-aws --build-arg="VERSION=${VERSION}" .
+build-scanner:
+	@echo "### [Building Scanner] ###"
+	@$(CONTAINER_ENGINE) build -t $(SCANNER_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-scanner --build-arg="VERSION=${VERSION}" --build-arg="COMMIT=${IMAGE_TAG}" .
 	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(VERSION)
 	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(IMAGE_TAG)
 
@@ -94,29 +89,25 @@ local-clean:
 	@echo "### [Cleanning local building] ###"
 	@rm -Rf $(BIN_DIR)
 
-local-build: local-build-scanners local-build-api
+local-build: local-build-scanner local-build-api
 
 local-build-api:
 	@echo "### [Building API] ###"
 	@go build -o $(BIN_DIR)/api/api $(LDFLAGS) ./cmd/api/
 
-local-build-scanners: local-build-api local-build-aws-scanner
-
-local-build-aws-scanner:
-	@echo "### [Building AWS Scanner] ###"
-	@go build -o $(BIN_DIR)/scanners/aws_scanner $(LDFLAGS) ./cmd/scanners/aws
+local-build-scanner:
+	@echo "### [Building Scanner] ###"
+	@go build -o $(BIN_DIR)/scanners/scanner $(LDFLAGS) ./cmd/scanner
 
 # Publish images
-push: push-api push-scanners
+push: push-api push-scanner
 
 push-api:
 	$(CONTAINER_ENGINE) push $(API_IMAGE):latest
 	$(CONTAINER_ENGINE) push $(API_IMAGE):$(VERSION)
 	$(CONTAINER_ENGINE) push $(API_IMAGE):$(IMAGE_TAG)
 
-push-scanners: push-aws-scanner
-
-push-aws-scanner:
+push-scanner:
 	@$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):latest
 	@$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):$(VERSION)
 	@$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):$(IMAGE_TAG)
@@ -133,7 +124,6 @@ stop-dev:
 
 
 # Tests
-.PHONY: test
 test:
 	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
 	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out
