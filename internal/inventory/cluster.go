@@ -18,6 +18,9 @@ type Cluster struct {
 	// The region of the infrastructure provider in which the cluster is deployed
 	Region string `redis:"region" json:"region"`
 
+	// Account name which this cluster belongs to
+	AccountName string `redis:"accountName" json:"accountName"`
+
 	// Openshift Console URL. Might not be accesible if its protected
 	ConsoleLink string `redis:"consoleLink" json:"consoleLink"`
 
@@ -26,12 +29,13 @@ type Cluster struct {
 }
 
 // NewCluster creates a new cluster instance
-func NewCluster(name string, provider CloudProvider, region string, consoleLink string) Cluster {
+func NewCluster(name string, provider CloudProvider, region string, accountName string, consoleLink string) Cluster {
 	return Cluster{
 		Name:        name,
 		Provider:    provider,
 		Status:      Unknown,
 		Region:      region,
+		AccountName: accountName,
 		ConsoleLink: consoleLink,
 		Instances:   make([]Instance, 0),
 	}
