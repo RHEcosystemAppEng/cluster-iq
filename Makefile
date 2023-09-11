@@ -144,7 +144,7 @@ cover:
 
 # Swagger
 swagger-editor:
-	@docker run -p 8081:8080 -e SWAGGER_FILE=/open_api_design.yaml -v ./open_api_design.yaml:/open_api_design.yaml swaggerapi/swagger-editor
+	@$(CONTAINER_ENGINE) run -p 8081:8080 -e SWAGGER_FILE=/open_api_design.yaml -v ./open_api_design.yaml:/open_api_design.yaml swaggerapi/swagger-editor
 
 
 
