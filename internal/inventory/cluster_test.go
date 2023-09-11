@@ -9,9 +9,10 @@ func TestNewCluster(t *testing.T) {
 	name := "testCluster"
 	provider = UnknownProvider
 	region := "eu-west-1"
+	accountName := "testAccount"
 	consoleLink := "https://url.com"
 
-	cluster = NewCluster(name, provider, region, consoleLink)
+	cluster = NewCluster(name, provider, region, accountName, consoleLink)
 
 	if cluster.Name != name {
 		t.Errorf("Cluster's Name do not match. Have: %s ; Expected: %s", cluster.Name, name)
