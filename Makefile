@@ -54,6 +54,7 @@ Makefile Rules:
 	push-scanner: Pushes cluster-iq-scanner container image
 	start-dev: Starts a local environment using 'docker/podman-compose'
 	stop-dev: Stops the local environment using 'docker/podman-compose'
+	swagger-editor: Starts Swagger Editor using a docker container
 	help: Displays this message
 endef
 export HELP_MSG
@@ -130,6 +131,11 @@ test:
 
 cover:
 	@go tool cover -func $(TEST_DIR)/cover.out
+
+# Swagger
+swagger-editor:
+	@$(CONTAINER_ENGINE) run -p 8081:8080 -e SWAGGER_FILE=/open_api_design.yaml -v ./open_api_design.yaml:/open_api_design.yaml swaggerapi/swagger-editor
+
 
 
 # Help
