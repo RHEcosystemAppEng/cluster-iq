@@ -79,7 +79,6 @@ func (s *Scanner) readCloudProviderAccounts() error {
 	// Load cloud accounts credentials file.
 	cfg, err := ini.Load(s.credsFile)
 	if err != nil {
-		s.logger.Panic("Can't load credentials file. Aborting...", zap.Error(err))
 		return err
 	}
 
@@ -108,14 +107,14 @@ func (s *Scanner) createStockers() error {
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
 			s.stockers = append(s.stockers, stocker.NewAWSStocker(&account, logger))
 		case inventory.GCPProvider:
-			logger.Warn("Can't scan GCP account",
+			logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when Stocker is implemented
 			//s.stockers = append(s.stockers, stocker.NewGCPStocker(&account, logger))
 		case inventory.AzureProvider:
-			logger.Warn("Can't scan Azure account",
+			logger.Warn("Failed to scan Azure account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
@@ -125,7 +124,7 @@ func (s *Scanner) createStockers() error {
 	}
 
 	if len(s.stockers) == 0 {
-		s.logger.Warn("No accounts has been provided for scan", zap.String("credentials_file", s.credsFile))
+		return fmt.Errorf("Any account has been provided for scanning on credentials file")
 	}
 
 	if s.logger.Core().Enabled(zap.DebugLevel) {
@@ -161,8 +160,6 @@ func main() {
 		zap.String("credentials file", credsFile),
 	)
 
-	var err error
-
 	rdb, err := redis.InitDatabase(dbURL, dbPass)
 	if err != nil {
 		logger.Fatal("Failed to establish database connection", zap.Error(err))
@@ -178,7 +175,7 @@ func main() {
 	// Run Stockers
 	err = scan.createStockers()
 	if err != nil {
-		logger.Error("Failed to add stockers", zap.Error(err))
+		logger.Error("Failed to create stockers", zap.Error(err))
 		return
 	}
 
