@@ -7,18 +7,19 @@ FROM golang:1.19.12 AS builder
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api ./cmd/api/*.go
+# Arguments
+ARG VERSION=""
+ARG COMMIT=""
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/api/*.go
 
 ## Run
 ####################
-FROM scratch
-
-# Arguments
-ARG VERSION="0.1-alpha"
+FROM registry.access.redhat.com/ubi8/ubi-micro:8.8-5
 
 # Labels
 LABEL version=$VERSION
-LABEL description="Openshift Inventory API"
+LABEL description="ClusterIQ API"
 
 # Binary
 COPY --from=builder /app/cluster-iq-api /cluster-iq-api

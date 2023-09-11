@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -15,45 +14,55 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	defaultAWSRegion = "eu-west-1"
+)
+
 // AWSStocker object to make stock on AWS
 type AWSStocker struct {
 	region  string
 	session *session.Session
-	Account inventory.Account
+	Account *inventory.Account
+	logger  *zap.Logger
 }
 
-var logger = ciqLogger.NewLogger()
-
-// NewAWSStocker TODO
-func NewAWSStocker(account inventory.Account) AWSStocker {
-	st := AWSStocker{region: "eu-west-1"}
-	st.Account = *inventory.NewAccount(account.Name, inventory.AWSProvider, account.GetUser(), account.GetPassword())
-	st.CreateSession()
-	return st
+// NewAWSStocker create and returns a pointer to a new AWSStocker instance
+func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
+	st := AWSStocker{region: defaultAWSRegion, logger: logger}
+	st.Account = account
+	if err := st.CreateSession(); err != nil {
+		st.logger.Error("Failed to initialize new session during AWSStocker creation", zap.Error(err))
+		return nil
+	}
+	return &st
 }
 
-// CreateSession TODO
-func (s *AWSStocker) CreateSession() {
+// CreateSession Initialices the AWS API session
+func (s *AWSStocker) CreateSession() error {
 	var err error
 	creds := credentials.NewStaticCredentials(s.Account.GetUser(), s.Account.GetPassword(), "")
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(s.region)
 	s.session, err = session.NewSession(awsConfig)
+
 	if err != nil {
-		logger.Error("Failed to initialize new session", zap.Error(err))
-		return
+		return err
 	}
+	return nil
 }
 
 // MakeStock TODO
-func (s AWSStocker) MakeStock() error {
-	s.CreateSession()
+func (s *AWSStocker) MakeStock() error {
+	if err := s.CreateSession(); err != nil {
+		s.logger.Error("Failed to initialize new session when scanning AWS account", zap.String("account_name", s.Account.Name), zap.Error(err))
+		return err
+	}
 
 	regions := s.getRegions()
 
 	for _, region := range regions {
 		err := s.processRegion(region)
 		if err != nil {
-			logger.Warn("error processing region",
+			s.logger.Error("Error processing region",
 				zap.String("region", region),
 				zap.String("reason", err.Error()),
 			)
@@ -72,7 +81,7 @@ func (s AWSStocker) PrintStock() {
 
 // TODO: doc
 func (s AWSStocker) GetResults() inventory.Account {
-	return s.Account
+	return *s.Account
 }
 
 // TODO: doc
@@ -81,7 +90,7 @@ func (s AWSStocker) getRegions() []string {
 
 	regions, err := ec2Client.DescribeRegions(&ec2.DescribeRegionsInput{})
 	if err != nil {
-		logger.Warn("Failed to retrieve AWS regions", zap.String("reason", err.Error()))
+		s.logger.Warn("Failed to retrieve AWS regions", zap.String("reason", err.Error()))
 		return nil
 	}
 
@@ -138,7 +147,7 @@ func (s *AWSStocker) processRegion(region string) error {
 	s.region = region
 	s.CreateSession()
 	ec2Client := ec2.New(s.session)
-	logger.Info("Scraping region", zap.String("region", s.region), zap.String("account", s.Account.Name))
+	s.logger.Info("Scraping region", zap.String("region", s.region), zap.String("account", s.Account.Name))
 
 	instances, err := getInstances(ec2Client)
 	if err != nil {
