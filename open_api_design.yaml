@@ -65,12 +65,12 @@ paths:
       tags:
         - Accounts
       summary: Find account by Name
-      description: Returns a list of accounts by name
+      description: Returns a single account
       operationId: getAccountByName
       parameters:
         - name: accountName
           in: path
-          description: ID of account to return
+          description: Name of account to return
           required: true
           schema:
             type: string
@@ -83,7 +83,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'          
         '400':
-          description: Invalid ID supplied
+          description: Invalid name supplied
         '404':
           description: Account not found
 
@@ -92,11 +92,11 @@ paths:
       tags:
         - Clusters
       summary: Power Off Cluster
-      operationId: Powers off the specified cluster
+      operationId: powerOff
       parameters:
         - name: clusterId
           in: path
-          description: ID of account to return
+          description: ID of cluster
           required: true
           schema:
             type: string
@@ -118,11 +118,11 @@ paths:
       tags:
         - Clusters
       summary: Power On Cluster
-      operationId: Powers on the specified cluster
+      operationId: powerOn
       parameters:
         - name: clusterId
           in: path
-          description: ID of account to return
+          description: ID of cluster
           required: true
           schema:
             type: string
