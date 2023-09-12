@@ -187,6 +187,28 @@ func getClustersByName(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
+// getClusterInstances returns instances from clusters with the specified name.
+func getClusterInstances(c *gin.Context) {
+	clusterName := c.Param("name")
+	logger.Debug("Retrieving cluster instances", zap.String("clusterName", clusterName))
+	updateStock()
+	addHeaders(c)
+
+	var instances []inventory.Instance
+
+	for _, account := range inven.Accounts {
+		for _, cluster := range account.Clusters {
+			if cluster.Name == clusterName {
+				instances = append(instances, cluster.Instances...)
+				c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
+				return
+			}
+		}
+	}
+
+	c.PureJSON(http.StatusNotFound, gin.H{"error": "cluster not found"})
+}
+
 // getAccounts returns every account in Stock
 func getAccounts(c *gin.Context) {
 	logger.Debug("Retrieving complete accounts inventory")
@@ -242,6 +264,7 @@ func main() {
 	router.GET("/accounts/:name", getAccountsByName)
 	router.GET("/clusters", getClusters)
 	router.GET("/clusters/:name", getClustersByName)
+	router.GET("/clusters/:name/instances", getClusterInstances)
 	router.GET("/instances", getInstances)
 
 	// RedisDB connection
