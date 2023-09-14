@@ -8,25 +8,28 @@ import (
 // TODO: doc variables
 type Instance struct {
 	// Uniq Identifier of the instance
-	ID string `redis:"id" json:"id"`
+	ID string `db:"id" json:"id"`
 
 	// Instance Name. In some Cloud Providers, the name is managed as a Tag
-	Name string `redis:"name" json:"name"`
-
-	// Region/Availability Zone in which the instance is running on
-	Region string `redis:"region" json:"region"`
-
-	// Instance type/size/flavour
-	InstanceType string `redis:"instanceType" json:"instanceType"`
-
-	// Instance State
-	State InstanceState `redis:"state" json:"state"`
+	Name string `db:"name" json:"name"`
 
 	// Instance provider (public/private cloud provider)
-	Provider CloudProvider `redis:"provider" json:"provider"`
+	Provider CloudProvider `db:"provider" json:"provider"`
+
+	// Instance type/size/flavour
+	InstanceType string `db:"instance_type" json:"instanceType"`
+
+	// Region/Availability Zone in which the instance is running on
+	Region string `db:"region" json:"region"`
+
+	// Instance Status
+	State InstanceState `db:"state" json:"state"`
+
+	// ClusterName
+	ClusterName string `db:"cluster_name" json:"clusterName"`
 
 	// Instance Tags as key-value array
-	Tags []Tag `redis:"tags" json:"tags"`
+	Tags []Tag `json:"tags"`
 }
 
 // NewInstance returns a new Instance object
@@ -37,6 +40,7 @@ func NewInstance(id string, name string, region string, instanceType string, sta
 		Region:       region,
 		InstanceType: instanceType,
 		State:        state,
+		ClusterName:  "",
 		Provider:     provider,
 		Tags:         tags,
 	}

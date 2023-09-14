@@ -7,25 +7,25 @@ const minInstances int = 3
 // Cluster is the object to store Openshift Clusters and its properties
 type Cluster struct {
 	// Cluster's Name. Must be unique per Account
-	Name string `redis:"name" json:"name"`
+	Name string `db:"name" json:"name"`
 
 	// Infrastructure provider identifier.
-	Provider CloudProvider `redis:"provider" json:"provider"`
+	Provider CloudProvider `db:"provider" json:"provider"`
 
 	// Defines the status of the cluster if its infrastructure is running or not
-	Status InstanceState `redis:"status" json:"status"`
+	Status InstanceState `db:"state" json:"status"`
 
 	// The region of the infrastructure provider in which the cluster is deployed
-	Region string `redis:"region" json:"region"`
+	Region string `db:"region" json:"region"`
 
 	// Account name which this cluster belongs to
-	AccountName string `redis:"accountName" json:"accountName"`
+	AccountName string `db:"account_name" json:"accountName"`
 
 	// Openshift Console URL. Might not be accesible if its protected
-	ConsoleLink string `redis:"consoleLink" json:"consoleLink"`
+	ConsoleLink string `db:"console_link" json:"consoleLink"`
 
 	// Cluster's instance (nodes) lists
-	Instances []Instance `redis:"instances" json:"instances"`
+	Instances []Instance
 }
 
 // NewCluster creates a new cluster instance

@@ -41,6 +41,19 @@ services:
     volumes:
       - ../../secrets/credentials:/credentials:ro
 
+  pgsql:
+    image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
+    container_name: pgsql
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRESQL_USER: "user"
+      POSTGRESQL_PASSWORD: "password"
+      POSTGRESQL_DATABASE: "clusteriq"
+      POSTGRESQL_ADMIN_PASSWORD: "admin"
+
+
   redis:
     image: registry.redhat.io/rhel8/redis-6@sha256:39c7fb6fa745e5e56bc2fb315917f83fe2f338f526e61e3c959495818c79ffa9
     container_name: redis

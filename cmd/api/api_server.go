@@ -1,10 +1,8 @@
+// TODO: Read this article https://ferencfbin.medium.com/golang-own-structscan-method-for-sql-rows-978c5c80f9b5
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -12,7 +10,8 @@ import (
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -22,88 +21,16 @@ var (
 	// commit reflects the git short-hash of the compiled version
 	commit string
 	// TODO: comment rest of global vars
-	inven    *inventory.Inventory
-	router   *gin.Engine
-	apiURL   string
-	dbURL    string
-	dbPass   string
-	rdb      *redis.Client
-	ctx      context.Context
-	redisKey = "Stock"
-	logger   *zap.Logger
+	inven  *inventory.Inventory
+	router *gin.Engine
+	apiURL string
+	dbURL  string
+	dbPass string
+	logger *zap.Logger
+	db     *sqlx.DB
 )
 
-// InstanceListResponse represents the API response containing a list of clusters
-type InstanceListResponse struct {
-	Count     int                  `json:"count"`
-	Instances []inventory.Instance `json:"instances"`
-}
-
-// NewInstanceListResponse creates a new InstanceListResponse instance and
-// controls if there is any Instance in the incoming list
-func NewInstanceListResponse(instances []inventory.Instance) *InstanceListResponse {
-	numInstances := len(instances)
-
-	// If there is no clusters, an empty array is returned instead of null
-	if numInstances == 0 {
-		instances = []inventory.Instance{}
-	}
-
-	response := InstanceListResponse{
-		Count:     numInstances,
-		Instances: instances,
-	}
-
-	return &response
-}
-
-// ClusterListResponse represents the API response containing a list of clusters
-type ClusterListResponse struct {
-	Count    int                 `json:"count"`
-	Clusters []inventory.Cluster `json:"clusters"`
-}
-
-// NewClusterListResponse creates a new ClusterListResponse instance and
-// controls if there is any cluster in the incoming list
-func NewClusterListResponse(clusters []inventory.Cluster) *ClusterListResponse {
-	numClusters := len(clusters)
-
-	// If there is no clusters, an empty array is returned instead of null
-	if numClusters == 0 {
-		clusters = []inventory.Cluster{}
-	}
-
-	response := ClusterListResponse{
-		Count:    numClusters,
-		Clusters: clusters,
-	}
-
-	return &response
-}
-
-// AccountListResponse represents the API response containing a list of accounts
-type AccountListResponse struct {
-	Count    int                 `json:"count"`
-	Accounts []inventory.Account `json:"accounts"`
-}
-
-// NewAccountListResponse creates a new ClusterListResponse instance and
-// controls if there is any cluster in the incoming list
-func NewAccountListResponse(accounts []inventory.Account) *AccountListResponse {
-	numAccounts := len(accounts)
-
-	// If there is no clusters, an empty array is returned instead of null
-	if numAccounts == 0 {
-		accounts = []inventory.Account{}
-	}
-
-	response := AccountListResponse{
-		Count:    numAccounts,
-		Accounts: accounts,
-	}
-
-	return &response
-}
+const connStr = "postgresql://user:password@localhost:5432/clusteriq?sslmode=disable"
 
 func init() {
 	// Logging config
@@ -131,149 +58,41 @@ func addHeaders(c *gin.Context) {
 	c.Header("Access-Control-Allow-Origin", "*")
 }
 
-// getAccounts returns every account in Stock
-func getInstances(c *gin.Context) {
-	logger.Debug("Retrieving complete instance inventory")
-	updateStock()
-	addHeaders(c)
-
-	var instances []inventory.Instance
-	for _, account := range inven.Accounts {
-		for _, cluster := range account.Clusters {
-			for _, instance := range cluster.Instances {
-				instances = append(instances, instance)
-			}
-		}
-	}
-
-	response := NewInstanceListResponse(instances)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// getClusters returns every cluster in Stock
-func getClusters(c *gin.Context) {
-	logger.Debug("Retrieving complete cluster inventory")
-	updateStock()
-	addHeaders(c)
-
-	var clusters []inventory.Cluster
-	for _, account := range inven.Accounts {
-		for _, cluster := range account.Clusters {
-			clusters = append(clusters, *cluster)
-		}
-	}
-
-	response := NewClusterListResponse(clusters)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// getClusters returns the clusters in Stock with the requested name
-func getClustersByName(c *gin.Context) {
-	name := c.Param("name")
-	logger.Debug("Retrieving clusters by name", zap.String("clusterName", name))
-	updateStock()
-	addHeaders(c)
-
-	var clusters []inventory.Cluster
-	for _, account := range inven.Accounts {
-		for _, cluster := range account.Clusters {
-			if cluster.Name == name {
-				clusters = append(clusters, *cluster)
-			}
-		}
-	}
-
-	response := NewClusterListResponse(clusters)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// getClusterInstances returns instances from clusters with the specified name.
-func getClusterInstances(c *gin.Context) {
-	clusterName := c.Param("name")
-	logger.Debug("Retrieving cluster instances", zap.String("clusterName", clusterName))
-	updateStock()
-	addHeaders(c)
-
-	var instances []inventory.Instance
-
-	for _, account := range inven.Accounts {
-		for _, cluster := range account.Clusters {
-			if cluster.Name == clusterName {
-				instances = append(instances, cluster.Instances...)
-				c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
-				return
-			}
-		}
-	}
-
-	c.PureJSON(http.StatusNotFound, gin.H{"error": "cluster not found"})
-}
-
-// getAccounts returns every account in Stock
-func getAccounts(c *gin.Context) {
-	logger.Debug("Retrieving complete accounts inventory")
-	updateStock()
-	addHeaders(c)
-
-	var accounts []inventory.Account
-
-	for _, account := range inven.Accounts {
-		accounts = append(accounts, account)
-	}
-
-	response := NewAccountListResponse(accounts)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// getAccountsByName returns an account by its name in Stock
-func getAccountsByName(c *gin.Context) {
-	name := c.Param("name")
-	logger.Debug("Retrieving accounts by name", zap.String("accountName", name))
-	updateStock()
-	addHeaders(c)
-
-	account, ok := inven.Accounts[name]
-	if ok {
-		c.PureJSON(http.StatusOK, account)
-	} else {
-		c.Status(http.StatusNotFound)
-	}
-}
-
-// updateStock updates the cache of the API
-func updateStock() {
-	// Getting Redis Results
-	val, err := rdb.Get(ctx, redisKey).Result()
-	if err != nil {
-		logger.Error("Can't connect to DB for inventory updating", zap.Error(err))
-	}
-
-	// Unmarshall from JSON to inventory.Inventory type
-	json.Unmarshal([]byte(val), &inven)
-}
-
 func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Starting ClusterIQ API", zap.String("version", version), zap.String("commit", commit))
 	logger.Info("Connection properties", zap.String("api_url", apiURL), zap.String("db_url", dbURL))
+	logger.Debug("Debug Mode active!")
 
 	// Preparing API Endpoints
-	router.GET("/accounts", getAccounts)
-	router.GET("/accounts/:name", getAccountsByName)
-	router.GET("/clusters", getClusters)
-	router.GET("/clusters/:name", getClustersByName)
-	router.GET("/clusters/:name/instances", getClusterInstances)
-	router.GET("/instances", getInstances)
+	instancesGroup := router.Group("/instances")
+	{
+		instancesGroup.GET("/", HandlerGetInstances)
+		instancesGroup.GET("/:instance_id", HandlerGetInstancesByID)
+	}
 
-	// RedisDB connection
-	ctx = context.Background()
-	rdb = redis.NewClient(&redis.Options{
-		Addr:     dbURL,
-		Password: dbPass,
-		DB:       0,
-	})
+	clustersGroup := router.Group("/clusters")
+	{
+		clustersGroup.GET("/", HandlerGetClusters)
+		clustersGroup.GET("/:cluster_name", HandlerGetClustersByName)
+		clustersGroup.GET("/:cluster_name/instances", HandlerGetInstancesOnCluster)
+	}
+
+	accountsGroup := router.Group("/accounts")
+	{
+		accountsGroup.GET("/", HandlerGetAccounts)
+		accountsGroup.GET("/:account_name", HandlerGetAccountsByName)
+		accountsGroup.GET("/:account_name/clusters", HandlerGetClustersOnAccount)
+	}
+
+	// PGSQL connection
+	var err error
+	db, err = sqlx.Connect("postgres", connStr)
+	if err != nil {
+		logger.Error("Can't connect to PSQL DB", zap.Error(err))
+	}
 
 	// Start API
 	logger.Info("API Ready to serve")
