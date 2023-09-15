@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/cmd/api/docs"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	ginzap "github.com/gin-contrib/zap"
@@ -13,6 +14,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
+
+	// swagger embed files
+	// swagger embed files
+	swaggerFiles "github.com/swaggo/files"     // swagger embed files
+	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
 )
 
 var (
@@ -58,6 +64,25 @@ func addHeaders(c *gin.Context) {
 	c.Header("Access-Control-Allow-Origin", "*")
 }
 
+//	@title			ClusterIQ API
+//	@version		1.0
+//	@description	This is the API of the ClusterIQ cloud inventory software
+//	@tersOfService	http://swagger.io/ters/
+
+//	@contact.name	ClusterIQ Team
+//	@contact.email	vbelouso@redhat.com nnaamneh@redhat.com avillega@redhat.com
+
+//	@license.name	Apache 2.0
+//	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
+
+//	@host		localhost:8080
+//	@BasePath	/api/v1
+
+//	@securityDefinitions.basic	BasicAuth
+
+//	@externalDocs.description	OpenAPI
+//	@externalDocs.url			https://swagger.io/resources/open-api/
+
 func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
@@ -67,25 +92,47 @@ func main() {
 	logger.Debug("Debug Mode active!")
 
 	// Preparing API Endpoints
-	instancesGroup := router.Group("/instances")
+	baseGroup := router.Group("/api/v1")
 	{
-		instancesGroup.GET("/", HandlerGetInstances)
-		instancesGroup.GET("/:instance_id", HandlerGetInstancesByID)
+		instancesGroup := router.Group("/instances")
+		{
+			instancesGroup.GET("/", HandlerGetInstances)
+			instancesGroup.GET("/:instance_id", HandlerGetInstancesByID)
+			instancesGroup.POST("/", HandlerPostInstance)
+			instancesGroup.DELETE("/", HandlerDeleteInstance)
+			instancesGroup.PATCH("/", HandlerPatchInstance)
+		}
+
+		clustersGroup := router.Group("/clusters")
+		{
+			clustersGroup.GET("/", HandlerGetClusters)
+			clustersGroup.GET("/:cluster_name", HandlerGetClustersByName)
+			clustersGroup.GET("/:cluster_name/instances", HandlerGetInstancesOnCluster)
+			clustersGroup.POST("/", HandlerPostCluster)
+			clustersGroup.DELETE("/", HandlerDeleteCluster)
+			clustersGroup.PATCH("/", HandlerPatchCluster)
+		}
+
+		accountsGroup := router.Group("/accounts")
+		{
+			accountsGroup.GET("/", HandlerGetAccounts)
+			accountsGroup.GET("/:account_name", HandlerGetAccountsByName)
+			accountsGroup.GET("/:account_name/clusters", HandlerGetClustersOnAccount)
+			accountsGroup.POST("/", HandlerPostAccount)
+			accountsGroup.DELETE("/", HandlerDeleteAccount)
+			accountsGroup.PATCH("/", HandlerPatchAccount)
+		}
+		baseGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	clustersGroup := router.Group("/clusters")
-	{
-		clustersGroup.GET("/", HandlerGetClusters)
-		clustersGroup.GET("/:cluster_name", HandlerGetClustersByName)
-		clustersGroup.GET("/:cluster_name/instances", HandlerGetInstancesOnCluster)
-	}
-
-	accountsGroup := router.Group("/accounts")
-	{
-		accountsGroup.GET("/", HandlerGetAccounts)
-		accountsGroup.GET("/:account_name", HandlerGetAccountsByName)
-		accountsGroup.GET("/:account_name/clusters", HandlerGetClustersOnAccount)
-	}
+	// Swagger endpoint
+	// programmatically set swagger info
+	docs.SwaggerInfo.Title = "Cluster IP API doc"
+	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost"
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	// PGSQL connection
 	var err error

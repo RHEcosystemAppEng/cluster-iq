@@ -134,7 +134,14 @@ cover:
 
 # Swagger
 swagger-editor:
+	@echo "Open your browser at http://localhost:8081"
 	@$(CONTAINER_ENGINE) run -p 8081:8080 -e SWAGGER_FILE=/open_api_design.yaml -v ./open_api_design.yaml:/open_api_design.yaml swaggerapi/swagger-editor
+
+swagger-doc:
+	@echo "### [Generating Swagger Docs] ###"
+	@swag fmt
+	@swag init --generalInfo ./cmd/api/api_server.go --parseDependency --output ./cmd/api/docs
+
 
 
 

@@ -1,0 +1,465 @@
+basePath: /api/v1
+definitions:
+  cmd_api.AccountListResponse:
+    properties:
+      accounts:
+        items:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Account'
+        type: array
+      count:
+        type: integer
+    type: object
+  cmd_api.ClusterListResponse:
+    properties:
+      clusters:
+        items:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Cluster'
+        type: array
+      count:
+        type: integer
+    type: object
+  cmd_api.InstanceListResponse:
+    properties:
+      count:
+        type: integer
+      instances:
+        items:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Instance'
+        type: array
+    type: object
+  github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Account:
+    properties:
+      clusters:
+        additionalProperties:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Cluster'
+        description: List of clusters deployed on this account indexed by Cluster's
+          name
+        type: object
+      name:
+        description: |-
+          Account's name. It's considered as an uniq key. Two accounts with same
+          name can't belong to same Inventory
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.CloudProvider'
+        description: Infrastructure provider identifier.
+    type: object
+  github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.CloudProvider:
+    enum:
+    - AWS
+    type: string
+    x-enum-varnames:
+    - AWSProvider
+  github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Cluster:
+    properties:
+      accountName:
+        description: Account name which this cluster belongs to
+        type: string
+      consoleLink:
+        description: Openshift Console URL. Might not be accesible if its protected
+        type: string
+      instances:
+        description: Cluster's instance (nodes) lists
+        items:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Instance'
+        type: array
+      name:
+        description: Cluster's Name. Must be unique per Account
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.CloudProvider'
+        description: Infrastructure provider identifier.
+      region:
+        description: The region of the infrastructure provider in which the cluster
+          is deployed
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.InstanceState'
+        description: Defines the status of the cluster if its infrastructure is running
+          or not
+    type: object
+  github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Instance:
+    properties:
+      clusterName:
+        description: ClusterName
+        type: string
+      id:
+        description: Uniq Identifier of the instance
+        type: string
+      instanceType:
+        description: Instance type/size/flavour
+        type: string
+      name:
+        description: Instance Name. In some Cloud Providers, the name is managed as
+          a Tag
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.CloudProvider'
+        description: Instance provider (public/private cloud provider)
+      region:
+        description: Region/Availability Zone in which the instance is running on
+        type: string
+      state:
+        allOf:
+        - $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.InstanceState'
+        description: Instance Status
+      tags:
+        description: Instance Tags as key-value array
+        items:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Tag'
+        type: array
+    type: object
+  github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.InstanceState:
+    enum:
+    - Running
+    type: string
+    x-enum-varnames:
+    - Running
+  github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Tag:
+    properties:
+      key:
+        description: Tag's key
+        type: string
+      value:
+        description: Tag's Value
+        type: string
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact:
+    email: vbelouso@redhat.com nnaamneh@redhat.com avillega@redhat.com
+    name: ClusterIQ Team
+  description: This is the API of the ClusterIQ cloud inventory software
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: ClusterIQ API
+  version: "1.0"
+paths:
+  /accounts/:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Accounts with a single Account filtered by Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.AccountListResponse'
+        "500":
+          description: Internal Server Error
+      summary: Obtain every Account
+      tags:
+      - Accounts
+    post:
+      consumes:
+      - application/json
+      description: Receives and write into the DB the information for a new Account
+      parameters:
+      - description: New Account to be added
+        format: email
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Account'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Creates a new Account in the inventory
+      tags:
+      - Accounts
+  /accounts/:account_name:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an Account present in the inventory by its Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Deletes an Account in the inventory
+      tags:
+      - Accounts
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Accounts with a single Account filtered by Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.AccountListResponse'
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Obtain a single Account by its Name
+      tags:
+      - Accounts
+    patch:
+      consumes:
+      - application/json
+      description: Receives and patch into the DB the information for an existing
+        Account
+      parameters:
+      - description: Account to be modified
+        in: body
+        name: Account
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Account'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Patches an Account in the inventory
+      tags:
+      - Accounts
+  /accounts/:account_name/clusters:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Clusters which belongs to an Account given by
+        Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.AccountListResponse'
+        "500":
+          description: Internal Server Error
+      summary: Obtain Cluster list on an Account
+      tags:
+      - Accounts
+  /clusters/:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Clusters with a single instance filtered by Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.ClusterListResponse'
+        "500":
+          description: Internal Server Error
+      summary: Obtain every Cluster
+      tags:
+      - Clusters
+    post:
+      consumes:
+      - application/json
+      description: Receives and write into the DB the information for a new Cluster
+      parameters:
+      - description: New Cluster to be added
+        in: body
+        name: cluster
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Cluster'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Creates a new Cluster in the inventory
+      tags:
+      - Clusters
+  /clusters/:cluster_name:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a Cluster present in the inventory by its Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Deletes a Cluster in the inventory
+      tags:
+      - Clusters
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Clusters with a single Cluster filtered by Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.ClusterListResponse'
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Obtain a single Cluster by its Name
+      tags:
+      - Clusters
+    patch:
+      consumes:
+      - application/json
+      description: Receives and patch into the DB the information for an existing
+        Cluster
+      parameters:
+      - description: Cluster to be modified
+        in: body
+        name: instance
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Cluster'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Patches a Cluster in the inventory
+      tags:
+      - Clusters
+  /clusters/:cluster_name/instances:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Instances belonging to an Cluster given by Name
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.InstanceListResponse'
+        "500":
+          description: Internal Server Error
+      summary: Obtain Instances list belonging to a Cluster
+      tags:
+      - Clusters
+  /instances/:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Instances with every Instance in the inventory
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.InstanceListResponse'
+        "500":
+          description: Internal Server Error
+      summary: Obtain every Instance
+      tags:
+      - Instances
+    post:
+      consumes:
+      - application/json
+      description: Receives and write into the DB the information for a new Instance
+      parameters:
+      - description: New Instance to be added
+        in: body
+        name: instance
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Instance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Creates a new Instance in the inventory
+      tags:
+      - Instances
+  /instances/:instance_id:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an Instance present in the inventory by its ID
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Deletes an Instance in the inventory
+      tags:
+      - Instances
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of Instances with a single Instance filtered by
+        ID
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cmd_api.InstanceListResponse'
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Obtain a single Instance by its ID
+      tags:
+      - Instances
+    patch:
+      consumes:
+      - application/json
+      description: Receives and patch into the DB the information for an existing
+        Instance
+      parameters:
+      - description: Instance to be modified
+        in: body
+        name: instance
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_RHEcosystemAppEng_cluster-iq_internal_inventory.Instance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      summary: Patches an Instance in the inventory
+      tags:
+      - Instances
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
