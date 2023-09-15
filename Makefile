@@ -55,6 +55,7 @@ Makefile Rules:
 	start-dev: Starts a local environment using 'docker/podman-compose'
 	stop-dev: Stops the local environment using 'docker/podman-compose'
 	swagger-editor: Starts Swagger Editor using a docker container
+	swagger-doc: generates Swagger Documentation of the API
 	help: Displays this message
 endef
 export HELP_MSG
