@@ -94,33 +94,33 @@ func main() {
 	// Preparing API Endpoints
 	baseGroup := router.Group("/api/v1")
 	{
-		instancesGroup := router.Group("/instances")
+		instancesGroup := baseGroup.Group("/instances")
 		{
-			instancesGroup.GET("/", HandlerGetInstances)
+			instancesGroup.GET("", HandlerGetInstances)
 			instancesGroup.GET("/:instance_id", HandlerGetInstancesByID)
-			instancesGroup.POST("/", HandlerPostInstance)
-			instancesGroup.DELETE("/", HandlerDeleteInstance)
-			instancesGroup.PATCH("/", HandlerPatchInstance)
+			instancesGroup.POST("", HandlerPostInstance)
+			instancesGroup.DELETE("/:instance_id", HandlerDeleteInstance)
+			instancesGroup.PATCH("/:instance_id", HandlerPatchInstance)
 		}
 
-		clustersGroup := router.Group("/clusters")
+		clustersGroup := baseGroup.Group("/clusters")
 		{
-			clustersGroup.GET("/", HandlerGetClusters)
+			clustersGroup.GET("", HandlerGetClusters)
 			clustersGroup.GET("/:cluster_name", HandlerGetClustersByName)
 			clustersGroup.GET("/:cluster_name/instances", HandlerGetInstancesOnCluster)
-			clustersGroup.POST("/", HandlerPostCluster)
-			clustersGroup.DELETE("/", HandlerDeleteCluster)
-			clustersGroup.PATCH("/", HandlerPatchCluster)
+			clustersGroup.POST("", HandlerPostCluster)
+			clustersGroup.DELETE("/:cluster_name", HandlerDeleteCluster)
+			clustersGroup.PATCH("/:cluster_name", HandlerPatchCluster)
 		}
 
-		accountsGroup := router.Group("/accounts")
+		accountsGroup := baseGroup.Group("/accounts")
 		{
-			accountsGroup.GET("/", HandlerGetAccounts)
+			accountsGroup.GET("", HandlerGetAccounts)
 			accountsGroup.GET("/:account_name", HandlerGetAccountsByName)
 			accountsGroup.GET("/:account_name/clusters", HandlerGetClustersOnAccount)
-			accountsGroup.POST("/", HandlerPostAccount)
-			accountsGroup.DELETE("/", HandlerDeleteAccount)
-			accountsGroup.PATCH("/", HandlerPatchAccount)
+			accountsGroup.POST("", HandlerPostAccount)
+			accountsGroup.DELETE("/:account_name", HandlerDeleteAccount)
+			accountsGroup.PATCH("/:account_name", HandlerPatchAccount)
 		}
 		baseGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}

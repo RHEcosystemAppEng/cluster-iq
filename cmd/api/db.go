@@ -28,6 +28,12 @@ const (
 
 	// SelectClustersOnAccountQuery returns an cluster by its Name
 	SelectClustersOnAccountQuery = "SELECT * FROM clusters WHERE account_name = $1 ORDER BY name"
+
+	// InsertInstanceQuery inserts into a new instance in its table
+	InsertInstanceQuery = "INSERT INTO instances (id, name, provider, instance_type, region, state, cluster_name) VALUES (:id, :name, :provider, :instance_type, :region, :state, :cluster_name)"
+
+	// DeleteInstanceQuery inserts into a new instance in its table
+	DeleteInstanceQuery = "DELETE FROM instances WHERE id=$1"
 )
 
 // getAccounts returns every account in Stock
@@ -45,6 +51,24 @@ func getInstanceByID(instanceID string) ([]inventory.Instance, error) {
 		return nil, err
 	}
 	return []inventory.Instance{instance}, nil
+}
+
+func writeInstance(instances []inventory.Instance) error {
+	tx := db.MustBegin()
+	tx.NamedExec(InsertInstanceQuery, instances)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteInstance(instanceID string) error {
+	tx := db.MustBegin()
+	tx.MustExec(DeleteInstanceQuery, instanceID)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // getClusters returns every cluster in Stock

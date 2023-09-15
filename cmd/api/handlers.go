@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	_ "github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -65,19 +67,33 @@ func HandlerGetInstancesByID(c *gin.Context) {
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
-//	@Param			instance	body		inventory.Instance	true	"New Instance to be added"
+//	@Param			instance	body		[]inventory.Instance	true	"New Instance to be added"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Router			/instances/ [post]
+//	@Router			/instances [post]
 func HandlerPostInstance(c *gin.Context) {
-	instance, err := ioutil.ReadAll(c.Request.Body)
+	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		logger.Error("Can't get body from request", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
 	}
-	logger.Debug("Writing a new Instance", zap.Reflect("instance", instance))
-	c.PureJSON(http.StatusNotImplemented, nil)
+
+	var instances []inventory.Instance
+	err = json.Unmarshal([]byte(body), &instances)
+	if err != nil {
+		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		c.PureJSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	logger.Debug("Writing a new Instance", zap.Reflect("instance", instances))
+	err = writeInstance(instances)
+	if err != nil {
+		logger.Error("Can't write new instances into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
 }
 
 // HandlerDeleteInstance handles the request for removing an Instance in the inventory
@@ -93,7 +109,13 @@ func HandlerPostInstance(c *gin.Context) {
 func HandlerDeleteInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	logger.Debug("Removing an Instance", zap.String("instance_id", instanceID))
-	c.PureJSON(http.StatusNotImplemented, nil)
+	if err := deleteInstance(instanceID); err != nil {
+		logger.Error("Can't delete instance from DB", zap.String("instance_id", instanceID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // HandlerPatchInstance handles the request for patching an Instance in the inventory
