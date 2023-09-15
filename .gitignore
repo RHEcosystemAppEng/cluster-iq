@@ -1,6 +1,9 @@
 # ViM temp files
 .*.sw*
 
+# Swagger docs. It can generated using "swagger-doc" rule on Makefile
+cmd/api/docs/
+
 
 # Exclude project folders
 secrets/
