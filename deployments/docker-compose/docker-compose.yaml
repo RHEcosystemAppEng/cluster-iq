@@ -13,10 +13,11 @@ services:
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
   api:
-    depends_on: redis
     image: quay.io/ecosystem-appeng/cluster-iq-api:latest
     container_name: api
     restart: always
+    depends_on:
+      - redis
     ports:
       - 9000:9000
     environment:
@@ -29,9 +30,10 @@ services:
 
   scanner:
     image: quay.io/ecosystem-appeng/cluster-iq-scanner:latest
-    depends_on: redis
     container_name: scanner
     restart: "no"
+    depends_on:
+      - redis
     environment:
       CIQ_DB_HOST: "redis"
       CIQ_DB_PORT: "6379"
