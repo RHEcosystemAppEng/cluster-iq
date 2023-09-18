@@ -13,10 +13,11 @@ services:
       CIQ_DB_PORT: "6379"
       CIQ_DB_PASS: ""
   api:
-    depends_on: redis
     image: quay.io/ecosystem-appeng/cluster-iq-api:latest
     container_name: api
     restart: always
+    depends_on:
+      - redis
     ports:
       - 9000:9000
     environment:
@@ -29,9 +30,10 @@ services:
 
   scanner:
     image: quay.io/ecosystem-appeng/cluster-iq-scanner:latest
-    depends_on: redis
     container_name: scanner
     restart: "no"
+    depends_on:
+      - redis
     environment:
       CIQ_DB_HOST: "redis"
       CIQ_DB_PORT: "6379"
@@ -40,6 +42,19 @@ services:
       CIQ_LOG_LEVEL: "DEBUG"
     volumes:
       - ../../secrets/credentials:/credentials:ro
+
+  pgsql:
+    image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
+    container_name: pgsql
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRESQL_USER: "user"
+      POSTGRESQL_PASSWORD: "password"
+      POSTGRESQL_DATABASE: "clusteriq"
+      POSTGRESQL_ADMIN_PASSWORD: "admin"
+
 
   redis:
     image: registry.redhat.io/rhel8/redis-6@sha256:39c7fb6fa745e5e56bc2fb315917f83fe2f338f526e61e3c959495818c79ffa9

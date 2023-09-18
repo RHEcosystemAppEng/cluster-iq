@@ -6,13 +6,13 @@ import "fmt"
 type Account struct {
 	// Account's name. It's considered as an uniq key. Two accounts with same
 	// name can't belong to same Inventory
-	Name string `redis:"name" json:"name"`
+	Name string `db:"name" json:"name"`
 
 	// Infrastructure provider identifier.
-	Provider CloudProvider `redis:"provider" json:"provider"`
+	Provider CloudProvider `db:"provider" json:"provider"`
 
 	// List of clusters deployed on this account indexed by Cluster's name
-	Clusters map[string]*Cluster `redis:"clusters" json:"clusters"`
+	Clusters map[string]*Cluster
 
 	// Account's username
 	user string
