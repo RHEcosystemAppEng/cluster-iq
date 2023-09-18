@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -72,7 +72,7 @@ func HandlerGetInstancesByID(c *gin.Context) {
 //	@Failure		500			{object}	nil
 //	@Router			/instances [post]
 func HandlerPostInstance(c *gin.Context) {
-	body, err := ioutil.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		logger.Error("Can't get body from request", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
@@ -220,7 +220,7 @@ func HandlerGetInstancesOnCluster(c *gin.Context) {
 //	@Failure		500		{object}	nil
 //	@Router			/clusters/ [post]
 func HandlerPostCluster(c *gin.Context) {
-	cluster, err := ioutil.ReadAll(c.Request.Body)
+	cluster, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		logger.Error("Can't get body from request", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
@@ -348,7 +348,7 @@ func HandlerGetClustersOnAccount(c *gin.Context) {
 //	@Failure		500		{object}	nil
 //	@Router			/accounts/ [post]
 func HandlerPostAccount(c *gin.Context) {
-	account, err := ioutil.ReadAll(c.Request.Body)
+	account, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		logger.Error("Can't get body from request", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
