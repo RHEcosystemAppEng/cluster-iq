@@ -9,7 +9,8 @@ INSERT INTO
 VALUES
   ('AWS'),
   ('GCP'),
-  ('Azure')
+  ('Azure'),
+  ('UNKNOWN')
 ;
 
 
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 -- Clusters
 CREATE TABLE IF NOT EXISTS clusters (
   name TEXT PRIMARY KEY,
-  provider TEXT REFERENCES providers(name),
+  provider TEXT,
   state TEXT,
   region TEXT,
   account_name TEXT REFERENCES accounts(name),

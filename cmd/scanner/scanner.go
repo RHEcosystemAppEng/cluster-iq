@@ -1,18 +1,25 @@
 package main
 
 import (
-	"context"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/redis"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
 	"go.uber.org/zap"
 	"gopkg.in/ini.v1"
+)
+
+const (
+	APIBaseURL       = "http://localhost:8443/api/v1"
+	accountEndpoint  = "/accounts"
+	clusterEndpoint  = "/clusters"
+	instanceEndpoint = "/instances"
 )
 
 var (
@@ -24,6 +31,7 @@ var (
 	logger    *zap.Logger
 	dbURL     string
 	dbPass    string
+	apiURL    string
 	credsFile string
 )
 
@@ -54,9 +62,8 @@ func init() {
 	logger = ciqLogger.NewLogger()
 
 	// Load configuration from environment variables.
-	dbHost := os.Getenv("CIQ_DB_HOST")
-	dbPort := os.Getenv("CIQ_DB_PORT")
-	dbURL = fmt.Sprintf("%s:%s", dbHost, dbPort)
+	dbURL = os.Getenv("CIQ_DB_URL")
+	apiURL = os.Getenv("CIQ_API_URL")
 	dbPass = os.Getenv("CIQ_DB_PASS")
 	credsFile = os.Getenv("CIQ_CREDS_FILE")
 }
@@ -160,10 +167,7 @@ func main() {
 		zap.String("credentials file", credsFile),
 	)
 
-	rdb, err := redis.InitDatabase(dbURL, dbPass)
-	if err != nil {
-		logger.Fatal("Failed to establish database connection", zap.Error(err))
-	}
+	var err error
 
 	// Get Cloud Accounts from credentials file
 	err = scan.readCloudProviderAccounts()
@@ -185,20 +189,103 @@ func main() {
 		return
 	}
 
-	b, err := json.Marshal(scan.inventory)
-	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return
-	}
-
-	ctx := context.Background()
-	logger.Info("Saving results to the database")
-	// TODO Refactor into dedicated function
-	err = rdb.Set(ctx, "Stock", string(b), redis.DataExpirationTTL).Err()
-	if err != nil {
-		logger.Error("Failed to write results to the database", zap.Error(err))
+	// Writing into DB
+	scan.inventory.PrintInventory()
+	if err := scan.postScannerResults(); err != nil {
+		logger.Error("Can't post scanned results", zap.Error(err))
 		return
 	}
 
 	logger.Info("Scanner finished successfully")
+}
+
+// postNewInstance posts into the API, the new instances obtained after scanning
+func postNewInstances(instances []inventory.Instance) error {
+	b, err := json.Marshal(instances)
+	if err != nil {
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return err
+	}
+
+	requestURL := fmt.Sprintf("%s%s", APIBaseURL, instanceEndpoint)
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
+	client := http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+// postNewCluster posts into the API, the new instances obtained after scanning
+func postNewClusters(clusters []inventory.Cluster) error {
+	b, err := json.Marshal(clusters)
+	if err != nil {
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return err
+	}
+
+	requestURL := fmt.Sprintf("%s%s", APIBaseURL, clusterEndpoint)
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
+	client := http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+// postNewAccount posts into the API, the new instances obtained after scanning
+func postNewAccounts(accounts []inventory.Account) error {
+	b, err := json.Marshal(accounts)
+	if err != nil {
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return err
+	}
+
+	logger.Debug("Print bin", zap.ByteString("bytes", b))
+
+	requestURL := fmt.Sprintf("%s%s", APIBaseURL, accountEndpoint)
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
+	client := http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+func (s *Scanner) postScannerResults() error {
+	var accounts []inventory.Account
+	var clusters []inventory.Cluster
+	var instances []inventory.Instance
+	for _, account := range s.inventory.Accounts {
+		for _, cluster := range account.Clusters {
+			for _, instance := range cluster.Instances {
+				instances = append(instances, instance)
+			}
+			cluster.Instances = nil
+			clusters = append(clusters, *cluster)
+		}
+		account.Clusters = nil
+		accounts = append(accounts, account)
+	}
+
+	if err := postNewAccounts(accounts); err != nil {
+		return err
+	}
+	if err := postNewClusters(clusters); err != nil {
+		return err
+	}
+	if err := postNewInstances(instances); err != nil {
+		return err
+	}
+
+	return nil
 }

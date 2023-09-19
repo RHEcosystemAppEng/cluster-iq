@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
@@ -29,11 +31,23 @@ const (
 	// SelectClustersOnAccountQuery returns an cluster by its Name
 	SelectClustersOnAccountQuery = "SELECT * FROM clusters WHERE account_name = $1 ORDER BY name"
 
-	// InsertInstanceQuery inserts into a new instance in its table
-	InsertInstanceQuery = "INSERT INTO instances (id, name, provider, instance_type, region, state, cluster_name) VALUES (:id, :name, :provider, :instance_type, :region, :state, :cluster_name)"
+	// InsertInstancesQuery inserts into a new instance in its table
+	InsertInstancesQuery = "INSERT INTO instances (id, name, provider, instance_type, region, state, cluster_name) VALUES (:id, :name, :provider, :instance_type, :region, :state, :cluster_name)"
 
-	// DeleteInstanceQuery inserts into a new instance in its table
+	// InsertClustersQuery inserts into a new instance in its table
+	InsertClustersQuery = "INSERT INTO clusters (name, provider, state, region, account_name, console_link) VALUES (:name, :provider, :state, :region, :account_name, :console_link)"
+
+	// InsertAccountsQuery inserts into a new instance in its table
+	InsertAccountsQuery = "INSERT INTO accounts (name, provider) VALUES (:name, :provider)"
+
+	// DeleteInstanceQuery removes an instance by its ID
 	DeleteInstanceQuery = "DELETE FROM instances WHERE id=$1"
+
+	// DeleteClusterQuery removes an cluster by its name
+	DeleteClusterQuery = "DELETE FROM clusters WHERE name=$1"
+
+	// DeleteAccountQuery removes an account by its name
+	DeleteAccountQuery = "DELETE FROM accounts WHERE name=$1"
 )
 
 // getAccounts returns every account in Stock
@@ -53,9 +67,12 @@ func getInstanceByID(instanceID string) ([]inventory.Instance, error) {
 	return []inventory.Instance{instance}, nil
 }
 
-func writeInstance(instances []inventory.Instance) error {
-	tx := db.MustBegin()
-	tx.NamedExec(InsertInstanceQuery, instances)
+func writeInstances(instances []inventory.Instance) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+	tx.NamedExec(InsertInstancesQuery, instances)
 	if err := tx.Commit(); err != nil {
 		return err
 	}
@@ -63,7 +80,11 @@ func writeInstance(instances []inventory.Instance) error {
 }
 
 func deleteInstance(instanceID string) error {
-	tx := db.MustBegin()
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
 	tx.MustExec(DeleteInstanceQuery, instanceID)
 	if err := tx.Commit(); err != nil {
 		return err
@@ -98,6 +119,32 @@ func getInstancesOnCluster(clusterName string) ([]inventory.Instance, error) {
 	return instances, nil
 }
 
+func writeClusters(clusters []inventory.Cluster) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	tx.NamedExec(InsertClustersQuery, clusters)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteCluster(clusterName string) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	tx.MustExec(DeleteClusterQuery, clusterName)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // getAccounts returns every account in Stock
 func getAccounts() ([]inventory.Account, error) {
 	var accounts []inventory.Account
@@ -123,4 +170,32 @@ func getClustersOnAccount(accountName string) ([]inventory.Cluster, error) {
 		return nil, err
 	}
 	return clusters, nil
+}
+
+func writeAccounts(accounts []inventory.Account) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("========================", accounts)
+
+	tx.NamedExec(InsertAccountsQuery, accounts)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteAccount(accountName string) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	tx.MustExec(DeleteAccountQuery, accountName)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
