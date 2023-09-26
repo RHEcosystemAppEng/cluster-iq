@@ -32,13 +32,13 @@ const (
 	SelectClustersOnAccountQuery = "SELECT * FROM clusters WHERE account_name = $1 ORDER BY name"
 
 	// InsertInstancesQuery inserts into a new instance in its table
-	InsertInstancesQuery = "INSERT INTO instances (id, name, provider, instance_type, region, state, cluster_name) VALUES (:id, :name, :provider, :instance_type, :region, :state, :cluster_name)"
+	InsertInstancesQuery = "INSERT INTO instances (id, name, provider, instance_type, region, state, cluster_name) VALUES (:id, :name, :provider, :instance_type, :region, :state, :cluster_name) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, provider = EXCLUDED.provider, instance_type = EXCLUDED.instance_type, region = EXCLUDED.region, state = EXCLUDED.state, cluster_name = EXCLUDED.cluster_name"
 
 	// InsertClustersQuery inserts into a new instance in its table
-	InsertClustersQuery = "INSERT INTO clusters (name, provider, state, region, account_name, console_link) VALUES (:name, :provider, :state, :region, :account_name, :console_link)"
+	InsertClustersQuery = "INSERT INTO clusters (name, provider, state, region, account_name, console_link) VALUES (:name, :provider, :state, :region, :account_name, :console_link) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider, state = EXCLUDED.state, region = EXCLUDED.region, console_link = EXCLUDED.console_link"
 
 	// InsertAccountsQuery inserts into a new instance in its table
-	InsertAccountsQuery = "INSERT INTO accounts (name, provider) VALUES (:name, :provider)"
+	InsertAccountsQuery = "INSERT INTO accounts (name, provider) VALUES (:name, :provider) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider"
 
 	// DeleteInstanceQuery removes an instance by its ID
 	DeleteInstanceQuery = "DELETE FROM instances WHERE id=$1"

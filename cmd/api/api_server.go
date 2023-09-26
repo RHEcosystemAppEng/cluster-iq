@@ -2,7 +2,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -27,29 +26,22 @@ var (
 	// commit reflects the git short-hash of the compiled version
 	commit string
 	// TODO: comment rest of global vars
-	inven  *inventory.Inventory
-	router *gin.Engine
-	apiURL string
-	dbURL  string
-	dbPass string
-	logger *zap.Logger
-	db     *sqlx.DB
+	inven    *inventory.Inventory
+	router   *gin.Engine
+	apiURL   string
+	dbURL    string
+	logLevel string
+	logger   *zap.Logger
+	db       *sqlx.DB
 )
-
-const connStr = "postgresql://user:password@localhost:5432/clusteriq?sslmode=disable"
 
 func init() {
 	// Logging config
 	logger = ciqLogger.NewLogger()
 
 	// Getting config
-	apiHost := os.Getenv("CIQ_API_HOST")
-	apiPort := os.Getenv("CIQ_API_PORT")
-	dbHost := os.Getenv("CIQ_DB_HOST")
-	dbPort := os.Getenv("CIQ_DB_PORT")
-	dbPass = os.Getenv("CIQ_DB_PASS")
-	apiURL = fmt.Sprintf("%s:%s", apiHost, apiPort)
-	dbURL = fmt.Sprintf("%s:%s", dbHost, dbPort)
+	apiURL = os.Getenv("CIQ_API_URL")
+	dbURL = os.Getenv("CIQ_DB_URL")
 
 	// Initializaion global vars
 	inven = inventory.NewInventory()
@@ -136,9 +128,10 @@ func main() {
 
 	// PGSQL connection
 	var err error
-	db, err = sqlx.Connect("postgres", connStr)
+	db, err = sqlx.Connect("postgres", dbURL)
 	if err != nil {
 		logger.Error("Can't connect to PSQL DB", zap.Error(err))
+		return
 	}
 
 	// Start API

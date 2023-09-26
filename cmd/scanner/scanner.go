@@ -16,10 +16,9 @@ import (
 )
 
 const (
-	APIBaseURL       = "http://localhost:8443/api/v1"
-	accountEndpoint  = "/accounts"
-	clusterEndpoint  = "/clusters"
-	instanceEndpoint = "/instances"
+	apiAccountEndpoint  = "/accounts"
+	apiClusterEndpoint  = "/clusters"
+	apiInstanceEndpoint = "/instances"
 )
 
 var (
@@ -29,8 +28,6 @@ var (
 	commit string
 	//
 	logger    *zap.Logger
-	dbURL     string
-	dbPass    string
 	apiURL    string
 	credsFile string
 )
@@ -39,19 +36,17 @@ var (
 type Scanner struct {
 	inventory inventory.Inventory
 	stockers  []stocker.Stocker
-	dbURL     string
-	dbPass    string
+	apiURL    string
 	credsFile string
 	logger    *zap.Logger
 }
 
 // NewScanner creates and returns a new Scanner instance
-func NewScanner(dbURL string, dbPass string, credsFile string, logger *zap.Logger) *Scanner {
+func NewScanner(apiURL string, credsFile string, logger *zap.Logger) *Scanner {
 	return &Scanner{
 		inventory: *inventory.NewInventory(),
 		stockers:  make([]stocker.Stocker, 0),
-		dbURL:     dbURL,
-		dbPass:    dbPass,
+		apiURL:    apiURL,
 		credsFile: credsFile,
 		logger:    logger,
 	}
@@ -62,9 +57,7 @@ func init() {
 	logger = ciqLogger.NewLogger()
 
 	// Load configuration from environment variables.
-	dbURL = os.Getenv("CIQ_DB_URL")
 	apiURL = os.Getenv("CIQ_API_URL")
-	dbPass = os.Getenv("CIQ_DB_PASS")
 	credsFile = os.Getenv("CIQ_CREDS_FILE")
 }
 
@@ -159,11 +152,10 @@ func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
 
-	scan := NewScanner(dbURL, dbPass, credsFile, logger)
+	scan := NewScanner(apiURL, credsFile, logger)
 	scan.logger.Info("Starting ClusterIQ Scanner",
 		zap.String("version", version),
 		zap.String("commit", commit),
-		zap.String("dbURL", dbURL),
 		zap.String("credentials file", credsFile),
 	)
 
@@ -200,14 +192,15 @@ func main() {
 }
 
 // postNewInstance posts into the API, the new instances obtained after scanning
-func postNewInstances(instances []inventory.Instance) error {
+func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
+	s.logger.Debug("Posting new Instances")
 	b, err := json.Marshal(instances)
 	if err != nil {
 		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", APIBaseURL, instanceEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
 	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
 	client := http.Client{}
 	response, err := client.Do(request)
@@ -220,14 +213,15 @@ func postNewInstances(instances []inventory.Instance) error {
 }
 
 // postNewCluster posts into the API, the new instances obtained after scanning
-func postNewClusters(clusters []inventory.Cluster) error {
+func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
+	s.logger.Debug("Posting new Clusters")
 	b, err := json.Marshal(clusters)
 	if err != nil {
 		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", APIBaseURL, clusterEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiClusterEndpoint)
 	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
 	client := http.Client{}
 	response, err := client.Do(request)
@@ -240,23 +234,27 @@ func postNewClusters(clusters []inventory.Cluster) error {
 }
 
 // postNewAccount posts into the API, the new instances obtained after scanning
-func postNewAccounts(accounts []inventory.Account) error {
+func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
+	s.logger.Debug("Posting new Accounts")
 	b, err := json.Marshal(accounts)
 	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		s.logger.Error("Failed to marshal inventory data from database", zap.Error(err))
 		return err
 	}
 
-	logger.Debug("Print bin", zap.ByteString("bytes", b))
-
-	requestURL := fmt.Sprintf("%s%s", APIBaseURL, accountEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiAccountEndpoint)
 	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
 	client := http.Client{}
 	response, err := client.Do(request)
-	if err != nil {
-		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
+	if response != nil {
+		defer response.Body.Close()
+		if err != nil {
+			s.logger.Error("Request Failed", zap.String("response", response.Status), zap.Error(err))
+			return err
+		}
+	} else if err != nil {
+		s.logger.Error("Can't request to API. Response is Null", zap.Error(err))
 	}
-	defer response.Body.Close()
 
 	return nil
 }
@@ -277,13 +275,13 @@ func (s *Scanner) postScannerResults() error {
 		accounts = append(accounts, account)
 	}
 
-	if err := postNewAccounts(accounts); err != nil {
+	if err := s.postNewAccounts(accounts); err != nil {
 		return err
 	}
-	if err := postNewClusters(clusters); err != nil {
+	if err := s.postNewClusters(clusters); err != nil {
 		return err
 	}
-	if err := postNewInstances(instances); err != nil {
+	if err := s.postNewInstances(instances); err != nil {
 		return err
 	}
 

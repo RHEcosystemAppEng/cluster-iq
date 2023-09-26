@@ -7,25 +7,18 @@ services:
     ports:
       - 8080:8080
     environment:
-      CIQ_API_HOST: "0.0.0.0"
-      CIQ_API_PORT: "9000"
-      CIQ_DB_HOST: "redis"
-      CIQ_DB_PORT: "6379"
-      CIQ_DB_PASS: ""
+      CIQ_API_URL: "http://api:8443/api/v1"
   api:
     image: quay.io/ecosystem-appeng/cluster-iq-api:latest
     container_name: api
     restart: always
     depends_on:
-      - redis
+      - pgsql
     ports:
       - 9000:9000
     environment:
-      CIQ_API_HOST: "0.0.0.0"
-      CIQ_API_PORT: "9000"
-      CIQ_DB_HOST: "redis"
-      CIQ_DB_PORT: "6379"
-      CIQ_DB_PASS: ""
+      CIQ_API_URL: "0.0.0.0:8443"
+      CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
       CIQ_LOG_LEVEL: "DEBUG"
 
   scanner:
@@ -35,9 +28,7 @@ services:
     depends_on:
       - redis
     environment:
-      CIQ_DB_HOST: "redis"
-      CIQ_DB_PORT: "6379"
-      CIQ_DB_PASS: ""
+      CIQ_API_URL: "http://api:8443/api/v1"
       CIQ_CREDS_FILE: "/credentials"
       CIQ_LOG_LEVEL: "DEBUG"
     volumes:
@@ -55,10 +46,14 @@ services:
       POSTGRESQL_DATABASE: "clusteriq"
       POSTGRESQL_ADMIN_PASSWORD: "admin"
 
-
-  redis:
-    image: registry.redhat.io/rhel8/redis-6@sha256:39c7fb6fa745e5e56bc2fb315917f83fe2f338f526e61e3c959495818c79ffa9
-    container_name: redis
-    restart: always
-    ports:
-      - 6379:6379
+  init-pgsql:
+    image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
+    container_name: init-pgsql
+    restart: "no"
+    command: |
+      sh -c 'sleep 2; psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql'
+    volumes:
+      - ./../../db/sql/init.sql:/init.sql
+    depends_on:
+      pgsql:
+        condition: service_started
