@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
@@ -177,8 +175,6 @@ func writeAccounts(accounts []inventory.Account) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("========================", accounts)
 
 	tx.NamedExec(InsertAccountsQuery, accounts)
 	if err := tx.Commit(); err != nil {
