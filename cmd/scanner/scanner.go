@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	apiAccountEndpoint  = "/accounts"
-	apiClusterEndpoint  = "/clusters"
-	apiInstanceEndpoint = "/instances"
+	apiAccountEndpoint    = "/accounts"
+	apiClusterEndpoint    = "/clusters"
+	apiInstanceEndpoint   = "/instances"
+	defaultINISectionName = "__DEFAULT__"
 )
 
 var (
@@ -59,6 +60,9 @@ func init() {
 	// Load configuration from environment variables.
 	apiURL = os.Getenv("CIQ_API_URL")
 	credsFile = os.Getenv("CIQ_CREDS_FILE")
+
+	// Setting INI files default section name
+	ini.DefaultSection = defaultINISectionName
 }
 
 // gerProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
@@ -81,6 +85,10 @@ func (s *Scanner) readCloudProviderAccounts() error {
 	if err != nil {
 		return err
 	}
+
+	// Removing the default sections because every account should have its own
+	// section, and any parameter outside of an account section will be considered
+	cfg.DeleteSection(defaultINISectionName)
 
 	// Read INI file content.
 	for _, account := range cfg.Sections() {
