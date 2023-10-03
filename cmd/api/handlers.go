@@ -88,12 +88,13 @@ func HandlerPostInstance(c *gin.Context) {
 	}
 
 	logger.Debug("Writing a new Instance", zap.Reflect("instance", instances))
-	err = writeInstance(instances)
+	err = writeInstances(instances)
 	if err != nil {
 		logger.Error("Can't write new instances into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
 	}
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // HandlerDeleteInstance handles the request for removing an Instance in the inventory
@@ -220,14 +221,29 @@ func HandlerGetInstancesOnCluster(c *gin.Context) {
 //	@Failure		500		{object}	nil
 //	@Router			/clusters/ [post]
 func HandlerPostCluster(c *gin.Context) {
-	cluster, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		logger.Error("Can't get body from request", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
 	}
-	logger.Debug("Writing a new Cluster", zap.Reflect("cluster", cluster))
-	c.PureJSON(http.StatusNotImplemented, nil)
+
+	var clusters []inventory.Cluster
+	err = json.Unmarshal([]byte(body), &clusters)
+	if err != nil {
+		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		c.PureJSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	logger.Debug("Writing new Clusters", zap.Reflect("clusters", clusters))
+	err = writeClusters(clusters)
+	if err != nil {
+		logger.Error("Can't write new Clusters into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // HandlerDeleteCluster handles the request for removing a Cluster in the inventory
@@ -243,7 +259,13 @@ func HandlerPostCluster(c *gin.Context) {
 func HandlerDeleteCluster(c *gin.Context) {
 	clusterName := c.Param("cluster_name")
 	logger.Debug("Removing a Cluster", zap.String("cluster_name", clusterName))
-	c.PureJSON(http.StatusNotImplemented, nil)
+	if err := deleteCluster(clusterName); err != nil {
+		logger.Error("Can't delete Cluster from DB", zap.String("cluster_name", clusterName), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // HandlerPatchCluster handles the request for patching a Cluster in the inventory
@@ -348,14 +370,30 @@ func HandlerGetClustersOnAccount(c *gin.Context) {
 //	@Failure		500		{object}	nil
 //	@Router			/accounts/ [post]
 func HandlerPostAccount(c *gin.Context) {
-	account, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		logger.Error("Can't get body from request", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
 	}
-	logger.Debug("Writing a new Account", zap.Reflect("account", account))
-	c.PureJSON(http.StatusNotImplemented, nil)
+
+	var accounts []inventory.Account
+	err = json.Unmarshal([]byte(body), &accounts)
+	if err != nil {
+		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		c.PureJSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	logger.Debug("Writing a new Account", zap.Reflect("accounts", accounts))
+	err = writeAccounts(accounts)
+	if err != nil {
+		logger.Error("Can't write new Accounts into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // HandlerDeleteAccount handles the request for deleting an Account in the inventory
@@ -371,7 +409,13 @@ func HandlerPostAccount(c *gin.Context) {
 func HandlerDeleteAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	logger.Debug("Removing an Account", zap.String("account", accountName))
-	c.PureJSON(http.StatusNotImplemented, nil)
+	if err := deleteAccount(accountName); err != nil {
+		logger.Error("Can't delete Cluster from DB", zap.String("account_name", accountName), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // HandlerPatchAccount handles the request for patching an Account in the inventory
