@@ -61,8 +61,6 @@ endef
 export HELP_MSG
 
 
-all: stop-dev build start-dev
-
 # Deployments
 deploy:
 	@$(K8S_CLI) apply -f $(DEPLOYMENTS_DIR)/openshift

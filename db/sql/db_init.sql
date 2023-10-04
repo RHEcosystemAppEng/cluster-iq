@@ -9,8 +9,7 @@ INSERT INTO
 VALUES
   ('AWS'),
   ('GCP'),
-  ('Azure'),
-  ('UNKNOWN')
+  ('Azure')
 ;
 
 
@@ -42,11 +41,4 @@ CREATE TABLE IF NOT EXISTS instances (
   state TEXT,
   cluster_name TEXT REFERENCES clusters(name)
   -- TODO: ADD tags
-);
-
-
-CREATE TABLE IF NOT EXISTS tags (
-  key TEXT,
-  value TEXT,
-  instance_id TEXT REFERENCES instances(id)
 );

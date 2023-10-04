@@ -33,28 +33,27 @@ type Instance struct {
 }
 
 // NewInstance returns a new Instance object
-func NewInstance(id string, name string, provider CloudProvider, instanceType string, region string, state InstanceState, clusterName string, tags []Tag) *Instance {
+func NewInstance(id string, name string, region string, instanceType string, state InstanceState, provider CloudProvider, tags []Tag) *Instance {
 	return &Instance{
 		ID:           id,
 		Name:         name,
-		Provider:     provider,
-		InstanceType: instanceType,
 		Region:       region,
+		InstanceType: instanceType,
 		State:        state,
-		ClusterName:  clusterName,
+		ClusterName:  "",
+		Provider:     provider,
 		Tags:         tags,
 	}
 }
 
 func (i Instance) String() string {
-	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s]",
+	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s]",
 		i.Name,
 		i.ID,
 		i.Provider,
-		i.InstanceType,
 		i.Region,
 		i.State,
-		i.ClusterName,
+		i.InstanceType,
 	)
 }
 

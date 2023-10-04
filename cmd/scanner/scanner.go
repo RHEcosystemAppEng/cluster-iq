@@ -1,25 +1,18 @@
 package main
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/redis"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
 	"go.uber.org/zap"
 	"gopkg.in/ini.v1"
-)
-
-const (
-	apiAccountEndpoint    = "/accounts"
-	apiClusterEndpoint    = "/clusters"
-	apiInstanceEndpoint   = "/instances"
-	defaultINISectionName = "__DEFAULT__"
 )
 
 var (
@@ -29,7 +22,8 @@ var (
 	commit string
 	//
 	logger    *zap.Logger
-	apiURL    string
+	dbURL     string
+	dbPass    string
 	credsFile string
 )
 
@@ -37,17 +31,19 @@ var (
 type Scanner struct {
 	inventory inventory.Inventory
 	stockers  []stocker.Stocker
-	apiURL    string
+	dbURL     string
+	dbPass    string
 	credsFile string
 	logger    *zap.Logger
 }
 
 // NewScanner creates and returns a new Scanner instance
-func NewScanner(apiURL string, credsFile string, logger *zap.Logger) *Scanner {
+func NewScanner(dbURL string, dbPass string, credsFile string, logger *zap.Logger) *Scanner {
 	return &Scanner{
 		inventory: *inventory.NewInventory(),
 		stockers:  make([]stocker.Stocker, 0),
-		apiURL:    apiURL,
+		dbURL:     dbURL,
+		dbPass:    dbPass,
 		credsFile: credsFile,
 		logger:    logger,
 	}
@@ -58,11 +54,11 @@ func init() {
 	logger = ciqLogger.NewLogger()
 
 	// Load configuration from environment variables.
-	apiURL = os.Getenv("CIQ_API_URL")
+	dbHost := os.Getenv("CIQ_DB_HOST")
+	dbPort := os.Getenv("CIQ_DB_PORT")
+	dbURL = fmt.Sprintf("%s:%s", dbHost, dbPort)
+	dbPass = os.Getenv("CIQ_DB_PASS")
 	credsFile = os.Getenv("CIQ_CREDS_FILE")
-
-	// Setting INI files default section name
-	ini.DefaultSection = defaultINISectionName
 }
 
 // gerProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
@@ -85,10 +81,6 @@ func (s *Scanner) readCloudProviderAccounts() error {
 	if err != nil {
 		return err
 	}
-
-	// Removing the default sections because every account should have its own
-	// section, and any parameter outside of an account section will be considered
-	cfg.DeleteSection(defaultINISectionName)
 
 	// Read INI file content.
 	for _, account := range cfg.Sections() {
@@ -160,14 +152,18 @@ func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
 
-	scan := NewScanner(apiURL, credsFile, logger)
+	scan := NewScanner(dbURL, dbPass, credsFile, logger)
 	scan.logger.Info("Starting ClusterIQ Scanner",
 		zap.String("version", version),
 		zap.String("commit", commit),
+		zap.String("dbURL", dbURL),
 		zap.String("credentials file", credsFile),
 	)
 
-	var err error
+	rdb, err := redis.InitDatabase(dbURL, dbPass)
+	if err != nil {
+		logger.Fatal("Failed to establish database connection", zap.Error(err))
+	}
 
 	// Get Cloud Accounts from credentials file
 	err = scan.readCloudProviderAccounts()
@@ -189,109 +185,20 @@ func main() {
 		return
 	}
 
-	// Writing into DB
-	scan.inventory.PrintInventory()
-	if err := scan.postScannerResults(); err != nil {
-		logger.Error("Can't post scanned results", zap.Error(err))
+	b, err := json.Marshal(scan.inventory)
+	if err != nil {
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return
+	}
+
+	ctx := context.Background()
+	logger.Info("Saving results to the database")
+	// TODO Refactor into dedicated function
+	err = rdb.Set(ctx, "Stock", string(b), redis.DataExpirationTTL).Err()
+	if err != nil {
+		logger.Error("Failed to write results to the database", zap.Error(err))
 		return
 	}
 
 	logger.Info("Scanner finished successfully")
-}
-
-// postNewInstance posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
-	s.logger.Debug("Posting new Instances")
-	b, err := json.Marshal(instances)
-	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
-	}
-	defer response.Body.Close()
-
-	return nil
-}
-
-// postNewCluster posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
-	s.logger.Debug("Posting new Clusters")
-	b, err := json.Marshal(clusters)
-	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiClusterEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
-	}
-	defer response.Body.Close()
-
-	return nil
-}
-
-// postNewAccount posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
-	s.logger.Debug("Posting new Accounts")
-	b, err := json.Marshal(accounts)
-	if err != nil {
-		s.logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiAccountEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
-	response, err := client.Do(request)
-	if response != nil {
-		defer response.Body.Close()
-		if err != nil {
-			s.logger.Error("Request Failed", zap.String("response", response.Status), zap.Error(err))
-			return err
-		}
-	} else if err != nil {
-		s.logger.Error("Can't request to API. Response is Null", zap.Error(err))
-	}
-
-	return nil
-}
-
-func (s *Scanner) postScannerResults() error {
-	var accounts []inventory.Account
-	var clusters []inventory.Cluster
-	var instances []inventory.Instance
-	for _, account := range s.inventory.Accounts {
-		for _, cluster := range account.Clusters {
-			for _, instance := range cluster.Instances {
-				instances = append(instances, instance)
-			}
-			cluster.Instances = nil
-			clusters = append(clusters, *cluster)
-		}
-		account.Clusters = nil
-		accounts = append(accounts, account)
-	}
-
-	if err := s.postNewAccounts(accounts); err != nil {
-		return err
-	}
-	if err := s.postNewClusters(clusters); err != nil {
-		return err
-	}
-	if err := s.postNewInstances(instances); err != nil {
-		return err
-	}
-
-	return nil
 }

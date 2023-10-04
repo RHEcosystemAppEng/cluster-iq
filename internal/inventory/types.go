@@ -50,5 +50,5 @@ const (
 	// GCPProvider - Google Cloud Platform Cloud Provider
 	GCPProvider = "GCP"
 	// UnknownProvider - Google Cloud Platform Cloud Provider
-	UnknownProvider = "UNKNOWN"
+	UnknownProvider = "UNK"
 )

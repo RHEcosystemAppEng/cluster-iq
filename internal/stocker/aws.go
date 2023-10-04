@@ -183,12 +183,7 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 			for _, tag := range instance.Tags {
 				switch {
 				case strings.Contains(*tag.Key, inventory.ClusterTagKey) && *tag.Value == "owned":
-					// The clusterName will be used as Key on DB. To prevent issues with
-					// blank characters, strings.TrimSpace is applied to remove those chars
-					//
-					// As the tag key follow this structure: "kubernetes.io/cluster/<CLUSTER_NAME>"
-					// only the 3rd field is needed
-					clusterName = strings.TrimSpace(strings.Split(*tag.Key, "/")[2])
+					clusterName = strings.Split(*tag.Key, "/")[2]
 				case *tag.Key == "Name":
 					name = *tag.Value
 				}
@@ -198,7 +193,7 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 				clusterName = "Unknown Cluster"
 			}
 
-			newInstance := inventory.NewInstance(*id, name, provider, *instanceType, *region, state, clusterName, inventory.ConvertEC2TagtoTag(tags))
+			newInstance := inventory.NewInstance(*id, name, *region, *instanceType, state, provider, inventory.ConvertEC2TagtoTag(tags))
 
 			if !s.Account.IsClusterOnAccount(clusterName) {
 				cluster := inventory.NewCluster(clusterName, provider, *region, s.Account.Name, "Unknown Console Link")
