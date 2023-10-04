@@ -9,8 +9,8 @@ import (
 func TestNewTag(t *testing.T) {
 	key := "testKey"
 	value := "testValue"
-	tag := NewTag(key, value)
-
+	instance := "instanceTest"
+	tag := NewTag(key, value, instance)
 	if tag != nil {
 		if tag.Key != key {
 			t.Errorf("Tag's key doesn't match. Have: %v ; Expected: %v", tag.Key, key)
