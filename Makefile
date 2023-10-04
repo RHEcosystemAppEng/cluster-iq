@@ -41,6 +41,7 @@ export
 # Help message
 define HELP_MSG
 Makefile Rules:
+	all: Stops the devel env, re-build the images, and starts the devel env again
 	deploy: Deploys the application on the current context configured on Openshift/Kubernetes CLI
 	clean: Removes local container images
 	build: Builds every component image in the repo: (API, scanner)
