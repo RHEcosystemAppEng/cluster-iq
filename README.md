@@ -88,7 +88,7 @@ The following services are available:
 | Service        | URL                   |
 |----------------|-----------------------|
 | UI             | <http://localhost:8080> |
-| API            | <http://localhost:9000/clusters> |
+| API            | <http://localhost:8443/clusters> |
 | Redis          | 0.0.0.0:6379          |
 
 ### Scanners

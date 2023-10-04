@@ -24,12 +24,9 @@ LABEL description="ClusterIQ API"
 # Binary
 COPY --from=builder /app/cluster-iq-api /cluster-iq-api
 
-ENV CIQ_API_HOST="0.0.0.0"
-ENV CIQ_API_PORT="8080"
-ENV CIQ_DB_HOST="127.0.0.1"
-ENV CIQ_DB_PORT="6379"
-ENV CIQ_DB_PASS=""
+ENV CIQ_API_URL="http://api:8443/api/v1"
+ENV CIQ_DB_URL="postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
 
-EXPOSE 8080
+EXPOSE 8443
 
 ENTRYPOINT ["/cluster-iq-api"]
