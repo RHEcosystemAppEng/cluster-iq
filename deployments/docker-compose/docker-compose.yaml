@@ -15,7 +15,7 @@ services:
     depends_on:
       - pgsql
     ports:
-      - 9000:9000
+      - 8443:8443
     environment:
       CIQ_API_URL: "0.0.0.0:8443"
       CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
@@ -26,7 +26,8 @@ services:
     container_name: scanner
     restart: "no"
     depends_on:
-      - pgsql
+      pgsql:
+        condition: service_completed_successfully
     environment:
       CIQ_API_URL: "http://api:8443/api/v1"
       CIQ_CREDS_FILE: "/credentials"
@@ -51,7 +52,7 @@ services:
     container_name: init-pgsql
     restart: "no"
     command: |
-      sh -c 'sleep 2; psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql'
+      sh -c 'while true; do psql postgresql://user:password@pgsql:5432/clusteriq -c "SELECT true" && break || sleep 2; done; psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql'
     volumes:
       - ./../../db/sql/init.sql:/init.sql
     depends_on:
