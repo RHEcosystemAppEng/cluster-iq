@@ -89,7 +89,7 @@ func main() {
 		instancesGroup := baseGroup.Group("/instances")
 		{
 			instancesGroup.GET("", HandlerGetInstances)
-			instancesGroup.GET("/:instance_id", HandlerGetInstancesByID)
+			instancesGroup.GET("/:instance_id", HandlerGetInstanceByID)
 			instancesGroup.POST("", HandlerPostInstance)
 			instancesGroup.DELETE("/:instance_id", HandlerDeleteInstance)
 			instancesGroup.PATCH("/:instance_id", HandlerPatchInstance)
