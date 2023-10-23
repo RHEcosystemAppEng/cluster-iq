@@ -59,7 +59,7 @@ services:
     container_name: init-pgsql
     restart: "no"
     command: |
-      sh -c 'sleep 2; psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql'
+      sh -c 'while true; do psql postgresql://user:password@pgsql:5432/clusteriq -c "SELECT true" && break || sleep 2; done; psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql'
     volumes:
       - ./../../db/sql/init.sql:/init.sql
     depends_on:

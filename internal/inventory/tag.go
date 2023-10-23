@@ -9,18 +9,21 @@ type Tag struct {
 
 	// Tag's Value
 	Value string `redis:"value" json:"value"`
+
+	// InstanceName reference
+	InstanceID string `db:"instance_id" json:"instance_id"`
 }
 
 // NewTag returns a new generic tag struct
-func NewTag(key string, value string) *Tag {
-	return &Tag{Key: key, Value: value}
+func NewTag(key string, value string, instanceID string) *Tag {
+	return &Tag{Key: key, Value: value, InstanceID: instanceID}
 }
 
 // ConvertEC2TagtoTag transforms the EC2 instance tags into Tag
-func ConvertEC2TagtoTag(ec2Tags []*ec2.Tag) []Tag {
+func ConvertEC2TagtoTag(ec2Tags []*ec2.Tag, instanceID string) []Tag {
 	var tags []Tag
 	for _, tag := range ec2Tags {
-		tags = append(tags, *NewTag(*tag.Key, *tag.Value))
+		tags = append(tags, *NewTag(*tag.Key, *tag.Value, instanceID))
 	}
 	return tags
 }

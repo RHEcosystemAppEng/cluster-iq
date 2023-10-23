@@ -46,6 +46,10 @@ func NewInstance(id string, name string, provider CloudProvider, instanceType st
 	}
 }
 
+func (i *Instance) AddTag(tag Tag) {
+	i.Tags = append(i.Tags, tag)
+}
+
 func (i Instance) String() string {
 	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s]",
 		i.Name,

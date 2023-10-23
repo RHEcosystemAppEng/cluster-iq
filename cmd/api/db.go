@@ -2,14 +2,15 @@ package main
 
 import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"go.uber.org/zap"
 )
 
 const (
 	// SelectInstancesQuery returns every instance in the inventory ordered by ID
-	SelectInstancesQuery = "SELECT * FROM instances ORDER BY id"
+	SelectInstancesQuery = "SELECT * FROM instances JOIN tags ON instances.id = tags.instance_id ORDER BY id"
 
 	// SelectInstancesByIDQuery returns an instance by its ID
-	SelectInstancesByIDQuery = "SELECT * FROM instances WHERE id = $1 ORDER BY id"
+	SelectInstancesByIDQuery = "SELECT * FROM instances JOIN tags ON instances.id = tags.instance_id WHERE id = $1 ORDER BY id"
 
 	// SelectClustersQuery returns every cluster in the inventory ordered by Name
 	SelectClustersQuery = "SELECT * FROM clusters ORDER BY name"
@@ -38,6 +39,9 @@ const (
 	// InsertAccountsQuery inserts into a new instance in its table
 	InsertAccountsQuery = "INSERT INTO accounts (name, provider) VALUES (:name, :provider) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider"
 
+	// InsertTagsQuery inserts into a new tag for an instance
+	InsertTagsQuery = "INSERT INTO tags (key, value, instance_id) VALUES (:key, :value, :instance_id) ON CONFLICT (key, instance_id) DO UPDATE SET value = EXCLUDED.value"
+
 	// DeleteInstanceQuery removes an instance by its ID
 	DeleteInstanceQuery = "DELETE FROM instances WHERE id=$1"
 
@@ -46,43 +50,104 @@ const (
 
 	// DeleteAccountQuery removes an account by its name
 	DeleteAccountQuery = "DELETE FROM accounts WHERE name=$1"
+
+	// DeleteTagsQuery removes a Tag by its key and instance reference
+	DeleteTagsQuery = "DELETE FROM tags WHERE instance_id=$1"
 )
+
+// joinInstancesTags, converts an array of InstanceDB into an array of inventory.Instance
+func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
+	instanceMap := make(map[string]*inventory.Instance)
+	for _, dbinstance := range dbinstances {
+		if _, ok := instanceMap[dbinstance.ID]; ok {
+			// Adding tag to an already read instance
+			instance := instanceMap[dbinstance.ID]
+			instance.AddTag(
+				*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID),
+			)
+		} else {
+			// Adding a new instance to the response
+			instanceMap[dbinstance.ID] = inventory.NewInstance(
+				dbinstance.ID,
+				dbinstance.Name,
+				dbinstance.Provider,
+				dbinstance.InstanceType,
+				dbinstance.Region,
+				dbinstance.State,
+				dbinstance.ClusterName,
+				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
+			)
+		}
+	}
+
+	// Converting map into list
+	var instances []inventory.Instance
+	for _, instance := range instanceMap {
+		instances = append(instances, *instance)
+	}
+
+	return instances
+}
 
 // getAccounts returns every account in Stock
 func getInstances() ([]inventory.Instance, error) {
-	var instances []inventory.Instance
-	if err := db.Select(&instances, SelectInstancesQuery); err != nil {
+	var dbinstances []InstanceDB
+	if err := db.Select(&dbinstances, SelectInstancesQuery); err != nil {
 		return nil, err
 	}
+
+	instances := joinInstancesTags(dbinstances)
+
 	return instances, nil
 }
 
 func getInstanceByID(instanceID string) ([]inventory.Instance, error) {
-	var instance inventory.Instance
-	if err := db.Get(&instance, SelectInstancesByIDQuery, instanceID); err != nil {
+	var dbinstances []InstanceDB
+	if err := db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
 	}
-	return []inventory.Instance{instance}, nil
+
+	instances := joinInstancesTags(dbinstances)
+
+	return instances, nil
 }
 
 func writeInstances(instances []inventory.Instance) error {
+	var tags []inventory.Tag
+	for _, instance := range instances {
+		tags = append(tags, instance.Tags...)
+	}
+
 	tx, err := db.Beginx()
 	if err != nil {
 		return err
 	}
-	tx.NamedExec(InsertInstancesQuery, instances)
+
+	// Writing Instances
+	if _, err := tx.NamedExec(InsertInstancesQuery, instances); err != nil {
+		logger.Error("Can't prepare Insert instances query", zap.Error(err))
+		return err
+	}
+	// Writing tags
+	if _, err := tx.NamedExec(InsertTagsQuery, tags); err != nil {
+		logger.Error("Can't prepare Insert tags query", zap.Error(err))
+		return err
+	}
+	// Commit
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 	return nil
 }
 
+// deleteInstance removes and instance and its tags from the DB
 func deleteInstance(instanceID string) error {
 	tx, err := db.Beginx()
 	if err != nil {
 		return err
 	}
 
+	tx.MustExec(DeleteTagsQuery, instanceID)
 	tx.MustExec(DeleteInstanceQuery, instanceID)
 	if err := tx.Commit(); err != nil {
 		return err

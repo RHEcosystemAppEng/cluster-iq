@@ -35,7 +35,7 @@ func HandlerGetInstances(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerGetInstancesByID handles the request for obtain an Instance by its ID
+// HandlerGetInstanceByID handles the request for obtain an Instance by its ID
 //	@Summary		Obtain a single Instance by its ID
 //	@Description	Returns a list of Instances with a single Instance filtered by ID
 //	@Tags			Instances
@@ -45,7 +45,7 @@ func HandlerGetInstances(c *gin.Context) {
 //	@Failure		404	{object}	nil
 //	@Failure		500	{object}	nil
 //	@Router			/instances/:instance_id [get]
-func HandlerGetInstancesByID(c *gin.Context) {
+func HandlerGetInstanceByID(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	logger.Debug("Retrieving instance by ID", zap.String("instance_id", instanceID))
 	addHeaders(c)

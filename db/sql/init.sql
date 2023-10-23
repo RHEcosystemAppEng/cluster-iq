@@ -48,5 +48,6 @@ CREATE TABLE IF NOT EXISTS instances (
 CREATE TABLE IF NOT EXISTS tags (
   key TEXT,
   value TEXT,
-  instance_id TEXT REFERENCES instances(id)
+  instance_id TEXT REFERENCES instances(id),
+  PRIMARY KEY (key, instance_id)
 );
