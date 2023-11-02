@@ -98,7 +98,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 			account.Key("user").String(),
 			account.Key("key").String(),
 		)
-		if err := s.inventory.AddAccount(*newAccount); err != nil {
+		if err := s.inventory.AddAccount(newAccount); err != nil {
 			return err
 		}
 	}
@@ -113,7 +113,7 @@ func (s *Scanner) createStockers() error {
 		switch account.Provider {
 		case inventory.AWSProvider:
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
-			s.stockers = append(s.stockers, stocker.NewAWSStocker(&account, logger))
+			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, logger))
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
@@ -154,49 +154,6 @@ func (s *Scanner) startStockers() error {
 		}
 	}
 	return nil
-}
-
-func main() {
-	// Ignore Logger sync error
-	defer func() { _ = logger.Sync() }()
-
-	scan := NewScanner(apiURL, credsFile, logger)
-	scan.logger.Info("Starting ClusterIQ Scanner",
-		zap.String("version", version),
-		zap.String("commit", commit),
-		zap.String("credentials file", credsFile),
-	)
-
-	var err error
-
-	// Get Cloud Accounts from credentials file
-	err = scan.readCloudProviderAccounts()
-	if err != nil {
-		logger.Error("Failed to get cloud provider accounts", zap.Error(err))
-		return
-	}
-
-	// Run Stockers
-	err = scan.createStockers()
-	if err != nil {
-		logger.Error("Failed to create stockers", zap.Error(err))
-		return
-	}
-
-	err = scan.startStockers()
-	if err != nil {
-		logger.Error("Failed to start up stocker instances", zap.Error(err))
-		return
-	}
-
-	// Writing into DB
-	scan.inventory.PrintInventory()
-	if err := scan.postScannerResults(); err != nil {
-		logger.Error("Can't post scanned results", zap.Error(err))
-		return
-	}
-
-	logger.Info("Scanner finished successfully")
 }
 
 // postNewInstance posts into the API, the new instances obtained after scanning
@@ -280,7 +237,7 @@ func (s *Scanner) postScannerResults() error {
 			clusters = append(clusters, *cluster)
 		}
 		account.Clusters = nil
-		accounts = append(accounts, account)
+		accounts = append(accounts, *account)
 	}
 
 	if err := s.postNewAccounts(accounts); err != nil {
@@ -294,4 +251,47 @@ func (s *Scanner) postScannerResults() error {
 	}
 
 	return nil
+}
+
+func main() {
+	// Ignore Logger sync error
+	defer func() { _ = logger.Sync() }()
+
+	scan := NewScanner(apiURL, credsFile, logger)
+	scan.logger.Info("Starting ClusterIQ Scanner",
+		zap.String("version", version),
+		zap.String("commit", commit),
+		zap.String("credentials file", credsFile),
+	)
+
+	var err error
+
+	// Get Cloud Accounts from credentials file
+	err = scan.readCloudProviderAccounts()
+	if err != nil {
+		logger.Error("Failed to get cloud provider accounts", zap.Error(err))
+		return
+	}
+
+	// Run Stockers
+	err = scan.createStockers()
+	if err != nil {
+		logger.Error("Failed to create stockers", zap.Error(err))
+		return
+	}
+
+	err = scan.startStockers()
+	if err != nil {
+		logger.Error("Failed to start up stocker instances", zap.Error(err))
+		return
+	}
+
+	// Writing into DB
+	scan.inventory.PrintInventory()
+	if err := scan.postScannerResults(); err != nil {
+		logger.Error("Can't post scanned results", zap.Error(err))
+		return
+	}
+
+	logger.Info("Scanner finished successfully")
 }

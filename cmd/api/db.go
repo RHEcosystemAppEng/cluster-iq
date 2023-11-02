@@ -34,10 +34,10 @@ const (
 	InsertInstancesQuery = "INSERT INTO instances (id, name, provider, instance_type, region, state, cluster_name) VALUES (:id, :name, :provider, :instance_type, :region, :state, :cluster_name) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, provider = EXCLUDED.provider, instance_type = EXCLUDED.instance_type, region = EXCLUDED.region, state = EXCLUDED.state, cluster_name = EXCLUDED.cluster_name"
 
 	// InsertClustersQuery inserts into a new instance in its table
-	InsertClustersQuery = "INSERT INTO clusters (name, provider, state, region, account_name, console_link) VALUES (:name, :provider, :state, :region, :account_name, :console_link) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider, state = EXCLUDED.state, region = EXCLUDED.region, console_link = EXCLUDED.console_link"
+	InsertClustersQuery = "INSERT INTO clusters (name, provider, state, region, account_name, console_link, instance_count) VALUES (:name, :provider, :state, :region, :account_name, :console_link, :instance_count) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider, state = EXCLUDED.state, region = EXCLUDED.region, console_link = EXCLUDED.console_link, instance_count = EXCLUDED.instance_count"
 
 	// InsertAccountsQuery inserts into a new instance in its table
-	InsertAccountsQuery = "INSERT INTO accounts (name, provider) VALUES (:name, :provider) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider"
+	InsertAccountsQuery = "INSERT INTO accounts (name, provider, cluster_count) VALUES (:name, :provider, :cluster_count) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider, cluster_count = EXCLUDED.cluster_count"
 
 	// InsertTagsQuery inserts into a new tag for an instance
 	InsertTagsQuery = "INSERT INTO tags (key, value, instance_id) VALUES (:key, :value, :instance_id) ON CONFLICT (key, instance_id) DO UPDATE SET value = EXCLUDED.value"
