@@ -46,7 +46,7 @@ func init() {
 	logger = ciqLogger.NewLogger()
 
 	// Getting Env Vars for config
-	apiURL = os.Getenv("CIQ_API_URL")
+	apiURL = os.Getenv("CIQ_API_LISTEN_URL")
 	dbURL = os.Getenv("CIQ_DB_URL")
 
 	// Initializaion global vars

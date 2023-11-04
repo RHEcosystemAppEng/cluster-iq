@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,6 +32,8 @@ var (
 	logger    *zap.Logger
 	apiURL    string
 	credsFile string
+	// client http
+	client http.Client
 )
 
 // Scanner models the cloud agnostic Scanner for looking up OCP deployments
@@ -63,6 +66,12 @@ func init() {
 
 	// Setting INI files default section name
 	ini.DefaultSection = defaultINISectionName
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client = http.Client{Transport: tr}
+
 }
 
 // gerProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
@@ -167,7 +176,6 @@ func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
 
 	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
 	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
 		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
@@ -188,7 +196,6 @@ func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
 
 	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiClusterEndpoint)
 	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
 		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
@@ -209,7 +216,6 @@ func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
 
 	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiAccountEndpoint)
 	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
 	response, err := client.Do(request)
 	if response != nil {
 		defer response.Body.Close()
