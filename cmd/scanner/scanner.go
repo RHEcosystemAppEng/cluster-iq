@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,6 +32,8 @@ var (
 	logger    *zap.Logger
 	apiURL    string
 	credsFile string
+	// client http
+	client http.Client
 )
 
 // Scanner models the cloud agnostic Scanner for looking up OCP deployments
@@ -63,6 +66,12 @@ func init() {
 
 	// Setting INI files default section name
 	ini.DefaultSection = defaultINISectionName
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client = http.Client{Transport: tr}
+
 }
 
 // gerProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
@@ -98,7 +107,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 			account.Key("user").String(),
 			account.Key("key").String(),
 		)
-		if err := s.inventory.AddAccount(*newAccount); err != nil {
+		if err := s.inventory.AddAccount(newAccount); err != nil {
 			return err
 		}
 	}
@@ -113,7 +122,7 @@ func (s *Scanner) createStockers() error {
 		switch account.Provider {
 		case inventory.AWSProvider:
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
-			s.stockers = append(s.stockers, stocker.NewAWSStocker(&account, logger))
+			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, logger))
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
@@ -153,6 +162,100 @@ func (s *Scanner) startStockers() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// postNewInstance posts into the API, the new instances obtained after scanning
+func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
+	s.logger.Debug("Posting new Instances")
+	b, err := json.Marshal(instances)
+	if err != nil {
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return err
+	}
+
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+// postNewCluster posts into the API, the new instances obtained after scanning
+func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
+	s.logger.Debug("Posting new Clusters")
+	b, err := json.Marshal(clusters)
+	if err != nil {
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return err
+	}
+
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiClusterEndpoint)
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
+// postNewAccount posts into the API, the new instances obtained after scanning
+func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
+	s.logger.Debug("Posting new Accounts")
+	b, err := json.Marshal(accounts)
+	if err != nil {
+		s.logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return err
+	}
+
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiAccountEndpoint)
+	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
+	response, err := client.Do(request)
+	if response != nil {
+		defer response.Body.Close()
+		if err != nil {
+			s.logger.Error("Request Failed", zap.String("response", response.Status), zap.Error(err))
+			return err
+		}
+	} else if err != nil {
+		s.logger.Error("Can't request to API. Response is Null", zap.Error(err))
+	}
+
+	return nil
+}
+
+func (s *Scanner) postScannerResults() error {
+	var accounts []inventory.Account
+	var clusters []inventory.Cluster
+	var instances []inventory.Instance
+	for _, account := range s.inventory.Accounts {
+		for _, cluster := range account.Clusters {
+			for _, instance := range cluster.Instances {
+				instances = append(instances, instance)
+			}
+			cluster.Instances = nil
+			clusters = append(clusters, *cluster)
+		}
+		account.Clusters = nil
+		accounts = append(accounts, *account)
+	}
+
+	if err := s.postNewAccounts(accounts); err != nil {
+		return err
+	}
+	if err := s.postNewClusters(clusters); err != nil {
+		return err
+	}
+	if err := s.postNewInstances(instances); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -197,101 +300,4 @@ func main() {
 	}
 
 	logger.Info("Scanner finished successfully")
-}
-
-// postNewInstance posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
-	s.logger.Debug("Posting new Instances")
-	b, err := json.Marshal(instances)
-	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
-	}
-	defer response.Body.Close()
-
-	return nil
-}
-
-// postNewCluster posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
-	s.logger.Debug("Posting new Clusters")
-	b, err := json.Marshal(clusters)
-	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiClusterEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
-	}
-	defer response.Body.Close()
-
-	return nil
-}
-
-// postNewAccount posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
-	s.logger.Debug("Posting new Accounts")
-	b, err := json.Marshal(accounts)
-	if err != nil {
-		s.logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiAccountEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	client := http.Client{}
-	response, err := client.Do(request)
-	if response != nil {
-		defer response.Body.Close()
-		if err != nil {
-			s.logger.Error("Request Failed", zap.String("response", response.Status), zap.Error(err))
-			return err
-		}
-	} else if err != nil {
-		s.logger.Error("Can't request to API. Response is Null", zap.Error(err))
-	}
-
-	return nil
-}
-
-func (s *Scanner) postScannerResults() error {
-	var accounts []inventory.Account
-	var clusters []inventory.Cluster
-	var instances []inventory.Instance
-	for _, account := range s.inventory.Accounts {
-		for _, cluster := range account.Clusters {
-			for _, instance := range cluster.Instances {
-				instances = append(instances, instance)
-			}
-			cluster.Instances = nil
-			clusters = append(clusters, *cluster)
-		}
-		account.Clusters = nil
-		accounts = append(accounts, account)
-	}
-
-	if err := s.postNewAccounts(accounts); err != nil {
-		return err
-	}
-	if err := s.postNewClusters(clusters); err != nil {
-		return err
-	}
-	if err := s.postNewInstances(instances); err != nil {
-		return err
-	}
-
-	return nil
 }

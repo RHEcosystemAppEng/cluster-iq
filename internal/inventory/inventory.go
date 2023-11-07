@@ -8,7 +8,7 @@ import (
 // Inventory object to store inventored resources
 type Inventory struct {
 	// Accounts map indexed by Account's Name
-	Accounts map[string]Account `redis:"accounts" json:"accounts"`
+	Accounts map[string]*Account `redis:"accounts" json:"accounts"`
 
 	// Date of Inventory creation/update
 	CreationTimestamp time.Time `redis:"creationTimestamp" json:"creationTimestamp"`
@@ -16,7 +16,7 @@ type Inventory struct {
 
 // NewInventory creates a new Inventory variable
 func NewInventory() *Inventory {
-	return &Inventory{Accounts: make(map[string]Account), CreationTimestamp: time.Now()}
+	return &Inventory{Accounts: make(map[string]*Account), CreationTimestamp: time.Now()}
 }
 
 // IsAccountOnInventory checks if a cluster is already in the Inventory
@@ -26,9 +26,8 @@ func (s Inventory) IsAccountOnInventory(name string) bool {
 }
 
 // AddAccount adds a new account into the Inventory
-func (s *Inventory) AddAccount(account Account) error {
+func (s *Inventory) AddAccount(account *Account) error {
 	if s.IsAccountOnInventory(account.Name) {
-		// TODO Should not be error?
 		return fmt.Errorf("Account %s already exists on Inventory", account.Name)
 	}
 	s.Accounts[account.Name] = account

@@ -113,9 +113,9 @@ push-api:
 	$(CONTAINER_ENGINE) push $(API_IMAGE):$(IMAGE_TAG)
 
 push-scanner:
-	@$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):latest
-	@$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):$(VERSION)
-	@$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):$(IMAGE_TAG)
+	$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):latest
+	$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):$(VERSION)
+	$(CONTAINER_ENGINE) push $(SCANNER_IMAGE):$(IMAGE_TAG)
 
 
 # Development env based on Docker/Podman Compose tool

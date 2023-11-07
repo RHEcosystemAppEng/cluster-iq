@@ -1,4 +1,3 @@
-
 -- Providers
 CREATE TABLE IF NOT EXISTS providers (
   name TEXT PRIMARY KEY
@@ -17,7 +16,8 @@ VALUES
 -- Accounts
 CREATE TABLE IF NOT EXISTS accounts (
   name TEXT PRIMARY KEY,
-  provider TEXT REFERENCES providers(name)
+  provider TEXT REFERENCES providers(name),
+  cluster_count INTEGER
 );
 
 
@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS clusters (
   state TEXT,
   region TEXT,
   account_name TEXT REFERENCES accounts(name),
-  console_link TEXT
+  console_link TEXT,
+  instance_count INTEGER
 );
 
 

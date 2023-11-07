@@ -26,21 +26,27 @@ var (
 	// commit reflects the git short-hash of the compiled version
 	commit string
 	// TODO: comment rest of global vars
-	inven    *inventory.Inventory
-	router   *gin.Engine
-	apiURL   string
-	dbURL    string
+	inven *inventory.Inventory
+	// Gin Router for serving API
+	router *gin.Engine
+	// API serving URL
+	apiURL string
+	// DB URL (example: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable")
+	dbURL string
+	// Loggin verbosity level. For more info, check zap log library
 	logLevel string
-	logger   *zap.Logger
-	db       *sqlx.DB
+	// Logger object
+	logger *zap.Logger
+	// DB object to manage DB connections
+	db *sqlx.DB
 )
 
 func init() {
-	// Logging config
+	// Logger creation
 	logger = ciqLogger.NewLogger()
 
-	// Getting config
-	apiURL = os.Getenv("CIQ_API_URL")
+	// Getting Env Vars for config
+	apiURL = os.Getenv("CIQ_API_LISTEN_URL")
 	dbURL = os.Getenv("CIQ_DB_URL")
 
 	// Initializaion global vars
@@ -52,7 +58,9 @@ func init() {
 	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 }
 
+// addHeaders adds the requerired HTTP headers for API working
 func addHeaders(c *gin.Context) {
+	// To deal with CORS
 	c.Header("Access-Control-Allow-Origin", "*")
 }
 
@@ -124,7 +132,7 @@ func main() {
 	docs.SwaggerInfo.Version = "1.0"
 	docs.SwaggerInfo.Host = "localhost"
 	docs.SwaggerInfo.BasePath = "/api/v1"
-	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+	docs.SwaggerInfo.Schemes = []string{"http"}
 
 	// PGSQL connection
 	var err error

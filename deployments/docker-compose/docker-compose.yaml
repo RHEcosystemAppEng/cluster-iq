@@ -4,8 +4,11 @@ services:
     image: quay.io/ecosystem-appeng/cluster-iq-console:latest
     container_name: console
     restart: always
+    depends_on:
+      api:
+        condition: service_healthy
     ports:
-      - 8080:8080
+      - 8080:3000
     environment:
       CIQ_API_URL: "http://api:8080/api/v1"
   api:
@@ -52,8 +55,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    volumes:
-      - db:/var/lib/pgsql/data
+
   init-pgsql:
     image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
     container_name: init-pgsql
@@ -65,6 +67,3 @@ services:
     depends_on:
       pgsql:
         condition: service_healthy
-volumes:
-  db:
-    driver: local

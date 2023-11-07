@@ -24,6 +24,9 @@ type Cluster struct {
 	// Openshift Console URL. Might not be accesible if its protected
 	ConsoleLink string `db:"console_link" json:"consoleLink"`
 
+	// Instances count
+	InstanceCount int `db:"instance_count" json:"instanceCount"`
+
 	// Cluster's instance (nodes) lists
 	Instances []Instance
 }
@@ -31,13 +34,14 @@ type Cluster struct {
 // NewCluster creates a new cluster instance
 func NewCluster(name string, provider CloudProvider, region string, accountName string, consoleLink string) Cluster {
 	return Cluster{
-		Name:        name,
-		Provider:    provider,
-		Status:      Unknown,
-		Region:      region,
-		AccountName: accountName,
-		ConsoleLink: consoleLink,
-		Instances:   make([]Instance, 0),
+		Name:          name,
+		Provider:      provider,
+		Status:        Unknown,
+		Region:        region,
+		AccountName:   accountName,
+		ConsoleLink:   consoleLink,
+		InstanceCount: 0,
+		Instances:     make([]Instance, 0),
 	}
 }
 
@@ -66,10 +70,10 @@ func (c Cluster) isClusterRunning() bool {
 // considered as Unknown status
 // TODO: find out a more trustable approach to evaluate cluster status
 func (c *Cluster) UpdateStatus() {
-	instancesNum := len(c.Instances)
+	c.InstanceCount = len(c.Instances)
 
 	// Check minimun instances
-	if instancesNum < minInstances {
+	if c.InstanceCount < minInstances {
 		c.Status = Unknown
 		return
 	}
@@ -96,7 +100,7 @@ func (c *Cluster) AddInstance(instance Instance) {
 
 // PrintCluster prints cluster info
 func (c Cluster) PrintCluster() {
-	fmt.Printf("\tCluster: %s -- [%s](Instances: %d)\n", c.Name, c.ConsoleLink, len(c.Instances))
+	fmt.Printf("\tCluster: %s -- [%s](Instances: %d)\n", c.Name, c.ConsoleLink, c.InstanceCount)
 	for _, instance := range c.Instances {
 		instance.PrintInstance()
 	}

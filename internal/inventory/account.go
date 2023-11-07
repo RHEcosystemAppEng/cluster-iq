@@ -11,8 +11,11 @@ type Account struct {
 	// Infrastructure provider identifier.
 	Provider CloudProvider `db:"provider" json:"provider"`
 
+	// ClusterCount
+	ClusterCount int `db:"cluster_count" json:"clusterCount"`
+
 	// List of clusters deployed on this account indexed by Cluster's name
-	Clusters map[string]*Cluster
+	Clusters map[string]*Cluster `json:"-"`
 
 	// Account's username
 	user string
@@ -23,7 +26,14 @@ type Account struct {
 
 // NewAccount create a new Could Provider account to store its instances
 func NewAccount(name string, provider CloudProvider, user string, password string) *Account {
-	return &Account{Name: name, Provider: provider, Clusters: make(map[string]*Cluster), user: user, password: password}
+	return &Account{
+		Name:         name,
+		Provider:     provider,
+		ClusterCount: 0,
+		Clusters:     make(map[string]*Cluster),
+		user:         user,
+		password:     password,
+	}
 }
 
 // GetUser returns the username value
@@ -54,12 +64,13 @@ func (a *Account) AddCluster(cluster Cluster) error {
 	}
 
 	a.Clusters[cluster.Name] = &cluster
+	a.ClusterCount = len(a.Clusters)
 	return nil
 }
 
 // PrintAccount prints account info and every cluster on it by stdout
 func (a Account) PrintAccount() {
-	fmt.Printf("Account: %s -- (Clusters: %d)\n", a.Name, len(a.Clusters))
+	fmt.Printf("Account: %s -- (Clusters: %d)\n", a.Name, a.ClusterCount)
 	for _, cluster := range a.Clusters {
 		cluster.PrintCluster()
 		fmt.Printf("\n")
