@@ -21,7 +21,7 @@ services:
     ports:
       - 8081:8080
     environment:
-      CIQ_API_URL: "0.0.0.0:8080"
+      CIQ_API_LISTEN_URL: "0.0.0.0:8080"
       CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
       CIQ_LOG_LEVEL: "DEBUG"
 

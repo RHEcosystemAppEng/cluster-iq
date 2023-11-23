@@ -34,12 +34,17 @@ The following graph shows the architecture of this project:
 
 
 ## Getting started
+Prepare your cluster and CLI
+```
+oc login ...
+
+export NAMESPACE="cluster-iq"
+oc new-project $NAMESPACE
+```
 
 ### Credentials file
-
 The file containing the access credentials to the cloud provider accounts
 should look like this:
-
 ```text
 [appeng]
 provider = aws/gcp/azure
@@ -54,13 +59,10 @@ Once you prepared your credentials file, run the following command to create the
 secret:
 
 ```shell
-oc create secret generic credentials \
-  -n <NAMESPACE> \
-  --from-file=credentials=<CREDENTIALS_FILE>
+oc create secret generic credentials -n $NAMESPACE --from-file=credentials=<CREDENTIALS_FILE>
 ```
 
 ### Configuration
-
 Available configuration via Env Vars:
 | Key                  | Value                         | Description                               |
 |----------------------|-------------------------------|-------------------------------------------|
@@ -74,6 +76,22 @@ Available configuration via Env Vars:
 
 These variables are defined in `./<PROJECT_FOLDER>/.env` to be used on Makefile
 and on `./<PROJECT_FOLDER>/deploy/openshift/config.yaml` to deploy it on Openshift.
+```sh
+oc apply -n $NAMESPACE -f ./deployments/openshift/config.yaml
+```
+
+
+```sh
+oc adm policy add-scc-to-user anyuid -z cluster-iq-console
+```
+
+
+
+### DB init
+To create Openshift ConfigFile for initializing the DB, run the following command:
+```sh
+oc create configmap -n $NAMESPACE pgsql-init --from-file=init.sql=./db/sql/init.sql
+```
 
 ### Run local development environment
 
