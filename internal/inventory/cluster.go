@@ -32,8 +32,8 @@ type Cluster struct {
 }
 
 // NewCluster creates a new cluster instance
-func NewCluster(name string, provider CloudProvider, region string, accountName string, consoleLink string) Cluster {
-	return Cluster{
+func NewCluster(name string, provider CloudProvider, region string, accountName string, consoleLink string) *Cluster {
+	return &Cluster{
 		Name:          name,
 		Provider:      provider,
 		Status:        Unknown,

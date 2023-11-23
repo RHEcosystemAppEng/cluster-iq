@@ -7,7 +7,7 @@ metadata:
     app: cluster-iq
     component: config
 data:
-  CIQ_API_URL: "https://api-cloud-inventory.apps.ocp-dev01.lab.eng.tlv2.redhat.com/api/v1"
+  REACT_APP_CIQ_API_URL: "https://api/api/v1"
   CIQ_API_LISTEN_URL: "0.0.0.0:8443"
   CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
   CIQ_CREDS_FILE: "/credentials/credentials"
@@ -16,3 +16,4 @@ data:
   POSTGRESQL_PASSWORD: "password"
   POSTGRESQL_DATABASE: "clusteriq"
   POSTGRESQL_ADMIN_PASSWORD: "admin"
+  POSTGRESQL_MAX_CONNECTIONS: "100"
