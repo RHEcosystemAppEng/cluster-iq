@@ -235,8 +235,6 @@ func (s *Scanner) postScannerResults() error {
 			}
 			cluster.Instances = nil
 			clusters = append(clusters, *cluster)
-			fmt.Println("CLuster COunt ----------", len(clusters))
-
 		}
 		account.Clusters = nil
 		accounts = append(accounts, *account)
