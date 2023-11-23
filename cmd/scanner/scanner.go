@@ -175,14 +175,8 @@ func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
 	}
 
 	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	response, err := client.Do(request)
-	if err != nil {
-		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
-	}
-	defer response.Body.Close()
 
-	return nil
+	return postData(requestURL, b, s.logger)
 }
 
 // postNewCluster posts into the API, the new instances obtained after scanning
@@ -195,14 +189,8 @@ func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
 	}
 
 	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiClusterEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
-	response, err := client.Do(request)
-	if err != nil {
-		logger.Error("Can't request to API", zap.String("response", response.Status), zap.Error(err))
-	}
-	defer response.Body.Close()
 
-	return nil
+	return postData(requestURL, b, s.logger)
 }
 
 // postNewAccount posts into the API, the new instances obtained after scanning
@@ -215,16 +203,22 @@ func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
 	}
 
 	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiAccountEndpoint)
-	request, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(b))
+
+	return postData(requestURL, b, s.logger)
+}
+
+func postData(url string, b []byte, logger *zap.Logger) error {
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
 	response, err := client.Do(request)
 	if response != nil {
 		defer response.Body.Close()
 		if err != nil {
-			s.logger.Error("Request Failed", zap.String("response", response.Status), zap.Error(err))
+			logger.Error("Request Failed", zap.String("response", response.Status), zap.Error(err))
 			return err
 		}
 	} else if err != nil {
-		s.logger.Error("Can't request to API. Response is Null", zap.Error(err))
+		logger.Error("Can't request to API. Response is Null", zap.Error(err))
+		return err
 	}
 
 	return nil
@@ -247,12 +241,17 @@ func (s *Scanner) postScannerResults() error {
 	}
 
 	if err := s.postNewAccounts(accounts); err != nil {
+		s.logger.Debug("Adding Accounts", zap.Int("accounts_count", len(accounts)))
 		return err
 	}
+
 	if err := s.postNewClusters(clusters); err != nil {
+		s.logger.Debug("Adding Clusters", zap.Int("clusters_count", len(accounts)))
 		return err
 	}
+
 	if err := s.postNewInstances(instances); err != nil {
+		s.logger.Debug("Adding Instances", zap.Int("instances_count", len(accounts)))
 		return err
 	}
 

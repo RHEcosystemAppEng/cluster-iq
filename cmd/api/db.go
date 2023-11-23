@@ -188,7 +188,15 @@ func writeClusters(clusters []inventory.Cluster) error {
 		return err
 	}
 
-	tx.NamedExec(InsertClustersQuery, clusters)
+	result, err := tx.NamedExec(InsertClustersQuery, clusters)
+	if err != nil {
+		if result != nil {
+			rows, _ := result.RowsAffected()
+			logger.Error("Error running NamedQuery", zap.Int64("rows_affected", rows))
+		}
+		logger.Error("Error preparing NamedQUery", zap.Error(err))
+	}
+
 	if err := tx.Commit(); err != nil {
 		return err
 	}

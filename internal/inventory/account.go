@@ -58,12 +58,12 @@ func (a Account) GetCluster(name string) *Cluster {
 }
 
 // AddCluster adds a cluster to the stock
-func (a *Account) AddCluster(cluster Cluster) error {
+func (a *Account) AddCluster(cluster *Cluster) error {
 	if a.IsClusterOnAccount(cluster.Name) {
 		return fmt.Errorf("Cluster %s already exists on Account %s", cluster.Name, a.Name)
 	}
 
-	a.Clusters[cluster.Name] = &cluster
+	a.Clusters[cluster.Name] = cluster
 	a.ClusterCount = len(a.Clusters)
 	return nil
 }
