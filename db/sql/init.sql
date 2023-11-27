@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 -- Clusters
 CREATE TABLE IF NOT EXISTS clusters (
-  -- id is the result of joinning: "name+infra_id+account
+  -- id is the result of joinning: "name+infra_id+account"
   id TEXT PRIMARY KEY,
   name TEXT,
   infra_id TEXT,
