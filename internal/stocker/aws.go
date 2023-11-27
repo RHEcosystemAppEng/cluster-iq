@@ -38,10 +38,20 @@ type AWSStocker struct {
 func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
 	st := AWSStocker{region: defaultAWSRegion, logger: logger}
 	st.Account = account
+
 	if err := st.CreateSession(); err != nil {
 		st.logger.Error("Failed to initialize new session during AWSStocker creation", zap.Error(err))
 		return nil
 	}
+
+	accountID, err := st.getAccountID(st.session)
+	if err != nil {
+		st.logger.Error("Can't obtain AccountID", zap.Error(err))
+		return nil
+	}
+
+	st.Account.ID = accountID
+
 	return &st
 }
 
@@ -73,14 +83,6 @@ func (s *AWSStocker) CreateSession() error {
 		s.logger.Error("Can't Create new AWS client session", zap.Error(err))
 		return err
 	}
-
-	accountID, err := s.getAccountID(s.session)
-	if err != nil {
-		s.logger.Error("Can't obtain AccountID", zap.Error(err))
-		return err
-	}
-
-	s.Account.ID = accountID
 
 	if err != nil {
 		return err

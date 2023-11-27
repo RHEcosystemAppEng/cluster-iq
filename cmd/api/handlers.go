@@ -279,8 +279,8 @@ func HandlerDeleteCluster(c *gin.Context) {
 //	@Failure		500			{object}	nil
 //	@Router			/clusters/:cluster_id [patch]
 func HandlerPatchCluster(c *gin.Context) {
-	clusterName := c.Param("cluster_id")
-	logger.Debug("Patching a Cluster", zap.String("cluster", clusterName))
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Patching a Cluster", zap.String("cluster_id", clusterID))
 	c.PureJSON(http.StatusNotImplemented, nil)
 }
 
