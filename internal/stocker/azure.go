@@ -17,7 +17,7 @@ type AzureStocker struct {
 // NewAzureStocker create and returns a pointer to a new AzureStocker instance
 func NewAzureStocker(account inventory.Account, logger *zap.Logger) *AzureStocker {
 	st := AzureStocker{region: "default", logger: logger}
-	st.Account = *inventory.NewAccount(account.Name, inventory.AzureProvider, account.GetUser(), account.GetPassword())
+	st.Account = *inventory.NewAccount(account.ID, account.Name, inventory.AzureProvider, account.GetUser(), account.GetPassword())
 	return &st
 }
 

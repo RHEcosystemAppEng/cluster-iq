@@ -3,19 +3,27 @@ package inventory
 import "testing"
 
 func TestNewCluster(t *testing.T) {
-	var cluster Cluster
+	var cluster *Cluster
 	var provider CloudProvider
 
+	id := "testCluster-XXXX1-testAccount"
 	name := "testCluster"
+	infraID := "XXXX1"
 	provider = UnknownProvider
 	region := "eu-west-1"
 	accountName := "testAccount"
 	consoleLink := "https://url.com"
 
-	cluster = NewCluster(name, provider, region, accountName, consoleLink)
+	cluster = NewCluster(name, infraID, provider, region, accountName, consoleLink)
 
+	if cluster.ID != id {
+		t.Errorf("Cluster's ID do not match. Have: %s ; Expected: %s", cluster.ID, id)
+	}
 	if cluster.Name != name {
 		t.Errorf("Cluster's Name do not match. Have: %s ; Expected: %s", cluster.Name, name)
+	}
+	if cluster.InfraID != infraID {
+		t.Errorf("Cluster's InfraID do not match. Have: %s ; Expected: %s", cluster.InfraID, infraID)
 	}
 	if cluster.Provider != provider {
 		t.Errorf("Cluster's Provider do not match. Have: %s ; Expected: %s", cluster.Provider, provider)
@@ -40,34 +48,35 @@ func TestIsClusterStopped(t *testing.T) {
 	// Running Cluster
 	cluster = Cluster{
 		Name:        "testCluster",
+		InfraID:     "XXXX1",
 		Provider:    UnknownProvider,
 		Status:      Unknown,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "12345",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "23456",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "23456",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 		},
 	}
@@ -86,20 +95,20 @@ func TestIsClusterStopped(t *testing.T) {
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "12345",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 		},
 	}
@@ -122,28 +131,28 @@ func TestIsClusterRunning(t *testing.T) {
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "12345",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "23456",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "23456",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 		},
 	}
@@ -161,20 +170,20 @@ func TestIsClusterRunning(t *testing.T) {
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "12345",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 		},
 	}
@@ -197,20 +206,20 @@ func TestUpdateStatus(t *testing.T) {
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "12345",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 		},
 	}
@@ -228,28 +237,28 @@ func TestUpdateStatus(t *testing.T) {
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "12345",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "23456",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Running,
-				Tags:         []Tag{},
+				ID:               "23456",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Running,
+				Tags:             []Tag{},
 			},
 		},
 	}
@@ -267,28 +276,28 @@ func TestUpdateStatus(t *testing.T) {
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "12345",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 			{
-				ID:           "23456",
-				Name:         "testInstance2",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "23456",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 		},
 	}
@@ -311,12 +320,12 @@ func TestAddInstance(t *testing.T) {
 	}
 
 	instance = Instance{
-		ID:           "01234",
-		Name:         "testInstance",
-		Region:       "eu-west-1a",
-		InstanceType: "medium",
-		State:        Stopped,
-		Tags:         []Tag{},
+		ID:               "01234",
+		Name:             "testInstance",
+		AvailabilityZone: "eu-west-1a",
+		InstanceType:     "medium",
+		State:            Stopped,
+		Tags:             []Tag{},
 	}
 
 	before := len(cluster.Instances)
@@ -338,12 +347,12 @@ func TestPrintCluster(t *testing.T) {
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
 			{
-				ID:           "01234",
-				Name:         "testInstance1",
-				Region:       "eu-west-1a",
-				InstanceType: "medium",
-				State:        Stopped,
-				Tags:         []Tag{},
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				State:            Stopped,
+				Tags:             []Tag{},
 			},
 		},
 	}

@@ -7,52 +7,161 @@ import (
 
 const (
 	// SelectInstancesQuery returns every instance in the inventory ordered by ID
-	SelectInstancesQuery = "SELECT * FROM instances JOIN tags ON instances.id = tags.instance_id ORDER BY id"
+	SelectInstancesQuery = `
+		SELECT * FROM instances
+		JOIN tags ON
+			instances.id = tags.instance_id
+		ORDER BY name
+	`
 
 	// SelectInstancesByIDQuery returns an instance by its ID
-	SelectInstancesByIDQuery = "SELECT * FROM instances JOIN tags ON instances.id = tags.instance_id WHERE id = $1 ORDER BY id"
+	SelectInstancesByIDQuery = `
+		SELECT * FROM instances
+		JOIN tags ON
+			instances.id = tags.instance_id
+		WHERE id = $1
+		ORDER BY name
+	`
 
 	// SelectClustersQuery returns every cluster in the inventory ordered by Name
-	SelectClustersQuery = "SELECT * FROM clusters ORDER BY name"
+	SelectClustersQuery = `
+		SELECT * FROM clusters
+		ORDER BY name
+	`
 
-	// SelectClustersByNameQuery returns an cluster by its Name
-	SelectClustersByNameQuery = "SELECT * FROM clusters WHERE name = $1 ORDER BY name"
+	// SelectClustersByIDuery returns an cluster by its Name
+	SelectClustersByIDuery = `
+		SELECT * FROM clusters
+		WHERE id = $1
+		ORDER BY name
+	`
 
 	// SelectInstancesOnClusterQuery returns every instance belonging to a acluster
-	SelectInstancesOnClusterQuery = "SELECT * FROM instances WHERE cluster_name = $1 ORDER BY id"
+	SelectInstancesOnClusterQuery = `
+		SELECT * FROM instances
+		WHERE cluster_id = $1
+		ORDER BY id
+	`
 
 	// SelectAccountsQuery returns every instance in the inventory ordered by Name
-	SelectAccountsQuery = "SELECT * FROM accounts ORDER BY name"
+	SelectAccountsQuery = `
+		SELECT * FROM accounts
+		ORDER BY name
+	`
 
 	// SelectAccountsByNameQuery returns an instance by its Name
-	SelectAccountsByNameQuery = "SELECT * FROM accounts WHERE name = $1 ORDER BY name"
+	SelectAccountsByNameQuery = `
+		SELECT * FROM accounts
+		WHERE name = $1
+		ORDER BY name
+	`
 
 	// SelectClustersOnAccountQuery returns an cluster by its Name
-	SelectClustersOnAccountQuery = "SELECT * FROM clusters WHERE account_name = $1 ORDER BY name"
+	SelectClustersOnAccountQuery = `
+		SELECT * FROM clusters
+		WHERE account_name = $1
+		ORDER BY name
+	`
 
 	// InsertInstancesQuery inserts into a new instance in its table
-	InsertInstancesQuery = "INSERT INTO instances (id, name, provider, instance_type, region, state, cluster_name) VALUES (:id, :name, :provider, :instance_type, :region, :state, :cluster_name) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, provider = EXCLUDED.provider, instance_type = EXCLUDED.instance_type, region = EXCLUDED.region, state = EXCLUDED.state, cluster_name = EXCLUDED.cluster_name"
+	InsertInstancesQuery = `
+	INSERT INTO instances (
+		id,
+		name,
+		provider,
+		instance_type,
+		availability_zone,
+		state,
+		cluster_id
+	) VALUES (
+		:id,
+		:name,
+		:provider,
+		:instance_type,
+		:availability_zone,
+		:state,
+		:cluster_id
+	) ON CONFLICT (id) DO UPDATE SET
+		name = EXCLUDED.name,
+		provider = EXCLUDED.provider,
+		instance_type = EXCLUDED.instance_type,
+		availability_zone = EXCLUDED.availability_zone,
+		state = EXCLUDED.state,
+		cluster_id = EXCLUDED.cluster_id
+	`
 
 	// InsertClustersQuery inserts into a new instance in its table
-	InsertClustersQuery = "INSERT INTO clusters (name, provider, state, region, account_name, console_link, instance_count) VALUES (:name, :provider, :state, :region, :account_name, :console_link, :instance_count) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider, state = EXCLUDED.state, region = EXCLUDED.region, console_link = EXCLUDED.console_link, instance_count = EXCLUDED.instance_count"
+	InsertClustersQuery = `INSERT INTO clusters (
+		id,
+		name,
+		infra_id,
+		provider,
+		state,
+		region,
+		account_name,
+		console_link,
+		instance_count
+	) VALUES (
+		:id,
+	  :name,
+		:infra_id,
+		:provider,
+		:state,
+		:region,
+		:account_name,
+		:console_link,
+		:instance_count
+	) ON CONFLICT (id) DO UPDATE SET
+		provider = EXCLUDED.provider,
+		state = EXCLUDED.state,
+		region = EXCLUDED.region,
+		console_link = EXCLUDED.console_link,
+		instance_count = EXCLUDED.instance_count
+		`
 
 	// InsertAccountsQuery inserts into a new instance in its table
-	InsertAccountsQuery = "INSERT INTO accounts (name, provider, cluster_count) VALUES (:name, :provider, :cluster_count) ON CONFLICT (name) DO UPDATE SET provider = EXCLUDED.provider, cluster_count = EXCLUDED.cluster_count"
+	InsertAccountsQuery = `
+		INSERT INTO accounts (
+			id,
+			name,
+			provider,
+			cluster_count
+		) VALUES (
+			:id,
+			:name,
+			:provider,
+			:cluster_count
+		) ON CONFLICT (name) DO UPDATE SET
+			id = EXCLUDED.id,
+			provider = EXCLUDED.provider,
+			cluster_count = EXCLUDED.cluster_count
+	`
 
 	// InsertTagsQuery inserts into a new tag for an instance
-	InsertTagsQuery = "INSERT INTO tags (key, value, instance_id) VALUES (:key, :value, :instance_id) ON CONFLICT (key, instance_id) DO UPDATE SET value = EXCLUDED.value"
+	InsertTagsQuery = `
+		INSERT INTO tags (
+			key,
+			value,
+			instance_id
+		) VALUES (
+			:key,
+			:value,
+			:instance_id
+		) ON CONFLICT (key, instance_id) DO UPDATE SET
+			value = EXCLUDED.value
+	`
 
 	// DeleteInstanceQuery removes an instance by its ID
-	DeleteInstanceQuery = "DELETE FROM instances WHERE id=$1"
+	DeleteInstanceQuery = `DELETE FROM instances WHERE id=$1`
 
 	// DeleteClusterQuery removes an cluster by its name
-	DeleteClusterQuery = "DELETE FROM clusters WHERE name=$1"
+	DeleteClusterQuery = `DELETE FROM clusters WHERE id=$1`
 
 	// DeleteAccountQuery removes an account by its name
-	DeleteAccountQuery = "DELETE FROM accounts WHERE name=$1"
+	DeleteAccountQuery = `DELETE FROM accounts WHERE name=$1`
 
 	// DeleteTagsQuery removes a Tag by its key and instance reference
-	DeleteTagsQuery = "DELETE FROM tags WHERE instance_id=$1"
+	DeleteTagsQuery = `DELETE FROM tags WHERE instance_id=$1`
 )
 
 // joinInstancesTags, converts an array of InstanceDB into an array of inventory.Instance
@@ -72,9 +181,9 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 				dbinstance.Name,
 				dbinstance.Provider,
 				dbinstance.InstanceType,
-				dbinstance.Region,
+				dbinstance.AvailabilityZone,
 				dbinstance.State,
-				dbinstance.ClusterName,
+				dbinstance.ClusterID,
 				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
 			)
 		}
@@ -165,18 +274,18 @@ func getClusters() ([]inventory.Cluster, error) {
 }
 
 // getClusters returns the clusters in Stock with the requested name
-func getClusterByName(clusterName string) ([]inventory.Cluster, error) {
+func getClusterByID(clusterID string) ([]inventory.Cluster, error) {
 	var cluster inventory.Cluster
-	if err := db.Get(&cluster, SelectClustersByNameQuery, clusterName); err != nil {
+	if err := db.Get(&cluster, SelectClustersByIDuery, clusterID); err != nil {
 		return nil, err
 	}
 	return []inventory.Cluster{cluster}, nil
 }
 
 // getInstancesOnCluster returns the instances belonging to a cluster specified by name
-func getInstancesOnCluster(clusterName string) ([]inventory.Instance, error) {
+func getInstancesOnCluster(clusterID string) ([]inventory.Instance, error) {
 	var instances []inventory.Instance
-	if err := db.Select(&instances, SelectInstancesOnClusterQuery, clusterName); err != nil {
+	if err := db.Select(&instances, SelectInstancesOnClusterQuery, clusterID); err != nil {
 		return nil, err
 	}
 	return instances, nil
