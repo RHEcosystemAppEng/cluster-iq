@@ -20,7 +20,7 @@ type Instance struct {
 	InstanceType string `db:"instance_type" json:"instanceType"`
 
 	// Availability Zone in which the instance is running on
-	AvailabilityZone string `db:"availability_zone" json:"availability_zone"`
+	AvailabilityZone string `db:"availability_zone" json:"availabilityZone"`
 
 	// Instance Status
 	State InstanceState `db:"state" json:"state"`
