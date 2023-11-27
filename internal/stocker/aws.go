@@ -234,11 +234,12 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 	for _, reservation := range instances.Reservations {
 		for _, instance := range reservation.Instances {
 			// Instance properties
-			id := instance.InstanceId
+			id := *instance.InstanceId
 			name := ""
 			infraID := ""
-			region := instance.Placement.AvailabilityZone
-			instanceType := instance.InstanceType
+			availabilityZone := *instance.Placement.AvailabilityZone
+			region := availabilityZone[:len(availabilityZone)-1]
+			instanceType := *instance.InstanceType
 			provider := inventory.AWSProvider
 			state := inventory.AsInstanceState(*instance.State.Name)
 			tags := instance.Tags
@@ -276,10 +277,10 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 				s.logger.Error("Error obtainning ClusterID for a new instance add", zap.Error(err))
 			}
 
-			newInstance := inventory.NewInstance(*id, name, provider, *instanceType, *region, state, clusterID, inventory.ConvertEC2TagtoTag(tags, *id))
+			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, state, clusterID, inventory.ConvertEC2TagtoTag(tags, id))
 
 			if !s.Account.IsClusterOnAccount(clusterID) {
-				cluster := inventory.NewCluster(clusterName, infraID, provider, *region, s.Account.Name, unknownConsoleLinkCode)
+				cluster := inventory.NewCluster(clusterName, infraID, provider, region, s.Account.Name, unknownConsoleLinkCode)
 				s.Account.AddCluster(cluster)
 			}
 			s.Account.Clusters[clusterID].AddInstance(*newInstance)
