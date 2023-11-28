@@ -4,6 +4,12 @@ import "fmt"
 
 // Account defines an infrastructure provider account
 type Account struct {
+	// ID is the uniq identifier for each account without considering the cloud provider
+	// AWS: AccountID
+	// Azure: SubscriptionID
+	// GCP: ProjectID
+	ID string `db:"id" json:"id"`
+
 	// Account's name. It's considered as an uniq key. Two accounts with same
 	// name can't belong to same Inventory
 	Name string `db:"name" json:"name"`
@@ -25,8 +31,9 @@ type Account struct {
 }
 
 // NewAccount create a new Could Provider account to store its instances
-func NewAccount(name string, provider CloudProvider, user string, password string) *Account {
+func NewAccount(id string, name string, provider CloudProvider, user string, password string) *Account {
 	return &Account{
+		ID:           id,
 		Name:         name,
 		Provider:     provider,
 		ClusterCount: 0,
@@ -47,30 +54,31 @@ func (a Account) GetPassword() string {
 }
 
 // IsClusterOnAccount checks if a cluster is already in the Stock
-func (a Account) IsClusterOnAccount(name string) bool {
-	_, ok := a.Clusters[name]
+func (a Account) IsClusterOnAccount(id string) bool {
+	_, ok := a.Clusters[id]
 	return ok
 }
 
 // GetCluster returns cluster on stock by name
-func (a Account) GetCluster(name string) *Cluster {
-	return a.Clusters[name]
+func (a Account) GetCluster(id string) *Cluster {
+	return a.Clusters[id]
 }
 
 // AddCluster adds a cluster to the stock
 func (a *Account) AddCluster(cluster *Cluster) error {
-	if a.IsClusterOnAccount(cluster.Name) {
-		return fmt.Errorf("Cluster %s already exists on Account %s", cluster.Name, a.Name)
+	if a.IsClusterOnAccount(cluster.ID) {
+		return fmt.Errorf("Cluster '%s[%s]' already exists on Account %s", cluster.Name, cluster.ID, a.Name)
 	}
 
-	a.Clusters[cluster.Name] = cluster
+	// Adding
+	a.Clusters[cluster.ID] = cluster
 	a.ClusterCount = len(a.Clusters)
 	return nil
 }
 
 // PrintAccount prints account info and every cluster on it by stdout
 func (a Account) PrintAccount() {
-	fmt.Printf("Account: %s -- (Clusters: %d)\n", a.Name, a.ClusterCount)
+	fmt.Printf("Account: %s[%s] -- (Clusters: %d)\n", a.Name, a.ID, a.ClusterCount)
 	for _, cluster := range a.Clusters {
 		cluster.PrintCluster()
 		fmt.Printf("\n")

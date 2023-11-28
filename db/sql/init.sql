@@ -15,6 +15,7 @@ VALUES
 
 -- Accounts
 CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT,
   name TEXT PRIMARY KEY,
   provider TEXT REFERENCES providers(name),
   cluster_count INTEGER
@@ -23,7 +24,10 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 -- Clusters
 CREATE TABLE IF NOT EXISTS clusters (
-  name TEXT PRIMARY KEY,
+  -- id is the result of joinning: "name+infra_id+account"
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  infra_id TEXT,
   provider TEXT REFERENCES providers(name),
   state TEXT,
   region TEXT,
@@ -39,9 +43,9 @@ CREATE TABLE IF NOT EXISTS instances (
   name TEXT,
   provider TEXT REFERENCES providers(name),
   instance_type TEXT,
-  region TEXT,
+  availability_zone TEXT,
   state TEXT,
-  cluster_name TEXT REFERENCES clusters(name)
+  cluster_id TEXT REFERENCES clusters(id)
   -- TODO: ADD tags
 );
 

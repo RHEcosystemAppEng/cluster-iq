@@ -40,24 +40,25 @@ export
 
 # Help message
 define HELP_MSG
-Makefile Rules:
-	all: Stops the devel env, re-build the images, and starts the devel env again
-	deploy: Deploys the application on the current context configured on Openshift/Kubernetes CLI
-	clean: Removes local container images
-	build: Builds every component image in the repo: (API, scanner)
-	build-api: Builds API container image
-	build-scanner: Builds the cluster-iq scanner container image
-	local-build: Builds every component it the repo in your local environment: (API, scanner)
-	local-build-api: Builds API binary in your local environment.
-	local-build-scanner: Builds in your local environment the cluster-iq scanner
-	push: Pushes every container image into remote repo
-	push-api: Pushes API container image
-	push-scanner: Pushes cluster-iq-scanner container image
-	start-dev: Starts a local environment using 'docker/podman-compose'
-	stop-dev: Stops the local environment using 'docker/podman-compose'
-	swagger-editor: Starts Swagger Editor using a docker container
-	swagger-doc: generates Swagger Documentation of the API
-	help: Displays this message
+\033[1;37mMakefile Rules\033[0m:
+	\033[1;36mall:\033[0m                 \033[0;37m Stops the devel env, re-build the images, and starts the devel env again
+	\033[1;36mdeploy:\033[0m              \033[0;37m Deploys the application on the current context configured on Openshift/Kubernetes CLI
+	\033[1;36mclean:\033[0m               \033[0;37m Removes local container images
+	\033[1;36mbuild:\033[0m               \033[0;37m Builds every component image in the repo:\033[0m \033[0;37m (API, scanner)
+	\033[1;36mbuild-api:\033[0m           \033[0;37m Builds API container image
+	\033[1;36mbuild-scanner:\033[0m       \033[0;37m Builds the cluster-iq scanner container image
+	\033[1;36mlocal-build:\033[0m         \033[0;37m Builds every component it the repo in your local environment:\033[0m \033[0;37m (API, scanner)
+	\033[1;36mlocal-build-api:\033[0m     \033[0;37m Builds API binary in your local environment.
+	\033[1;36mlocal-build-scanner:\033[0m \033[0;37m Builds in your local environment the cluster-iq scanner
+	\033[1;36mpush:\033[0m                \033[0;37m Pushes every container image into remote repo
+	\033[1;36mpush-api:\033[0m            \033[0;37m Pushes API container image
+	\033[1;36mpush-scanner:\033[0m        \033[0;37m Pushes cluster-iq-scanner container image
+	\033[1;36mstart-dev:\033[0m           \033[0;37m Starts a local environment using 'docker/podman-compose'
+	\033[1;36mstop-dev:\033[0m            \033[0;37m Stops the local environment using 'docker/podman-compose'
+	\033[1;36mswagger-editor:\033[0m      \033[0;37m Starts Swagger Editor using a docker container
+	\033[1;36mswagger-doc:\033[0m         \033[0;37m generates Swagger Documentation of the API
+	\033[1;36mhelp:\033[0m                \033[0;37m Displays this message
+	\033[0m
 endef
 export HELP_MSG
 
@@ -133,7 +134,7 @@ test:
 	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
 	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out
 
-cover:
+cover: test
 	@go tool cover -func $(TEST_DIR)/cover.out
 
 # Swagger
@@ -153,4 +154,4 @@ swagger-doc:
 # Set the default target to "help"
 .DEFAULT_GOAL := help
 help:
-	@echo "$$HELP_MSG"
+	@echo -e "$$HELP_MSG"

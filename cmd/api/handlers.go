@@ -159,7 +159,7 @@ func HandlerGetClusters(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerGetClustersByName handles the request for obtain an Cluster by its Name
+// HandlerGetClustersByID handles the request for obtain an Cluster by its Name
 //	@Summary		Obtain a single Cluster by its Name
 //	@Description	Returns a list of Clusters with a single Cluster filtered by Name
 //	@Tags			Clusters
@@ -168,20 +168,45 @@ func HandlerGetClusters(c *gin.Context) {
 //	@Success		200	{object}	ClusterListResponse
 //	@Failure		404	{object}	nil
 //	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_name [get]
-func HandlerGetClustersByName(c *gin.Context) {
-	clusterName := c.Param("cluster_name")
-	logger.Debug("Retrieving Cluster by Name", zap.String("cluster_name", clusterName))
+//	@Router			/clusters/:cluster_id [get]
+func HandlerGetClustersByID(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Retrieving Cluster Tags by ID", zap.String("cluster_id", clusterID))
 	addHeaders(c)
 
-	clusters, err := getClusterByName(clusterName)
+	clusters, err := getClusterByID(clusterID)
 	if err != nil {
-		logger.Error("Cluster not found", zap.String("cluster_name", clusterName), zap.Error(err))
+		logger.Error("Cluster not found", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, nil)
 		return
 	}
 
 	response := NewClusterListResponse(clusters)
+	c.PureJSON(http.StatusOK, response)
+}
+
+// HandlerGetClusterTags handles the request for obtain the list of tags of a Cluster
+//	@Summary		Obtain Cluster Tags
+//	@Description	Returns a list of Tags belonging to an Cluster given by ID
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	TagListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/clusters/:cluster_id/instances [get]
+func HandlerGetClusterTags(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
+	addHeaders(c)
+
+	tags, err := getClusterTags(clusterID)
+	if err != nil {
+		logger.Error("Can't retrieve Tags of cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	response := NewTagListResponse(tags)
 	c.PureJSON(http.StatusOK, response)
 }
 
@@ -193,15 +218,15 @@ func HandlerGetClustersByName(c *gin.Context) {
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
 //	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_name/instances [get]
+//	@Router			/clusters/:cluster_id/instances [get]
 func HandlerGetInstancesOnCluster(c *gin.Context) {
-	clusterName := c.Param("cluster_name")
-	logger.Debug("Retrieving Cluster's Instances", zap.String("cluster_name", clusterName))
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Retrieving Cluster's Instances", zap.String("cluster_id", clusterID))
 	addHeaders(c)
 
-	instances, err := getInstancesOnCluster(clusterName)
+	instances, err := getInstancesOnCluster(clusterID)
 	if err != nil {
-		logger.Error("Can't retrieve instances on cluster", zap.String("cluster_name", clusterName), zap.Error(err))
+		logger.Error("Can't retrieve instances on cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
 	}
@@ -254,13 +279,13 @@ func HandlerPostCluster(c *gin.Context) {
 //	@Produce		json
 //	@Success		200	{object}	nil
 //	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_name [delete]
+//	@Router			/clusters/:cluster_id [delete]
 // TODO: Not Implemented
 func HandlerDeleteCluster(c *gin.Context) {
-	clusterName := c.Param("cluster_name")
-	logger.Debug("Removing a Cluster", zap.String("cluster_name", clusterName))
+	clusterName := c.Param("cluster_id")
+	logger.Debug("Removing a Cluster", zap.String("cluster_id", clusterName))
 	if err := deleteCluster(clusterName); err != nil {
-		logger.Error("Can't delete Cluster from DB", zap.String("cluster_name", clusterName), zap.Error(err))
+		logger.Error("Can't delete Cluster from DB", zap.String("cluster_id", clusterName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
 	}
@@ -277,10 +302,10 @@ func HandlerDeleteCluster(c *gin.Context) {
 //	@Param			instance	body		inventory.Cluster	true	"Cluster to be modified"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Router			/clusters/:cluster_name [patch]
+//	@Router			/clusters/:cluster_id [patch]
 func HandlerPatchCluster(c *gin.Context) {
-	clusterName := c.Param("cluster_name")
-	logger.Debug("Patching a Cluster", zap.String("cluster", clusterName))
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Patching a Cluster", zap.String("cluster_id", clusterID))
 	c.PureJSON(http.StatusNotImplemented, nil)
 }
 

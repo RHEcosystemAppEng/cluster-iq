@@ -19,7 +19,7 @@ func TestIsAccountOnInventory(t *testing.T) {
 		password: "testPassword",
 	}
 
-	inv.AddAccount(acc)
+	inv.AddAccount(&acc)
 
 	// Lookup an existing Account
 	if !inv.IsAccountOnInventory(acc.Name) {
@@ -44,13 +44,13 @@ func TestAddAccount(t *testing.T) {
 	}
 
 	// Normal Account Add
-	err = inv.AddAccount(acc)
+	err = inv.AddAccount(&acc)
 	if err != nil {
 		t.Error("Can't add Account to Inventory", err)
 	}
 
 	// Repeated Account Add
-	err = inv.AddAccount(acc)
+	err = inv.AddAccount(&acc)
 	if err == nil {
 		t.Error("Duplicated insertion didn't return any error")
 	}
@@ -68,7 +68,7 @@ func TestPrintInventory(t *testing.T) {
 	}
 
 	// Normal Account Add
-	inv.AddAccount(acc)
+	inv.AddAccount(&acc)
 
 	inv.PrintInventory()
 }

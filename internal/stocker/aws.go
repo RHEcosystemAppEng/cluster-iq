@@ -7,15 +7,23 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"go.uber.org/zap"
 )
 
 const (
-	defaultAWSRegion = "eu-west-1"
+	defaultAWSRegion       = "eu-west-1"
+	infraIDRegexp          = "kubernetes.io/cluster/.*-(.{5}?)$"
+	clusterNameRegexp      = "kubernetes.io/cluster/(.*?)-.{5}$"
+	unknownAccountIDCode   = "Unknown Account ID"
+	unknownClusterNameCode = "Unknown Cluster"
+	unknownConsoleLinkCode = "Unknown Console Link"
+	unknownInfraIDCode     = "UNKNOWN-INFRAID"
 )
 
 // AWSStocker object to make stock on AWS
@@ -30,11 +38,34 @@ type AWSStocker struct {
 func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
 	st := AWSStocker{region: defaultAWSRegion, logger: logger}
 	st.Account = account
+
 	if err := st.CreateSession(); err != nil {
 		st.logger.Error("Failed to initialize new session during AWSStocker creation", zap.Error(err))
 		return nil
 	}
+
+	accountID, err := st.getAccountID(st.session)
+	if err != nil {
+		st.logger.Error("Can't obtain AccountID", zap.Error(err))
+		return nil
+	}
+
+	st.Account.ID = accountID
+
 	return &st
+}
+
+func (s *AWSStocker) getAccountID(session client.ConfigProvider) (string, error) {
+	client := sts.New(session)
+	input := &sts.GetCallerIdentityInput{}
+
+	req, err := client.GetCallerIdentity(input)
+	if err != nil {
+		return unknownAccountIDCode, err
+	}
+
+	return *req.Account, nil
+
 }
 
 // CreateSession Initialices the AWS API session
@@ -42,11 +73,22 @@ func (s *AWSStocker) CreateSession() error {
 	var err error
 	creds := credentials.NewStaticCredentials(s.Account.GetUser(), s.Account.GetPassword(), "")
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(s.region)
+	if err != nil {
+		s.logger.Error("Can't obtain AccountID", zap.Error(err))
+		return err
+	}
+
 	s.session, err = session.NewSession(awsConfig)
+	if err != nil {
+		s.logger.Error("Can't Create new AWS client session", zap.Error(err))
+		return err
+	}
 
 	if err != nil {
 		return err
 	}
+
+	s.logger.Info("AWS Session created", zap.String("account_id", s.Account.ID))
 	return nil
 }
 
@@ -120,9 +162,9 @@ func (s *AWSStocker) getConsoleLink() error {
 			}
 
 			if strings.Contains(*zone.Name, clusterName) {
-				cl := s.Account.Clusters[cluster.Name]
+				cl := s.Account.Clusters[cluster.ID]
 				cl.ConsoleLink = fmt.Sprintf("https://console-openshift-console.apps.%s", *zone.Name)
-				s.Account.Clusters[cluster.Name] = cl
+				s.Account.Clusters[cluster.ID] = cl
 				break
 			}
 		}
@@ -165,15 +207,41 @@ func (s *AWSStocker) processRegion(region string) error {
 	return nil
 }
 
+// parseClusterName parses a Tag key to obtain the clusterName
+func parseClusterName(key string) string {
+	re := regexp.MustCompile(clusterNameRegexp)
+	res := re.FindAllStringSubmatch(key, 1)
+
+	// if there are no results, return empty string, if there are, return first match
+	if len(res) <= 0 {
+		return ""
+	}
+	return res[0][1]
+}
+
+// parseInfraID parses a Tag key to obtain the InfraID
+func parseInfraID(key string) string {
+	re := regexp.MustCompile(infraIDRegexp)
+	res := re.FindAllStringSubmatch(key, 1)
+
+	// if there are no results, return empty string, if there are, return first match
+	if len(res) <= 0 {
+		return ""
+	}
+	return res[0][1]
+}
+
 // TODO: doc
 func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 	for _, reservation := range instances.Reservations {
 		for _, instance := range reservation.Instances {
 			// Instance properties
-			id := instance.InstanceId
+			id := *instance.InstanceId
 			name := ""
-			region := instance.Placement.AvailabilityZone
-			instanceType := instance.InstanceType
+			infraID := ""
+			availabilityZone := *instance.Placement.AvailabilityZone
+			region := availabilityZone[:len(availabilityZone)-1]
+			instanceType := *instance.InstanceType
 			provider := inventory.AWSProvider
 			state := inventory.AsInstanceState(*instance.State.Name)
 			tags := instance.Tags
@@ -188,24 +256,36 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 					//
 					// As the tag key follow this structure: "kubernetes.io/cluster/<CLUSTER_NAME>"
 					// only the 3rd field is needed
-					clusterName = strings.TrimSpace(strings.Split(*tag.Key, "/")[2])
+					clusterName = parseClusterName(*tag.Key)
+					// Check if infraID is defined, if not, try to obtain it
+					if infraID == "" {
+						infraID = parseInfraID(*tag.Key)
+					}
 				case *tag.Key == "Name":
 					name = *tag.Value
 				}
 			}
 
 			if clusterName == "" {
-				clusterName = "Unknown Cluster"
+				clusterName = unknownClusterNameCode
 			}
 
-			newInstance := inventory.NewInstance(*id, name, provider, *instanceType, *region, state, clusterName, inventory.ConvertEC2TagtoTag(tags, *id))
+			if infraID == "" {
+				infraID = unknownInfraIDCode
+			}
 
-			if !s.Account.IsClusterOnAccount(clusterName) {
-				cluster := inventory.NewCluster(clusterName, provider, *region, s.Account.Name, "Unknown Console Link")
-				// TODO Missed error checking
+			clusterID, err := inventory.GenerateClusterID(clusterName, infraID, s.Account.Name)
+			if err != nil {
+				s.logger.Error("Error obtainning ClusterID for a new instance add", zap.Error(err))
+			}
+
+			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, state, clusterID, inventory.ConvertEC2TagtoTag(tags, id))
+
+			if !s.Account.IsClusterOnAccount(clusterID) {
+				cluster := inventory.NewCluster(clusterName, infraID, provider, region, s.Account.Name, unknownConsoleLinkCode)
 				s.Account.AddCluster(cluster)
 			}
-			s.Account.Clusters[clusterName].AddInstance(*newInstance)
+			s.Account.Clusters[clusterID].AddInstance(*newInstance)
 		}
 	}
 }

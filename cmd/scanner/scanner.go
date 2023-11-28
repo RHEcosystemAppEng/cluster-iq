@@ -102,6 +102,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 	// Read INI file content.
 	for _, account := range cfg.Sections() {
 		newAccount := inventory.NewAccount(
+			"",
 			account.Name(),
 			getProvider(account.Key("provider").String()),
 			account.Key("user").String(),

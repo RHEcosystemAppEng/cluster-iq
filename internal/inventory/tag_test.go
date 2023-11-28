@@ -33,7 +33,7 @@ func TestConvertEC2TagtoTag(t *testing.T) {
 		},
 	}
 
-	tags := ConvertEC2TagtoTag(ec2Tag)
+	tags := ConvertEC2TagtoTag(ec2Tag, "instanceTest")
 	if tags[0].Key != key {
 		t.Errorf("Tag key mismatch. Have %v ; Expected %v", tags[0].Key, key)
 	}
