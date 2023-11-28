@@ -171,7 +171,7 @@ func HandlerGetClusters(c *gin.Context) {
 //	@Router			/clusters/:cluster_id [get]
 func HandlerGetClustersByID(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
-	logger.Debug("Retrieving Cluster by ID", zap.String("cluster_id", clusterID))
+	logger.Debug("Retrieving Cluster Tags by ID", zap.String("cluster_id", clusterID))
 	addHeaders(c)
 
 	clusters, err := getClusterByID(clusterID)
@@ -182,6 +182,31 @@ func HandlerGetClustersByID(c *gin.Context) {
 	}
 
 	response := NewClusterListResponse(clusters)
+	c.PureJSON(http.StatusOK, response)
+}
+
+// HandlerGetClusterTags handles the request for obtain the list of tags of a Cluster
+//	@Summary		Obtain Cluster Tags
+//	@Description	Returns a list of Tags belonging to an Cluster given by ID
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	TagListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/clusters/:cluster_id/instances [get]
+func HandlerGetClusterTags(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
+	addHeaders(c)
+
+	tags, err := getClusterTags(clusterID)
+	if err != nil {
+		logger.Error("Can't retrieve Tags of cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	response := NewTagListResponse(tags)
 	c.PureJSON(http.StatusOK, response)
 }
 

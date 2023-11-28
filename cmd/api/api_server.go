@@ -108,6 +108,7 @@ func main() {
 			clustersGroup.GET("", HandlerGetClusters)
 			clustersGroup.GET("/:cluster_id", HandlerGetClustersByID)
 			clustersGroup.GET("/:cluster_id/instances", HandlerGetInstancesOnCluster)
+			clustersGroup.GET("/:cluster_id/tags", HandlerGetClusterTags)
 			clustersGroup.POST("", HandlerPostCluster)
 			clustersGroup.DELETE("/:cluster_id", HandlerDeleteCluster)
 			clustersGroup.PATCH("/:cluster_id", HandlerPatchCluster)

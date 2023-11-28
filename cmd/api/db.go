@@ -36,6 +36,14 @@ const (
 		ORDER BY name
 	`
 
+	// SelectClusterTags returns the cluster's tags
+	SelectClusterTags = `
+		SELECT DISTINCT ON (key) key,value,instance_id FROM instances
+		JOIN tags ON
+			id=instance_id
+		WHERE cluster_id = $1
+	`
+
 	// SelectInstancesOnClusterQuery returns every instance belonging to a acluster
 	SelectInstancesOnClusterQuery = `
 		SELECT * FROM instances
@@ -273,13 +281,22 @@ func getClusters() ([]inventory.Cluster, error) {
 	return clusters, nil
 }
 
-// getClusters returns the clusters in Stock with the requested name
+// getClusterByID returns the clusters in Stock with the requested name
 func getClusterByID(clusterID string) ([]inventory.Cluster, error) {
 	var cluster inventory.Cluster
 	if err := db.Get(&cluster, SelectClustersByIDuery, clusterID); err != nil {
 		return nil, err
 	}
 	return []inventory.Cluster{cluster}, nil
+}
+
+// getClusterTags returns the clusters in Stock with the requested name
+func getClusterTags(clusterID string) ([]inventory.Tag, error) {
+	var tags []inventory.Tag
+	if err := db.Select(&tags, SelectClusterTags, clusterID); err != nil {
+		return nil, err
+	}
+	return tags, nil
 }
 
 // getInstancesOnCluster returns the instances belonging to a cluster specified by name
