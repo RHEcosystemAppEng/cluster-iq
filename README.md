@@ -34,33 +34,86 @@ The following graph shows the architecture of this project:
 
 
 ## Getting started
-Prepare your cluster and CLI
-```
-oc login ...
+1. Prepare your cluster and CLI
+    ```
+    oc login ...
 
-export NAMESPACE="cluster-iq"
-oc new-project $NAMESPACE
-```
+    export NAMESPACE="cluster-iq"
+    oc new-project $NAMESPACE
+    ```
 
-### Credentials file
-The file containing the access credentials to the cloud provider accounts
-should look like this:
-```text
-[appeng]
-provider = aws/gcp/azure
-user = XXXXXXX
-key = YYYYYYY
-```
+2. Create `secrets` folder
+    ```text
+    mkdir secrets
+    export CLUSTER_IQ_CREDENTIALS_FILE="./secrets/credentials"
+    ```
 
-The credentials file must be located on the path `secrets/credentials` to work with `docker/podman-compose`.
+3. Create your credentials file with the AWS credentials of the accounts you
+   want to scrape. The file must follow the following format:
+    ```text
+    echo "
+    [AWS_ACCOUNT_NAME]
+    provider = aws/gcp/azure
+    user = XXXXXXX
+    key = YYYYYYY
+    " >> $CLUSTER_IQ_CREDENTIALS_FILE
+    ```
+    :warning: The values for `provider` are: `aws`, `gcp` and `azure`, but the
+    scraping is only supported for `aws` by the moment.  The credentials file
+    should be placed on the path `secrets/*` to work with
+    `docker/podman-compose`. This repo ignores `secrets` folder for preventing
+    you to push your cloud credentials to the repo.
 
-To manage this on Openshift, a secret containing this information is needed.
-Once you prepared your credentials file, run the following command to create the
-secret:
+    :exclamation: This file structure was design to be generic, but it works
+    differently depending on the cloud provider. For AWS, `user` refers to the
+    `ACCESS_KEY`, and `key` refers to `SECRET_ACCESS_KEY`.
 
-```shell
-oc create secret generic credentials -n $NAMESPACE --from-file=credentials=<CREDENTIALS_FILE>
-```
+4. Create a secret containing this information is needed. To create the secret,
+   use the following command:
+    ```shell
+    oc create secret generic credentials -n $NAMESPACE \
+      --from-file=credentials=$CLUSTER_IQ_CREDENTIALS_FILE
+    ```
+
+5. Configure your cluster-iq deployment using
+   `./deployments/openshift/00_config.yaml` file. For more information about the
+   supported parameters, check the [Configuration Section](#configuration).
+    ```sh
+    oc apply -n $NAMESPACE -f ./deployments/openshift/00_config.yaml
+    ```
+
+6. Create the Service Account for Cluster-IQ, and bind it with the `anyuid` SCC.
+    ```sh
+    oc apply -n $NAMESPACE -f ./deployments/openshift/01_service_account.yaml
+    oc adm policy add-scc-to-user anyuid -z cluster-iq
+    ```
+
+7. Deploy and configure the Database:
+    ```sh
+    oc create configmap -n $NAMESPACE pgsql-init --from-file=init.sql=./db/sql/init.sql
+    oc apply -n $NAMESPACE -f ./deployments/openshift/02_database.yaml
+    ```
+
+8. Deploy API:
+    ```sh
+    oc apply -n $NAMESPACE -f ./deployments/openshift/03_api.yaml
+    ```
+
+9. Reconfigure ConfigMap with API's route hostname.
+    ```sh
+    ROUTE_HOSTNAME=$(oc get route api -o jsonpath='{.spec.host}')
+    oc get cm config -o yaml | sed 's/REACT_APP_CIQ_API_URL: .*/REACT_APP_CIQ_API_URL: https:\/\/'$ROUTE_HOSTNAME'\/api\/v1/
+    ```
+
+9. Deploy Scanner:
+    ```sh
+    oc apply -n $NAMESPACE -f ./deployments/openshift/04_scanner.yaml
+    ```
+
+10. Deploy Console:
+    ```sh
+    oc apply -n $NAMESPACE -f ./deployments/openshift/05_console.yaml
+    ```
 
 ### Configuration
 Available configuration via Env Vars:
@@ -76,25 +129,8 @@ Available configuration via Env Vars:
 
 These variables are defined in `./<PROJECT_FOLDER>/.env` to be used on Makefile
 and on `./<PROJECT_FOLDER>/deploy/openshift/config.yaml` to deploy it on Openshift.
-```sh
-oc apply -n $NAMESPACE -f ./deployments/openshift/config.yaml
-```
-
-
-```sh
-oc adm policy add-scc-to-user anyuid -z cluster-iq-console
-```
-
-
-
-### DB init
-To create Openshift ConfigFile for initializing the DB, run the following command:
-```sh
-oc create configmap -n $NAMESPACE pgsql-init --from-file=init.sql=./db/sql/init.sql
-```
 
 ### Run local development environment
-
 ```shell
 make start-dev
 ```

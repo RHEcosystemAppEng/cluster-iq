@@ -8,6 +8,7 @@ metadata:
     component: config
 data:
   REACT_APP_CIQ_API_URL: "https://api/api/v1"
+  CIQ_API_URL: 'http://api:8443/api/v1'
   CIQ_API_LISTEN_URL: "0.0.0.0:8443"
   CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
   CIQ_CREDS_FILE: "/credentials/credentials"

@@ -18,7 +18,7 @@ spec:
         app: cluster-iq
         component: console
     spec:
-      serviceAccountName: cluster-iq-console
+      serviceAccountName: cluster-iq
       containers:
         - name: server
           image: quay.io/ecosystem-appeng/cluster-iq-console:latest
@@ -64,9 +64,3 @@ spec:
     targetPort: console
   tls:
     termination: edge
-
----
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: cluster-iq-console
