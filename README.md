@@ -33,22 +33,15 @@ The following graph shows the architecture of this project:
 ![ClusterIQ architecture diagram](./doc/arch.png)
 
 
-## Getting started
-1. Prepare your cluster and CLI
-    ```
-    oc login ...
-
-    export NAMESPACE="cluster-iq"
-    oc new-project $NAMESPACE
-    ```
-
-2. Create `secrets` folder
+## Deployment
+This section explains how to deploy ClusterIQ and ClusterIQ Console
+1. Create `secrets` folder
     ```text
     mkdir secrets
     export CLUSTER_IQ_CREDENTIALS_FILE="./secrets/credentials"
     ```
 
-3. Create your credentials file with the AWS credentials of the accounts you
+2. Create your credentials file with the AWS credentials of the accounts you
    want to scrape. The file must follow the following format:
     ```text
     echo "
@@ -68,49 +61,86 @@ The following graph shows the architecture of this project:
     differently depending on the cloud provider. For AWS, `user` refers to the
     `ACCESS_KEY`, and `key` refers to `SECRET_ACCESS_KEY`.
 
-4. Create a secret containing this information is needed. To create the secret,
+3. Continue to "Local Deployment" for running ClusterIQ on your local using
+   Podman.
+4. Continue to "Openshift Deployment" for deploying ClusterIQ on an Openshift
+   cluster.
+
+### Local Deployment (for development)
+1. Use the Makefile targets for building the components
+    ```sh
+    make build
+    ```
+
+2. Deploy dev environment
+    ```sh
+    make start-dev
+    ```
+
+:warning: Make sure you have access to `registry.redhat.io` for downloading
+required images.
+
+:warning: If you're having issues mounting your local files (like init.psql or
+the credentials file) check if your SELinux is enforcing. This could prevent
+podman to bind these files into the containers.
+
+3. Undeploy dev environment
+    ```sh
+    make stop-dev
+    ```
+
+### Openshift Deployment
+1. Prepare your cluster and CLI
+    ```sh
+    oc login ...
+
+    export NAMESPACE="cluster-iq"
+    oc new-project $NAMESPACE
+    ```
+
+2. Create a secret containing this information is needed. To create the secret,
    use the following command:
     ```shell
     oc create secret generic credentials -n $NAMESPACE \
       --from-file=credentials=$CLUSTER_IQ_CREDENTIALS_FILE
     ```
 
-5. Configure your cluster-iq deployment using
+3. Configure your cluster-iq deployment using
    `./deployments/openshift/00_config.yaml` file. For more information about the
    supported parameters, check the [Configuration Section](#configuration).
     ```sh
     oc apply -n $NAMESPACE -f ./deployments/openshift/00_config.yaml
     ```
 
-6. Create the Service Account for Cluster-IQ, and bind it with the `anyuid` SCC.
+4. Create the Service Account for Cluster-IQ, and bind it with the `anyuid` SCC.
     ```sh
     oc apply -n $NAMESPACE -f ./deployments/openshift/01_service_account.yaml
     oc adm policy add-scc-to-user anyuid -z cluster-iq
     ```
 
-7. Deploy and configure the Database:
+5. Deploy and configure the Database:
     ```sh
     oc create configmap -n $NAMESPACE pgsql-init --from-file=init.sql=./db/sql/init.sql
     oc apply -n $NAMESPACE -f ./deployments/openshift/02_database.yaml
     ```
 
-8. Deploy API:
+6. Deploy API:
     ```sh
     oc apply -n $NAMESPACE -f ./deployments/openshift/03_api.yaml
     ```
 
-9. Reconfigure ConfigMap with API's route hostname.
+7. Reconfigure ConfigMap with API's route hostname.
     ```sh
     ROUTE_HOSTNAME=$(oc get route api -o jsonpath='{.spec.host}')
     oc get cm config -o yaml | sed 's/REACT_APP_CIQ_API_URL: .*/REACT_APP_CIQ_API_URL: https:\/\/'$ROUTE_HOSTNAME'\/api\/v1/
     ```
 
-9. Deploy Scanner:
+7. Deploy Scanner:
     ```sh
     oc apply -n $NAMESPACE -f ./deployments/openshift/04_scanner.yaml
     ```
 
-10. Deploy Console:
+8. Deploy Console:
     ```sh
     oc apply -n $NAMESPACE -f ./deployments/openshift/05_console.yaml
     ```

@@ -75,7 +75,7 @@ clean:
 	@echo "### [Cleanning Docker images] ###"
 	@$(CONTAINER_ENGINE) images | grep $(PROJECT_NAME) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
-build: build-scanner build-api
+build: build-scanner swagger-doc build-api
 
 build-api:
 	@echo "### [Building API] ###"
@@ -97,7 +97,7 @@ local-clean:
 
 local-build: local-build-scanner local-build-api
 
-local-build-api:
+local-build-api: swagger-doc
 	@echo "### [Building API] ###"
 	@go build -o $(BIN_DIR)/api/api $(LDFLAGS) ./cmd/api/
 

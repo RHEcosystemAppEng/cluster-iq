@@ -10,13 +10,13 @@ services:
     ports:
       - 8080:3000
     environment:
-      REACT_APP_CIQ_API_URL: "http://api:8080/api/v1"
+      REACT_APP_CIQ_API_URL: "http://localhost:8081/api/v1"
   api:
     image: quay.io/ecosystem-appeng/cluster-iq-api:latest
     container_name: api
     restart: always
     depends_on:
-      pgsql:
+      init-pgsql:
         condition: service_healthy
     ports:
       - 8081:8080
