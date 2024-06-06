@@ -16,14 +16,14 @@ type InstanceDB struct {
 	// Instance type/size/flavour
 	InstanceType string `db:"instance_type"`
 
-	// Region/Availability Zone in which the instance is running on
-	Region string `db:"region"`
+	// Availability Zone in which the instance is running on
+	AvailabilityZone string `db:"availability_zone"`
 
 	// Instance Status
 	State inventory.InstanceState `db:"state"`
 
-	// ClusterName
-	ClusterName string `db:"cluster_name"`
+	// ClusterID
+	ClusterID string `db:"cluster_id"`
 
 	// instance Tags
 	TagKey   string `db:"key"`

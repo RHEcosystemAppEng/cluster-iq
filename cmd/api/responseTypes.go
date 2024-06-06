@@ -2,6 +2,33 @@ package main
 
 import "github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 
+// TagListResponse represents the API response containing a list of instances
+type TagListResponse struct {
+	Count int             `json:"count,omitempty"`
+	Tags  []inventory.Tag `json:"tags"`
+}
+
+// NewTagListResponse creates a new TagListResponse Tag and
+// controls if there is any Tag in the incoming list
+func NewTagListResponse(tags []inventory.Tag) *TagListResponse {
+	numTags := len(tags)
+
+	// If there is no instances, an empty array is returned instead of null
+	if numTags == 0 {
+		tags = []inventory.Tag{}
+	}
+
+	response := TagListResponse{
+		Tags: tags,
+	}
+	// If there is more than one instance, the response contains a 'count' field
+	if numTags > 1 {
+		response.Count = numTags
+	}
+
+	return &response
+}
+
 // InstanceListResponse represents the API response containing a list of instances
 type InstanceListResponse struct {
 	Count     int                  `json:"count,omitempty"`

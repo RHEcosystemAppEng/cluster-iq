@@ -5,10 +5,10 @@ import "github.com/aws/aws-sdk-go/service/ec2"
 // Tag model generic tags as a Key-Value object
 type Tag struct {
 	// Tag's key
-	Key string `redis:"key" json:"key"`
+	Key string `db:"key" json:"key"`
 
 	// Tag's Value
-	Value string `redis:"value" json:"value"`
+	Value string `db:"value" json:"value"`
 
 	// InstanceName reference
 	InstanceID string `db:"instance_id" json:"instance_id"`

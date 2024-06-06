@@ -19,46 +19,48 @@ type Instance struct {
 	// Instance type/size/flavour
 	InstanceType string `db:"instance_type" json:"instanceType"`
 
-	// Region/Availability Zone in which the instance is running on
-	Region string `db:"region" json:"region"`
+	// Availability Zone in which the instance is running on
+	AvailabilityZone string `db:"availability_zone" json:"availabilityZone"`
 
 	// Instance Status
 	State InstanceState `db:"state" json:"state"`
 
-	// ClusterName
-	ClusterName string `db:"cluster_name" json:"clusterName"`
+	// ClusterID
+	ClusterID string `db:"cluster_id" json:"clusterID"`
 
 	// Instance Tags as key-value array
 	Tags []Tag `json:"tags"`
 }
 
 // NewInstance returns a new Instance object
-func NewInstance(id string, name string, provider CloudProvider, instanceType string, region string, state InstanceState, clusterName string, tags []Tag) *Instance {
+func NewInstance(id string, name string, provider CloudProvider, instanceType string, availabilityZone string, state InstanceState, clusterID string, tags []Tag) *Instance {
 	return &Instance{
-		ID:           id,
-		Name:         name,
-		Provider:     provider,
-		InstanceType: instanceType,
-		Region:       region,
-		State:        state,
-		ClusterName:  clusterName,
-		Tags:         tags,
+		ID:               id,
+		Name:             name,
+		Provider:         provider,
+		InstanceType:     instanceType,
+		AvailabilityZone: availabilityZone,
+		State:            state,
+		ClusterID:        clusterID,
+		Tags:             tags,
 	}
 }
 
+// AddTag adds a tag to an instance
 func (i *Instance) AddTag(tag Tag) {
 	i.Tags = append(i.Tags, tag)
 }
 
+// String as ToString func
 func (i Instance) String() string {
 	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s]",
 		i.Name,
 		i.ID,
 		i.Provider,
 		i.InstanceType,
-		i.Region,
+		i.AvailabilityZone,
 		i.State,
-		i.ClusterName,
+		i.ClusterID,
 	)
 }
 
