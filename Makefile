@@ -122,7 +122,7 @@ push-scanner:
 # Development env based on Docker/Podman Compose tool
 start-dev:
 	@echo "### [Starting dev environment] ###"
-	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/docker-compose/docker-compose.yaml up &
+	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/docker-compose/docker-compose.yaml up -d
 
 stop-dev:
 	@echo "### [Stopping dev environment] ###"
