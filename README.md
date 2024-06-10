@@ -77,17 +77,29 @@ This section explains how to deploy ClusterIQ and ClusterIQ Console
     make start-dev
     ```
 
+3. Undeploy dev environment
+    ```sh
+    make stop-dev
+    ```
+
 :warning: Make sure you have access to `registry.redhat.io` for downloading
 required images.
 
 :warning: If you're having issues mounting your local files (like init.psql or
 the credentials file) check if your SELinux is enforcing. This could prevent
 podman to bind these files into the containers.
+```sh
+# Run this carefully and under your own responsability
+sudo setenforce 0
+```
 
-3. Undeploy dev environment
-    ```sh
-    make stop-dev
-    ```
+ClusterIQ includes two exposed components, the API and the UI.
+
+| Service        | URL                   |
+|----------------|-----------------------|
+| UI             | <http://localhost:8080> |
+| API            | <http://localhost:8081/api/v1> |
+
 
 ### Openshift Deployment
 1. Prepare your cluster and CLI
@@ -160,20 +172,6 @@ Available configuration via Env Vars:
 These variables are defined in `./<PROJECT_FOLDER>/.env` to be used on Makefile
 and on `./<PROJECT_FOLDER>/deploy/openshift/config.yaml` to deploy it on Openshift.
 
-### Run local development environment
-```shell
-make start-dev
-```
-
-The local environment is started via `docker-compose`.
-
-The following services are available:
-
-| Service        | URL                   |
-|----------------|-----------------------|
-| UI             | <http://localhost:8080> |
-| API            | <http://localhost:8443/clusters> |
-| Redis          | 0.0.0.0:6379          |
 
 ### Scanners
 [![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner)
