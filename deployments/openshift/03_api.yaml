@@ -18,6 +18,7 @@ spec:
         app: cluster-iq
         component: api
     spec:
+      serviceAccountName: api-cluster-iq
       containers:
         - name: api
           image: quay.io/ecosystem-appeng/cluster-iq-api:latest
@@ -33,13 +34,43 @@ spec:
             - configMapRef:
                 name: config
           ports:
-            - containerPort: 8443
+            - name: api
+              containerPort: 8080
+        - name: oauth-proxy
+          image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.13
+          imagePullPolicy: IfNotPresent
+          args:
+             - -provider=openshift
+             - -https-address=:8443
+             - -http-address=
+             - -email-domain=*
+             - -tls-cert=/etc/tls/private/tls.crt
+             - -tls-key=/etc/tls/private/tls.key
+             - -upstream=http://localhost:8080
+             - -cookie-secret=ClusterIQ-Cookie
+             - -openshift-service-account=cluster-iq
+             - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          ports:
+            - name: oauth-proxy
+              containerPort: 8443
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: api-tls
+      volumes:
+        - name: api-tls
+          secret:
+            defaultMode: 420
+            secretName: api-tls
+
+
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: api
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: api-tls
   labels:
     app: cluster-iq
     component: api
@@ -50,8 +81,13 @@ spec:
   ports:
     - name: api
       protocol: TCP
+      port: 8080
+      targetPort: api
+    - name: oauth-proxy
+      protocol: TCP
       port: 8443
-      targetPort: 8443
+      targetPort: oauth-proxy
+
 
 ---
 kind: Route
@@ -69,4 +105,5 @@ spec:
   port:
     targetPort: api
   tls:
-    termination: edge
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
