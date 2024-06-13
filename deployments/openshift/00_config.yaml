@@ -7,7 +7,7 @@ metadata:
     app: cluster-iq
     component: config
 data:
-  REACT_APP_CIQ_API_URL: "https://api-cluster-iq.apps.cn-ai-lab.6aw6.p1.openshiftapps.com/api/v1"
+  REACT_APP_CIQ_API_URL: "http://api.cluster-iq.svc.cluster.local:8080"
   CIQ_API_URL: 'http://api:8080/api/v1'
   CIQ_API_LISTEN_URL: "0.0.0.0:8080"
   CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
