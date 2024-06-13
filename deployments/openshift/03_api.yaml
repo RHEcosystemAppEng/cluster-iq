@@ -54,23 +54,3 @@ spec:
       protocol: TCP
       port: 8080
       targetPort: api
-
-
----
-kind: Route
-apiVersion: route.openshift.io/v1
-metadata:
-  name: api
-  labels:
-    app: cluster-iq
-    component: api
-spec:
-  to:
-    kind: Service
-    name: api
-    weight: 100
-  port:
-    targetPort: api
-  tls:
-    termination: edge
-    insecureEdgeTerminationPolicy: Redirect
