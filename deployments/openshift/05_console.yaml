@@ -20,20 +20,50 @@ spec:
     spec:
       serviceAccountName: cluster-iq
       containers:
-        - name: server
+        - name: console
           image: quay.io/ecosystem-appeng/cluster-iq-console:latest
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
                 name: config
           ports:
-            - containerPort: 3000
+            - name: console
+              containerPort: 3000
+        - name: oauth-proxy
+          image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.13
+          imagePullPolicy: IfNotPresent
+          args:
+             - -provider=openshift
+             - -https-address=:8443
+             - -http-address=
+             - -email-domain=*
+             - -tls-cert=/etc/tls/private/tls.crt
+             - -tls-key=/etc/tls/private/tls.key
+             - -upstream=http://localhost:3000
+             - -cookie-secret=ClusterIQ-Cookie
+             - -openshift-service-account=cluster-iq
+             - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          ports:
+            - name: oauth-proxy
+              containerPort: 8443
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: console-tls
+      volumes:
+        - name: console-tls
+          secret:
+            defaultMode: 420
+            secretName: console-tls
+
+
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: console
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: console-tls
   labels:
     app: cluster-iq
     component: console
@@ -42,10 +72,15 @@ spec:
     app: cluster-iq
     component: console
   ports:
-    - protocol: TCP
+    - name: console
+      protocol: TCP
       port: 3000
-      targetPort: 3000
-      name: console
+      targetPort: console
+    - name: oauth-proxy
+      protocol: TCP
+      port: 8443
+      targetPort: oauth-proxy
+
 
 ---
 kind: Route
@@ -61,6 +96,7 @@ spec:
     name: console
     weight: 100
   port:
-    targetPort: console
+    targetPort: oauth-proxy
   tls:
-    termination: edge
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
