@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS accounts (
   id TEXT,
   name TEXT PRIMARY KEY,
   provider TEXT REFERENCES providers(name),
-  cluster_count INTEGER
+  cluster_count INTEGER,
+  last_scan_timestamp TIMESTAMP WITH TIME ZONE
 );
 
 
@@ -33,7 +34,8 @@ CREATE TABLE IF NOT EXISTS clusters (
   region TEXT,
   account_name TEXT REFERENCES accounts(name),
   console_link TEXT,
-  instance_count INTEGER
+  instance_count INTEGER,
+  last_scan_timestamp TIMESTAMP WITH TIME ZONE
 );
 
 
