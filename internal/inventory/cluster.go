@@ -3,6 +3,7 @@ package inventory
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 const minInstances int = 3
@@ -37,6 +38,9 @@ type Cluster struct {
 	// Instances count
 	InstanceCount int `db:"instance_count" json:"instanceCount"`
 
+	// Last scan timestamp of the account
+	LastScanTimestamp time.Time `db:"last_scan_timestamp" json:"lastScanTimestamp"`
+
 	// Cluster's instance (nodes) lists
 	Instances []Instance
 }
@@ -49,16 +53,17 @@ func NewCluster(name string, infraID string, provider CloudProvider, region stri
 		return nil
 	}
 	return &Cluster{
-		ID:            id,
-		Name:          name,
-		InfraID:       infraID,
-		Provider:      provider,
-		Status:        Unknown,
-		Region:        region,
-		AccountName:   accountName,
-		ConsoleLink:   consoleLink,
-		InstanceCount: 0,
-		Instances:     make([]Instance, 0),
+		ID:                id,
+		Name:              name,
+		InfraID:           infraID,
+		Provider:          provider,
+		Status:            Unknown,
+		Region:            region,
+		AccountName:       accountName,
+		ConsoleLink:       consoleLink,
+		InstanceCount:     0,
+		LastScanTimestamp: time.Now(),
+		Instances:         make([]Instance, 0),
 	}
 }
 

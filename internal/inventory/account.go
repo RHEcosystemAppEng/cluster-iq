@@ -1,6 +1,9 @@
 package inventory
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Account defines an infrastructure provider account
 type Account struct {
@@ -23,6 +26,9 @@ type Account struct {
 	// List of clusters deployed on this account indexed by Cluster's name
 	Clusters map[string]*Cluster `json:"-"`
 
+	// Last scan timestamp of the account
+	LastScanTimestamp time.Time `db:"last_scan_timestamp" json:"lastScanTimestamp"`
+
 	// Account's username
 	user string
 
@@ -33,13 +39,14 @@ type Account struct {
 // NewAccount create a new Could Provider account to store its instances
 func NewAccount(id string, name string, provider CloudProvider, user string, password string) *Account {
 	return &Account{
-		ID:           id,
-		Name:         name,
-		Provider:     provider,
-		ClusterCount: 0,
-		Clusters:     make(map[string]*Cluster),
-		user:         user,
-		password:     password,
+		ID:                id,
+		Name:              name,
+		Provider:          provider,
+		ClusterCount:      0,
+		Clusters:          make(map[string]*Cluster),
+		LastScanTimestamp: time.Now(),
+		user:              user,
+		password:          password,
 	}
 }
 

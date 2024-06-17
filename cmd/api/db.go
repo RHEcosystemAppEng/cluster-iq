@@ -73,59 +73,63 @@ const (
 
 	// InsertInstancesQuery inserts into a new instance in its table
 	InsertInstancesQuery = `
-	INSERT INTO instances (
-		id,
-		name,
-		provider,
-		instance_type,
-		availability_zone,
-		state,
-		cluster_id
-	) VALUES (
-		:id,
-		:name,
-		:provider,
-		:instance_type,
-		:availability_zone,
-		:state,
-		:cluster_id
-	) ON CONFLICT (id) DO UPDATE SET
-		name = EXCLUDED.name,
-		provider = EXCLUDED.provider,
-		instance_type = EXCLUDED.instance_type,
-		availability_zone = EXCLUDED.availability_zone,
-		state = EXCLUDED.state,
-		cluster_id = EXCLUDED.cluster_id
+		INSERT INTO instances (
+			id,
+			name,
+			provider,
+			instance_type,
+			availability_zone,
+			state,
+			cluster_id
+		) VALUES (
+			:id,
+			:name,
+			:provider,
+			:instance_type,
+			:availability_zone,
+			:state,
+			:cluster_id
+		) ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			provider = EXCLUDED.provider,
+			instance_type = EXCLUDED.instance_type,
+			availability_zone = EXCLUDED.availability_zone,
+			state = EXCLUDED.state,
+			cluster_id = EXCLUDED.cluster_id
 	`
 
 	// InsertClustersQuery inserts into a new instance in its table
-	InsertClustersQuery = `INSERT INTO clusters (
-		id,
-		name,
-		infra_id,
-		provider,
-		state,
-		region,
-		account_name,
-		console_link,
-		instance_count
-	) VALUES (
-		:id,
-	  :name,
-		:infra_id,
-		:provider,
-		:state,
-		:region,
-		:account_name,
-		:console_link,
-		:instance_count
-	) ON CONFLICT (id) DO UPDATE SET
-		provider = EXCLUDED.provider,
-		state = EXCLUDED.state,
-		region = EXCLUDED.region,
-		console_link = EXCLUDED.console_link,
-		instance_count = EXCLUDED.instance_count
-		`
+	InsertClustersQuery = `
+		INSERT INTO clusters (
+			id,
+			name,
+			infra_id,
+			provider,
+			state,
+			region,
+			account_name,
+			console_link,
+			instance_count,
+			last_scan_timestamp
+		) VALUES (
+			:id,
+			:name,
+			:infra_id,
+			:provider,
+			:state,
+			:region,
+			:account_name,
+			:console_link,
+			:instance_count,
+			:last_scan_timestamp
+		) ON CONFLICT (id) DO UPDATE SET
+			provider = EXCLUDED.provider,
+			state = EXCLUDED.state,
+			region = EXCLUDED.region,
+			console_link = EXCLUDED.console_link,
+			instance_count = EXCLUDED.instance_count,
+			last_scan_timestamp = EXCLUDED.last_scan_timestamp
+	`
 
 	// InsertAccountsQuery inserts into a new instance in its table
 	InsertAccountsQuery = `
@@ -133,16 +137,19 @@ const (
 			id,
 			name,
 			provider,
-			cluster_count
+			cluster_count,
+			last_scan_timestamp
 		) VALUES (
 			:id,
 			:name,
 			:provider,
-			:cluster_count
+			:cluster_count,
+			:last_scan_timestamp
 		) ON CONFLICT (name) DO UPDATE SET
 			id = EXCLUDED.id,
 			provider = EXCLUDED.provider,
-			cluster_count = EXCLUDED.cluster_count
+			cluster_count = EXCLUDED.cluster_count,
+			last_scan_timestamp = EXCLUDED.last_scan_timestamp
 	`
 
 	// InsertTagsQuery inserts into a new tag for an instance
