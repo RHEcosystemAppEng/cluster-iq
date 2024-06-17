@@ -163,7 +163,9 @@ func (s *AWSStocker) getConsoleLink() error {
 
 			if strings.Contains(*zone.Name, clusterName) {
 				cl := s.Account.Clusters[cluster.ID]
-				cl.ConsoleLink = fmt.Sprintf("https://console-openshift-console.apps.%s", *zone.Name)
+				// Trim last '.' character because it's returned with an extra dot character at the end of the domain name zone
+				// i.e. 'console-openshift-console-apps.<DOMAIN_NAME>.'
+				cl.ConsoleLink = fmt.Sprintf("https://console-openshift-console.apps.%s", strings.TrimSuffix(*zone.Name, "."))
 				s.Account.Clusters[cluster.ID] = cl
 				break
 			}
@@ -299,3 +301,5 @@ func getInstances(client *ec2.EC2) (*ec2.DescribeInstancesOutput, error) {
 
 	return result, err
 }
+
+//
