@@ -1,8 +1,11 @@
-// TODO: Read this article https://ferencfbin.medium.com/golang-own-structscan-method-for-sql-rows-978c5c80f9b5
 package main
 
 import (
+	"context"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/cmd/api/docs"
@@ -14,10 +17,12 @@ import (
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 
-	// swagger embed files
-	// swagger embed files
 	swaggerFiles "github.com/swaggo/files"     // swagger embed files
 	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
+)
+
+const (
+	APITimeoutSeconds = 10
 )
 
 var (
@@ -29,6 +34,8 @@ var (
 	inven *inventory.Inventory
 	// Gin Router for serving API
 	router *gin.Engine
+	// Gin Server
+	server *http.Server
 	// API serving URL
 	apiURL string
 	// DB URL (example: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable")
@@ -58,6 +65,21 @@ func init() {
 	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 }
 
+// signalHandler for managing incoming OS signals
+func signalHandler(signal os.Signal) {
+	if signal == syscall.SIGTERM {
+		ctx, cancel := context.WithTimeout(context.Background(), APITimeoutSeconds*time.Second)
+		defer cancel()
+		logger.Warn("SIGTERM signal received. Stopping ClusterIQ API server")
+		if err := server.Shutdown(ctx); err != nil {
+			logger.Fatal("API Shutdown error", zap.Error(err))
+			os.Exit(-1)
+		}
+	} else {
+		logger.Warn("Ignoring signal: ", zap.String("signal_id", signal.String()))
+	}
+}
+
 // addHeaders adds the requerired HTTP headers for API working
 func addHeaders(c *gin.Context) {
 	// To deal with CORS
@@ -82,7 +104,6 @@ func addHeaders(c *gin.Context) {
 
 //	@externalDocs.description	OpenAPI
 //	@externalDocs.url			https://swagger.io/resources/open-api/
-
 func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
@@ -143,7 +164,24 @@ func main() {
 		return
 	}
 
+	server = &http.Server{
+		Addr:    apiURL,
+		Handler: router.Handler(),
+	}
+
 	// Start API
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Server listen and serve error", zap.Error(err))
+			os.Exit(-1)
+		}
+	}()
+
 	logger.Info("API Ready to serve")
-	router.Run(apiURL)
+
+	quitChan := make(chan os.Signal, 1)
+	signal.Notify(quitChan, syscall.SIGTERM)
+	s := <-quitChan
+	signalHandler(s)
+	logger.Info("API server stopped")
 }
