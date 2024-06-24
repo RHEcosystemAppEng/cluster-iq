@@ -1,6 +1,10 @@
 package main
 
-import "github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+import (
+	"time"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+)
 
 // InstanceDB is an intermediate struct to map the Instances and its tags into inventory.Instance objects
 type InstanceDB struct {
@@ -31,4 +35,10 @@ type InstanceDB struct {
 
 	// InstanceID from Tags table (not needed, defined just for parsing the join result)
 	InstanceID string `db:"instance_id"`
+
+	// Instance TotalCost
+	TotalCost float64 `db:"total_cost"`
+
+	// Last cost query time
+	LastCostQueryTime time.Time `db:"last_cost_query_time"`
 }

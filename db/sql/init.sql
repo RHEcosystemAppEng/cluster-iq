@@ -47,7 +47,9 @@ CREATE TABLE IF NOT EXISTS instances (
   instance_type TEXT,
   availability_zone TEXT,
   state TEXT,
-  cluster_id TEXT REFERENCES clusters(id)
+  cluster_id TEXT REFERENCES clusters(id),
+  total_cost DOUBLE PRECISION,
+  last_cost_query_time TIMESTAMP
   -- TODO: ADD tags
 );
 
