@@ -1,6 +1,9 @@
 package inventory
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestNewInstance(t *testing.T) {
 	var state InstanceState
@@ -14,7 +17,7 @@ func TestNewInstance(t *testing.T) {
 	provider := AWSProvider
 	tags := []Tag{}
 
-	instance := NewInstance(id, name, provider, instanceType, availabilityZone, state, clusterName, tags)
+	instance := NewInstance(id, name, provider, instanceType, availabilityZone, state, clusterName, tags, 0.0, time.Now())
 
 	if instance.ID != id {
 		t.Errorf("Instance's ID do not match. Have: %s ; Expected: %s", instance.ID, id)

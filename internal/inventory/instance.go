@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"fmt"
+	"time"
 )
 
 // Instance model a cloud provider instance
@@ -30,19 +31,26 @@ type Instance struct {
 
 	// Instance Tags as key-value array
 	Tags []Tag `json:"tags"`
+
+	// Instance Total Cost since created
+	TotalCost float64 `db:"total_cost" json:"totalCost"`
+
+	LastCostQueryTime time.Time `db:"last_cost_query_time" json:"lastCostQueryTime"`
 }
 
 // NewInstance returns a new Instance object
-func NewInstance(id string, name string, provider CloudProvider, instanceType string, availabilityZone string, state InstanceState, clusterID string, tags []Tag) *Instance {
+func NewInstance(id string, name string, provider CloudProvider, instanceType string, availabilityZone string, state InstanceState, clusterID string, tags []Tag, totalCost float64, lastCostQueryTime time.Time) *Instance {
 	return &Instance{
-		ID:               id,
-		Name:             name,
-		Provider:         provider,
-		InstanceType:     instanceType,
-		AvailabilityZone: availabilityZone,
-		State:            state,
-		ClusterID:        clusterID,
-		Tags:             tags,
+		ID:                id,
+		Name:              name,
+		Provider:          provider,
+		InstanceType:      instanceType,
+		AvailabilityZone:  availabilityZone,
+		State:             state,
+		ClusterID:         clusterID,
+		Tags:              tags,
+		TotalCost:         totalCost,
+		LastCostQueryTime: lastCostQueryTime,
 	}
 }
 
@@ -53,7 +61,7 @@ func (i *Instance) AddTag(tag Tag) {
 
 // String as ToString func
 func (i Instance) String() string {
-	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s]",
+	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s][TotalCost: %.2f][LastCostQueryTime: %s]",
 		i.Name,
 		i.ID,
 		i.Provider,
@@ -61,6 +69,8 @@ func (i Instance) String() string {
 		i.AvailabilityZone,
 		i.State,
 		i.ClusterID,
+		i.TotalCost,
+		i.LastCostQueryTime.Format(time.RFC3339),
 	)
 }
 

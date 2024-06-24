@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"io"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
@@ -118,12 +120,16 @@ func (s *Scanner) readCloudProviderAccounts() error {
 
 // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
+	instances, err := s.getInstances()
+	if err != nil {
+		return err
+	}
 	for i := range s.inventory.Accounts {
 		account := s.inventory.Accounts[i]
 		switch account.Provider {
 		case inventory.AWSProvider:
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
-			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, logger))
+			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger, instances))
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
@@ -223,6 +229,60 @@ func postData(url string, b []byte, logger *zap.Logger) error {
 	}
 
 	return nil
+}
+
+// getInstances fetches instances from the backend API
+func (s *Scanner) getInstances() ([]inventory.Instance, error) {
+	s.logger.Debug("Fetching instances from backend")
+
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
+
+	resp, err := http.Get(requestURL)
+	if err != nil {
+		s.logger.Error("Failed to get instances from API", zap.Error(err))
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		s.logger.Error("Failed to get instances from API", zap.Int("status_code", resp.StatusCode))
+		return nil, fmt.Errorf("failed to get instances, status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.logger.Error("Failed to read response body", zap.Error(err))
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		s.logger.Error("Failed to unmarshal response body", zap.Error(err))
+		return nil, err
+	}
+
+	instancesData, ok := result["instances"]
+	if !ok {
+		s.logger.Error("Instances field not found in the response")
+		return nil, fmt.Errorf("instances field not found in the response")
+	}
+
+	instancesJSON, err := json.Marshal(instancesData)
+	if err != nil {
+		s.logger.Error("Failed to marshal instances data", zap.Error(err))
+		return nil, err
+	}
+
+	var instances []inventory.Instance
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		s.logger.Error("Failed to unmarshal instances JSON", zap.Error(err))
+		return nil, err
+	}
+
+	s.logger.Debug("Successfully fetched instances from backend", zap.Any("the instances are ", instances))
+	return instances, nil
 }
 
 func (s *Scanner) postScannerResults() error {

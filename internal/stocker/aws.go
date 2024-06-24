@@ -3,13 +3,16 @@ package stocker
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/costexplorer"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -28,15 +31,16 @@ const (
 
 // AWSStocker object to make stock on AWS
 type AWSStocker struct {
-	region  string
-	session *session.Session
-	Account *inventory.Account
-	logger  *zap.Logger
+	region    string
+	session   *session.Session
+	Account   *inventory.Account
+	logger    *zap.Logger
+	Instances []inventory.Instance
 }
 
 // NewAWSStocker create and returns a pointer to a new AWSStocker instance
-func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
-	st := AWSStocker{region: defaultAWSRegion, logger: logger}
+func NewAWSStocker(account *inventory.Account, logger *zap.Logger, instances []inventory.Instance) *AWSStocker {
+	st := AWSStocker{region: defaultAWSRegion, logger: logger, Instances: instances}
 	st.Account = account
 
 	if err := st.CreateSession(); err != nil {
@@ -233,6 +237,79 @@ func parseInfraID(key string) string {
 	return res[0][1]
 }
 
+func (s *AWSStocker) getInstanceCost(instance *inventory.Instance) (float64, error) {
+	ceClient := costexplorer.New(s.session)
+	var fetchedInstance *inventory.Instance
+
+	for _, inst := range s.Instances {
+		if inst.ID == instance.ID {
+			fetchedInstance = &inst
+			break
+		}
+	}
+
+	if fetchedInstance != nil {
+		instance.LastCostQueryTime = fetchedInstance.LastCostQueryTime
+		instance.TotalCost = fetchedInstance.TotalCost
+	}
+
+	startDate := instance.LastCostQueryTime
+	endDate := time.Now()
+
+	if startDate.IsZero() {
+		startDate = endDate.AddDate(0, 0, -14)
+	}
+
+	// Format dates as YYYY-MM-DD
+	startDateFormatted := startDate.Format("2006-01-02")
+	endDateFormatted := endDate.Format("2006-01-02")
+
+	// Skip fetching if the dates are the same
+	if startDateFormatted == endDateFormatted {
+		s.logger.Debug("Start and end dates are the same, skipping cost fetch")
+		return instance.TotalCost, nil
+	}
+
+	input := &costexplorer.GetCostAndUsageWithResourcesInput{
+		TimePeriod: &costexplorer.DateInterval{
+			Start: aws.String(startDateFormatted),
+			End:   aws.String(endDateFormatted),
+		},
+		Granularity: aws.String("DAILY"),
+		Filter: &costexplorer.Expression{
+			Dimensions: &costexplorer.DimensionValues{
+				Key:    aws.String("RESOURCE_ID"),
+				Values: []*string{aws.String(instance.ID)},
+			},
+		},
+		Metrics: []*string{aws.String("UnblendedCost")},
+	}
+
+	result, err := ceClient.GetCostAndUsageWithResources(input)
+	if err != nil {
+		s.logger.Error("Error getting cost and usage with resources", zap.Error(err))
+		return 0, err
+	}
+	// var totalCost float64
+	for _, resultByTime := range result.ResultsByTime {
+		if resultByTime.Total != nil {
+			if amount, ok := resultByTime.Total["UnblendedCost"]; ok {
+				amountStr := *amount.Amount
+				cost, err := strconv.ParseFloat(amountStr, 64)
+				if err != nil {
+					s.logger.Error("Error parsing cost amount", zap.String("amount", amountStr), zap.Error(err))
+					return 0, err
+				}
+				instance.TotalCost += cost
+			}
+		}
+	}
+
+	// Update the last query time
+	instance.LastCostQueryTime = endDate
+	return instance.TotalCost, nil
+}
+
 // TODO: doc
 func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 	for _, reservation := range instances.Reservations {
@@ -281,7 +358,12 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 				s.logger.Error("Error obtainning ClusterID for a new instance add", zap.Error(err))
 			}
 
-			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, state, clusterID, inventory.ConvertEC2TagtoTag(tags, id))
+			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, state, clusterID, inventory.ConvertEC2TagtoTag(tags, id), 0.0, time.Time{})
+
+			_, err = s.getInstanceCost(newInstance)
+			if err != nil {
+				s.logger.Warn("Error fetching total cost for instance", zap.String("instance_id", id), zap.Error(err))
+			}
 
 			if !s.Account.IsClusterOnAccount(clusterID) {
 				cluster := inventory.NewCluster(clusterName, infraID, provider, region, s.Account.Name, unknownConsoleLinkCode)

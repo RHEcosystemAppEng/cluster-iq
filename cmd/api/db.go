@@ -80,7 +80,9 @@ const (
 			instance_type,
 			availability_zone,
 			state,
-			cluster_id
+			cluster_id,
+			total_cost,
+			last_cost_query_time
 		) VALUES (
 			:id,
 			:name,
@@ -88,14 +90,18 @@ const (
 			:instance_type,
 			:availability_zone,
 			:state,
-			:cluster_id
+			:cluster_id,
+			:total_cost,
+			:last_cost_query_time
 		) ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,
 			provider = EXCLUDED.provider,
 			instance_type = EXCLUDED.instance_type,
 			availability_zone = EXCLUDED.availability_zone,
 			state = EXCLUDED.state,
-			cluster_id = EXCLUDED.cluster_id
+			cluster_id = EXCLUDED.cluster_id,
+			total_cost = EXCLUDED.total_cost,
+			last_cost_query_time = EXCLUDED.last_cost_query_time
 	`
 
 	// InsertClustersQuery inserts into a new instance in its table
@@ -200,6 +206,8 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 				dbinstance.State,
 				dbinstance.ClusterID,
 				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
+				dbinstance.TotalCost,
+				dbinstance.LastCostQueryTime,
 			)
 		}
 	}
