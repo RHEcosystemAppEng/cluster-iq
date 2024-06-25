@@ -59,7 +59,7 @@ type Instance struct {
 }
 
 // NewInstance returns a new Instance object
-func NewInstance(id string, name string, provider CloudProvider, instanceType string, availabilityZone string, status InstanceStatus, clusterID string, tags []Tag, creationTimestamp time.Time, totalCost float64) *Instance {
+func NewInstance(id string, name string, provider CloudProvider, instanceType string, availabilityZone string, status InstanceStatus, clusterID string, tags []Tag, creationTimestamp time.Time) *Instance {
 	now := time.Now()
 	age := calculateAge(creationTimestamp, now)
 
@@ -75,7 +75,7 @@ func NewInstance(id string, name string, provider CloudProvider, instanceType st
 		CreationTimestamp: creationTimestamp,
 		Age:               age,
 		DailyCost:         0.0,
-		TotalCost:         totalCost,
+		TotalCost:         0.0,
 		Tags:              tags,
 	}
 }
@@ -130,14 +130,21 @@ func (i *Instance) AddTag(tag Tag) {
 	i.Tags = append(i.Tags, tag)
 }
 
+// String as ToString func
+func (i Instance) String() string {
+	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s][%f]",
+		i.Name,
+		i.ID,
+		i.Provider,
+		i.InstanceType,
+		i.AvailabilityZone,
+		i.Status,
+		i.ClusterID,
+		i.TotalCost,
+	)
+}
+
 // PrintInstance prints Instance details
-func (i *Instance) PrintInstance() {
-	if i == nil {
-		return
-	}
-	if str, err := JSONMarshal(i); err != nil {
-		fmt.Printf("\t\tInstance: %s\n", str)
-	} else {
-		fmt.Println(i)
-	}
+func (i Instance) PrintInstance() {
+	fmt.Printf("\t\t\tInstance: %s\n", i.String())
 }

@@ -255,7 +255,6 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 				dbinstance.ClusterID,
 				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
 				dbinstance.CreationTimestamp,
-				dbinstance.DailyCost,
 			)
 		}
 	}

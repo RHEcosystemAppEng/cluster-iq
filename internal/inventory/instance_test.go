@@ -24,7 +24,7 @@ var (
 func TestNewInstance(t *testing.T) {
 	creationTimestamp, _ = time.Parse("2006-01-02", "2024-03-01")
 
-	instance := NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, tags, creationTimestamp, totalCost)
+	instance := NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, tags, creationTimestamp)
 	if instance == nil {
 		t.Errorf("Instance is null")
 	}

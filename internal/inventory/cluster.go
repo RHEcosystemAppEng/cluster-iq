@@ -207,9 +207,8 @@ func GenerateClusterID(name string, infraID string, accountName string) (string,
 
 // PrintCluster prints cluster info
 func (c Cluster) PrintCluster() {
-	if str, err := JSONMarshal(c); err != nil {
-		fmt.Printf("\tCluster: %s\n", str)
-	}
+	fmt.Printf("\t\tCluster: %s[%s] -- Region: %s, Provider: %s, #Instances: %d\n", c.Name, c.ID, c.Region, c.Provider, len(c.Instances))
+
 	for _, instance := range c.Instances {
 		instance.PrintInstance()
 	}

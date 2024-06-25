@@ -66,11 +66,6 @@ func (a Account) IsClusterOnAccount(id string) bool {
 	return ok
 }
 
-// GetCluster returns cluster on stock by name
-func (a Account) GetCluster(id string) *Cluster {
-	return a.Clusters[id]
-}
-
 // AddCluster adds a cluster to the stock
 func (a *Account) AddCluster(cluster *Cluster) error {
 	if a.IsClusterOnAccount(cluster.ID) {
@@ -84,9 +79,8 @@ func (a *Account) AddCluster(cluster *Cluster) error {
 
 // PrintAccount prints account info and every cluster on it by stdout
 func (a Account) PrintAccount() {
-	if str, err := JSONMarshal(a); err != nil {
-		fmt.Printf("Account: %s\n", str)
-	}
+	fmt.Printf("\tAccount: %s[%s] #Clusters: %d\n", a.Name, a.ID, len(a.Clusters))
+
 	for _, cluster := range a.Clusters {
 		cluster.PrintCluster()
 	}

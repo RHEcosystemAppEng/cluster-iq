@@ -314,7 +314,6 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 			var infraID string
 			var clusterName string
 			var owner string
-			var dailyCost float64 = 0.0
 			id := *instance.InstanceId
 			availabilityZone := *instance.Placement.AvailabilityZone
 			region := availabilityZone[:len(availabilityZone)-1]
@@ -335,7 +334,7 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 				s.logger.Error("Error obtainning ClusterID for a new instance add", zap.Error(err))
 			}
 
-			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, inventory.ConvertEC2TagtoTag(tags, id), creationTimestamp, dailyCost)
+			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, inventory.ConvertEC2TagtoTag(tags, id), creationTimestamp)
 
 			//TODO: Just for testing
 			min := 0.0
