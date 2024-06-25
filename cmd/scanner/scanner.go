@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
@@ -259,6 +261,16 @@ func (s *Scanner) postScannerResults() error {
 	return nil
 }
 
+// signalHandler for managing incoming OS signals
+func signalHandler(signal os.Signal) {
+	if signal == syscall.SIGTERM {
+		logger.Fatal("SIGTERM signal received. Stopping ClusterIQ Scanner")
+		os.Exit(0)
+	} else {
+		logger.Warn("Ignoring signal: ", zap.String("signal_id", signal.String()))
+	}
+}
+
 func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
@@ -269,6 +281,15 @@ func main() {
 		zap.String("commit", commit),
 		zap.String("credentials file", credsFile),
 	)
+
+	// Listen Signals
+	go func() {
+		quitChan := make(chan os.Signal, 1)
+		signal.Notify(quitChan, syscall.SIGTERM)
+		s := <-quitChan
+		signalHandler(s)
+		logger.Info("Scanner stopped")
+	}()
 
 	var err error
 
