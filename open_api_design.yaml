@@ -239,7 +239,7 @@ components:
         instanceType:
           type: string
           example: t3.medium
-        state:
+        status:
           type: string
           example: Running
         provider:

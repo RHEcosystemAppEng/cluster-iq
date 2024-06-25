@@ -5,7 +5,7 @@
     "provider": "AWS",
     "instanceType": "t2.large",
     "region": "eu-west-1",
-    "state": "Running",
+    "status": "Running",
     "clusterName": "cluster-01",
     "tags": null
   },
@@ -15,7 +15,7 @@
     "provider": "AWS",
     "instanceType": "t2.large",
     "region": "eu-west-1",
-    "state": "Running",
+    "status": "Running",
     "clusterName": "cluster-01",
     "tags": null
   }
