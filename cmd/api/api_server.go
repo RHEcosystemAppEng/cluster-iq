@@ -115,6 +115,11 @@ func main() {
 	// Preparing API Endpoints
 	baseGroup := router.Group("/api/v1")
 	{
+		healthcheckGroup := baseGroup.Group("/healthcheck")
+		{
+			healthcheckGroup.GET("", HandlerHealthCheck)
+		}
+
 		instancesGroup := baseGroup.Group("/instances")
 		{
 			instancesGroup.GET("", HandlerGetInstances)
@@ -151,7 +156,7 @@ func main() {
 	// programmatically set swagger info
 	docs.SwaggerInfo.Title = "Cluster IP API doc"
 	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
-	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Version = "0.2"
 	docs.SwaggerInfo.Host = "localhost"
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	docs.SwaggerInfo.Schemes = []string{"http"}

@@ -2,6 +2,17 @@ package main
 
 import "github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 
+// HealthChecks represents the different HealthChecks performed by the API
+type HealthChecks struct {
+	APIHealth bool `json:"api_health"`
+	DBHealth  bool `json:"db_health"`
+}
+
+// HealthCheckResponse represents the API response for the Health Check report
+type HealthCheckResponse struct {
+	HealthChecks HealthChecks `json:"health_checks"`
+}
+
 // TagListResponse represents the API response containing a list of instances
 type TagListResponse struct {
 	Count int             `json:"count,omitempty"`
