@@ -11,6 +11,41 @@ import (
 	"go.uber.org/zap"
 )
 
+// HandlerHealthCheck handles the request for checking the health level of the API
+//	@Summary		Runs HealthChecks
+//	@Description	Runs several checks for evaulating the health level of ClusterIQ
+//	@Tags			Health
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	HealthCheckResponse
+//	@Router			/health_check/ [get]
+func HandlerHealthCheck(c *gin.Context) {
+	logger.Debug("Running Health Checks")
+	addHeaders(c)
+
+	hc := HealthChecks{
+		APIHealth: false,
+		DBHealth:  false,
+	}
+
+	// Checking DB Connection status
+	if db != nil {
+		if err := db.Ping(); err == nil {
+			hc.DBHealth = true
+		} else {
+			logger.Error("Can't ping DB", zap.Error(err))
+		}
+	}
+
+	// Checking API's Router status
+	if router != nil {
+		hc.APIHealth = true
+	}
+
+	response := HealthCheckResponse{HealthChecks: hc}
+	c.PureJSON(http.StatusOK, response)
+}
+
 // HandlerGetInstances handles the request for obtain the entire Instances list
 //	@Summary		Obtain every Instance
 //	@Description	Returns a list of Instances with every Instance in the inventory
