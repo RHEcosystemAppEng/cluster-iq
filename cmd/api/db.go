@@ -6,6 +6,33 @@ import (
 )
 
 const (
+	// SelectExpensesQuery returns every expense in the inventory ordered by instanceID
+	SelectExpensesQuery = `
+		SELECT * FROM expenses
+		ORDER BY instance_id
+	`
+
+	// SelectExpensesByInstanceQuery returns expense in the inventory for a specific InstanceID
+	SelectExpensesByInstanceQuery = `
+		SELECT * FROM expenses
+		WHERE instance_id = $1
+		ORDER BY date
+	`
+
+	// InsertExpensesQuery inserts into a new expense for an instance
+	InsertExpensesQuery = `
+		INSERT INTO expenses (
+			instance_id,
+			date,
+			amount
+		) VALUES (
+			:instance_id,
+			:date,
+			:amount
+		) ON CONFLICT (instance_id, date) DO UPDATE SET
+			amount = EXCLUDED.amount
+	`
+
 	// SelectInstancesQuery returns every instance in the inventory ordered by ID
 	SelectInstancesQuery = `
 		SELECT * FROM instances
@@ -79,23 +106,38 @@ const (
 			provider,
 			instance_type,
 			availability_zone,
-			state,
-			cluster_id
+			status,
+			cluster_id,
+			last_scan_timestamp,
+			creation_timestamp,
+			age,
+			daily_cost,
+			total_cost
 		) VALUES (
 			:id,
 			:name,
 			:provider,
 			:instance_type,
 			:availability_zone,
-			:state,
-			:cluster_id
+			:status,
+			:cluster_id,
+			:last_scan_timestamp,
+			:creation_timestamp,
+			:age,
+			:daily_cost,
+			:total_cost
 		) ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,
 			provider = EXCLUDED.provider,
 			instance_type = EXCLUDED.instance_type,
 			availability_zone = EXCLUDED.availability_zone,
-			state = EXCLUDED.state,
-			cluster_id = EXCLUDED.cluster_id
+			status = EXCLUDED.status,
+			cluster_id = EXCLUDED.cluster_id,
+			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
+			creation_timestamp = EXCLUDED.creation_timestamp,
+			age = EXCLUDED.age,
+			daily_cost = EXCLUDED.daily_cost,
+			total_cost = EXCLUDED.total_cost
 	`
 
 	// InsertClustersQuery inserts into a new instance in its table
@@ -105,30 +147,42 @@ const (
 			name,
 			infra_id,
 			provider,
-			state,
+			status,
 			region,
 			account_name,
 			console_link,
 			instance_count,
-			last_scan_timestamp
+			last_scan_timestamp,
+			creation_timestamp,
+			age,
+			owner,
+			total_cost
 		) VALUES (
 			:id,
 			:name,
 			:infra_id,
 			:provider,
-			:state,
+			:status,
 			:region,
 			:account_name,
 			:console_link,
 			:instance_count,
-			:last_scan_timestamp
+			:last_scan_timestamp,
+			:creation_timestamp,
+			:age,
+			:owner,
+			:total_cost
 		) ON CONFLICT (id) DO UPDATE SET
 			provider = EXCLUDED.provider,
-			state = EXCLUDED.state,
+			status = EXCLUDED.status,
 			region = EXCLUDED.region,
 			console_link = EXCLUDED.console_link,
 			instance_count = EXCLUDED.instance_count,
-			last_scan_timestamp = EXCLUDED.last_scan_timestamp
+			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
+			creation_timestamp = EXCLUDED.creation_timestamp,
+			age = EXCLUDED.age,
+			owner = EXCLUDED.owner,
+			total_cost = EXCLUDED.total_cost
 	`
 
 	// InsertAccountsQuery inserts into a new instance in its table
@@ -197,9 +251,11 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 				dbinstance.Provider,
 				dbinstance.InstanceType,
 				dbinstance.AvailabilityZone,
-				dbinstance.State,
+				dbinstance.Status,
 				dbinstance.ClusterID,
 				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
+				dbinstance.CreationTimestamp,
+				dbinstance.DailyCost,
 			)
 		}
 	}
@@ -211,6 +267,43 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 	}
 
 	return instances
+}
+
+func getExpenses() ([]inventory.Expense, error) {
+	var dbexpenses []inventory.Expense
+	if err := db.Select(&dbexpenses, SelectExpensesQuery); err != nil {
+		return nil, err
+	}
+
+	return dbexpenses, nil
+}
+
+func getExpensesByInstance(instanceID string) ([]inventory.Expense, error) {
+	var dbexpenses []inventory.Expense
+	if err := db.Select(&dbexpenses, SelectExpensesByInstanceQuery, instanceID); err != nil {
+		return nil, err
+	}
+
+	return dbexpenses, nil
+}
+
+func writeExpenses(expenses []inventory.Expense) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	// Writing Expenses
+	if _, err := tx.NamedExec(InsertExpensesQuery, expenses); err != nil {
+		logger.Error("Can't prepare Insert Expenses query", zap.Error(err))
+		return err
+	}
+
+	// Commit
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // getAccounts returns every account in Stock

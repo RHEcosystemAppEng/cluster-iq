@@ -77,7 +77,6 @@ func (a *Account) AddCluster(cluster *Cluster) error {
 		return fmt.Errorf("Cluster '%s[%s]' already exists on Account %s", cluster.Name, cluster.ID, a.Name)
 	}
 
-	// Adding
 	a.Clusters[cluster.ID] = cluster
 	a.ClusterCount = len(a.Clusters)
 	return nil
@@ -85,9 +84,10 @@ func (a *Account) AddCluster(cluster *Cluster) error {
 
 // PrintAccount prints account info and every cluster on it by stdout
 func (a Account) PrintAccount() {
-	fmt.Printf("Account: %s[%s] -- (Clusters: %d)\n", a.Name, a.ID, a.ClusterCount)
+	if str, err := JSONMarshal(a); err != nil {
+		fmt.Printf("Account: %s\n", str)
+	}
 	for _, cluster := range a.Clusters {
 		cluster.PrintCluster()
-		fmt.Printf("\n")
 	}
 }

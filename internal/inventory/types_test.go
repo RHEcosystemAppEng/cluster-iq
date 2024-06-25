@@ -2,10 +2,10 @@ package inventory
 
 import "testing"
 
-func TestAsInstanceState(t *testing.T) {
+func TestAsInstanceStatus(t *testing.T) {
 	tests := []struct {
 		input  string
-		result InstanceState
+		result InstanceStatus
 	}{
 		{
 			input:  "running",
@@ -38,9 +38,9 @@ func TestAsInstanceState(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := AsInstanceState(test.input)
+		result := AsInstanceStatus(test.input)
 		if test.result != result {
-			t.Errorf("Instance state parsing failed. Have: %s ; Expected: %v", result, test.result)
+			t.Errorf("Instance status parsing failed. Have: %s ; Expected: %v", result, test.result)
 		}
 	}
 

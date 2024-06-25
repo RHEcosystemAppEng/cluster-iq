@@ -29,6 +29,33 @@ func NewTagListResponse(tags []inventory.Tag) *TagListResponse {
 	return &response
 }
 
+// ExpenseListResponse represents the API response containing a list of expenses
+type ExpenseListResponse struct {
+	Count    int                 `json:"count,omitempty"`
+	Expenses []inventory.Expense `json:"expenses"`
+}
+
+// NewExpenseListResponse creates a new ExpenseListResponse instance and
+// controls if there is any Expense in the incoming list
+func NewExpenseListResponse(expenses []inventory.Expense) *ExpenseListResponse {
+	numExpenses := len(expenses)
+
+	// If there is no expenses, an emtpy array is returned instead of null
+	if numExpenses == 0 {
+		expenses = []inventory.Expense{}
+	}
+
+	response := ExpenseListResponse{
+		Expenses: expenses,
+	}
+	// If there is more than one instance, the response contains a 'count' field
+	if numExpenses > 1 {
+		response.Count = numExpenses
+	}
+
+	return &response
+}
+
 // InstanceListResponse represents the API response containing a list of instances
 type InstanceListResponse struct {
 	Count     int                  `json:"count,omitempty"`

@@ -113,8 +113,16 @@ func main() {
 	logger.Debug("Debug Mode active!")
 
 	// Preparing API Endpoints
+	// TODO: Include Healtcheck endpoint
 	baseGroup := router.Group("/api/v1")
 	{
+		expensesGroup := baseGroup.Group("/expenses")
+		{
+			expensesGroup.GET("", HandlerGetExpenses)
+			expensesGroup.GET("/:instance_id", HandlerGetExpensesByInstance)
+			expensesGroup.POST("", HandlerPostExpense)
+		}
+
 		instancesGroup := baseGroup.Group("/instances")
 		{
 			instancesGroup.GET("", HandlerGetInstances)

@@ -41,7 +41,7 @@ func TestGetCluster(t *testing.T) {
 		t.Errorf("Wrong cluster returned: [%v][%s]", &cluster, cluster.Name)
 	}
 
-	newCluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	newCluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	acc.AddCluster(newCluster)
 	cluster = acc.GetCluster("testCluster-1-XXXX1-testAccount")
 	if cluster == nil {
@@ -55,7 +55,7 @@ func TestAddCluster(t *testing.T) {
 	var err error
 
 	// First Insert
-	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -69,7 +69,7 @@ func TestAddCluster(t *testing.T) {
 
 	}
 	// Second Insert
-	cluster = NewCluster("testCluster-2", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	cluster = NewCluster("testCluster-2", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -84,7 +84,7 @@ func TestAddCluster(t *testing.T) {
 	}
 
 	// Repeated Insert
-	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -104,7 +104,9 @@ func TestAddCluster(t *testing.T) {
 
 func TestPrintAccount(t *testing.T) {
 	acc := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
+	instance := Instance{}
+	cluster.AddInstance(instance)
 	acc.AddCluster(cluster)
 	acc.PrintAccount()
 }

@@ -2,6 +2,7 @@ package stocker
 
 import (
 	"fmt"
+	"math/rand"
 	"regexp"
 	"strings"
 
@@ -21,9 +22,8 @@ const (
 	infraIDRegexp          = "kubernetes.io/cluster/.*-(.{5}?)$"
 	clusterNameRegexp      = "kubernetes.io/cluster/(.*?)-.{5}$"
 	unknownAccountIDCode   = "Unknown Account ID"
-	unknownClusterNameCode = "Unknown Cluster"
+	unknownClusterNameCode = "NO_CLUSTER"
 	unknownConsoleLinkCode = "Unknown Console Link"
-	unknownInfraIDCode     = "UNKNOWN-INFRAID"
 )
 
 // AWSStocker object to make stock on AWS
@@ -88,7 +88,7 @@ func (s *AWSStocker) CreateSession() error {
 		return err
 	}
 
-	s.logger.Info("AWS Session created", zap.String("account_id", s.Account.ID))
+	s.logger.Info("AWS Session created", zap.String("account_id", s.Account.Name))
 	return nil
 }
 
@@ -216,7 +216,7 @@ func parseClusterName(key string) string {
 
 	// if there are no results, return empty string, if there are, return first match
 	if len(res) <= 0 {
-		return ""
+		return unknownClusterNameCode
 	}
 	return res[0][1]
 }
@@ -233,58 +233,119 @@ func parseInfraID(key string) string {
 	return res[0][1]
 }
 
-// TODO: doc
+// lookForTagByValue returns an array of ec2.Tag with every tag found with the specified value
+func lookForTagByValue(value string, tags []*ec2.Tag) *[]ec2.Tag {
+	var resultTags []ec2.Tag
+	for _, tag := range tags {
+		if *tag.Value == value {
+			resultTags = append(resultTags, *tag)
+		}
+	}
+	return &resultTags
+}
+
+// lookForTagByKey returns an array of ec2.Tag with every tag found with the specified key
+func lookForTagByKey(key string, tags []*ec2.Tag) *[]ec2.Tag {
+	var resultTags []ec2.Tag
+	for _, tag := range tags {
+		if *tag.Key == key {
+			resultTags = append(resultTags, *tag)
+		}
+	}
+	return &resultTags
+}
+
+// getInfraIDFromTags search and return the infrastructure associted to the instance,
+// if it belongs to a cluster. Empty string is returned if the
+// instance doesn't belong to any cluster
+func getInfraIDFromTags(instance ec2.Instance) string {
+	var tags []ec2.Tag
+	tags = *(lookForTagByValue("owned", instance.Tags))
+	for _, tag := range tags {
+		if strings.Contains(*tag.Key, inventory.ClusterTagKey) {
+			return parseInfraID(*(tag.Key))
+		}
+	}
+	return ""
+}
+
+// getClusterTag search and return the cluster name associted to the instance,
+// if it belongs to a cluster. UnknownClusterNameCode is returned if the
+// instance doesn't belong to any cluster
+func getClusterNameFromTags(instance ec2.Instance) string {
+	var tags []ec2.Tag
+	tags = *(lookForTagByValue("owned", instance.Tags))
+	for _, tag := range tags {
+		if strings.Contains(*tag.Key, inventory.ClusterTagKey) {
+			return parseClusterName(*(tag.Key))
+		}
+	}
+	return unknownClusterNameCode
+}
+
+// getInstanceNameFromTags search and return the instance's name based on its tags.
+func getInstanceNameFromTags(instance ec2.Instance) string {
+	var tags []ec2.Tag
+	tags = *(lookForTagByKey("Name", instance.Tags))
+	if len(tags) == 1 {
+		return *(tags[0].Value)
+	} else {
+		return ""
+	}
+}
+
+// getOwnerFromTags search and return the instance's Owner based on its tags.
+func getOwnerFromTags(instance ec2.Instance) string {
+	var tags []ec2.Tag
+	tags = *(lookForTagByKey("Owner", instance.Tags))
+	if len(tags) == 1 {
+		return *(tags[0].Value)
+	} else {
+		return ""
+	}
+}
+
+// processInstances gets every AWS EC2 instance, parse it, a
 func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 	for _, reservation := range instances.Reservations {
 		for _, instance := range reservation.Instances {
 			// Instance properties
+			var name string
+			var infraID string
+			var clusterName string
+			var owner string
+			var dailyCost float64 = 0.0
 			id := *instance.InstanceId
-			name := ""
-			infraID := ""
 			availabilityZone := *instance.Placement.AvailabilityZone
 			region := availabilityZone[:len(availabilityZone)-1]
 			instanceType := *instance.InstanceType
 			provider := inventory.AWSProvider
-			state := inventory.AsInstanceState(*instance.State.Name)
+			status := inventory.AsInstanceStatus(*instance.State.Name)
 			tags := instance.Tags
-			clusterName := ""
+			creationTimestamp := *instance.LaunchTime
 
-			// TODO move into getEc2Cluster
-			for _, tag := range instance.Tags {
-				switch {
-				case strings.Contains(*tag.Key, inventory.ClusterTagKey) && *tag.Value == "owned":
-					// The clusterName will be used as Key on DB. To prevent issues with
-					// blank characters, strings.TrimSpace is applied to remove those chars
-					//
-					// As the tag key follow this structure: "kubernetes.io/cluster/<CLUSTER_NAME>"
-					// only the 3rd field is needed
-					clusterName = parseClusterName(*tag.Key)
-					// Check if infraID is defined, if not, try to obtain it
-					if infraID == "" {
-						infraID = parseInfraID(*tag.Key)
-					}
-				case *tag.Key == "Name":
-					name = *tag.Value
-				}
-			}
-
-			if clusterName == "" {
-				clusterName = unknownClusterNameCode
-			}
-
-			if infraID == "" {
-				infraID = unknownInfraIDCode
-			}
+			// Getting Instance's metadata
+			name = getInstanceNameFromTags(*instance)
+			clusterName = getClusterNameFromTags(*instance)
+			infraID = getInfraIDFromTags(*instance)
+			owner = getOwnerFromTags(*instance)
 
 			clusterID, err := inventory.GenerateClusterID(clusterName, infraID, s.Account.Name)
 			if err != nil {
 				s.logger.Error("Error obtainning ClusterID for a new instance add", zap.Error(err))
 			}
 
-			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, state, clusterID, inventory.ConvertEC2TagtoTag(tags, id))
+			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, inventory.ConvertEC2TagtoTag(tags, id), creationTimestamp, dailyCost)
+
+			//TODO: Just for testing
+			min := 0.0
+			max := 100.0
+			totalCost := min + rand.Float64()*(max-min)
+			newInstance.TotalCost = totalCost
+			//TODO: Just for testing
 
 			if !s.Account.IsClusterOnAccount(clusterID) {
-				cluster := inventory.NewCluster(clusterName, infraID, provider, region, s.Account.Name, unknownConsoleLinkCode)
+				cluster := inventory.NewCluster(clusterName, infraID, provider, region, s.Account.Name, unknownConsoleLinkCode, owner)
 				s.Account.AddCluster(cluster)
 			}
 			s.Account.Clusters[clusterID].AddInstance(*newInstance)
@@ -301,5 +362,3 @@ func getInstances(client *ec2.EC2) (*ec2.DescribeInstancesOutput, error) {
 
 	return result, err
 }
-
-//

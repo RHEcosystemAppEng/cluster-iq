@@ -2,6 +2,12 @@ package inventory
 
 import "testing"
 
+const (
+	accountName = "Test-Account"
+	userName    = "John Doe"
+	password    = "secret"
+)
+
 func TestNewInventory(t *testing.T) {
 	inv := NewInventory()
 	if inv == nil {
@@ -12,11 +18,11 @@ func TestNewInventory(t *testing.T) {
 func TestIsAccountOnInventory(t *testing.T) {
 	inv := NewInventory()
 	acc := Account{
-		Name:     "testAccount",
+		Name:     accountName,
 		Provider: UnknownProvider,
 		Clusters: make(map[string]*Cluster),
-		user:     "testUser",
-		password: "testPassword",
+		user:     userName,
+		password: password,
 	}
 
 	inv.AddAccount(&acc)
@@ -36,11 +42,11 @@ func TestAddAccount(t *testing.T) {
 	var err error
 	inv := NewInventory()
 	acc := Account{
-		Name:     "testAccount",
+		Name:     accountName,
 		Provider: UnknownProvider,
 		Clusters: make(map[string]*Cluster),
-		user:     "testUser",
-		password: "testPassword",
+		user:     userName,
+		password: password,
 	}
 
 	// Normal Account Add
@@ -57,14 +63,13 @@ func TestAddAccount(t *testing.T) {
 }
 
 func TestPrintInventory(t *testing.T) {
-
 	inv := NewInventory()
 	acc := Account{
-		Name:     "testAccount",
+		Name:     accountName,
 		Provider: UnknownProvider,
 		Clusters: make(map[string]*Cluster),
-		user:     "testUser",
-		password: "testPassword",
+		user:     userName,
+		password: password,
 	}
 
 	// Normal Account Add
