@@ -2,8 +2,8 @@ package inventory
 
 import "strings"
 
-// InstanceState defines the status of the instance
-type InstanceState string
+// InstanceStatus defines the status of the instance
+type InstanceStatus string
 
 const (
 	// ClusterTagKey string to identify to which cluster is the instance associated
@@ -11,18 +11,18 @@ const (
 )
 
 const (
-	// Running Instance state
-	Running InstanceState = "Running"
-	// Stopped Instance state
+	// Running Instance status
+	Running InstanceStatus = "Running"
+	// Stopped Instance status
 	Stopped = "Stopped"
-	// Terminated Instance state
+	// Terminated Instance status
 	Terminated = "Terminated"
-	// Unknown Instance state
+	// Unknown Instance status
 	Unknown = "Unknown"
 )
 
-// AsInstanceState converts the incoming argument into a InstanceState type
-func AsInstanceState(status string) InstanceState {
+// AsInstanceStatus converts the incoming argument into a InstanceStatus type
+func AsInstanceStatus(status string) InstanceStatus {
 	switch strings.ToLower(status) {
 	case "running":
 		return Running

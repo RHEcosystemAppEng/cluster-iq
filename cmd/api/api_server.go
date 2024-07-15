@@ -115,6 +115,12 @@ func main() {
 	// Preparing API Endpoints
 	baseGroup := router.Group("/api/v1")
 	{
+		expensesGroup := baseGroup.Group("/expenses")
+		{
+			expensesGroup.GET("", HandlerGetExpenses)
+			expensesGroup.GET("/:instance_id", HandlerGetExpensesByInstance)
+			expensesGroup.POST("", HandlerPostExpense)
+		}
 		healthcheckGroup := baseGroup.Group("/healthcheck")
 		{
 			healthcheckGroup.GET("", HandlerHealthCheck)

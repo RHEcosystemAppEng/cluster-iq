@@ -23,8 +23,8 @@ type Cluster struct {
 	// Infrastructure provider identifier.
 	Provider CloudProvider `db:"provider" json:"provider"`
 
-	// Defines the status of the cluster if its infrastructure is running or not
-	Status InstanceState `db:"state" json:"status"`
+	// Defines the status of the cluster if its infrastructure is running or not or it was removed
+	Status InstanceStatus `db:"status" json:"status"`
 
 	// The region of the infrastructure provider in which the cluster is deployed
 	Region string `db:"region" json:"region"`
@@ -38,20 +38,35 @@ type Cluster struct {
 	// Instances count
 	InstanceCount int `db:"instance_count" json:"instanceCount"`
 
-	// Last scan timestamp of the account
+	// Last scan timestamp of the cluster
 	LastScanTimestamp time.Time `db:"last_scan_timestamp" json:"lastScanTimestamp"`
+
+	// Timestamp when the cluster was created
+	CreationTimestamp time.Time `db:"creation_timestamp" json:"creationTimestamp"`
+
+	// Ammount of days since the cluster was created
+	Age int `db:"age" json:"age"`
+
+	// Cluster's owner
+	Owner string `db:"owner" json:"owner"`
+
+	//TODO: Add Contact/partners/customer_owner
+
+	// Total cost (US Dollars)
+	TotalCost float64 `db:"total_cost" json:"totalCost"`
 
 	// Cluster's instance (nodes) lists
 	Instances []Instance
 }
 
 // NewCluster creates a new cluster instance
-func NewCluster(name string, infraID string, provider CloudProvider, region string, accountName string, consoleLink string) *Cluster {
+func NewCluster(name string, infraID string, provider CloudProvider, region string, accountName string, consoleLink string, owner string) *Cluster {
 	id, err := GenerateClusterID(name, infraID, accountName)
 	if err != nil {
-		fmt.Println("Can't generate Cluster Object: ", err.Error())
 		return nil
 	}
+	now := time.Now()
+
 	return &Cluster{
 		ID:                id,
 		Name:              name,
@@ -62,7 +77,11 @@ func NewCluster(name string, infraID string, provider CloudProvider, region stri
 		AccountName:       accountName,
 		ConsoleLink:       consoleLink,
 		InstanceCount:     0,
-		LastScanTimestamp: time.Now(),
+		LastScanTimestamp: now,
+		CreationTimestamp: now,
+		Age:               calculateAge(now, now),
+		Owner:             owner,
+		TotalCost:         0.0,
 		Instances:         make([]Instance, 0),
 	}
 }
@@ -81,6 +100,62 @@ func (c Cluster) isClusterRunning() bool {
 		return true
 	}
 	return false
+}
+
+// UpdateClusterInfo as a update funciton wrapper
+func (c *Cluster) Update() error {
+	var err error
+
+	// Update Cluster Status
+	c.UpdateStatus()
+
+	// Update Cluster Age and CreationTimestamp
+	if err = c.UpdateAge(); err != nil {
+		return err
+	}
+
+	// Update Cluster Costs
+	if err = c.UpdateCosts(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpdateAge updates cluster age based on current and creation timestamps
+func (c *Cluster) UpdateAge() error {
+	var creationTimestamp time.Time = time.Now()
+	for _, instance := range c.Instances {
+		if instance.CreationTimestamp.Before(creationTimestamp) {
+			creationTimestamp = instance.CreationTimestamp
+		}
+	}
+	c.CreationTimestamp = creationTimestamp
+
+	// Calculating Age in days since the cluster was created until last scraping
+	newAge := calculateAge(c.CreationTimestamp, c.LastScanTimestamp)
+	if c.Age < newAge && c.Age != 0 {
+		return fmt.Errorf("New cluster age is lower than previous value. Current age: %d, New estimated age: %d", c.Age, newAge)
+	}
+
+	c.Age = newAge
+	return nil
+}
+
+// UpdateCosts takes every cluster's instance costs and estimates the total cost for the cluster
+func (c *Cluster) UpdateCosts() error {
+	var newCost float64
+
+	newCost = 0.0
+	for _, instance := range c.Instances {
+		newCost += instance.TotalCost
+	}
+
+	if c.TotalCost < newCost {
+		return fmt.Errorf("New estimated cost is lower than exspected. Review the cluster/instanes costs. Current Cost: %f, New estimated cost: %f", c.TotalCost, newCost)
+	}
+
+	c.TotalCost = newCost
+	return nil
 }
 
 // UpdateStatus evaluate the status of the cluster checking how many of the
@@ -102,7 +177,7 @@ func (c *Cluster) UpdateStatus() {
 
 	count := 0
 	for _, instance := range c.Instances {
-		if instance.State == Running {
+		if instance.Status == Running {
 			count++
 		}
 		if count >= minInstances {
@@ -115,18 +190,9 @@ func (c *Cluster) UpdateStatus() {
 }
 
 // AddInstance add a new instance to a cluster
-func (c *Cluster) AddInstance(instance Instance) {
+func (c *Cluster) AddInstance(instance Instance) error {
 	c.Instances = append(c.Instances, instance)
-	c.UpdateStatus()
-}
-
-// PrintCluster prints cluster info
-func (c Cluster) PrintCluster() {
-	fmt.Printf("\tCluster: %s[%s] -- [%s](Instances: %d)\n", c.Name, c.ID, c.ConsoleLink, c.InstanceCount)
-	for _, instance := range c.Instances {
-		instance.PrintInstance()
-	}
-	fmt.Printf("\n")
+	return c.Update()
 }
 
 // Obtain the required parameters for generate a ClusterID. If any key parameter is missing, it will return a non-nil error
@@ -137,4 +203,13 @@ func GenerateClusterID(name string, infraID string, accountName string) (string,
 	args := []string{name, infraID, accountName}
 	id := strings.Join(args, "-")
 	return id, nil
+}
+
+// PrintCluster prints cluster info
+func (c Cluster) PrintCluster() {
+	fmt.Printf("\t\tCluster: %s[%s] -- Region: %s, Provider: %s, #Instances: %d\n", c.Name, c.ID, c.Region, c.Provider, len(c.Instances))
+
+	for _, instance := range c.Instances {
+		instance.PrintInstance()
+	}
 }

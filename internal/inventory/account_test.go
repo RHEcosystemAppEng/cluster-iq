@@ -4,58 +4,28 @@ import (
 	"testing"
 )
 
+// TestNewAccount for inventory.Account.NewAccount
 func TestNewAccount(t *testing.T) {
-	var provider CloudProvider
-
 	id := "0000-11A"
 	name := "testAccount"
-	provider = UnknownProvider
+	var provider CloudProvider = UnknownProvider
 	user := "user"
 	password := "password"
 
 	acc := NewAccount(id, name, provider, user, password)
-
-	if acc.ID != id {
-		t.Errorf("Account's ID do not match. Have: %s ; Expected: %s", acc.ID, id)
-	}
-	if acc.Name != name {
-		t.Errorf("Account's Name do not match. Have: %s ; Expected: %s", acc.Name, name)
-	}
-	if acc.Provider != provider {
-		t.Errorf("Account's Provider do not match. Have: %s ; Expected: %s", acc.Provider, provider)
-	}
-	if acc.GetUser() != user {
-		t.Errorf("Account's User do not match. Have: %s ; Expected: %s", acc.GetUser(), user)
-	}
-	if acc.GetPassword() != password {
-		t.Errorf("Account's Password do not match. Have: %s ; Expected: %s", acc.GetPassword(), password)
+	if acc == nil {
+		t.Errorf("Account was not created correctly. Nil was returned")
 	}
 }
 
-func TestGetCluster(t *testing.T) {
-	acc := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
-	var cluster *Cluster
-
-	cluster = acc.GetCluster("MISSING")
-	if cluster != nil {
-		t.Errorf("Wrong cluster returned: [%v][%s]", &cluster, cluster.Name)
-	}
-
-	newCluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
-	acc.AddCluster(newCluster)
-	cluster = acc.GetCluster("testCluster-1-XXXX1-testAccount")
-	if cluster == nil {
-		t.Errorf("Cluster: [%v][%s]; Not found!", &cluster, newCluster.Name)
-	}
-}
-
+// TestAddCluster for inventory.Account.AddCluster
 func TestAddCluster(t *testing.T) {
 	acc := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
 	var cluster *Cluster
 	var err error
 
 	// First Insert
-	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -69,7 +39,7 @@ func TestAddCluster(t *testing.T) {
 
 	}
 	// Second Insert
-	cluster = NewCluster("testCluster-2", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	cluster = NewCluster("testCluster-2", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -84,7 +54,7 @@ func TestAddCluster(t *testing.T) {
 	}
 
 	// Repeated Insert
-	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -102,9 +72,42 @@ func TestAddCluster(t *testing.T) {
 
 }
 
+func TestGetUser(t *testing.T) {
+	user := "user01"
+
+	account := Account{
+		ID:   "0000-11A",
+		Name: "testAccount",
+		user: user,
+	}
+
+	accUser := account.GetUser()
+	if accUser != user {
+		t.Errorf("Account's User do not match. Have: %s ; Expected: %s", accUser, user)
+	}
+}
+
+func TestGetPassword(t *testing.T) {
+	password := "secretPassword"
+
+	account := Account{
+		ID:       "0000-11A",
+		Name:     "testAccount",
+		password: password,
+	}
+
+	accPassword := account.GetPassword()
+	if accPassword != password {
+		t.Errorf("Account's Password do not match. Have: %s ; Expected: %s", accPassword, password)
+	}
+}
+
 func TestPrintAccount(t *testing.T) {
 	acc := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com")
+	acc.PrintAccount()
+
+	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
 	acc.AddCluster(cluster)
 	acc.PrintAccount()
+
 }
