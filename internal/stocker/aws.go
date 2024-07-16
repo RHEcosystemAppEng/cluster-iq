@@ -2,15 +2,19 @@ package stocker
 
 import (
 	"fmt"
-	"math/rand"
 	"regexp"
+	"strconv"
+
+	// "strconv"
 	"strings"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/costexplorer"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -28,15 +32,16 @@ const (
 
 // AWSStocker object to make stock on AWS
 type AWSStocker struct {
-	region  string
-	session *session.Session
-	Account *inventory.Account
-	logger  *zap.Logger
+	region    string
+	session   *session.Session
+	Account   *inventory.Account
+	logger    *zap.Logger
+	Instances []inventory.Instance
 }
 
 // NewAWSStocker create and returns a pointer to a new AWSStocker instance
-func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
-	st := AWSStocker{region: defaultAWSRegion, logger: logger}
+func NewAWSStocker(account *inventory.Account, logger *zap.Logger, instances []inventory.Instance) *AWSStocker {
+	st := AWSStocker{region: defaultAWSRegion, logger: logger, Instances: instances}
 	st.Account = account
 
 	if err := st.CreateSession(); err != nil {
@@ -73,6 +78,8 @@ func (s *AWSStocker) CreateSession() error {
 	var err error
 	creds := credentials.NewStaticCredentials(s.Account.GetUser(), s.Account.GetPassword(), "")
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(s.region)
+
+	// TO-DO: we are comparing nil to nil
 	if err != nil {
 		s.logger.Error("Can't obtain AccountID", zap.Error(err))
 		return err
@@ -84,6 +91,7 @@ func (s *AWSStocker) CreateSession() error {
 		return err
 	}
 
+	// TO-DO: we are comparing nil to nil
 	if err != nil {
 		return err
 	}
@@ -305,6 +313,91 @@ func getOwnerFromTags(instance ec2.Instance) string {
 	}
 }
 
+func (s *AWSStocker) getInstanceCost(instance *inventory.Instance) error {
+	ceClient := costexplorer.New(s.session)
+	var fetchedInstance *inventory.Instance
+
+	// Check if we had scanned this Instance in the Past
+	for _, inst := range s.Instances {
+		if inst.ID == instance.ID {
+			fetchedInstance = &inst
+			break
+		}
+	}
+
+	// Logic for Setting the period to fetch the Expenses within
+	startDate := time.Time{}
+	endDate := time.Now().AddDate(0, 0, -1)
+	if fetchedInstance != nil {
+		startDate = fetchedInstance.LastScanTimestamp
+	}
+	if startDate.IsZero() {
+		startDate = endDate.AddDate(0, 0, -13)
+	} else {
+		startDate = startDate.AddDate(0, 0, -1)
+	}
+
+	// Format dates as YYYY-MM-DD
+	startDateFormatted := startDate.Format("2006-01-02")
+	endDateFormatted := endDate.Format("2006-01-02")
+
+	// Debug only
+	s.logger.Debug("dates being proccessed from", zap.Any("start date is", startDateFormatted))
+	s.logger.Debug("dates being proccessed to", zap.Any("end date is", endDateFormatted))
+
+	// Skip fetching if the dates are the same
+	if startDateFormatted == endDateFormatted {
+		s.logger.Debug("Start and end dates are the same, skipping cost fetch")
+		return nil
+	}
+
+	// Prepoare the AWS Query input
+	input := &costexplorer.GetCostAndUsageWithResourcesInput{
+		TimePeriod: &costexplorer.DateInterval{
+			Start: aws.String(startDateFormatted),
+			End:   aws.String(endDateFormatted),
+		},
+		Granularity: aws.String("DAILY"),
+		Filter: &costexplorer.Expression{
+			Dimensions: &costexplorer.DimensionValues{
+				Key:    aws.String("RESOURCE_ID"),
+				Values: []*string{aws.String(instance.ID)},
+			},
+		},
+		Metrics: []*string{aws.String("UnblendedCost")},
+	}
+
+	// Fetch the Costs from AWS API
+	result, err := ceClient.GetCostAndUsageWithResources(input)
+	if err != nil {
+		s.logger.Error("Error getting cost and usage with resources", zap.Error(err))
+		return err
+	}
+	s.logger.Debug("Adding Expenses", zap.Any("Expenses", result))
+
+	// for each cost add it to the instance Expenses
+	for _, resultByTime := range result.ResultsByTime {
+		if resultByTime.Total != nil {
+			if singleCost, ok := resultByTime.Total["UnblendedCost"]; ok {
+				amountStr := *singleCost.Amount
+				cost, err := strconv.ParseFloat(amountStr, 64)
+				if err != nil {
+					s.logger.Error("Error parsing cost amount", zap.String("amount", amountStr), zap.Error(err))
+					return err
+				}
+				startDate, err := time.Parse(time.RFC3339, *resultByTime.TimePeriod.Start)
+				if err != nil {
+					s.logger.Error("Error parsing start date", zap.String("start", *resultByTime.TimePeriod.Start), zap.Error(err))
+					return err
+				}
+				instance.Expenses = append(instance.Expenses, *inventory.NewExpense(instance.ID, cost, startDate))
+			}
+		}
+	}
+
+	return nil
+}
+
 // processInstances gets every AWS EC2 instance, parse it, a
 func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 	for _, reservation := range instances.Reservations {
@@ -335,13 +428,17 @@ func (s *AWSStocker) processInstances(instances *ec2.DescribeInstancesOutput) {
 			}
 
 			newInstance := inventory.NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, inventory.ConvertEC2TagtoTag(tags, id), creationTimestamp)
+			//TODO: Just for testing
+			// min := 0.0
+			// max := 100.0
+			// totalCost := min + rand.Float64()*(max-min)
+			// newInstance.TotalCost = totalCost
+			//TODO: Just for testing
+			err = s.getInstanceCost(newInstance)
 
-			//TODO: Just for testing
-			min := 0.0
-			max := 100.0
-			totalCost := min + rand.Float64()*(max-min)
-			newInstance.TotalCost = totalCost
-			//TODO: Just for testing
+			if err != nil {
+				s.logger.Error("Error obtainning Instance Cost", zap.Error(err))
+			}
 
 			if !s.Account.IsClusterOnAccount(clusterID) {
 				cluster := inventory.NewCluster(clusterName, infraID, provider, region, s.Account.Name, unknownConsoleLinkCode, owner)

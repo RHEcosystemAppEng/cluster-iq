@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"go.uber.org/zap"
 )
@@ -256,6 +258,9 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
 				dbinstance.CreationTimestamp,
 			)
+			// TODO: Implement a method for setting this values OR include them on the builder method
+			instanceMap[dbinstance.ID].TotalCost = dbinstance.TotalCost
+			instanceMap[dbinstance.ID].DailyCost = dbinstance.DailyCost
 		}
 	}
 
@@ -322,6 +327,8 @@ func getInstanceByID(instanceID string) ([]inventory.Instance, error) {
 	if err := db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
 	}
+
+	fmt.Println(dbinstances)
 
 	instances := joinInstancesTags(dbinstances)
 
