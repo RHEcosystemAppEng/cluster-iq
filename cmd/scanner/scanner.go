@@ -9,14 +9,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
 	"go.uber.org/zap"
-	"gopkg.in/ini.v1"
+	ini "gopkg.in/ini.v1"
 )
 
 const (
@@ -32,11 +31,16 @@ var (
 	version string
 	// commit reflects the git short-hash of the compiled version
 	commit string
-	//
-	logger    *zap.Logger
+
+	// logger variable across the entire scanner code
+	logger *zap.Logger
+
+	// Global vars for taking the config from the EnvVars and use it as part of the scanner configuration
 	apiURL    string
 	credsFile string
 	// client http
+
+	// HTTP Client for connecting the scanner to the API
 	client http.Client
 )
 
@@ -78,19 +82,6 @@ func init() {
 
 }
 
-// gerProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
-func getProvider(provider string) inventory.CloudProvider {
-	switch strings.ToUpper(provider) {
-	case "AWS":
-		return inventory.AWSProvider
-	case "GCP":
-		return inventory.GCPProvider
-	case "AZURE":
-		return inventory.AzureProvider
-	}
-	return inventory.UnknownProvider
-}
-
 // readCloudProviderAccounts reads and loads cloud provider accounts from a credentials file.
 func (s *Scanner) readCloudProviderAccounts() error {
 	// Load cloud accounts credentials file.
@@ -108,7 +99,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 		newAccount := inventory.NewAccount(
 			"",
 			account.Name(),
-			getProvider(account.Key("provider").String()),
+			inventory.GetProvider(account.Key("provider").String()),
 			account.Key("user").String(),
 			account.Key("key").String(),
 		)
@@ -122,37 +113,35 @@ func (s *Scanner) readCloudProviderAccounts() error {
 
 // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
-	instances, err := s.getInstances()
-	if err != nil {
-		return err
-	}
 	for i := range s.inventory.Accounts {
 		account := s.inventory.Accounts[i]
 		switch account.Provider {
 		case inventory.AWSProvider:
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
-			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger, instances))
+			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger))
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
-			// TODO: Uncomment line below when Stocker is implemented
+			// TODO: Uncomment line below when GCP Stocker is implemented
 			//s.stockers = append(s.stockers, stocker.NewGCPStocker(&account, logger))
 		case inventory.AzureProvider:
 			logger.Warn("Failed to scan Azure account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
-			// TODO: Uncomment line below when Stocker is implemented
+			// TODO: Uncomment line below when Azure Stocker is implemented
 			//s.stockers = append(s.stockers, stocker.NewAzureStocker(&account, logger))
 		}
 	}
 
+	// If there are no stockers, nothing to do
 	if len(s.stockers) == 0 {
 		return fmt.Errorf("Any account has been provided for scanning on credentials file")
 	}
 
+	// Checking the logLevel before entering on the For loop for optimization
 	if s.logger.Core().Enabled(zap.DebugLevel) {
 		s.logger.Debug("Total Stockers created", zap.Int("count", len(s.stockers)))
 		for i, stocker := range s.stockers {
@@ -302,6 +291,7 @@ func signalHandler(signal os.Signal) {
 	}
 }
 
+// Main method
 func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
@@ -313,7 +303,8 @@ func main() {
 		zap.String("credentials file", credsFile),
 	)
 
-	// Listen Signals
+	// Listen Signals block for receive OS signals. This is used by K8s/OCP for
+	// interacting with this software when it's deployed on a Pod
 	go func() {
 		quitChan := make(chan os.Signal, 1)
 		signal.Notify(quitChan, syscall.SIGTERM)

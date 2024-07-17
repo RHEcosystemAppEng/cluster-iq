@@ -299,7 +299,7 @@ func writeExpenses(expenses []inventory.Expense) error {
 
 	// Writing Expenses
 	if _, err := tx.NamedExec(InsertExpensesQuery, expenses); err != nil {
-		logger.Error("Can't prepare Insert Expenses query", zap.Error(err))
+		logger.Error("Can't prepare Insert Expenses query", zap.Error(err), zap.Reflect("expenses", expenses))
 		return err
 	}
 
