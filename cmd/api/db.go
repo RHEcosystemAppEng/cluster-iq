@@ -300,7 +300,6 @@ func writeExpenses(expenses []inventory.Expense) error {
 	// Writing Expenses
 	if _, err := tx.NamedExec(InsertExpensesQuery, expenses); err != nil {
 		logger.Error("Can't prepare Insert Expenses query", zap.Error(err), zap.Reflect("expenses", expenses))
-		return err
 	}
 
 	// Commit
@@ -349,12 +348,10 @@ func writeInstances(instances []inventory.Instance) error {
 	// Writing Instances
 	if _, err := tx.NamedExec(InsertInstancesQuery, instances); err != nil {
 		logger.Error("Can't prepare Insert instances query", zap.Error(err))
-		return err
 	}
 	// Writing tags
 	if _, err := tx.NamedExec(InsertTagsQuery, tags); err != nil {
 		logger.Error("Can't prepare Insert tags query", zap.Error(err))
-		return err
 	}
 	// Commit
 	if err := tx.Commit(); err != nil {
