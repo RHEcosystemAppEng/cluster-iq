@@ -118,7 +118,17 @@ func (s *Scanner) createStockers() error {
 		switch account.Provider {
 		case inventory.AWSProvider:
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
+
+			// AWS API Stoker
 			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger))
+
+			// AWS Billing API Stoker
+			instancesToScan, err := s.getInstancesForBillingUpdate()
+			if err != nil {
+				s.logger.Error("Cannot obtain the list of instances for obtainning the billing information on AWS CostExplorer")
+			} else {
+				s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+			}
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
@@ -179,7 +189,7 @@ func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
 
 // postNewInstance posts into the API, the new instances obtained after scanning
 func (s *Scanner) postNewExpenses(expenses []inventory.Expense) error {
-	s.logger.Debug("Posting new Instances")
+	s.logger.Debug("Posting new Expenses")
 	b, err := json.Marshal(expenses)
 	if err != nil {
 		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
@@ -247,35 +257,41 @@ func (s *Scanner) postScannerResults() error {
 				for _, expense := range instance.Expenses {
 					expenses = append(expenses, expense)
 				}
-				instance.Expenses = nil
 				instances = append(instances, instance)
 
 			}
-			cluster.Instances = nil
 			clusters = append(clusters, *cluster)
 		}
-		account.Clusters = nil
 		accounts = append(accounts, *account)
 	}
 
-	if err := s.postNewAccounts(accounts); err != nil {
-		s.logger.Debug("Adding Accounts", zap.Int("accounts_count", len(accounts)))
-		return err
+	var lenAccounts int = len(accounts)
+	var lenClusters int = len(clusters)
+	var lenInstances int = len(instances)
+	var lenExpenses int = len(expenses)
+
+	if lenAccounts > 0 {
+		if err := s.postNewAccounts(accounts); err != nil {
+			return err
+		}
 	}
 
-	if err := s.postNewClusters(clusters); err != nil {
-		s.logger.Debug("Adding Clusters", zap.Int("clusters_count", len(accounts)))
-		return err
+	if lenClusters > 0 {
+		if err := s.postNewClusters(clusters); err != nil {
+			return err
+		}
 	}
 
-	if err := s.postNewInstances(instances); err != nil {
-		s.logger.Debug("Adding Instances", zap.Int("instances_count", len(accounts)))
-		return err
+	if lenInstances > 0 {
+		if err := s.postNewInstances(instances); err != nil {
+			return err
+		}
 	}
 
-	if err := s.postNewExpenses(expenses); err != nil {
-		s.logger.Debug("Adding Expenses", zap.Any("Expenses", expenses))
-		return err
+	if lenExpenses > 0 {
+		if err := s.postNewExpenses(expenses); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -346,21 +362,21 @@ func main() {
 }
 
 // getInstances fetches instances from the backend API
-func (s *Scanner) getInstances() ([]inventory.Instance, error) {
-	s.logger.Debug("Fetching instances from backend")
+func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
+	s.logger.Debug("Fetching instances for update billing from backend")
 
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint+"/expense_update")
 
 	resp, err := http.Get(requestURL)
 	if err != nil {
-		s.logger.Error("Failed to get instances from API", zap.Error(err))
+		s.logger.Error("Failed to get last expenses from API", zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		s.logger.Error("Failed to get instances from API", zap.Int("status_code", resp.StatusCode))
-		return nil, fmt.Errorf("failed to get instances, status code: %d", resp.StatusCode)
+		s.logger.Error("Failed to get last expenses from API", zap.Int("status_code", resp.StatusCode))
+		return nil, fmt.Errorf("failed to get last expenses, status code: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)

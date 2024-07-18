@@ -35,6 +35,31 @@ func HandlerGetExpenses(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
+// HandlerGetInstancesForBillingUpdate handles the request for obtain a list of instances that needs to update its billing information
+//	@Summary		Obtain instances list with missing billing data
+//	@Description	Returns a list of Instances with outdated expenses or without any expense
+//	@Tags			Instance
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	InstanceListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/instances/expense_update [get]
+func HandlerGetInstancesForBillingUpdate(c *gin.Context) {
+	logger.Debug("Retrieving instances with outdated billing information")
+	addHeaders(c)
+
+	instances, err := getInstancesOutdatedBilling()
+	if err != nil {
+		logger.Error("Can't retrieve Last Expenses list", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	//response := NewExpenseListResponse(expenses)
+	response := NewInstanceListResponse(instances)
+	c.PureJSON(http.StatusOK, response)
+}
+
 // HandlerGetExpenseByID handles the request for obtain an Expense by its ID
 //	@Summary		Obtain a single Expense by its ID
 //	@Description	Returns a list of Expenses with a single Expense filtered by ID

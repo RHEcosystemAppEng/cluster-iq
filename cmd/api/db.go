@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"go.uber.org/zap"
 )
@@ -12,6 +10,42 @@ const (
 	SelectExpensesQuery = `
 		SELECT * FROM expenses
 		ORDER BY instance_id
+	`
+
+	// SelectLastExpensesQuery returns the last expense for every instance older
+	// than 1 day. This is used for obtainning the list of instances that need
+	// Billing information update because all the instances returned by this
+	// query doesn't have expenses for the current day
+	SelectLastExpensesQuery = `
+		SELECT
+				instances.id
+		FROM
+				instances
+		LEFT JOIN (
+				SELECT
+						instance_id,
+						MAX(date) AS last_expense_date
+				FROM
+						expenses
+				GROUP BY
+						instance_id
+		) AS last_expenses
+		ON
+				instances.id = last_expenses.instance_id
+		WHERE
+				last_expenses.last_expense_date IS NULL
+				OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day';
+	`
+	SelectLastExpensesQueryVOPT = `
+		WITH ranked_expenses AS (
+				SELECT
+						instance_id,
+						date,
+						amount,
+						ROW_NUMBER() OVER (PARTITION BY instance_id ORDER BY date DESC) AS rn
+				FROM expenses
+		)
+		SELECT instance_id, date, amount FROM ranked_expenses JOIN instances ON instance_id = id WHERE rn = 1 AND (status != 'Terminated' AND status != 'Unknown') AND date < '$1';
 	`
 
 	// SelectExpensesByInstanceQuery returns expense in the inventory for a specific InstanceID
@@ -282,6 +316,15 @@ func getExpenses() ([]inventory.Expense, error) {
 	return dbexpenses, nil
 }
 
+func getInstancesOutdatedBilling() ([]inventory.Instance, error) {
+	var dbexpenses []inventory.Instance
+	if err := db.Select(&dbexpenses, SelectLastExpensesQuery); err != nil {
+		return nil, err
+	}
+
+	return dbexpenses, nil
+}
+
 func getExpensesByInstance(instanceID string) ([]inventory.Expense, error) {
 	var dbexpenses []inventory.Expense
 	if err := db.Select(&dbexpenses, SelectExpensesByInstanceQuery, instanceID); err != nil {
@@ -327,8 +370,6 @@ func getInstanceByID(instanceID string) ([]inventory.Instance, error) {
 	if err := db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
 	}
-
-	fmt.Println(dbinstances)
 
 	instances := joinInstancesTags(dbinstances)
 
