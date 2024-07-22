@@ -37,7 +37,7 @@ const (
 				instances.id = last_expenses.instance_id
 		WHERE
 				last_expenses.last_expense_date IS NULL
-				OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day';
+				OR last_expenses.last_expense_date <= CURRENT_DATE - INTERVAL '1 day';
 	`
 	SelectLastExpensesQueryVOPT = `
 		WITH ranked_expenses AS (
