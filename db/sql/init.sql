@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   id TEXT,
   name TEXT PRIMARY KEY,
   provider TEXT REFERENCES providers(name),
+  total_cost REAL,
   cluster_count INTEGER,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE
 );
@@ -162,9 +163,30 @@ BEGIN
 END;
 $$;
 
+
+CREATE OR REPLACE FUNCTION update_account_total_costs()
+  RETURNS TRIGGER
+  LANGUAGE PLPGSQL
+  AS
+$$
+BEGIN
+  UPDATE accounts
+  SET total_cost = (SELECT SUM(total_cost) FROM clusters WHERE account_name = NEW.account_name)
+  WHERE name = NEW.account_name;
+  RETURN NEW;
+END;
+$$;
+
 -- Triggers
 CREATE TRIGGER update_instance_total_cost_after_insert
 AFTER INSERT
+ON expenses
+FOR EACH ROW
+  EXECUTE PROCEDURE update_instance_total_costs_after_insert();
+
+
+CREATE TRIGGER update_instance_total_cost_after_insert
+AFTER UPDATE
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_total_costs_after_insert();
@@ -184,6 +206,13 @@ FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
 
 
+CREATE TRIGGER update_instance_daily_cost_after_insert
+AFTER UPDATE
+ON expenses
+FOR EACH ROW
+  EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
+
+
 CREATE TRIGGER update_instance_daily_cost_after_delete
 AFTER DELETE
 ON expenses
@@ -196,3 +225,31 @@ AFTER UPDATE
 ON instances
 FOR EACH ROW
   EXECUTE PROCEDURE update_cluster_total_costs();
+
+
+CREATE TRIGGER update_account_total_cost
+AFTER UPDATE
+ON clusters
+FOR EACH ROW
+  EXECUTE PROCEDURE update_account_total_costs();
+
+
+-- Removed Instances/Clusters
+CREATE OR REPLACE FUNCTION check_terminated_instances()
+RETURNS void AS $$
+BEGIN
+  UPDATE instances
+  SET status = 'Terminated'
+	WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION check_terminated_clusters()
+RETURNS void AS $$
+BEGIN
+  UPDATE clusters
+  SET status = 'Terminated'
+	WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+END;
+$$ LANGUAGE plpgsql;
