@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -38,7 +39,9 @@ var (
 	// Global vars for taking the config from the EnvVars and use it as part of the scanner configuration
 	apiURL    string
 	credsFile string
-	// client http
+
+	// MD5 Checksum of credsFile
+	credsFileHash []byte
 
 	// HTTP Client for connecting the scanner to the API
 	client http.Client
@@ -71,6 +74,10 @@ func init() {
 	// Load configuration from environment variables.
 	apiURL = os.Getenv("CIQ_API_URL")
 	credsFile = os.Getenv("CIQ_CREDS_FILE")
+
+	// Calculate Credentials file MD5 checksum for checking on runtime
+	md5 := md5.Sum([]byte(credsFile))
+	copy(md5[:], credsFileHash)
 
 	// Setting INI files default section name
 	ini.DefaultSection = defaultINISectionName
@@ -307,60 +314,6 @@ func signalHandler(signal os.Signal) {
 	}
 }
 
-// Main method
-func main() {
-	// Ignore Logger sync error
-	defer func() { _ = logger.Sync() }()
-
-	scan := NewScanner(apiURL, credsFile, logger)
-	scan.logger.Info("Starting ClusterIQ Scanner",
-		zap.String("version", version),
-		zap.String("commit", commit),
-		zap.String("credentials file", credsFile),
-	)
-
-	// Listen Signals block for receive OS signals. This is used by K8s/OCP for
-	// interacting with this software when it's deployed on a Pod
-	go func() {
-		quitChan := make(chan os.Signal, 1)
-		signal.Notify(quitChan, syscall.SIGTERM)
-		s := <-quitChan
-		signalHandler(s)
-		logger.Info("Scanner stopped")
-	}()
-
-	var err error
-
-	// Get Cloud Accounts from credentials file
-	err = scan.readCloudProviderAccounts()
-	if err != nil {
-		logger.Error("Failed to get cloud provider accounts", zap.Error(err))
-		return
-	}
-
-	// Run Stockers
-	err = scan.createStockers()
-	if err != nil {
-		logger.Error("Failed to create stockers", zap.Error(err))
-		return
-	}
-
-	err = scan.startStockers()
-	if err != nil {
-		logger.Error("Failed to start up stocker instances", zap.Error(err))
-		return
-	}
-
-	// Writing into DB
-	scan.inventory.PrintInventory()
-	if err := scan.postScannerResults(); err != nil {
-		logger.Error("Can't post scanned results", zap.Error(err))
-		return
-	}
-
-	logger.Info("Scanner finished successfully")
-}
-
 // getInstances fetches instances from the backend API
 func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 	s.logger.Debug("Fetching instances for update billing from backend")
@@ -411,6 +364,62 @@ func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 		return nil, err
 	}
 
-	s.logger.Debug("Successfully fetched instances from backend", zap.Any("the instances are ", instances))
+	s.logger.Debug("Successfully fetched instances from backend", zap.Int("instances_num", len(instances)))
 	return instances, nil
+}
+
+// Main method
+func main() {
+	// Ignore Logger sync error
+	defer func() { _ = logger.Sync() }()
+
+	scan := NewScanner(apiURL, credsFile, logger)
+
+	scan.logger.Info("==================== Starting ClusterIQ Scanner ====================",
+		zap.String("version", version),
+		zap.String("commit", commit),
+		zap.String("credentials_file_path", credsFile),
+		zap.ByteString("credentials_file_path", credsFileHash),
+	)
+
+	// Listen Signals block for receive OS signals. This is used by K8s/OCP for
+	// interacting with this software when it's deployed on a Pod
+	go func() {
+		quitChan := make(chan os.Signal, 1)
+		signal.Notify(quitChan, syscall.SIGTERM)
+		s := <-quitChan
+		signalHandler(s)
+		logger.Info("Scanner stopped")
+	}()
+
+	var err error
+
+	// Get Cloud Accounts from credentials file
+	err = scan.readCloudProviderAccounts()
+	if err != nil {
+		logger.Error("Failed to get cloud provider accounts", zap.Error(err))
+		return
+	}
+
+	// Run Stockers
+	err = scan.createStockers()
+	if err != nil {
+		logger.Error("Failed to create stockers", zap.Error(err))
+		return
+	}
+
+	err = scan.startStockers()
+	if err != nil {
+		logger.Error("Failed to start up stocker instances", zap.Error(err))
+		return
+	}
+
+	// Writing into DB
+	scan.inventory.PrintInventory()
+	if err := scan.postScannerResults(); err != nil {
+		logger.Error("Can't post scanned results", zap.Error(err))
+		return
+	}
+
+	logger.Info("Scanner finished successfully")
 }
