@@ -126,6 +126,7 @@ func main() {
 			expensesGroup.POST("", HandlerPostExpense)
 		}
 		instancesGroup := baseGroup.Group("/instances")
+		instancesGroup.Use(HandlerRefreshInventory)
 		{
 			instancesGroup.GET("", HandlerGetInstances)
 			instancesGroup.GET("/expense_update", HandlerGetInstancesForBillingUpdate)
@@ -136,6 +137,7 @@ func main() {
 		}
 
 		clustersGroup := baseGroup.Group("/clusters")
+		clustersGroup.Use(HandlerRefreshInventory)
 		{
 			clustersGroup.GET("", HandlerGetClusters)
 			clustersGroup.GET("/:cluster_id", HandlerGetClustersByID)

@@ -604,3 +604,22 @@ func HandlerPatchAccount(c *gin.Context) {
 	logger.Debug("Patching an Account", zap.String("account", accountName))
 	c.PureJSON(http.StatusNotImplemented, nil)
 }
+
+// HandlerRefreshInventory handles the request for refreshing the entire
+// inventory just after a full scan. This method is used for recalculating some
+// values and mark the missing clusters as "terminated"
+//	@Summary		Refresh data on inventory
+//	@Description	Recalculating some values and mark the missing clusters as "terminated"
+//	@Tags			Inventory
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	nil
+//	@Failure		500	{object}	nil
+//	@Router			/inventory/refresh [post]
+func HandlerRefreshInventory(c *gin.Context) {
+	if err := refreshInventory(); err != nil {
+		logger.Error("Can't refresh inventory data on DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+}

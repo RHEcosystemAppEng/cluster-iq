@@ -1,6 +1,9 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"go.uber.org/zap"
 )
@@ -217,8 +220,7 @@ const (
 			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
 			creation_timestamp = EXCLUDED.creation_timestamp,
 			age = EXCLUDED.age,
-			owner = EXCLUDED.owner,
-			total_cost = EXCLUDED.total_cost
+			owner = EXCLUDED.owner
 	`
 
 	// InsertAccountsQuery inserts into a new instance in its table
@@ -227,12 +229,14 @@ const (
 			id,
 			name,
 			provider,
+			total_cost,
 			cluster_count,
 			last_scan_timestamp
 		) VALUES (
 			:id,
 			:name,
 			:provider,
+			:total_cost,
 			:cluster_count,
 			:last_scan_timestamp
 		) ON CONFLICT (name) DO UPDATE SET
@@ -267,6 +271,9 @@ const (
 
 	// DeleteTagsQuery removes a Tag by its key and instance reference
 	DeleteTagsQuery = `DELETE FROM tags WHERE instance_id=$1`
+
+	UpdateTerminatedInstancesQuery = `SELECT check_terminated_instances()`
+	UpdateTerminatedClustersQuery  = `SELECT check_terminated_clusters()`
 )
 
 // joinInstancesTags, converts an array of InstanceDB into an array of inventory.Instance
@@ -539,5 +546,21 @@ func deleteAccount(accountName string) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func refreshInventory() error {
+	var result sql.Result
+
+	if result = db.MustExec(UpdateTerminatedInstancesQuery); result == nil {
+		return fmt.Errorf("Cannot refresh terminated instances")
+	}
+	fmt.Println("====>", result)
+
+	if result = db.MustExec(UpdateTerminatedClustersQuery); result == nil {
+		return fmt.Errorf("Cannot refresh terminated clusters")
+	}
+	fmt.Println("====>", result)
+
 	return nil
 }
