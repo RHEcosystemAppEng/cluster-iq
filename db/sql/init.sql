@@ -129,7 +129,7 @@ CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_insert()
 $$
 BEGIN
   UPDATE instances
-  SET daily_cost = (SELECT SUM(amount)/age FROM expenses WHERE instance_id = NEW.instance_id)
+  SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = NEW.instance_id)
   WHERE id = NEW.instance_id;
   RETURN NEW;
 END;
@@ -143,7 +143,7 @@ CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_delete()
 $$
 BEGIN
   UPDATE instances
-  SET daily_cost = (SELECT SUM(amount)/age FROM expenses WHERE instance_id = OLD.instance_id)
+  SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = OLD.instance_id)
   WHERE id = OLD.instance_id;
   RETURN OLD;
 END;
