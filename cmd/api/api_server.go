@@ -115,20 +115,21 @@ func main() {
 	// Preparing API Endpoints
 	baseGroup := router.Group("/api/v1")
 	{
+		healthcheckGroup := baseGroup.Group("/healthcheck")
+		{
+			healthcheckGroup.GET("", HandlerHealthCheck)
+		}
 		expensesGroup := baseGroup.Group("/expenses")
 		{
 			expensesGroup.GET("", HandlerGetExpenses)
 			expensesGroup.GET("/:instance_id", HandlerGetExpensesByInstance)
 			expensesGroup.POST("", HandlerPostExpense)
 		}
-		healthcheckGroup := baseGroup.Group("/healthcheck")
-		{
-			healthcheckGroup.GET("", HandlerHealthCheck)
-		}
-
 		instancesGroup := baseGroup.Group("/instances")
+		instancesGroup.Use(HandlerRefreshInventory)
 		{
 			instancesGroup.GET("", HandlerGetInstances)
+			instancesGroup.GET("/expense_update", HandlerGetInstancesForBillingUpdate)
 			instancesGroup.GET("/:instance_id", HandlerGetInstanceByID)
 			instancesGroup.POST("", HandlerPostInstance)
 			instancesGroup.DELETE("/:instance_id", HandlerDeleteInstance)
@@ -136,6 +137,7 @@ func main() {
 		}
 
 		clustersGroup := baseGroup.Group("/clusters")
+		clustersGroup.Use(HandlerRefreshInventory)
 		{
 			clustersGroup.GET("", HandlerGetClusters)
 			clustersGroup.GET("/:cluster_id", HandlerGetClustersByID)

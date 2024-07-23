@@ -70,7 +70,7 @@ func TestNewCluster(t *testing.T) {
 func TestIsClusterStopped(t *testing.T) {
 	var cluster Cluster
 
-	// Running Cluster
+	// Stopped Cluster
 	cluster = Cluster{
 		Name:        "testCluster",
 		InfraID:     "XXXX1",
@@ -222,6 +222,20 @@ func TestIsClusterRunning(t *testing.T) {
 func TestUpdateStatus(t *testing.T) {
 	var cluster Cluster
 
+	// Zero instances
+	cluster = Cluster{
+		Name:        "testCluster",
+		Provider:    UnknownProvider,
+		Status:      Unknown,
+		Region:      "eu-west-1",
+		ConsoleLink: "http://url.com",
+		Instances:   []Instance{},
+	}
+	cluster.UpdateStatus()
+	if cluster.Status != Unknown {
+		t.Error("Cluster is not in Unknown status when it doesn't have any instances")
+	}
+
 	// Not enough instances
 	cluster = Cluster{
 		Name:        "testCluster",
@@ -251,6 +265,45 @@ func TestUpdateStatus(t *testing.T) {
 	cluster.UpdateStatus()
 	if cluster.Status != Unknown {
 		t.Error("Cluster is not in Unknown status when it doesn't have minimum instances count")
+	}
+
+	// Terminated Cluster
+	cluster = Cluster{
+		Name:        "testCluster",
+		Provider:    UnknownProvider,
+		Status:      Unknown,
+		Region:      "eu-west-1",
+		ConsoleLink: "http://url.com",
+		Instances: []Instance{
+			{
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				Status:           Terminated,
+				Tags:             []Tag{},
+			},
+			{
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				Status:           Terminated,
+				Tags:             []Tag{},
+			},
+			{
+				ID:               "23456",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				Status:           Terminated,
+				Tags:             []Tag{},
+			},
+		},
+	}
+	cluster.UpdateStatus()
+	if cluster.Status != Terminated {
+		t.Error("Cluster Status is not Terminated when every instance is Terminated")
 	}
 
 	// Running Cluster

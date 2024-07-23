@@ -132,7 +132,7 @@ func (i *Instance) AddTag(tag Tag) {
 
 // String as ToString func
 func (i Instance) String() string {
-	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s][%f]",
+	return fmt.Sprintf("%s(%s): [%s][%s][%s][%s][%s][%d]",
 		i.Name,
 		i.ID,
 		i.Provider,
@@ -140,7 +140,7 @@ func (i Instance) String() string {
 		i.AvailabilityZone,
 		i.Status,
 		i.ClusterID,
-		i.TotalCost,
+		len(i.Expenses),
 	)
 }
 

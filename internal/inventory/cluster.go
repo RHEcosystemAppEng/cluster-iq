@@ -50,8 +50,6 @@ type Cluster struct {
 	// Cluster's owner
 	Owner string `db:"owner" json:"owner"`
 
-	//TODO: Add Contact/partners/customer_owner
-
 	// Total cost (US Dollars)
 	TotalCost float64 `db:"total_cost" json:"totalCost"`
 
@@ -133,7 +131,7 @@ func (c *Cluster) UpdateAge() error {
 
 	// Calculating Age in days since the cluster was created until last scraping
 	newAge := calculateAge(c.CreationTimestamp, c.LastScanTimestamp)
-	if c.Age < newAge && c.Age != 0 {
+	if c.Age > newAge && c.Age != 0 {
 		return fmt.Errorf("New cluster age is lower than previous value. Current age: %d, New estimated age: %d", c.Age, newAge)
 	}
 
@@ -158,6 +156,7 @@ func (c *Cluster) UpdateCosts() error {
 	return nil
 }
 
+// TODO convert to a map[InstanceStatus]int for counting
 // UpdateStatus evaluate the status of the cluster checking how many of the
 // nodes are in Running or Stopped status. As Openshift needs at lease 3 nodes
 // running to be considered correctly Running (3 master nodes), but we cant'
@@ -165,7 +164,6 @@ func (c *Cluster) UpdateCosts() error {
 // instances are running, Cluster will be considered as Running also.
 // If the instances count is less than minInstances, Cluster would be
 // considered as Unknown status
-// TODO: find out a more trustable approach to evaluate cluster status
 func (c *Cluster) UpdateStatus() {
 	c.InstanceCount = len(c.Instances)
 
@@ -175,18 +173,35 @@ func (c *Cluster) UpdateStatus() {
 		return
 	}
 
-	count := 0
+	counts := map[InstanceStatus]int{
+		Running:    0,
+		Stopped:    0,
+		Terminated: 0,
+	}
+
 	for _, instance := range c.Instances {
-		if instance.Status == Running {
-			count++
-		}
-		if count >= minInstances {
-			c.Status = Running
-			return
+		switch instance.Status {
+		case Running:
+			counts[Running]++
+		case Stopped:
+			counts[Stopped]++
+		case Terminated:
+			counts[Terminated]++
 		}
 	}
 
-	c.Status = Stopped
+	if counts[Running] >= minInstances {
+		c.Status = Running
+		return
+	} else if counts[Stopped] == c.InstanceCount {
+		c.Status = Stopped
+		return
+	} else if counts[Terminated] == c.InstanceCount {
+		c.Status = Terminated
+		return
+	}
+
+	c.Status = Unknown
 }
 
 // AddInstance add a new instance to a cluster

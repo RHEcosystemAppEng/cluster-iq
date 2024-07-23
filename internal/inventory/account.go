@@ -20,6 +20,9 @@ type Account struct {
 	// Infrastructure provider identifier.
 	Provider CloudProvider `db:"provider" json:"provider"`
 
+	// Total cost invested on the account
+	TotalCost float64 `db:"total_cost" json:"totalCost"`
+
 	// ClusterCount
 	ClusterCount int `db:"cluster_count" json:"clusterCount"`
 
@@ -42,6 +45,7 @@ func NewAccount(id string, name string, provider CloudProvider, user string, pas
 		ID:                id,
 		Name:              name,
 		Provider:          provider,
+		TotalCost:         0.0,
 		ClusterCount:      0,
 		Clusters:          make(map[string]*Cluster),
 		LastScanTimestamp: time.Now(),

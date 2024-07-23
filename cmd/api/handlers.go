@@ -35,6 +35,31 @@ func HandlerGetExpenses(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
+// HandlerGetInstancesForBillingUpdate handles the request for obtain a list of instances that needs to update its billing information
+//	@Summary		Obtain instances list with missing billing data
+//	@Description	Returns a list of Instances with outdated expenses or without any expense
+//	@Tags			Instance
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	InstanceListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/instances/expense_update [get]
+func HandlerGetInstancesForBillingUpdate(c *gin.Context) {
+	logger.Debug("Retrieving instances with outdated billing information")
+	addHeaders(c)
+
+	instances, err := getInstancesOutdatedBilling()
+	if err != nil {
+		logger.Error("Can't retrieve Last Expenses list", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	//response := NewExpenseListResponse(expenses)
+	response := NewInstanceListResponse(instances)
+	c.PureJSON(http.StatusOK, response)
+}
+
 // HandlerGetExpenseByID handles the request for obtain an Expense by its ID
 //	@Summary		Obtain a single Expense by its ID
 //	@Description	Returns a list of Expenses with a single Expense filtered by ID
@@ -578,4 +603,23 @@ func HandlerPatchAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	logger.Debug("Patching an Account", zap.String("account", accountName))
 	c.PureJSON(http.StatusNotImplemented, nil)
+}
+
+// HandlerRefreshInventory handles the request for refreshing the entire
+// inventory just after a full scan. This method is used for recalculating some
+// values and mark the missing clusters as "terminated"
+//	@Summary		Refresh data on inventory
+//	@Description	Recalculating some values and mark the missing clusters as "terminated"
+//	@Tags			Inventory
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	nil
+//	@Failure		500	{object}	nil
+//	@Router			/inventory/refresh [post]
+func HandlerRefreshInventory(c *gin.Context) {
+	if err := refreshInventory(); err != nil {
+		logger.Error("Can't refresh inventory data on DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
 }

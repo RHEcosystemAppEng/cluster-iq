@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -12,6 +13,42 @@ const (
 	SelectExpensesQuery = `
 		SELECT * FROM expenses
 		ORDER BY instance_id
+	`
+
+	// SelectLastExpensesQuery returns the last expense for every instance older
+	// than 1 day. This is used for obtainning the list of instances that need
+	// Billing information update because all the instances returned by this
+	// query doesn't have expenses for the current day
+	SelectLastExpensesQuery = `
+		SELECT
+				instances.id
+		FROM
+				instances
+		LEFT JOIN (
+				SELECT
+						instance_id,
+						MAX(date) AS last_expense_date
+				FROM
+						expenses
+				GROUP BY
+						instance_id
+		) AS last_expenses
+		ON
+				instances.id = last_expenses.instance_id
+		WHERE
+				last_expenses.last_expense_date IS NULL
+				OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day';
+	`
+	SelectLastExpensesQueryVOPT = `
+		WITH ranked_expenses AS (
+				SELECT
+						instance_id,
+						date,
+						amount,
+						ROW_NUMBER() OVER (PARTITION BY instance_id ORDER BY date DESC) AS rn
+				FROM expenses
+		)
+		SELECT instance_id, date, amount FROM ranked_expenses JOIN instances ON instance_id = id WHERE rn = 1 AND (status != 'Terminated' AND status != 'Unknown') AND date < '$1';
 	`
 
 	// SelectExpensesByInstanceQuery returns expense in the inventory for a specific InstanceID
@@ -138,8 +175,6 @@ const (
 			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
 			creation_timestamp = EXCLUDED.creation_timestamp,
 			age = EXCLUDED.age,
-			daily_cost = EXCLUDED.daily_cost,
-			total_cost = EXCLUDED.total_cost
 	`
 
 	// InsertClustersQuery inserts into a new instance in its table
@@ -183,8 +218,7 @@ const (
 			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
 			creation_timestamp = EXCLUDED.creation_timestamp,
 			age = EXCLUDED.age,
-			owner = EXCLUDED.owner,
-			total_cost = EXCLUDED.total_cost
+			owner = EXCLUDED.owner
 	`
 
 	// InsertAccountsQuery inserts into a new instance in its table
@@ -193,12 +227,14 @@ const (
 			id,
 			name,
 			provider,
+			total_cost,
 			cluster_count,
 			last_scan_timestamp
 		) VALUES (
 			:id,
 			:name,
 			:provider,
+			:total_cost,
 			:cluster_count,
 			:last_scan_timestamp
 		) ON CONFLICT (name) DO UPDATE SET
@@ -233,6 +269,9 @@ const (
 
 	// DeleteTagsQuery removes a Tag by its key and instance reference
 	DeleteTagsQuery = `DELETE FROM tags WHERE instance_id=$1`
+
+	UpdateTerminatedInstancesQuery = `SELECT check_terminated_instances()`
+	UpdateTerminatedClustersQuery  = `SELECT check_terminated_clusters()`
 )
 
 // joinInstancesTags, converts an array of InstanceDB into an array of inventory.Instance
@@ -276,6 +315,15 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 func getExpenses() ([]inventory.Expense, error) {
 	var dbexpenses []inventory.Expense
 	if err := db.Select(&dbexpenses, SelectExpensesQuery); err != nil {
+		return nil, err
+	}
+
+	return dbexpenses, nil
+}
+
+func getInstancesOutdatedBilling() ([]inventory.Instance, error) {
+	var dbexpenses []inventory.Instance
+	if err := db.Select(&dbexpenses, SelectLastExpensesQuery); err != nil {
 		return nil, err
 	}
 
@@ -326,8 +374,6 @@ func getInstanceByID(instanceID string) ([]inventory.Instance, error) {
 	if err := db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
 	}
-
-	fmt.Println(dbinstances)
 
 	instances := joinInstancesTags(dbinstances)
 
@@ -495,5 +541,21 @@ func deleteAccount(accountName string) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func refreshInventory() error {
+	var result sql.Result
+
+	if result = db.MustExec(UpdateTerminatedInstancesQuery); result == nil {
+		return fmt.Errorf("Cannot refresh terminated instances")
+	}
+	fmt.Println("====>", result)
+
+	if result = db.MustExec(UpdateTerminatedClustersQuery); result == nil {
+		return fmt.Errorf("Cannot refresh terminated clusters")
+	}
+	fmt.Println("====>", result)
+
 	return nil
 }
