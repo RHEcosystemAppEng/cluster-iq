@@ -175,8 +175,6 @@ const (
 			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
 			creation_timestamp = EXCLUDED.creation_timestamp,
 			age = EXCLUDED.age,
-			daily_cost = EXCLUDED.daily_cost,
-			total_cost = EXCLUDED.total_cost
 	`
 
 	// InsertClustersQuery inserts into a new instance in its table
