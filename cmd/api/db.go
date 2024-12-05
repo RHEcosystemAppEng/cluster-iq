@@ -174,7 +174,7 @@ const (
 			cluster_id = EXCLUDED.cluster_id,
 			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
 			creation_timestamp = EXCLUDED.creation_timestamp,
-			age = EXCLUDED.age,
+			age = EXCLUDED.age
 	`
 
 	// InsertClustersQuery inserts into a new instance in its table
