@@ -21,7 +21,7 @@ spec:
       serviceAccountName: cluster-iq
       containers:
         - name: console
-          image: quay.io/ecosystem-appeng/cluster-iq-console:latest
+          image: quay.io/ecosystem-appeng/cluster-iq-console:v0.2
           imagePullPolicy: Always
           envFrom:
             - configMapRef:

@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: quay.io/ecosystem-appeng/cluster-iq-api:latest
+          image: quay.io/ecosystem-appeng/cluster-iq-api:v0.2
           imagePullPolicy: Always
           resources:
             requests:
