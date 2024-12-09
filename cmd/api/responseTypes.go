@@ -2,6 +2,17 @@ package main
 
 import "github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 
+// HealthChecks represents the different HealthChecks performed by the API
+type HealthChecks struct {
+	APIHealth bool `json:"api_health"`
+	DBHealth  bool `json:"db_health"`
+}
+
+// HealthCheckResponse represents the API response for the Health Check report
+type HealthCheckResponse struct {
+	HealthChecks HealthChecks `json:"health_checks"`
+}
+
 // TagListResponse represents the API response containing a list of instances
 type TagListResponse struct {
 	Count int             `json:"count,omitempty"`
@@ -24,6 +35,33 @@ func NewTagListResponse(tags []inventory.Tag) *TagListResponse {
 	// If there is more than one instance, the response contains a 'count' field
 	if numTags > 1 {
 		response.Count = numTags
+	}
+
+	return &response
+}
+
+// ExpenseListResponse represents the API response containing a list of expenses
+type ExpenseListResponse struct {
+	Count    int                 `json:"count,omitempty"`
+	Expenses []inventory.Expense `json:"expenses"`
+}
+
+// NewExpenseListResponse creates a new ExpenseListResponse instance and
+// controls if there is any Expense in the incoming list
+func NewExpenseListResponse(expenses []inventory.Expense) *ExpenseListResponse {
+	numExpenses := len(expenses)
+
+	// If there is no expenses, an emtpy array is returned instead of null
+	if numExpenses == 0 {
+		expenses = []inventory.Expense{}
+	}
+
+	response := ExpenseListResponse{
+		Expenses: expenses,
+	}
+	// If there is more than one instance, the response contains a 'count' field
+	if numExpenses > 1 {
+		response.Count = numExpenses
 	}
 
 	return &response

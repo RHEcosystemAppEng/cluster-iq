@@ -1,11 +1,77 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"go.uber.org/zap"
 )
 
 const (
+	// SelectExpensesQuery returns every expense in the inventory ordered by instanceID
+	SelectExpensesQuery = `
+		SELECT * FROM expenses
+		ORDER BY instance_id
+	`
+
+	// SelectLastExpensesQuery returns the last expense for every instance older
+	// than 1 day. This is used for obtainning the list of instances that need
+	// Billing information update because all the instances returned by this
+	// query doesn't have expenses for the current day
+	SelectLastExpensesQuery = `
+		SELECT
+				instances.id
+		FROM
+				instances
+		LEFT JOIN (
+				SELECT
+						instance_id,
+						MAX(date) AS last_expense_date
+				FROM
+						expenses
+				GROUP BY
+						instance_id
+		) AS last_expenses
+		ON
+				instances.id = last_expenses.instance_id
+		WHERE
+				last_expenses.last_expense_date IS NULL
+				OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day';
+	`
+	SelectLastExpensesQueryVOPT = `
+		WITH ranked_expenses AS (
+				SELECT
+						instance_id,
+						date,
+						amount,
+						ROW_NUMBER() OVER (PARTITION BY instance_id ORDER BY date DESC) AS rn
+				FROM expenses
+		)
+		SELECT instance_id, date, amount FROM ranked_expenses JOIN instances ON instance_id = id WHERE rn = 1 AND (status != 'Terminated' AND status != 'Unknown') AND date < '$1';
+	`
+
+	// SelectExpensesByInstanceQuery returns expense in the inventory for a specific InstanceID
+	SelectExpensesByInstanceQuery = `
+		SELECT * FROM expenses
+		WHERE instance_id = $1
+		ORDER BY date
+	`
+
+	// InsertExpensesQuery inserts into a new expense for an instance
+	InsertExpensesQuery = `
+		INSERT INTO expenses (
+			instance_id,
+			date,
+			amount
+		) VALUES (
+			:instance_id,
+			:date,
+			:amount
+		) ON CONFLICT (instance_id, date) DO UPDATE SET
+			amount = EXCLUDED.amount
+	`
+
 	// SelectInstancesQuery returns every instance in the inventory ordered by ID
 	SelectInstancesQuery = `
 		SELECT * FROM instances
@@ -79,23 +145,36 @@ const (
 			provider,
 			instance_type,
 			availability_zone,
-			state,
-			cluster_id
+			status,
+			cluster_id,
+			last_scan_timestamp,
+			creation_timestamp,
+			age,
+			daily_cost,
+			total_cost
 		) VALUES (
 			:id,
 			:name,
 			:provider,
 			:instance_type,
 			:availability_zone,
-			:state,
-			:cluster_id
+			:status,
+			:cluster_id,
+			:last_scan_timestamp,
+			:creation_timestamp,
+			:age,
+			:daily_cost,
+			:total_cost
 		) ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,
 			provider = EXCLUDED.provider,
 			instance_type = EXCLUDED.instance_type,
 			availability_zone = EXCLUDED.availability_zone,
-			state = EXCLUDED.state,
-			cluster_id = EXCLUDED.cluster_id
+			status = EXCLUDED.status,
+			cluster_id = EXCLUDED.cluster_id,
+			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
+			creation_timestamp = EXCLUDED.creation_timestamp,
+			age = EXCLUDED.age
 	`
 
 	// InsertClustersQuery inserts into a new instance in its table
@@ -105,30 +184,41 @@ const (
 			name,
 			infra_id,
 			provider,
-			state,
+			status,
 			region,
 			account_name,
 			console_link,
 			instance_count,
-			last_scan_timestamp
+			last_scan_timestamp,
+			creation_timestamp,
+			age,
+			owner,
+			total_cost
 		) VALUES (
 			:id,
 			:name,
 			:infra_id,
 			:provider,
-			:state,
+			:status,
 			:region,
 			:account_name,
 			:console_link,
 			:instance_count,
-			:last_scan_timestamp
+			:last_scan_timestamp,
+			:creation_timestamp,
+			:age,
+			:owner,
+			:total_cost
 		) ON CONFLICT (id) DO UPDATE SET
 			provider = EXCLUDED.provider,
-			state = EXCLUDED.state,
+			status = EXCLUDED.status,
 			region = EXCLUDED.region,
 			console_link = EXCLUDED.console_link,
 			instance_count = EXCLUDED.instance_count,
-			last_scan_timestamp = EXCLUDED.last_scan_timestamp
+			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
+			creation_timestamp = EXCLUDED.creation_timestamp,
+			age = EXCLUDED.age,
+			owner = EXCLUDED.owner
 	`
 
 	// InsertAccountsQuery inserts into a new instance in its table
@@ -137,12 +227,14 @@ const (
 			id,
 			name,
 			provider,
+			total_cost,
 			cluster_count,
 			last_scan_timestamp
 		) VALUES (
 			:id,
 			:name,
 			:provider,
+			:total_cost,
 			:cluster_count,
 			:last_scan_timestamp
 		) ON CONFLICT (name) DO UPDATE SET
@@ -177,6 +269,9 @@ const (
 
 	// DeleteTagsQuery removes a Tag by its key and instance reference
 	DeleteTagsQuery = `DELETE FROM tags WHERE instance_id=$1`
+
+	UpdateTerminatedInstancesQuery = `SELECT check_terminated_instances()`
+	UpdateTerminatedClustersQuery  = `SELECT check_terminated_clusters()`
 )
 
 // joinInstancesTags, converts an array of InstanceDB into an array of inventory.Instance
@@ -197,10 +292,14 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 				dbinstance.Provider,
 				dbinstance.InstanceType,
 				dbinstance.AvailabilityZone,
-				dbinstance.State,
+				dbinstance.Status,
 				dbinstance.ClusterID,
 				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
+				dbinstance.CreationTimestamp,
 			)
+			// TODO: Implement a method for setting this values OR include them on the builder method
+			instanceMap[dbinstance.ID].TotalCost = dbinstance.TotalCost
+			instanceMap[dbinstance.ID].DailyCost = dbinstance.DailyCost
 		}
 	}
 
@@ -211,6 +310,51 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 	}
 
 	return instances
+}
+
+func getExpenses() ([]inventory.Expense, error) {
+	var dbexpenses []inventory.Expense
+	if err := db.Select(&dbexpenses, SelectExpensesQuery); err != nil {
+		return nil, err
+	}
+
+	return dbexpenses, nil
+}
+
+func getInstancesOutdatedBilling() ([]inventory.Instance, error) {
+	var dbexpenses []inventory.Instance
+	if err := db.Select(&dbexpenses, SelectLastExpensesQuery); err != nil {
+		return nil, err
+	}
+
+	return dbexpenses, nil
+}
+
+func getExpensesByInstance(instanceID string) ([]inventory.Expense, error) {
+	var dbexpenses []inventory.Expense
+	if err := db.Select(&dbexpenses, SelectExpensesByInstanceQuery, instanceID); err != nil {
+		return nil, err
+	}
+
+	return dbexpenses, nil
+}
+
+func writeExpenses(expenses []inventory.Expense) error {
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	// Writing Expenses
+	if _, err := tx.NamedExec(InsertExpensesQuery, expenses); err != nil {
+		logger.Error("Can't prepare Insert Expenses query", zap.Error(err), zap.Reflect("expenses", expenses))
+	}
+
+	// Commit
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // getAccounts returns every account in Stock
@@ -250,12 +394,10 @@ func writeInstances(instances []inventory.Instance) error {
 	// Writing Instances
 	if _, err := tx.NamedExec(InsertInstancesQuery, instances); err != nil {
 		logger.Error("Can't prepare Insert instances query", zap.Error(err))
-		return err
 	}
 	// Writing tags
 	if _, err := tx.NamedExec(InsertTagsQuery, tags); err != nil {
 		logger.Error("Can't prepare Insert tags query", zap.Error(err))
-		return err
 	}
 	// Commit
 	if err := tx.Commit(); err != nil {
@@ -399,5 +541,21 @@ func deleteAccount(accountName string) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func refreshInventory() error {
+	var result sql.Result
+
+	if result = db.MustExec(UpdateTerminatedInstancesQuery); result == nil {
+		return fmt.Errorf("Cannot refresh terminated instances")
+	}
+	fmt.Println("====>", result)
+
+	if result = db.MustExec(UpdateTerminatedClustersQuery); result == nil {
+		return fmt.Errorf("Cannot refresh terminated clusters")
+	}
+	fmt.Println("====>", result)
+
 	return nil
 }

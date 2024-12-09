@@ -11,6 +11,152 @@ import (
 	"go.uber.org/zap"
 )
 
+// HandlerGetExpenses handles the request for obtain the entire Expenses list
+//	@Summary		Obtain every Expense
+//	@Description	Returns a list of Expense with every Expensein the inventory
+//	@Tags			Expense
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	ExpenseListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/expenses/ [get]
+func HandlerGetExpenses(c *gin.Context) {
+	logger.Debug("Retrieving complete expense inventory")
+	addHeaders(c)
+
+	expenses, err := getExpenses()
+	if err != nil {
+		logger.Error("Can't retrieve Expenses list", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	response := NewExpenseListResponse(expenses)
+	c.PureJSON(http.StatusOK, response)
+}
+
+// HandlerGetInstancesForBillingUpdate handles the request for obtain a list of instances that needs to update its billing information
+//	@Summary		Obtain instances list with missing billing data
+//	@Description	Returns a list of Instances with outdated expenses or without any expense
+//	@Tags			Instance
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	InstanceListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/instances/expense_update [get]
+func HandlerGetInstancesForBillingUpdate(c *gin.Context) {
+	logger.Debug("Retrieving instances with outdated billing information")
+	addHeaders(c)
+
+	instances, err := getInstancesOutdatedBilling()
+	if err != nil {
+		logger.Error("Can't retrieve Last Expenses list", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	//response := NewExpenseListResponse(expenses)
+	response := NewInstanceListResponse(instances)
+	c.PureJSON(http.StatusOK, response)
+}
+
+// HandlerGetExpenseByID handles the request for obtain an Expense by its ID
+//	@Summary		Obtain a single Expense by its ID
+//	@Description	Returns a list of Expenses with a single Expense filtered by ID
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	ExpenseListResponse
+//	@Failure		404	{object}	nil
+//	@Failure		500	{object}	nil
+//	@Router			/expenses/:instance_id [get]
+func HandlerGetExpensesByInstance(c *gin.Context) {
+	instanceID := c.Param("instance_id")
+	logger.Debug("Retrieving expenses by InstanceID", zap.String("instance_id", instanceID))
+	addHeaders(c)
+
+	expenses, err := getExpensesByInstance(instanceID)
+	if err != nil {
+		logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
+		c.PureJSON(http.StatusNotFound, nil)
+		return
+	}
+
+	response := NewExpenseListResponse(expenses)
+	c.PureJSON(http.StatusOK, response)
+}
+
+// HandlerPostExpense handles the request for writting a new Expense in the inventory
+//	@Summary		Creates a new Expense in the inventory
+//	@Description	Receives and write into the DB the information for a new Expense
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Param			instance	body		[]inventory.Expense	true	"New Expense to be added"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Router			/expenses/ [post]
+func HandlerPostExpense(c *gin.Context) {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		logger.Error("Can't get body from request", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	var expenses []inventory.Expense
+	err = json.Unmarshal([]byte(body), &expenses)
+	if err != nil {
+		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		c.PureJSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	logger.Debug("Writing a new Expense", zap.Reflect("expenses", expenses))
+	err = writeExpenses(expenses)
+	if err != nil {
+		logger.Error("Can't write new Expenses into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerHealthCheck handles the request for checking the health level of the API
+//	@Summary		Runs HealthChecks
+//	@Description	Runs several checks for evaulating the health level of ClusterIQ
+//	@Tags			Health
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	HealthCheckResponse
+//	@Router			/health_check/ [get]
+func HandlerHealthCheck(c *gin.Context) {
+	logger.Debug("Running Health Checks")
+	addHeaders(c)
+
+	hc := HealthChecks{
+		APIHealth: false,
+		DBHealth:  false,
+	}
+
+	// Checking DB Connection status
+	if db != nil {
+		if err := db.Ping(); err == nil {
+			hc.DBHealth = true
+		} else {
+			logger.Error("Can't ping DB", zap.Error(err))
+		}
+	}
+
+	// Checking API's Router status
+	if router != nil {
+		hc.APIHealth = true
+	}
+
+	response := HealthCheckResponse{HealthChecks: hc}
+	c.PureJSON(http.StatusOK, response)
+}
+
 // HandlerGetInstances handles the request for obtain the entire Instances list
 //	@Summary		Obtain every Instance
 //	@Description	Returns a list of Instances with every Instance in the inventory
@@ -457,4 +603,23 @@ func HandlerPatchAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	logger.Debug("Patching an Account", zap.String("account", accountName))
 	c.PureJSON(http.StatusNotImplemented, nil)
+}
+
+// HandlerRefreshInventory handles the request for refreshing the entire
+// inventory just after a full scan. This method is used for recalculating some
+// values and mark the missing clusters as "terminated"
+//	@Summary		Refresh data on inventory
+//	@Description	Recalculating some values and mark the missing clusters as "terminated"
+//	@Tags			Inventory
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	nil
+//	@Failure		500	{object}	nil
+//	@Router			/inventory/refresh [post]
+func HandlerRefreshInventory(c *gin.Context) {
+	if err := refreshInventory(); err != nil {
+		logger.Error("Can't refresh inventory data on DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
 }

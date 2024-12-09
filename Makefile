@@ -53,7 +53,8 @@ define HELP_MSG
 	\033[1;36mpush:\033[0m                \033[0;37m Pushes every container image into remote repo
 	\033[1;36mpush-api:\033[0m            \033[0;37m Pushes API container image
 	\033[1;36mpush-scanner:\033[0m        \033[0;37m Pushes cluster-iq-scanner container image
-	\033[1;36mstart-dev:\033[0m           \033[0;37m Starts a local environment using 'docker/podman-compose'
+	\033[1;36mstart-dev:\033[0m           \033[0;37m Starts a local environment using 'docker/podman-compose' and initializes the Database with some fake data
+	\033[1;36mdeploy-compose:\033[0m      \033[0;37m Starts a local environment using 'docker/podman-compose'
 	\033[1;36mstop-dev:\033[0m            \033[0;37m Stops the local environment using 'docker/podman-compose'
 	\033[1;36mswagger-editor:\033[0m      \033[0;37m Starts Swagger Editor using a docker container
 	\033[1;36mswagger-doc:\033[0m         \033[0;37m generates Swagger Documentation of the API
@@ -127,6 +128,9 @@ start-dev:
 stop-dev:
 	@echo "### [Stopping dev environment] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/docker-compose/docker-compose.yaml down
+
+init-psql-test-data:
+	export PGPASSWORD=password ; psql -h localhost -p 5432 -U user -d clusteriq < db/sql/test_data.sql
 
 
 # Tests

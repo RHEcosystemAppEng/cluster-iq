@@ -1,51 +1,76 @@
 package inventory
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestNewCluster(t *testing.T) {
-	var cluster *Cluster
-	var provider CloudProvider
+	var tests = []struct {
+		name         string
+		infraID      string
+		provider     CloudProvider
+		region       string
+		accountName  string
+		consoleLink  string
+		owner        string
+		creationFail bool
+	}{
+		{ // Case 1: Normal values
+			"testCluster-1",
+			"X01234",
+			AWSProvider,
+			"eu-west-1",
+			"testAccount-A",
+			"http://console.com",
+			"John Doe",
+			false,
+		},
+		{ // Case 2: Missing AccountName
+			"testCluster-2",
+			"X01234",
+			AWSProvider,
+			"eu-west-1",
+			"",
+			"http://console.com",
+			"John Doe",
+			true,
+		},
+		{ // Case 3: Missing InfraID
+			"testCluster-3",
+			"",
+			AWSProvider,
+			"eu-west-1",
+			"testAccount-A",
+			"http://console.com",
+			"John Doe",
+			false,
+		},
+		{ // Case 4: Missing ClusterName
+			"",
+			"X01234",
+			AWSProvider,
+			"eu-west-1",
+			"testAccount-A",
+			"http://console.com",
+			"John Doe",
+			true,
+		},
+	}
 
-	id := "testCluster-XXXX1-testAccount"
-	name := "testCluster"
-	infraID := "XXXX1"
-	provider = UnknownProvider
-	region := "eu-west-1"
-	accountName := "testAccount"
-	consoleLink := "https://url.com"
+	for _, test := range tests {
+		cluster := NewCluster(test.name, test.infraID, test.provider, test.region, test.accountName, test.consoleLink, test.owner)
+		if (cluster != nil) == test.creationFail {
+			t.Errorf("Returned Cluster object failed. Data: %v", test)
+		}
+	}
 
-	cluster = NewCluster(name, infraID, provider, region, accountName, consoleLink)
-
-	if cluster.ID != id {
-		t.Errorf("Cluster's ID do not match. Have: %s ; Expected: %s", cluster.ID, id)
-	}
-	if cluster.Name != name {
-		t.Errorf("Cluster's Name do not match. Have: %s ; Expected: %s", cluster.Name, name)
-	}
-	if cluster.InfraID != infraID {
-		t.Errorf("Cluster's InfraID do not match. Have: %s ; Expected: %s", cluster.InfraID, infraID)
-	}
-	if cluster.Provider != provider {
-		t.Errorf("Cluster's Provider do not match. Have: %s ; Expected: %s", cluster.Provider, provider)
-	}
-	if cluster.Status != Unknown {
-		t.Errorf("Cluster's Status do not match. Have: %s ; Expected: %s", cluster.Status, Unknown)
-	}
-	if cluster.Region != region {
-		t.Errorf("Cluster's Region do not match. Have: %s ; Expected: %s", cluster.Region, region)
-	}
-	if cluster.ConsoleLink != consoleLink {
-		t.Errorf("Cluster's ConsoleLink do not match. Have: %s ; Expected: %s", cluster.ConsoleLink, consoleLink)
-	}
-	if len(cluster.Instances) != 0 {
-		t.Errorf("Cluster's Instances list do not match. Have: %s ; Expected: %s", cluster.Instances, make([]Instance, 0))
-	}
 }
 
 func TestIsClusterStopped(t *testing.T) {
 	var cluster Cluster
 
-	// Running Cluster
+	// Stopped Cluster
 	cluster = Cluster{
 		Name:        "testCluster",
 		InfraID:     "XXXX1",
@@ -59,7 +84,7 @@ func TestIsClusterStopped(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 			{
@@ -67,7 +92,7 @@ func TestIsClusterStopped(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 			{
@@ -75,7 +100,7 @@ func TestIsClusterStopped(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 		},
@@ -83,7 +108,7 @@ func TestIsClusterStopped(t *testing.T) {
 
 	cluster.UpdateStatus()
 	if !cluster.isClusterStopped() {
-		t.Error("Cluster Status is not Stopped when every instance is stopped")
+		t.Errorf("Cluster Status is not Stopped when every instance is stopped. Have: %s, Expected: %s", cluster.Status, Running)
 	}
 
 	// Incomplete Cluster
@@ -99,7 +124,7 @@ func TestIsClusterStopped(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 			{
@@ -107,7 +132,7 @@ func TestIsClusterStopped(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 		},
@@ -115,7 +140,7 @@ func TestIsClusterStopped(t *testing.T) {
 
 	cluster.UpdateStatus()
 	if cluster.isClusterStopped() {
-		t.Error("Cluster not suppose to be Stopped")
+		t.Errorf("Cluster not suppose to be Stopped. Have: %s, Expected: %s", cluster.Status, Unknown)
 	}
 }
 
@@ -135,7 +160,7 @@ func TestIsClusterRunning(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 			{
@@ -143,7 +168,7 @@ func TestIsClusterRunning(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 			{
@@ -151,7 +176,7 @@ func TestIsClusterRunning(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 		},
@@ -174,7 +199,7 @@ func TestIsClusterRunning(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 			{
@@ -182,7 +207,7 @@ func TestIsClusterRunning(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 		},
@@ -197,6 +222,20 @@ func TestIsClusterRunning(t *testing.T) {
 func TestUpdateStatus(t *testing.T) {
 	var cluster Cluster
 
+	// Zero instances
+	cluster = Cluster{
+		Name:        "testCluster",
+		Provider:    UnknownProvider,
+		Status:      Unknown,
+		Region:      "eu-west-1",
+		ConsoleLink: "http://url.com",
+		Instances:   []Instance{},
+	}
+	cluster.UpdateStatus()
+	if cluster.Status != Unknown {
+		t.Error("Cluster is not in Unknown status when it doesn't have any instances")
+	}
+
 	// Not enough instances
 	cluster = Cluster{
 		Name:        "testCluster",
@@ -210,7 +249,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 			{
@@ -218,7 +257,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 		},
@@ -226,6 +265,45 @@ func TestUpdateStatus(t *testing.T) {
 	cluster.UpdateStatus()
 	if cluster.Status != Unknown {
 		t.Error("Cluster is not in Unknown status when it doesn't have minimum instances count")
+	}
+
+	// Terminated Cluster
+	cluster = Cluster{
+		Name:        "testCluster",
+		Provider:    UnknownProvider,
+		Status:      Unknown,
+		Region:      "eu-west-1",
+		ConsoleLink: "http://url.com",
+		Instances: []Instance{
+			{
+				ID:               "01234",
+				Name:             "testInstance1",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				Status:           Terminated,
+				Tags:             []Tag{},
+			},
+			{
+				ID:               "12345",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				Status:           Terminated,
+				Tags:             []Tag{},
+			},
+			{
+				ID:               "23456",
+				Name:             "testInstance2",
+				AvailabilityZone: "eu-west-1a",
+				InstanceType:     "medium",
+				Status:           Terminated,
+				Tags:             []Tag{},
+			},
+		},
+	}
+	cluster.UpdateStatus()
+	if cluster.Status != Terminated {
+		t.Error("Cluster Status is not Terminated when every instance is Terminated")
 	}
 
 	// Running Cluster
@@ -241,7 +319,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 			{
@@ -249,7 +327,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 			{
@@ -257,7 +335,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Running,
+				Status:           Running,
 				Tags:             []Tag{},
 			},
 		},
@@ -280,7 +358,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 			{
@@ -288,7 +366,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 			{
@@ -296,7 +374,7 @@ func TestUpdateStatus(t *testing.T) {
 				Name:             "testInstance2",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 		},
@@ -310,30 +388,32 @@ func TestUpdateStatus(t *testing.T) {
 func TestAddInstance(t *testing.T) {
 	var cluster Cluster
 	var instance Instance
-	cluster = Cluster{
-		Name:        "testCluster",
-		Provider:    UnknownProvider,
-		Status:      Unknown,
-		Region:      "eu-west-1",
-		ConsoleLink: "http://url.com",
-		Instances:   []Instance{},
-	}
+	creationTimestamp, _ := time.Parse("2006-01-02", "2024-01-02")
+	expectedAge := calculateAge(creationTimestamp, time.Now())
+
+	cluster = *NewCluster("testCluster", "infra-id", UnknownProvider, "eu-west-1", "account-0", "http://url.com", "owner")
 
 	instance = Instance{
-		ID:               "01234",
-		Name:             "testInstance",
-		AvailabilityZone: "eu-west-1a",
-		InstanceType:     "medium",
-		State:            Stopped,
-		Tags:             []Tag{},
+		ID:                "01234",
+		Name:              "testInstance",
+		AvailabilityZone:  "eu-west-1a",
+		InstanceType:      "medium",
+		Status:            Stopped,
+		Tags:              []Tag{},
+		CreationTimestamp: creationTimestamp,
 	}
 
 	before := len(cluster.Instances)
-	cluster.AddInstance(instance)
+	if err := cluster.AddInstance(instance); err != nil {
+		t.Errorf("Error adding instance to cluster: Error: %s", err.Error())
+	}
 	after := len(cluster.Instances)
 
 	if before != after-1 {
 		t.Errorf("Instance do not added correctly. #Instances: %d, NewInstance: %v", before, instance)
+	}
+	if cluster.Age != expectedAge {
+		t.Errorf("Cluster Age is not correct: Have: %d, Expected: %d", cluster.Age, expectedAge)
 	}
 }
 
@@ -351,7 +431,7 @@ func TestPrintCluster(t *testing.T) {
 				Name:             "testInstance1",
 				AvailabilityZone: "eu-west-1a",
 				InstanceType:     "medium",
-				State:            Stopped,
+				Status:           Stopped,
 				Tags:             []Tag{},
 			},
 		},

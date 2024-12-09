@@ -2,24 +2,28 @@ package main
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
-	"strings"
+	"os/signal"
+	"syscall"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
 	"go.uber.org/zap"
-	"gopkg.in/ini.v1"
+	ini "gopkg.in/ini.v1"
 )
 
 const (
 	apiAccountEndpoint    = "/accounts"
 	apiClusterEndpoint    = "/clusters"
 	apiInstanceEndpoint   = "/instances"
+	apiExpenseEndpoint    = "/expenses"
 	defaultINISectionName = "__DEFAULT__"
 )
 
@@ -28,11 +32,18 @@ var (
 	version string
 	// commit reflects the git short-hash of the compiled version
 	commit string
-	//
-	logger    *zap.Logger
+
+	// logger variable across the entire scanner code
+	logger *zap.Logger
+
+	// Global vars for taking the config from the EnvVars and use it as part of the scanner configuration
 	apiURL    string
 	credsFile string
-	// client http
+
+	// MD5 Checksum of credsFile
+	credsFileHash []byte
+
+	// HTTP Client for connecting the scanner to the API
 	client http.Client
 )
 
@@ -64,6 +75,10 @@ func init() {
 	apiURL = os.Getenv("CIQ_API_URL")
 	credsFile = os.Getenv("CIQ_CREDS_FILE")
 
+	// Calculate Credentials file MD5 checksum for checking on runtime
+	md5 := md5.Sum([]byte(credsFile))
+	copy(md5[:], credsFileHash)
+
 	// Setting INI files default section name
 	ini.DefaultSection = defaultINISectionName
 
@@ -72,19 +87,6 @@ func init() {
 	}
 	client = http.Client{Transport: tr}
 
-}
-
-// gerProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
-func getProvider(provider string) inventory.CloudProvider {
-	switch strings.ToUpper(provider) {
-	case "AWS":
-		return inventory.AWSProvider
-	case "GCP":
-		return inventory.GCPProvider
-	case "AZURE":
-		return inventory.AzureProvider
-	}
-	return inventory.UnknownProvider
 }
 
 // readCloudProviderAccounts reads and loads cloud provider accounts from a credentials file.
@@ -104,7 +106,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 		newAccount := inventory.NewAccount(
 			"",
 			account.Name(),
-			getProvider(account.Key("provider").String()),
+			inventory.GetProvider(account.Key("provider").String()),
 			account.Key("user").String(),
 			account.Key("key").String(),
 		)
@@ -123,28 +125,40 @@ func (s *Scanner) createStockers() error {
 		switch account.Provider {
 		case inventory.AWSProvider:
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
-			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, logger))
+
+			// AWS API Stoker
+			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger))
+
+			// AWS Billing API Stoker
+			instancesToScan, err := s.getInstancesForBillingUpdate()
+			if err != nil {
+				s.logger.Error("Cannot obtain the list of instances for obtainning the billing information on AWS CostExplorer")
+			} else {
+				s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+			}
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
-			// TODO: Uncomment line below when Stocker is implemented
+			// TODO: Uncomment line below when GCP Stocker is implemented
 			//s.stockers = append(s.stockers, stocker.NewGCPStocker(&account, logger))
 		case inventory.AzureProvider:
 			logger.Warn("Failed to scan Azure account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
-			// TODO: Uncomment line below when Stocker is implemented
+			// TODO: Uncomment line below when Azure Stocker is implemented
 			//s.stockers = append(s.stockers, stocker.NewAzureStocker(&account, logger))
 		}
 	}
 
+	// If there are no stockers, nothing to do
 	if len(s.stockers) == 0 {
 		return fmt.Errorf("Any account has been provided for scanning on credentials file")
 	}
 
+	// Checking the logLevel before entering on the For loop for optimization
 	if s.logger.Core().Enabled(zap.DebugLevel) {
 		s.logger.Debug("Total Stockers created", zap.Int("count", len(s.stockers)))
 		for i, stocker := range s.stockers {
@@ -176,6 +190,20 @@ func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
 	}
 
 	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
+
+	return postData(requestURL, b, s.logger)
+}
+
+// postNewInstance posts into the API, the new instances obtained after scanning
+func (s *Scanner) postNewExpenses(expenses []inventory.Expense) error {
+	s.logger.Debug("Posting new Expenses")
+	b, err := json.Marshal(expenses)
+	if err != nil {
+		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
+		return err
+	}
+
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiExpenseEndpoint)
 
 	return postData(requestURL, b, s.logger)
 }
@@ -229,46 +257,140 @@ func (s *Scanner) postScannerResults() error {
 	var accounts []inventory.Account
 	var clusters []inventory.Cluster
 	var instances []inventory.Instance
+	var expenses []inventory.Expense
 	for _, account := range s.inventory.Accounts {
 		for _, cluster := range account.Clusters {
 			for _, instance := range cluster.Instances {
+				for _, expense := range instance.Expenses {
+					expenses = append(expenses, expense)
+				}
 				instances = append(instances, instance)
+
 			}
-			cluster.Instances = nil
 			clusters = append(clusters, *cluster)
 		}
-		account.Clusters = nil
 		accounts = append(accounts, *account)
 	}
 
-	if err := s.postNewAccounts(accounts); err != nil {
-		s.logger.Debug("Adding Accounts", zap.Int("accounts_count", len(accounts)))
-		return err
+	var lenAccounts int = len(accounts)
+	var lenClusters int = len(clusters)
+	var lenInstances int = len(instances)
+	var lenExpenses int = len(expenses)
+
+	if lenAccounts > 0 {
+		if err := s.postNewAccounts(accounts); err != nil {
+			return err
+		}
 	}
 
-	if err := s.postNewClusters(clusters); err != nil {
-		s.logger.Debug("Adding Clusters", zap.Int("clusters_count", len(accounts)))
-		return err
+	if lenClusters > 0 {
+		if err := s.postNewClusters(clusters); err != nil {
+			return err
+		}
 	}
 
-	if err := s.postNewInstances(instances); err != nil {
-		s.logger.Debug("Adding Instances", zap.Int("instances_count", len(accounts)))
-		return err
+	if lenInstances > 0 {
+		if err := s.postNewInstances(instances); err != nil {
+			return err
+		}
+	}
+
+	if lenExpenses > 0 {
+		if err := s.postNewExpenses(expenses); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
+// signalHandler for managing incoming OS signals
+func signalHandler(signal os.Signal) {
+	if signal == syscall.SIGTERM {
+		logger.Fatal("SIGTERM signal received. Stopping ClusterIQ Scanner")
+		os.Exit(0)
+	} else {
+		logger.Warn("Ignoring signal: ", zap.String("signal_id", signal.String()))
+	}
+}
+
+// getInstances fetches instances from the backend API
+func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
+	s.logger.Debug("Fetching instances for update billing from backend")
+
+	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint+"/expense_update")
+
+	resp, err := http.Get(requestURL)
+	if err != nil {
+		s.logger.Error("Failed to get last expenses from API", zap.Error(err))
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		s.logger.Error("Failed to get last expenses from API", zap.Int("status_code", resp.StatusCode))
+		return nil, fmt.Errorf("failed to get last expenses, status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.logger.Error("Failed to read response body", zap.Error(err))
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		s.logger.Error("Failed to unmarshal response body", zap.Error(err))
+		return nil, err
+	}
+
+	instancesData, ok := result["instances"]
+	if !ok {
+		s.logger.Error("Instances field not found in the response")
+		return nil, fmt.Errorf("instances field not found in the response")
+	}
+
+	instancesJSON, err := json.Marshal(instancesData)
+	if err != nil {
+		s.logger.Error("Failed to marshal instances data", zap.Error(err))
+		return nil, err
+	}
+
+	var instances []inventory.Instance
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		s.logger.Error("Failed to unmarshal instances JSON", zap.Error(err))
+		return nil, err
+	}
+
+	s.logger.Debug("Successfully fetched instances from backend", zap.Int("instances_num", len(instances)))
+	return instances, nil
+}
+
+// Main method
 func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
 
 	scan := NewScanner(apiURL, credsFile, logger)
-	scan.logger.Info("Starting ClusterIQ Scanner",
+
+	scan.logger.Info("==================== Starting ClusterIQ Scanner ====================",
 		zap.String("version", version),
 		zap.String("commit", commit),
-		zap.String("credentials file", credsFile),
+		zap.String("credentials_file_path", credsFile),
+		zap.ByteString("credentials_file_path", credsFileHash),
 	)
+
+	// Listen Signals block for receive OS signals. This is used by K8s/OCP for
+	// interacting with this software when it's deployed on a Pod
+	go func() {
+		quitChan := make(chan os.Signal, 1)
+		signal.Notify(quitChan, syscall.SIGTERM)
+		s := <-quitChan
+		signalHandler(s)
+		logger.Info("Scanner stopped")
+	}()
 
 	var err error
 

@@ -8,10 +8,10 @@ import (
 // Inventory object to store inventored resources
 type Inventory struct {
 	// Accounts map indexed by Account's Name
-	Accounts map[string]*Account `redis:"accounts" json:"accounts"`
+	Accounts map[string]*Account `db:"accounts" json:"accounts"`
 
 	// Date of Inventory creation/update
-	CreationTimestamp time.Time `redis:"creationTimestamp" json:"creationTimestamp"`
+	CreationTimestamp time.Time `db:"creationTimestamp" json:"creationTimestamp"`
 }
 
 // NewInventory creates a new Inventory variable
@@ -36,7 +36,7 @@ func (s *Inventory) AddAccount(account *Account) error {
 
 // PrintInventory prints the entire Inventory content
 func (s Inventory) PrintInventory() {
-	fmt.Printf("Inventory %s:", s.CreationTimestamp)
+	fmt.Printf("Inventory created at: %s\nAccounts:\n", s.CreationTimestamp)
 	for _, account := range s.Accounts {
 		account.PrintAccount()
 	}
