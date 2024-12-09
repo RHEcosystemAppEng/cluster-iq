@@ -22,7 +22,7 @@ available for every cloud provider:
 
 | Cloud Provider | Compute Resources | Billing | Managing |
 |----------------|-------------------|---------|----------|
-| AWS            | Yes               | No      | No       |
+| AWS            | Yes               | Yes     | No       |
 | Azure          | No                | No      | No       |
 | GCP            | No                | No      | No       |
 
@@ -33,19 +33,25 @@ The following graph shows the architecture of this project:
 ![ClusterIQ architecture diagram](./doc/arch.png)
 
 
-## Deployment
-This section explains how to deploy ClusterIQ and ClusterIQ Console
-1. Create `secrets` folder
+## Installation
+This section explains how to deploy ClusterIQ and ClusterIQ Console.
+
+
+### Prerequisites: 
+#### Accounts Configuration
+1. Create a folder called `secrets` for saving the cloud credentials. This folder is ignored on this repo to keep your
+   credentials safe.
     ```text
     mkdir secrets
     export CLUSTER_IQ_CREDENTIALS_FILE="./secrets/credentials"
     ```
+    :warning: Please take care and don't include them on the repo.
 
 2. Create your credentials file with the AWS credentials of the accounts you
    want to scrape. The file must follow the following format:
     ```text
     echo "
-    [AWS_ACCOUNT_NAME]
+    [ACCOUNT_NAME]
     provider = aws/gcp/azure
     user = XXXXXXX
     key = YYYYYYY
@@ -54,52 +60,11 @@ This section explains how to deploy ClusterIQ and ClusterIQ Console
     :warning: The values for `provider` are: `aws`, `gcp` and `azure`, but the
     scraping is only supported for `aws` by the moment.  The credentials file
     should be placed on the path `secrets/*` to work with
-    `docker/podman-compose`. This repo ignores `secrets` folder for preventing
-    you to push your cloud credentials to the repo.
+    `docker/podman-compose`.
 
     :exclamation: This file structure was design to be generic, but it works
     differently depending on the cloud provider. For AWS, `user` refers to the
     `ACCESS_KEY`, and `key` refers to `SECRET_ACCESS_KEY`.
-
-3. Continue to "Local Deployment" for running ClusterIQ on your local using
-   Podman.
-4. Continue to "Openshift Deployment" for deploying ClusterIQ on an Openshift
-   cluster.
-
-### Local Deployment (for development)
-1. Use the Makefile targets for building the components
-    ```sh
-    make build
-    ```
-
-2. Deploy dev environment
-    ```sh
-    make start-dev
-    ```
-
-3. Undeploy dev environment
-    ```sh
-    make stop-dev
-    ```
-
-:warning: Make sure you have access to `registry.redhat.io` for downloading
-required images.
-
-:warning: If you're having issues mounting your local files (like init.psql or
-the credentials file) check if your SELinux is enforcing. This could prevent
-podman to bind these files into the containers.
-```sh
-# Run this carefully and under your own responsability
-sudo setenforce 0
-```
-
-ClusterIQ includes two exposed components, the API and the UI.
-
-| Service        | URL                   |
-|----------------|-----------------------|
-| UI             | <http://localhost:8080> |
-| API            | <http://localhost:8081/api/v1> |
-
 
 ### Openshift Deployment
 1. Prepare your cluster and CLI
@@ -157,6 +122,13 @@ ClusterIQ includes two exposed components, the API and the UI.
     oc apply -n $NAMESPACE -f ./deployments/openshift/05_console.yaml
     ```
 
+
+## Local Deployment (for development)
+For deploying ClusterIQ in local for development purposes, check the following
+[document](./doc/development-setup.md)
+
+
+
 ### Configuration
 Available configuration via Env Vars:
 | Key                  | Value                         | Description                               |
@@ -174,7 +146,7 @@ and on `./<PROJECT_FOLDER>/deploy/openshift/config.yaml` to deploy it on Openshi
 
 
 ### Scanners
-[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner)
+[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-scanner/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner)
 
 As each cloud provider has a different API and because of this, a specific
 scanner adapted to the provider is required.
@@ -189,7 +161,6 @@ By default, every build rule will be performed using the Dockerfile for each
 specific scanner
 
 #### AWS Scanner
-
 The scanner should run periodically to keep the inventory up to date.
 
 ```shell
