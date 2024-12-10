@@ -7,10 +7,6 @@ FROM golang:1.19.12 AS builder
 WORKDIR /app
 COPY . .
 
-# Arguments
-ARG VERSION=""
-ARG COMMIT=""
-
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/api/*.go
 
 ## Run
@@ -18,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api -ldflags "-
 FROM registry.access.redhat.com/ubi8/ubi-micro:8.8-5
 
 # Labels
-LABEL version=$VERSION
+LABEL version="v0.2"
 LABEL description="ClusterIQ API"
 
 # Binary

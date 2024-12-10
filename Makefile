@@ -80,13 +80,13 @@ build: build-scanner swagger-doc build-api
 
 build-api:
 	@echo "### [Building API] ###"
-	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-api --build-arg="VERSION=${VERSION}" --build-arg="COMMIT=${IMAGE_TAG}" .
+	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-api .
 	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(VERSION)
 	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(IMAGE_TAG)
 
 build-scanner:
 	@echo "### [Building Scanner] ###"
-	@$(CONTAINER_ENGINE) build -t $(SCANNER_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/dockerfiles/Dockerfile-scanner --build-arg="VERSION=${VERSION}" --build-arg="COMMIT=${IMAGE_TAG}" .
+	@$(CONTAINER_ENGINE) build -t $(SCANNER_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-scanner .
 	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(VERSION)
 	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(IMAGE_TAG)
 

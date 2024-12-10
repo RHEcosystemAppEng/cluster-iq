@@ -7,10 +7,6 @@ FROM golang:1.19.12 AS builder
 WORKDIR /app
 COPY . .
 
-# Arguments
-ARG VERSION=""
-ARG COMMIT=""
-
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-scanner -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/scanner/scanner.go 
 
 ## Run
@@ -18,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-scanner -ldflag
 FROM registry.access.redhat.com/ubi8/ubi-micro:8.8-5
 
 # Labels
-LABEL version=$VERSION
+LABEL version="v0.2"
 LABEL description="ClusterIQ cloud scanner"
 
 # Binary
@@ -27,8 +23,8 @@ COPY --from=builder /app/cluster-iq-scanner /cluster-iq-scanner
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 # Default config
-ENV CIQ_DB_HOST="redis"
-ENV CIQ_DB_PORT="6379"
-ENV CIQ_DB_PASS=""
+ENV CIQ_API_URL: "http://api:8080/api/v1"
+ENV CIQ_CREDS_FILE: "/credentials"
+ENV CIQ_LOG_LEVEL: "DEBUG"
 
 ENTRYPOINT ["/cluster-iq-scanner"]
