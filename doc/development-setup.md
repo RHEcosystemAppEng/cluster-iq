@@ -96,3 +96,21 @@ To manage your development environment:
     ```sh
     make stop-dev
     ```
+
+## API Documentation
+
+### Generating Swagger Documentation
+
+To generate the API documentation from the source code:
+
+```sh
+make swagger-doc
+```
+
+### Running Swagger Editor
+
+To view and edit the OpenAPI specification in a browser-based editor:
+
+```sh
+make swagger-editor
+```
