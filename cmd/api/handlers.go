@@ -536,7 +536,7 @@ func HandlerGetClustersOnAccount(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			account	body		inventory.Account	true	"New Account to be added"	Format(email)
+//	@Param			account	body		inventory.Account	true	"New Account to be added"
 //	@Success		200		{object}	nil
 //	@Failure		500		{object}	nil
 //	@Router			/accounts/ [post]
