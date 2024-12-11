@@ -1,78 +1,116 @@
 # Development Setup
-This document explains how to build and deploy
-[ClusterIQ](https://github.com/RHEcosystemAppEng/cluster-iq) for development
-purposes. For creating a dev environment, this project uses compose files. Not
-recommended for production
 
-ClusterIQ has two different repos:
-* [Console Repo](https://github.com/RHEcosystemAppEng/cluster-iq-console) for the Web User Interface
-* [Main Repo](https://github.com/RHEcosystemAppEng/cluster-iq-console) containing the API and the Scanner.
+This guide describes how to build and deploy [ClusterIQ](https://github.com/RHEcosystemAppEng/cluster-iq) in a development environment. The setup uses container compose files and is intended for development purposes only.
 
+ClusterIQ consists of two repositories:
 
-Both repos must be managed by separate.
+* [Console Repo](https://github.com/RHEcosystemAppEng/cluster-iq-console) contains the web user interface.
+* [Main Repo](https://github.com/RHEcosystemAppEng/cluster-iq-console) contains the API and Scanner components.
+
+Each repository requires separate configuration and management.
 
 ## Prerequisites
-Check you have configured your [cloud account
-credentials](../README.md#accounts-configuration) before continuing:
 
-:warning: Make sure you have access to `registry.redhat.io` for downloading
-required images.
+Before you begin:
 
-:warning: If you're having issues mounting your local files (like init.psql or
-the credentials file) check if your SELinux is enforcing. This could prevent
-podman to bind these files into the containers.
+* Configure your [cloud account credentials](../README.md#accounts-configuration).
+* Ensure you have access to `registry.redhat.io` to download the required container images.
+* If you experience file mounting issues with local files (such as `init.psql` or `credentials`), verify your SELinux settings. SELinux in enforcing mode can prevent container runtime from binding files to containers.
+
+To temporarily disable SELinux:
+
 ```sh
-# Run this carefully and under your own responsability
+# Run this carefully and under your own responsibility
 sudo setenforce 0
 ```
 
-## Building
-First, we need to build the images for every component.
+[!NOTE] Use this command with caution and only in development environments.
 
-1. Create a common folder for both repos
-```sh
-mkdir cluster-iq
-```
+## Build dependencies
 
-2. Download both repos
-```sh
-#Clonning Console Repo
-git clone git@github.com:RHEcosystemAppEng/cluster-iq.git
-```
-```sh
-#Clonning Console Repo
-git clone git@github.com:RHEcosystemAppEng/cluster-iq-console.git
-```
+* [go v1.19](https://go.dev/dl/)
+* [podman](https://podman.io/docs/installation) or [docker](https://docs.docker.com/engine/install)
+* [podman-compose](https://github.com/containers/podman-compose?tab=readme-ov-file#installation) or [docker-compose](https://docs.docker.com/compose/install/)
+* [swag](https://github.com/swaggo/swag?tab=readme-ov-file#getting-started)
 
-3. Build container images
-```sh
-cd cluster-iq
-## OPTIONAL: switch to another branch version if you need it, but we recomend to use `main`.
-git checkout main
-make build
-cd ..
-```
-```sh
-cd cluster-iq-console
-## OPTIONAL: switch to another branch version if you need it, but we recomend to use `main`.
-git checkout main
-make build
-cd ..
-```
+## Build
 
-4. Verify all the images are correctly built:
-```sh
-# You should see three images, cluster-iq-api, cluster-iq-scanner, cluster-iq-console
-podman images | grep cluster-iq
-```
+Follow these steps to build the ClusterIQ components:
+
+1. Create and navigate to a common folder for both repos:
+
+    ```sh
+    mkdir cluster-iq-repos
+    cd cluster-iq-repos
+    ```
+
+2. Clone the repositories:
+
+    ```sh
+    #Clone API Repo
+    git clone git@github.com:RHEcosystemAppEng/cluster-iq.git
+    ```
+
+    ```sh
+    #Clone Console Repo
+    git clone git@github.com:RHEcosystemAppEng/cluster-iq-console.git
+    ```
+
+3. Build the container images:
+
+    ```sh
+    cd cluster-iq
+    ## OPTIONAL: switch to another branch version if you need it, but we recommend to use `main`.
+    git checkout main
+    make build
+    cd ..
+    ```
+
+    ```sh
+    cd cluster-iq-console
+    ## OPTIONAL: switch to another branch version if you need it, but we recommend to use `main`.
+    git checkout main
+    make build
+    cd ..
+    ```
+
+4. Verify the container images:
+
+    ```sh
+    # You should see three images, cluster-iq-api, cluster-iq-scanner, cluster-iq-console
+    podman images | grep cluster-iq
+    ```
 
 ## Deployment
-1. Use Compose files for deploying the platform
+
+To manage your development environment:
+
+1. Start the environment:
+
+    ```sh
+    make start-dev
+    ```
+
+2. Stop the environment:
+
+    ```sh
+    make stop-dev
+    ```
+
+## API Documentation
+
+### Generating Swagger Documentation
+
+To generate the API documentation from the source code:
+
 ```sh
-make start-dev
+make swagger-doc
 ```
 
-2. Stop dev environment
+### Running Swagger Editor
+
+To view and edit the OpenAPI specification in a browser-based editor:
+
 ```sh
-make stop-dev
+make swagger-editor
 ```
