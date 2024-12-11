@@ -143,8 +143,11 @@ cover: test
 
 # Swagger
 swagger-editor:
-	@echo "Open your browser at http://localhost:8081"
-	@$(CONTAINER_ENGINE) run -p 8081:8080 -e SWAGGER_FILE=/open_api_design.yaml -v ./open_api_design.yaml:/open_api_design.yaml swaggerapi/swagger-editor
+	@echo "Open your browser at http://127.0.0.1:8082"
+	@$(CONTAINER_ENGINE) run --rm -p 127.0.0.1:8082:8080 \
+		-e SWAGGER_FILE=/tmp/swagger.yaml \
+		-v ./cmd/api/docs/swagger.yaml:/tmp/swagger.yaml:Z \
+		swaggerapi/swagger-editor
 
 swagger-doc:
 	@echo "### [Generating Swagger Docs] ###"

@@ -89,10 +89,10 @@ func addHeaders(c *gin.Context) {
 //	@title			ClusterIQ API
 //	@version		1.0
 //	@description	This is the API of the ClusterIQ cloud inventory software
-//	@tersOfService	http://swagger.io/ters/
+//	@termsOfService	http://swagger.io/terms/
 
 //	@contact.name	ClusterIQ Team
-//	@contact.email	vbelouso@redhat.com nnaamneh@redhat.com avillega@redhat.com
+//	@contact.email	cloud-native-team@redhat.com
 
 //	@license.name	Apache 2.0
 //	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
