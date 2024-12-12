@@ -110,6 +110,14 @@ func (s *Scanner) readCloudProviderAccounts() error {
 			account.Key("user").String(),
 			account.Key("key").String(),
 		)
+
+		// Getting billing enabled flag from config
+		billing_flag := account.Key("billing_enabled").MustBool()
+		if billing_flag {
+			newAccount.EnableBilling()
+		}
+
+		// Adding account to Inventory for scanning
 		if err := s.inventory.AddAccount(newAccount); err != nil {
 			return err
 		}
@@ -130,11 +138,14 @@ func (s *Scanner) createStockers() error {
 			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger))
 
 			// AWS Billing API Stoker
-			instancesToScan, err := s.getInstancesForBillingUpdate()
-			if err != nil {
-				s.logger.Error("Cannot obtain the list of instances for obtainning the billing information on AWS CostExplorer")
-			} else {
-				s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+			if account.IsBillingEnabled() {
+				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.Name))
+				instancesToScan, err := s.getInstancesForBillingUpdate()
+				if err != nil {
+					s.logger.Error("Cannot obtain the list of instances for obtainning the billing information on AWS CostExplorer")
+				} else {
+					s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+				}
 			}
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
