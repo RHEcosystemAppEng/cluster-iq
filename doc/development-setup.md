@@ -13,14 +13,13 @@ Each repository requires separate configuration and management.
 
 Before you begin:
 
-* Configure your [cloud account credentials](../README.md#accounts-configuration).
+* Ensure you have the necessary cloud account credentials.
 * Ensure you have access to `registry.redhat.io` to download the required container images.
 * If you experience file mounting issues with local files (such as `init.psql` or `credentials`), verify your SELinux settings. SELinux in enforcing mode can prevent container runtime from binding files to containers.
 
 To temporarily disable SELinux:
 
 ```sh
-# Run this carefully and under your own responsibility
 sudo setenforce 0
 ```
 
@@ -40,58 +39,66 @@ Follow these steps to build the ClusterIQ components:
 1. Create and navigate to a common folder for both repos:
 
     ```sh
-    mkdir cluster-iq-repos
-    cd cluster-iq-repos
+    WORKDIR=$(pwd)/cluster-iq-repos
+    mkdir -p $WORKDIR && cd $WORKDIR
     ```
 
 2. Clone the repositories:
 
     ```sh
-    #Clone API Repo
     git clone git@github.com:RHEcosystemAppEng/cluster-iq.git
-    ```
-
-    ```sh
-    #Clone Console Repo
     git clone git@github.com:RHEcosystemAppEng/cluster-iq-console.git
     ```
 
-3. Build the container images:
+3. Validate required dependencies:
+
+    If you encounter an error, please ensure that you have installed all the necessary dependencies before proceeding.
 
     ```sh
-    cd cluster-iq
-    ## OPTIONAL: switch to another branch version if you need it, but we recommend to use `main`.
+    cd ${WORKDIR}/cluster-iq
+    make check-dependencies
+    ```
+
+4. Build the container images:
+
+    ```sh
     git checkout main
     make build
-    cd ..
     ```
 
     ```sh
-    cd cluster-iq-console
-    ## OPTIONAL: switch to another branch version if you need it, but we recommend to use `main`.
+    cd ${WORKDIR}/cluster-iq-console
     git checkout main
     make build
-    cd ..
     ```
 
-4. Verify the container images:
+5. Verify the container images:
+
+   You should see the following images `cluster-iq-api`, `cluster-iq-scanner`, `cluster-iq-console`
 
     ```sh
-    # You should see three images, cluster-iq-api, cluster-iq-scanner, cluster-iq-console
-    podman images | grep cluster-iq
+    CONTAINER_ENGINE=$(which podman >/dev/null 2>&1 && echo podman || echo docker)
+    $CONTAINER_ENGINE images | grep cluster-iq
     ```
 
 ## Deployment
 
 To manage your development environment:
 
-1. Start the environment:
+1. Change the working directory to `cluster-iq` repo
+
+   ```sh
+   cd ${WORKDIR}/cluster-iq
+   ```
+
+2. Configure your [cloud account credentials](../README.md#accounts-configuration).
+3. Start the environment:
 
     ```sh
     make start-dev
     ```
 
-2. Stop the environment:
+4. Stop the environment:
 
     ```sh
     make stop-dev
