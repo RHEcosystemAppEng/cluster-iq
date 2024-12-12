@@ -11,6 +11,9 @@ IMAGE_TAG := $(shell git rev-parse --short=7 HEAD)
 CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
 K8S_CLI ?= $(shell which oc >/dev/null 2>&1 && echo oc || echo kubectl)
 
+# Required binaries
+REQUIRED_BINS := $(CONTAINER_ENGINE) $(CONTAINER_ENGINE)-compose $(K8S_CLI) swag
+
 # Container images vars
 REGISTRY ?= quay.io
 PROJECT_NAME ?= cluster-iq
@@ -66,10 +69,15 @@ export HELP_MSG
 
 all: stop-dev build start-dev
 
+.PHONY: check-dependencies
+check-dependencies:
+	@$(foreach bin,$(REQUIRED_BINS),\
+		$(if $(shell command -v $(bin) 2> /dev/null),,\
+			$(error ✗ $(bin) is required but not installed)))
+
 # Deployments
 deploy:
 	@$(K8S_CLI) apply -f $(DEPLOYMENTS_DIR)/openshift
-
 
 # Building using containers:
 clean:
