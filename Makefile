@@ -123,11 +123,13 @@ push-scanner:
 # Development env based on Docker/Podman Compose tool
 start-dev:
 	@echo "### [Starting dev environment] ###"
-	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/docker-compose/docker-compose.yaml up -d
+	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-devel.yaml up -d
 
 stop-dev:
 	@echo "### [Stopping dev environment] ###"
-	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/docker-compose/docker-compose.yaml down
+	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-devel.yaml down
+
+restart-dev: stop-dev start-dev
 
 init-psql-test-data:
 	export PGPASSWORD=password ; psql -h localhost -p 5432 -U user -d clusteriq < db/sql/test_data.sql
