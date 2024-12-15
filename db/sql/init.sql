@@ -1,8 +1,10 @@
--- Providers
+-- ## Tables definitions ##
+-- Cloud Providers
 CREATE TABLE IF NOT EXISTS providers (
   name TEXT PRIMARY KEY
 );
 
+-- Default values for Cloud Providers table
 INSERT INTO
   providers(name)
 VALUES
@@ -18,6 +20,7 @@ CREATE TABLE IF NOT EXISTS status (
   value TEXT PRIMARY KEY
 );
 
+-- Default values for Status table
 INSERT INTO
   status(value)
 VALUES
@@ -93,8 +96,8 @@ CREATE TABLE IF NOT EXISTS expenses (
   PRIMARY KEY (instance_id, date)
 );
 
-
--- Functions
+-- ## Functions ##
+-- Updates the total cost of an instance after a new expense record is inserted
 CREATE OR REPLACE FUNCTION update_instance_total_costs_after_insert()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
@@ -108,6 +111,7 @@ BEGIN
 END;
 $$;
 
+-- Updates the total cost of an instance after an expense record is deleted
 CREATE OR REPLACE FUNCTION update_instance_total_costs_after_delete()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
@@ -121,7 +125,7 @@ BEGIN
 END;
 $$;
 
-
+-- Updates the daily cost of an instance after a new expense record is inserted
 CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_insert()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
@@ -135,7 +139,7 @@ BEGIN
 END;
 $$;
 
-
+-- Updates the daily cost of an instance after an expense record is deleted
 CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_delete()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
@@ -149,7 +153,7 @@ BEGIN
 END;
 $$;
 
-
+-- Updates the total cost of a cluster based on its associated instances
 CREATE OR REPLACE FUNCTION update_cluster_total_costs()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
@@ -163,7 +167,7 @@ BEGIN
 END;
 $$;
 
-
+-- Updates the total cost of an account based on its associated clusters
 CREATE OR REPLACE FUNCTION update_account_total_costs()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
@@ -177,64 +181,65 @@ BEGIN
 END;
 $$;
 
--- Triggers
+-- ## Triggers ##
+-- Trigger to update instance total cost after an expense is inserted
 CREATE TRIGGER update_instance_total_cost_after_insert
 AFTER INSERT
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_total_costs_after_insert();
 
-
-CREATE TRIGGER update_instance_total_cost_after_insert
+-- Trigger to update instance total cost after an expense is updated
+CREATE TRIGGER update_instance_total_cost_after_update
 AFTER UPDATE
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_total_costs_after_insert();
 
-
+-- Trigger to update instance total cost after an expense is deleted
 CREATE TRIGGER update_instance_total_cost_after_delete
 AFTER DELETE
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_total_costs_after_delete();
 
-
+-- Trigger to update instance daily cost after an expense is inserted
 CREATE TRIGGER update_instance_daily_cost_after_insert
 AFTER INSERT
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
 
-
-CREATE TRIGGER update_instance_daily_cost_after_insert
+-- Trigger to update instance daily cost after an expense is updated
+CREATE TRIGGER update_instance_daily_cost_after_update
 AFTER UPDATE
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
 
-
+-- Trigger to update instance daily cost after an expense is deleted
 CREATE TRIGGER update_instance_daily_cost_after_delete
 AFTER DELETE
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_delete();
 
-
+-- Trigger to update cluster total cost after an instance is updated
 CREATE TRIGGER update_cluster_total_cost
 AFTER UPDATE
 ON instances
 FOR EACH ROW
   EXECUTE PROCEDURE update_cluster_total_costs();
 
-
+-- Trigger to update account total cost after a cluster is updated
 CREATE TRIGGER update_account_total_cost
 AFTER UPDATE
 ON clusters
 FOR EACH ROW
   EXECUTE PROCEDURE update_account_total_costs();
 
-
--- Removed Instances/Clusters
+-- ## Maintenance Functions ##
+-- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
 CREATE OR REPLACE FUNCTION check_terminated_instances()
 RETURNS void AS $$
 BEGIN
@@ -244,7 +249,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
+-- Marks clusters as 'Terminated' if they haven't been scanned in the last 24 hours
 CREATE OR REPLACE FUNCTION check_terminated_clusters()
 RETURNS void AS $$
 BEGIN
