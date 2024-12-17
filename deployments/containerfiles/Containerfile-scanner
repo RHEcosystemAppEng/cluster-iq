@@ -7,15 +7,15 @@ FROM golang:1.22.10 AS builder
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-scanner -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/scanner/scanner.go 
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-scanner -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/scanner/scanner.go
 
 ## Run
 ####################
 FROM registry.access.redhat.com/ubi8/ubi-micro:8.8-5
 
 # Labels
-LABEL version="v0.2"
-LABEL description="ClusterIQ cloud scanner"
+LABEL version="v0.2.1"
+LABEL description="ClusterIQ cloud provider Scanner"
 
 # Binary
 COPY --from=builder /app/cluster-iq-scanner /cluster-iq-scanner
