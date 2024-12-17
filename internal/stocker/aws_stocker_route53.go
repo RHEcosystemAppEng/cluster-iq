@@ -21,7 +21,7 @@ func generateConsoleLink(baseDomain string) *string {
 	return &consoleLink
 }
 
-// TODO: doc
+// getRoute53HostedZones get a list of every Hosted Zone on the Route53 service
 func getRoute53HostedZones(client *route53.Route53) ([]*route53.HostedZone, error) {
 	input := route53.ListHostedZonesByNameInput{}
 	result, err := client.ListHostedZonesByName(&input)
@@ -31,6 +31,7 @@ func getRoute53HostedZones(client *route53.Route53) ([]*route53.HostedZone, erro
 	return result.HostedZones, nil
 }
 
+// getHostedZoneRecords returns every record of a given HostedZone
 func getHostedZoneRecords(r53client *route53.Route53, hostedZoneID string) ([]*route53.ResourceRecordSet, error) {
 	// Define input for ListResourceRecordSets
 	input := &route53.ListResourceRecordSetsInput{
@@ -39,10 +40,10 @@ func getHostedZoneRecords(r53client *route53.Route53, hostedZoneID string) ([]*r
 
 	var records []*route53.ResourceRecordSet
 
-	// Llamada a la API para obtener los registros
+	// API Call for getting DNS records
 	err := r53client.ListResourceRecordSetsPages(input, func(page *route53.ListResourceRecordSetsOutput, lastPage bool) bool {
 		records = append(records, page.ResourceRecordSets...)
-		return !lastPage // Continuar si hay más páginas
+		return !lastPage // Continue if there are more record pages
 	})
 
 	if err != nil {
@@ -53,6 +54,7 @@ func getHostedZoneRecords(r53client *route53.Route53, hostedZoneID string) ([]*r
 
 }
 
+// searchConsoleURLinDNSRecords looks for the console link on the record list
 func searchConsoleURLinDNSRecords(records []*route53.ResourceRecordSet, cluster *inventory.Cluster) *string {
 	for _, record := range records {
 		if strings.Contains(aws.StringValue(record.Name), cluster.Name) {
