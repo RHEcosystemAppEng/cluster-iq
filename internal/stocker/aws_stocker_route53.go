@@ -49,7 +49,7 @@ func getHostedZoneRecords(r53client *route53.Route53, hostedZoneID string) ([]*r
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error al obtener los registros: %v", err)
+		return nil, fmt.Errorf("Error getting the DNS registries: %v", err)
 	}
 
 	return records, nil
