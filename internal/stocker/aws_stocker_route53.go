@@ -11,13 +11,15 @@ import (
 )
 
 const (
+	// consoleProtocolPrefix defines the "HTTP" protocol header
+	consoleProtocolPrefix = "https://"
 	// consoleLinkPrefix is the pre-defined hostname for the Openshift Console
 	consoleLinkPrefix = "console-openshift-console.apps."
 )
 
 // generateConsoleLink attaches the consoleLinkPrefix to the baseDomain specified by args
 func generateConsoleLink(baseDomain string) *string {
-	consoleLink := consoleLinkPrefix + baseDomain
+	consoleLink := consoleProtocolPrefix + consoleLinkPrefix + baseDomain
 	return &consoleLink
 }
 
