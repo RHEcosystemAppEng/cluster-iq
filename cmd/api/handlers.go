@@ -12,6 +12,7 @@ import (
 )
 
 // HandlerGetExpenses handles the request for obtain the entire Expenses list
+//
 //	@Summary		Obtain every Expense
 //	@Description	Returns a list of Expense with every Expensein the inventory
 //	@Tags			Expense
@@ -36,6 +37,7 @@ func HandlerGetExpenses(c *gin.Context) {
 }
 
 // HandlerGetInstancesForBillingUpdate handles the request for obtain a list of instances that needs to update its billing information
+//
 //	@Summary		Obtain instances list with missing billing data
 //	@Description	Returns a list of Instances with outdated expenses or without any expense
 //	@Tags			Instance
@@ -61,6 +63,7 @@ func HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 }
 
 // HandlerGetExpenseByID handles the request for obtain an Expense by its ID
+//
 //	@Summary		Obtain a single Expense by its ID
 //	@Description	Returns a list of Expenses with a single Expense filtered by ID
 //	@Tags			Expenses
@@ -87,6 +90,7 @@ func HandlerGetExpensesByInstance(c *gin.Context) {
 }
 
 // HandlerPostExpense handles the request for writting a new Expense in the inventory
+//
 //	@Summary		Creates a new Expense in the inventory
 //	@Description	Receives and write into the DB the information for a new Expense
 //	@Tags			Expenses
@@ -123,6 +127,7 @@ func HandlerPostExpense(c *gin.Context) {
 }
 
 // HandlerHealthCheck handles the request for checking the health level of the API
+//
 //	@Summary		Runs HealthChecks
 //	@Description	Runs several checks for evaulating the health level of ClusterIQ
 //	@Tags			Health
@@ -158,6 +163,7 @@ func HandlerHealthCheck(c *gin.Context) {
 }
 
 // HandlerGetInstances handles the request for obtain the entire Instances list
+//
 //	@Summary		Obtain every Instance
 //	@Description	Returns a list of Instances with every Instance in the inventory
 //	@Tags			Instances
@@ -182,6 +188,7 @@ func HandlerGetInstances(c *gin.Context) {
 }
 
 // HandlerGetInstanceByID handles the request for obtain an Instance by its ID
+//
 //	@Summary		Obtain a single Instance by its ID
 //	@Description	Returns a list of Instances with a single Instance filtered by ID
 //	@Tags			Instances
@@ -208,6 +215,7 @@ func HandlerGetInstanceByID(c *gin.Context) {
 }
 
 // HandlerPostInstance handles the request for writting a new Instance in the inventory
+//
 //	@Summary		Creates a new Instance in the inventory
 //	@Description	Receives and write into the DB the information for a new Instance
 //	@Tags			Instances
@@ -244,6 +252,7 @@ func HandlerPostInstance(c *gin.Context) {
 }
 
 // HandlerDeleteInstance handles the request for removing an Instance in the inventory
+//
 //	@Summary		Deletes an Instance in the inventory
 //	@Description	Deletes an Instance present in the inventory by its ID
 //	@Tags			Instances
@@ -252,6 +261,7 @@ func HandlerPostInstance(c *gin.Context) {
 //	@Success		200	{object}	nil
 //	@Failure		500	{object}	nil
 //	@Router			/instances/:instance_id [delete]
+//
 // TODO: Not Implemented
 func HandlerDeleteInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
@@ -266,6 +276,7 @@ func HandlerDeleteInstance(c *gin.Context) {
 }
 
 // HandlerPatchInstance handles the request for patching an Instance in the inventory
+//
 //	@Summary		Patches an Instance in the inventory
 //	@Description	Receives and patch into the DB the information for an existing Instance
 //	@Tags			Instances
@@ -282,6 +293,7 @@ func HandlerPatchInstance(c *gin.Context) {
 }
 
 // HandlerGetClusters handles the request for obtaining the entire Cluster list
+//
 //	@Summary		Obtain every Cluster
 //	@Description	Returns a list of Clusters with a single instance filtered by Name
 //	@Tags			Clusters
@@ -306,6 +318,7 @@ func HandlerGetClusters(c *gin.Context) {
 }
 
 // HandlerGetClustersByID handles the request for obtain an Cluster by its Name
+//
 //	@Summary		Obtain a single Cluster by its Name
 //	@Description	Returns a list of Clusters with a single Cluster filtered by Name
 //	@Tags			Clusters
@@ -332,6 +345,7 @@ func HandlerGetClustersByID(c *gin.Context) {
 }
 
 // HandlerGetClusterTags handles the request for obtain the list of tags of a Cluster
+//
 //	@Summary		Obtain Cluster Tags
 //	@Description	Returns a list of Tags belonging to an Cluster given by ID
 //	@Tags			Clusters
@@ -339,7 +353,7 @@ func HandlerGetClustersByID(c *gin.Context) {
 //	@Produce		json
 //	@Success		200	{object}	TagListResponse
 //	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_id/instances [get]
+//	@Router			/clusters/:cluster_id/tags [get]
 func HandlerGetClusterTags(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
@@ -357,6 +371,7 @@ func HandlerGetClusterTags(c *gin.Context) {
 }
 
 // HandlerGetInstancesOnCluster handles the request for obtain the list of Instances belonging to a specific Cluster
+//
 //	@Summary		Obtain Instances list belonging to a Cluster
 //	@Description	Returns a list of Instances belonging to an Cluster given by Name
 //	@Tags			Clusters
@@ -382,6 +397,7 @@ func HandlerGetInstancesOnCluster(c *gin.Context) {
 }
 
 // HandlerPostCluster handles the request for writting a new Cluster in the inventory
+//
 //	@Summary		Creates a new Cluster in the inventory
 //	@Description	Receives and write into the DB the information for a new Cluster
 //	@Tags			Clusters
@@ -418,6 +434,7 @@ func HandlerPostCluster(c *gin.Context) {
 }
 
 // HandlerDeleteCluster handles the request for removing a Cluster in the inventory
+//
 //	@Summary		Deletes a Cluster in the inventory
 //	@Description	Deletes a Cluster present in the inventory by its Name
 //	@Tags			Clusters
@@ -426,6 +443,7 @@ func HandlerPostCluster(c *gin.Context) {
 //	@Success		200	{object}	nil
 //	@Failure		500	{object}	nil
 //	@Router			/clusters/:cluster_id [delete]
+//
 // TODO: Not Implemented
 func HandlerDeleteCluster(c *gin.Context) {
 	clusterName := c.Param("cluster_id")
@@ -440,6 +458,7 @@ func HandlerDeleteCluster(c *gin.Context) {
 }
 
 // HandlerPatchCluster handles the request for patching a Cluster in the inventory
+//
 //	@Summary		Patches a Cluster in the inventory
 //	@Description	Receives and patch into the DB the information for an existing Cluster
 //	@Tags			Clusters
@@ -456,6 +475,7 @@ func HandlerPatchCluster(c *gin.Context) {
 }
 
 // HandlerGetAccounts handles the request for obtaining the entire Account list
+//
 //	@Summary		Obtain every Account
 //	@Description	Returns a list of Accounts with a single Account filtered by Name
 //	@Tags			Accounts
@@ -480,6 +500,7 @@ func HandlerGetAccounts(c *gin.Context) {
 }
 
 // HandlerGetAccountsByName handles the request for obtain an Account by its Name
+//
 //	@Summary		Obtain a single Account by its Name
 //	@Description	Returns a list of Accounts with a single Account filtered by Name
 //	@Tags			Accounts
@@ -506,6 +527,7 @@ func HandlerGetAccountsByName(c *gin.Context) {
 }
 
 // HandlerGetClustersOnAccount handles the request for obtain the list of clusters deployed on a specific Account
+//
 //	@Summary		Obtain Cluster list on an Account
 //	@Description	Returns a list of Clusters which belongs to an Account given by Name
 //	@Tags			Accounts
@@ -531,6 +553,7 @@ func HandlerGetClustersOnAccount(c *gin.Context) {
 }
 
 // HandlerPostAccount handles the request for writting a new Account in the inventory
+//
 //	@Summary		Creates a new Account in the inventory
 //	@Description	Receives and write into the DB the information for a new Account
 //	@Tags			Accounts
@@ -568,6 +591,7 @@ func HandlerPostAccount(c *gin.Context) {
 }
 
 // HandlerDeleteAccount handles the request for deleting an Account in the inventory
+//
 //	@Summary		Deletes an Account in the inventory
 //	@Description	Deletes an Account present in the inventory by its Name
 //	@Tags			Accounts
@@ -576,6 +600,7 @@ func HandlerPostAccount(c *gin.Context) {
 //	@Success		200	{object}	nil
 //	@Failure		500	{object}	nil
 //	@Router			/accounts/:account_name [delete]
+//
 // TODO: Not Implemented
 func HandlerDeleteAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
@@ -590,6 +615,7 @@ func HandlerDeleteAccount(c *gin.Context) {
 }
 
 // HandlerPatchAccount handles the request for patching an Account in the inventory
+//
 //	@Summary		Patches an Account in the inventory
 //	@Description	Receives and patch into the DB the information for an existing Account
 //	@Tags			Accounts
@@ -608,6 +634,7 @@ func HandlerPatchAccount(c *gin.Context) {
 // HandlerRefreshInventory handles the request for refreshing the entire
 // inventory just after a full scan. This method is used for recalculating some
 // values and mark the missing clusters as "terminated"
+//
 //	@Summary		Refresh data on inventory
 //	@Description	Recalculating some values and mark the missing clusters as "terminated"
 //	@Tags			Inventory
