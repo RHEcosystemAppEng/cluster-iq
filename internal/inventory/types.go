@@ -14,11 +14,11 @@ const (
 	// Running Instance status
 	Running InstanceStatus = "Running"
 	// Stopped Instance status
-	Stopped = "Stopped"
+	Stopped InstanceStatus = "Stopped"
 	// Terminated Instance status
-	Terminated = "Terminated"
+	Terminated InstanceStatus = "Terminated"
 	// Unknown Instance status
-	Unknown = "Unknown"
+	Unknown InstanceStatus = "Unknown"
 )
 
 // AsInstanceStatus converts the incoming argument into a InstanceStatus type
