@@ -23,6 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.25 // indirect
 	github.com/aws/smithy-go v1.22.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
+	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
