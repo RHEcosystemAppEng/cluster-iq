@@ -14,13 +14,13 @@ import (
 // HandlerGetExpenses handles the request for obtain the entire Expenses list
 //
 //	@Summary		Obtain every Expense
-//	@Description	Returns a list of Expense with every Expensein the inventory
-//	@Tags			Expense
+//	@Description	Returns a list of Expenses with every expense in the inventory
+//	@Tags			Expenses
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	ExpenseListResponse
 //	@Failure		500	{object}	nil
-//	@Router			/expenses/ [get]
+//	@Router			/expenses [get]
 func HandlerGetExpenses(c *gin.Context) {
 	logger.Debug("Retrieving complete expense inventory")
 	addHeaders(c)
@@ -40,7 +40,7 @@ func HandlerGetExpenses(c *gin.Context) {
 //
 //	@Summary		Obtain instances list with missing billing data
 //	@Description	Returns a list of Instances with outdated expenses or without any expense
-//	@Tags			Instance
+//	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
@@ -57,7 +57,6 @@ func HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 		return
 	}
 
-	//response := NewExpenseListResponse(expenses)
 	response := NewInstanceListResponse(instances)
 	c.PureJSON(http.StatusOK, response)
 }
@@ -69,10 +68,11 @@ func HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 //	@Tags			Expenses
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	ExpenseListResponse
-//	@Failure		404	{object}	nil
-//	@Failure		500	{object}	nil
-//	@Router			/expenses/:instance_id [get]
+//	@Param			instance_id	path		string	true	"Instance ID"
+//	@Success		200			{object}	ExpenseListResponse
+//	@Failure		404			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Router			/expenses/{instance_id} [get]
 func HandlerGetExpensesByInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	logger.Debug("Retrieving expenses by InstanceID", zap.String("instance_id", instanceID))
@@ -89,7 +89,7 @@ func HandlerGetExpensesByInstance(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerPostExpense handles the request for writting a new Expense in the inventory
+// HandlerPostExpense handles the request for writing a new Expense in the inventory
 //
 //	@Summary		Creates a new Expense in the inventory
 //	@Description	Receives and write into the DB the information for a new Expense
@@ -98,8 +98,9 @@ func HandlerGetExpensesByInstance(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		[]inventory.Expense	true	"New Expense to be added"
 //	@Success		200			{object}	nil
+//	@Failure		400			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Router			/expenses/ [post]
+//	@Router			/expenses [post]
 func HandlerPostExpense(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -111,7 +112,7 @@ func HandlerPostExpense(c *gin.Context) {
 	var expenses []inventory.Expense
 	err = json.Unmarshal([]byte(body), &expenses)
 	if err != nil {
-		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -129,12 +130,12 @@ func HandlerPostExpense(c *gin.Context) {
 // HandlerHealthCheck handles the request for checking the health level of the API
 //
 //	@Summary		Runs HealthChecks
-//	@Description	Runs several checks for evaulating the health level of ClusterIQ
+//	@Description	Runs several checks for evaluating the health level of ClusterIQ
 //	@Tags			Health
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	HealthCheckResponse
-//	@Router			/health_check/ [get]
+//	@Router			/healthcheck [get]
 func HandlerHealthCheck(c *gin.Context) {
 	logger.Debug("Running Health Checks")
 	addHeaders(c)
@@ -171,7 +172,7 @@ func HandlerHealthCheck(c *gin.Context) {
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
 //	@Failure		500	{object}	nil
-//	@Router			/instances/ [get]
+//	@Router			/instances [get]
 func HandlerGetInstances(c *gin.Context) {
 	logger.Debug("Retrieving complete instance inventory")
 	addHeaders(c)
@@ -194,10 +195,11 @@ func HandlerGetInstances(c *gin.Context) {
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	InstanceListResponse
-//	@Failure		404	{object}	nil
-//	@Failure		500	{object}	nil
-//	@Router			/instances/:instance_id [get]
+//	@Param			instance_id	path		string	true	"Instance ID"
+//	@Success		200			{object}	InstanceListResponse
+//	@Failure		404			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Router			/instances/{instance_id} [get]
 func HandlerGetInstanceByID(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	logger.Debug("Retrieving instance by ID", zap.String("instance_id", instanceID))
@@ -214,7 +216,7 @@ func HandlerGetInstanceByID(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerPostInstance handles the request for writting a new Instance in the inventory
+// HandlerPostInstance handles the request for writing a new Instance in the inventory
 //
 //	@Summary		Creates a new Instance in the inventory
 //	@Description	Receives and write into the DB the information for a new Instance
@@ -236,7 +238,7 @@ func HandlerPostInstance(c *gin.Context) {
 	var instances []inventory.Instance
 	err = json.Unmarshal([]byte(body), &instances)
 	if err != nil {
-		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -258,9 +260,10 @@ func HandlerPostInstance(c *gin.Context) {
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	nil
-//	@Failure		500	{object}	nil
-//	@Router			/instances/:instance_id [delete]
+//	@Param			instance_id	path		string	true	"Instance ID"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Router			/instances/{instance_id} [delete]
 //
 // TODO: Not Implemented
 func HandlerDeleteInstance(c *gin.Context) {
@@ -283,9 +286,11 @@ func HandlerDeleteInstance(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			instance	body		inventory.Instance	true	"Instance to be modified"
+//	@Param			instance_id	path		string				true	"Instance ID"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Router			/instances/:instance_id [patch]
+//	@Failure		501			{object}	nil "Not Implemented"
+//	@Router			/instances/{instance_id} [patch]
 func HandlerPatchInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	logger.Debug("Patching an Instance", zap.String("instance_id", instanceID))
@@ -301,7 +306,7 @@ func HandlerPatchInstance(c *gin.Context) {
 //	@Produce		json
 //	@Success		200	{object}	ClusterListResponse
 //	@Failure		500	{object}	nil
-//	@Router			/clusters/ [get]
+//	@Router			/clusters [get]
 func HandlerGetClusters(c *gin.Context) {
 	logger.Debug("Retrieving complete clusters inventory")
 	addHeaders(c)
@@ -324,10 +329,11 @@ func HandlerGetClusters(c *gin.Context) {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	ClusterListResponse
-//	@Failure		404	{object}	nil
-//	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_id [get]
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	ClusterListResponse
+//	@Failure		404			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Router			/clusters/{cluster_id} [get]
 func HandlerGetClustersByID(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	logger.Debug("Retrieving Cluster Tags by ID", zap.String("cluster_id", clusterID))
@@ -351,9 +357,10 @@ func HandlerGetClustersByID(c *gin.Context) {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	TagListResponse
-//	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_id/tags [get]
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	TagListResponse
+//	@Failure		500			{object}	nil
+//	@Router			/clusters/{cluster_id}/tags [get]
 func HandlerGetClusterTags(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
@@ -377,9 +384,10 @@ func HandlerGetClusterTags(c *gin.Context) {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	InstanceListResponse
-//	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_id/instances [get]
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	InstanceListResponse
+//	@Failure		500			{object}	nil
+//	@Router			/clusters/{cluster_id}/instances [get]
 func HandlerGetInstancesOnCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	logger.Debug("Retrieving Cluster's Instances", zap.String("cluster_id", clusterID))
@@ -396,7 +404,7 @@ func HandlerGetInstancesOnCluster(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerPostCluster handles the request for writting a new Cluster in the inventory
+// HandlerPostCluster handles the request for writing a new Cluster in the inventory
 //
 //	@Summary		Creates a new Cluster in the inventory
 //	@Description	Receives and write into the DB the information for a new Cluster
@@ -406,7 +414,7 @@ func HandlerGetInstancesOnCluster(c *gin.Context) {
 //	@Param			cluster	body		inventory.Cluster	true	"New Cluster to be added"
 //	@Success		200		{object}	nil
 //	@Failure		500		{object}	nil
-//	@Router			/clusters/ [post]
+//	@Router			/clusters [post]
 func HandlerPostCluster(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -418,7 +426,7 @@ func HandlerPostCluster(c *gin.Context) {
 	var clusters []inventory.Cluster
 	err = json.Unmarshal([]byte(body), &clusters)
 	if err != nil {
-		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -440,9 +448,10 @@ func HandlerPostCluster(c *gin.Context) {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	nil
-//	@Failure		500	{object}	nil
-//	@Router			/clusters/:cluster_id [delete]
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Router			/clusters/{cluster_id} [delete]
 //
 // TODO: Not Implemented
 func HandlerDeleteCluster(c *gin.Context) {
@@ -464,10 +473,12 @@ func HandlerDeleteCluster(c *gin.Context) {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Param			instance	body		inventory.Cluster	true	"Cluster to be modified"
+//	@Param			cluster_id	path		string				true	"Cluster ID"
+//	@Param			cluster		body		inventory.Cluster	true	"Cluster to be modified"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Router			/clusters/:cluster_id [patch]
+//	@Failure		501			{object}	nil "Not Implemented"
+//	@Router			/clusters/{cluster_id} [patch]
 func HandlerPatchCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	logger.Debug("Patching a Cluster", zap.String("cluster_id", clusterID))
@@ -483,7 +494,7 @@ func HandlerPatchCluster(c *gin.Context) {
 //	@Produce		json
 //	@Success		200	{object}	AccountListResponse
 //	@Failure		500	{object}	nil
-//	@Router			/accounts/ [get]
+//	@Router			/accounts [get]
 func HandlerGetAccounts(c *gin.Context) {
 	logger.Debug("Retrieving complete Accounts inventory")
 	addHeaders(c)
@@ -506,10 +517,11 @@ func HandlerGetAccounts(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	AccountListResponse
-//	@Failure		404	{object}	nil
-//	@Failure		500	{object}	nil
-//	@Router			/accounts/:account_name [get]
+//	@Param			account_name	path		string	true	"Account Name"
+//	@Success		200				{object}	AccountListResponse
+//	@Failure		404				{object}	nil
+//	@Failure		500				{object}	nil
+//	@Router			/accounts/{account_name} [get]
 func HandlerGetAccountsByName(c *gin.Context) {
 	accountName := c.Param("account_name")
 	logger.Debug("Retrieving Account by Name", zap.String("account_name", accountName))
@@ -533,9 +545,10 @@ func HandlerGetAccountsByName(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	AccountListResponse
-//	@Failure		500	{object}	nil
-//	@Router			/accounts/:account_name/clusters [get]
+//	@Param			account_name	path		string	true	"Account Name"
+//	@Success		200				{object}	ClusterListResponse
+//	@Failure		500				{object}	nil
+//	@Router			/accounts/{account_name}/clusters [get]
 func HandlerGetClustersOnAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	logger.Debug("Retrieving Account's Clusters", zap.String("account_name", accountName))
@@ -552,7 +565,7 @@ func HandlerGetClustersOnAccount(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerPostAccount handles the request for writting a new Account in the inventory
+// HandlerPostAccount handles the request for writing a new Account in the inventory
 //
 //	@Summary		Creates a new Account in the inventory
 //	@Description	Receives and write into the DB the information for a new Account
@@ -562,7 +575,7 @@ func HandlerGetClustersOnAccount(c *gin.Context) {
 //	@Param			account	body		inventory.Account	true	"New Account to be added"
 //	@Success		200		{object}	nil
 //	@Failure		500		{object}	nil
-//	@Router			/accounts/ [post]
+//	@Router			/accounts [post]
 func HandlerPostAccount(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -574,7 +587,7 @@ func HandlerPostAccount(c *gin.Context) {
 	var accounts []inventory.Account
 	err = json.Unmarshal([]byte(body), &accounts)
 	if err != nil {
-		logger.Error("Can't obtain data from body requet", zap.Error(err))
+		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -597,9 +610,10 @@ func HandlerPostAccount(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	nil
-//	@Failure		500	{object}	nil
-//	@Router			/accounts/:account_name [delete]
+//	@Param			account_name	path		string	true	"Account Name"
+//	@Success		200				{object}	nil
+//	@Failure		500				{object}	nil
+//	@Router			/accounts/{account_name} [delete]
 //
 // TODO: Not Implemented
 func HandlerDeleteAccount(c *gin.Context) {
@@ -621,10 +635,12 @@ func HandlerDeleteAccount(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			Account	body		inventory.Account	true	"Account to be modified"
-//	@Success		200		{object}	nil
-//	@Failure		500		{object}	nil
-//	@Router			/accounts/:account_name [patch]
+//	@Param			Account			body		inventory.Account	true	"Account to be modified"
+//	@Param			account_name	path		string				true	"Account Name"
+//	@Success		200				{object}	nil
+//	@Failure		500				{object}	nil
+//	@Failure		501				{object}	nil "Not Implemented"
+//	@Router			/accounts/{account_name} [patch]
 func HandlerPatchAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	logger.Debug("Patching an Account", zap.String("account", accountName))
