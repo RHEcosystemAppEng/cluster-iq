@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
@@ -102,8 +103,8 @@ func addHeaders(c *gin.Context) {
 
 //	@securityDefinitions.basic	BasicAuth
 
-//	@externalDocs.description	OpenAPI
-//	@externalDocs.url			https://swagger.io/resources/open-api/
+// @externalDocs.description	OpenAPI
+// @externalDocs.url			https://swagger.io/resources/open-api/
 func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
@@ -144,6 +145,8 @@ func main() {
 			clustersGroup.GET("/:cluster_id/instances", HandlerGetInstancesOnCluster)
 			clustersGroup.GET("/:cluster_id/tags", HandlerGetClusterTags)
 			clustersGroup.POST("", HandlerPostCluster)
+			clustersGroup.POST("/:cluster_id/power_on", HandlerStartCluster)
+			clustersGroup.POST("/:cluster_id/power_off", HandlerStopCluster)
 			clustersGroup.DELETE("/:cluster_id", HandlerDeleteCluster)
 			clustersGroup.PATCH("/:cluster_id", HandlerPatchCluster)
 		}
@@ -184,7 +187,7 @@ func main() {
 
 	// Start API
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal("Server listen and serve error", zap.Error(err))
 			os.Exit(-1)
 		}
