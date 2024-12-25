@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	_ "github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -61,7 +60,7 @@ func HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerGetExpenseByID handles the request for obtain an Expense by its ID
+// HandlerGetExpensesByInstance HandlerGetExpenseByID handles the request for obtain an Expense by its ID
 //
 //	@Summary		Obtain a single Expense by its ID
 //	@Description	Returns a list of Expenses with a single Expense filtered by ID
@@ -110,7 +109,7 @@ func HandlerPostExpense(c *gin.Context) {
 	}
 
 	var expenses []inventory.Expense
-	err = json.Unmarshal([]byte(body), &expenses)
+	err = json.Unmarshal(body, &expenses)
 	if err != nil {
 		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
@@ -236,7 +235,7 @@ func HandlerPostInstance(c *gin.Context) {
 	}
 
 	var instances []inventory.Instance
-	err = json.Unmarshal([]byte(body), &instances)
+	err = json.Unmarshal(body, &instances)
 	if err != nil {
 		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
@@ -289,7 +288,7 @@ func HandlerDeleteInstance(c *gin.Context) {
 //	@Param			instance_id	path		string				true	"Instance ID"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Failure		501			{object}	nil "Not Implemented"
+//	@Failure		501			{object}	nil	"Not Implemented"
 //	@Router			/instances/{instance_id} [patch]
 func HandlerPatchInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
@@ -322,7 +321,7 @@ func HandlerGetClusters(c *gin.Context) {
 	c.PureJSON(http.StatusOK, response)
 }
 
-// HandlerGetClustersByID handles the request for obtain an Cluster by its Name
+// HandlerGetClustersByID handles the request for obtain a Cluster by its Name
 //
 //	@Summary		Obtain a single Cluster by its Name
 //	@Description	Returns a list of Clusters with a single Cluster filtered by Name
@@ -353,7 +352,7 @@ func HandlerGetClustersByID(c *gin.Context) {
 // HandlerGetClusterTags handles the request for obtain the list of tags of a Cluster
 //
 //	@Summary		Obtain Cluster Tags
-//	@Description	Returns a list of Tags belonging to an Cluster given by ID
+//	@Description	Returns a list of Tags belonging to a Cluster given by ID
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
@@ -380,7 +379,7 @@ func HandlerGetClusterTags(c *gin.Context) {
 // HandlerGetInstancesOnCluster handles the request for obtain the list of Instances belonging to a specific Cluster
 //
 //	@Summary		Obtain Instances list belonging to a Cluster
-//	@Description	Returns a list of Instances belonging to an Cluster given by Name
+//	@Description	Returns a list of Instances belonging to a Cluster given by Name
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
@@ -424,7 +423,7 @@ func HandlerPostCluster(c *gin.Context) {
 	}
 
 	var clusters []inventory.Cluster
-	err = json.Unmarshal([]byte(body), &clusters)
+	err = json.Unmarshal(body, &clusters)
 	if err != nil {
 		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
@@ -477,11 +476,47 @@ func HandlerDeleteCluster(c *gin.Context) {
 //	@Param			cluster		body		inventory.Cluster	true	"Cluster to be modified"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Failure		501			{object}	nil "Not Implemented"
+//	@Failure		501			{object}	nil	"Not Implemented"
 //	@Router			/clusters/{cluster_id} [patch]
 func HandlerPatchCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	logger.Debug("Patching a Cluster", zap.String("cluster_id", clusterID))
+	c.PureJSON(http.StatusNotImplemented, nil)
+}
+
+// HandlerStopCluster handles graceful shutdown of cluster instances
+//
+//	@Summary		Power off cluster
+//	@Description	Gracefully stops all instances in the specified cluster
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Failure		501			{object}	nil	"Not Implemented"
+//	@Router			/clusters/{cluster_id}/power_off [post]
+func HandlerStopCluster(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Stopping the cluster", zap.String("cluster_id", clusterID))
+	c.PureJSON(http.StatusNotImplemented, nil)
+}
+
+// HandlerStartCluster handles startup of cluster instances
+//
+//	@Summary		Power on cluster
+//	@Description	Starts all instances in the specified cluster
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	nil
+//	@Failure		501			{object}	nil	"Not Implemented"
+//	@Router			/clusters/{cluster_id}/power_on [post]
+func HandlerStartCluster(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	logger.Debug("Starting the Cluster", zap.String("cluster_id", clusterID))
 	c.PureJSON(http.StatusNotImplemented, nil)
 }
 
@@ -585,7 +620,7 @@ func HandlerPostAccount(c *gin.Context) {
 	}
 
 	var accounts []inventory.Account
-	err = json.Unmarshal([]byte(body), &accounts)
+	err = json.Unmarshal(body, &accounts)
 	if err != nil {
 		logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, nil)
@@ -639,7 +674,7 @@ func HandlerDeleteAccount(c *gin.Context) {
 //	@Param			account_name	path		string				true	"Account Name"
 //	@Success		200				{object}	nil
 //	@Failure		500				{object}	nil
-//	@Failure		501				{object}	nil "Not Implemented"
+//	@Failure		501				{object}	nil	"Not Implemented"
 //	@Router			/accounts/{account_name} [patch]
 func HandlerPatchAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
