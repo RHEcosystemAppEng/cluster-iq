@@ -26,7 +26,7 @@ services:
       CIQ_CREDS_FILE: "/credentials"
       CIQ_LOG_LEVEL: "DEBUG"
     volumes:
-      - ../../secrets/credentials:/credentials:ro
+      - ../../secrets/credentials:/credentials:ro,Z
 
   pgsql:
     image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
@@ -56,7 +56,7 @@ services:
              psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
       '
     volumes:
-      - ./../../db/sql/init.sql:/init.sql
+      - ./../../db/sql/init.sql:/init.sql:ro,Z
     depends_on:
       pgsql:
         condition: service_healthy
