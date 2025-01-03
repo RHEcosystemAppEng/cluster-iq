@@ -28,10 +28,10 @@ DEPLOYMENTS_DIR ?= ./deployments
 
 # Images
 API_IMG_NAME ?= $(PROJECT_NAME)-api
-API_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${API_IMG_NAME}
+API_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(API_IMG_NAME)
 API_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-api
 SCANNER_IMG_NAME ?= $(PROJECT_NAME)-scanner
-SCANNER_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/${SCANNER_IMG_NAME}
+SCANNER_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(SCANNER_IMG_NAME)
 SCANNER_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-scanner
 
 # Standard targets
@@ -58,7 +58,7 @@ local-build-scanner:
 # Container based working targets
 clean: ## Removes the container images for the API and the Scanner
 	@echo "### [Cleanning Container images] ###"
-	@$(CONTAINER_ENGINE) images | grep $(PROJECT_NAME) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
+	@$(CONTAINER_ENGINE) images | grep $(REGISTRY_REPO)/$(PROJECT_NAME) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
 build: ## Builds the container images for the API and the Scanner
 build: build-api build-scanner
@@ -86,8 +86,8 @@ start-dev: ## Development env based on Docker/Podman Compose tool
 stop-dev: ## Stops the container based development env
 	@echo "### [Stopping dev environment] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-devel.yaml down
-	# If there are no containers attached to the network, remove it
-	[ "$(shell podman ps --all --noheading --filter network=$(COMPOSE_NETWORK) | wc -l)" -eq "0" ] && { $(CONTAINER_ENGINE) network rm $(COMPOSE_NETWORK); }
+	@# If there are no containers attached to the network, remove it
+	@[ "$(shell $(CONTAINER_ENGINE) ps --all --filter network=$(COMPOSE_NETWORK) | tail -n +2 | wc -l)" -eq "0" ] && { $(CONTAINER_ENGINE) network rm $(COMPOSE_NETWORK); }
 
 restart-dev: ## Restarts the container based development env
 restart-dev: stop-dev start-dev
