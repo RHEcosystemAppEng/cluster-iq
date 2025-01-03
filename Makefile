@@ -58,7 +58,7 @@ local-build-scanner:
 # Container based working targets
 clean: ## Removes the container images for the API and the Scanner
 	@echo "### [Cleanning Container images] ###"
-	@$(CONTAINER_ENGINE) images | grep $(REGISTRY_REPO)/$(PROJECT_NAME) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
+	@$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
 build: ## Builds the container images for the API and the Scanner
 build: build-api build-scanner
