@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pgsql
+  labels:
+    {{- include "cluster-iq.labels" . | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "database" | nindent 4 }}
+spec:
+  replicas: {{ .Values.database.replicaCount }}
+  serviceName: pgsql
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+    - kind: PersistentVolumeClaim
+      apiVersion: v1
+      metadata:
+        name: cluster-iq-data
+        creationTimestamp: null
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1024Mi
+        volumeMode: Filesystem
+  selector:
+    matchLabels:
+      {{- include "cluster-iq.selectorLabels" . | nindent 6 }}
+      {{- include "cluster-iq.componentLabels" "database" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cluster-iq.labels" . | nindent 8 }}
+        {{- with .Values.database.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- include "cluster-iq.componentLabels" "database" | nindent 8 }}
+    spec:
+      {{- with .Values.database.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cluster-iq.databaseServiceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.database.podSecurityContext | nindent 8 }}
+      containers:
+        - name: pgsql
+          envFrom:
+          - secretRef:
+              name: postgresql
+          securityContext:
+            {{- toYaml .Values.database.securityContext | nindent 12 }}
+          image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+          ports:
+            - name: {{ .Values.database.service.name }}
+              containerPort: {{ .Values.database.service.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.database.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.database.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.database.resources | nindent 12 }}
+          {{- with .Values.database.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.database.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

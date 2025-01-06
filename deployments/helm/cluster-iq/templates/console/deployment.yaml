@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console
+  labels:
+    {{- include "cluster-iq.labels" . | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "console" | nindent 4 }}
+spec:
+  replicas: {{ .Values.console.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cluster-iq.selectorLabels" . | nindent 6 }}
+      {{- include "cluster-iq.componentLabels" "console" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cluster-iq.labels" . | nindent 8 }}
+        {{- with .Values.console.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- include "cluster-iq.componentLabels" "console" | nindent 8 }}
+    spec:
+      {{- with .Values.console.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cluster-iq.consoleServiceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.console.podSecurityContext | nindent 8 }}
+      containers:
+        - name: console
+          env:
+            - name: BACKEND_URL
+              value: {{ include "cluster-iq.backendUrl" . | quote }}
+          securityContext:
+            {{- toYaml .Values.console.securityContext | nindent 12 }}
+          image: "{{ .Values.console.image.repository }}:{{ .Values.console.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.console.image.pullPolicy }}
+          ports:
+            - name: {{ .Values.console.service.name }}
+              containerPort: {{ .Values.console.service.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.console.resources | nindent 12 }}
+          volumeMounts:
+          - name: nginx-template
+            mountPath: /etc/nginx/nginx.conf.template
+            subPath: nginx.conf.template
+          - name: nginx-init-script
+            mountPath: /opt/app-root/src/nginx-start/script.sh
+            subPath: script.sh
+        - name: oauth-proxy
+          image: registry.redhat.io/openshift4/ose-oauth-proxy:v4.13
+          imagePullPolicy: IfNotPresent
+          args:
+             - -provider=openshift
+             - -https-address=:8443
+             - -http-address=
+             - -email-domain=redhat.com
+             - -tls-cert=/etc/tls/private/tls.crt
+             - -tls-key=/etc/tls/private/tls.key
+             - -upstream=http://localhost:{{ .Values.console.service.port }}
+             - -cookie-secret=ClusterIQ-Cookie
+             - -openshift-service-account={{ include "cluster-iq.consoleServiceAccountName" . }}
+             - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          ports:
+            - name: oauth-proxy
+              containerPort: 8443
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: console-tls
+      {{- with .Values.console.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.console.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.console.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.console.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
