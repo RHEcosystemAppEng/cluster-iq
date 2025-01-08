@@ -9,6 +9,9 @@ SHORT_COMMIT_HASH := $(shell git rev-parse --short=7 HEAD)
 CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
 K8S_CLI ?= $(shell which oc >/dev/null 2>&1 && echo oc || echo kubectl)
 
+# Required binaries
+REQUIRED_BINS := $(CONTAINER_ENGINE) $(CONTAINER_ENGINE)-compose $(K8S_CLI) swag
+
 # Container image registy vars
 REGISTRY ?= quay.io
 PROJECT_NAME ?= cluster-iq
@@ -38,8 +41,37 @@ SCANNER_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-scann
 all: ## Stops, build and starts the development environment based on containers
 all: stop-dev build start-dev
 
+.PHONY: check-dependencies
+check-dependencies:
+	@$(foreach bin,$(REQUIRED_BINS),\
+		$(if $(shell command -v $(bin) 2> /dev/null),,\
+			$(error ✗ $(bin) is required but not installed)))
 
-# Local working targets
+# Deployments
+deploy:
+	@$(K8S_CLI) apply -f $(DEPLOYMENTS_DIR)/openshift
+
+# Building using containers:
+clean:
+	@echo "### [Cleanning Docker images] ###"
+	@$(CONTAINER_ENGINE) images | grep $(PROJECT_NAME) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
+
+build: build-scanner swagger-doc build-api
+
+build-api:
+	@echo "### [Building API] ###"
+	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-api .
+	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(VERSION)
+	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(IMAGE_TAG)
+
+build-scanner:
+	@echo "### [Building Scanner] ###"
+	@$(CONTAINER_ENGINE) build -t $(SCANNER_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-scanner .
+	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(VERSION)
+	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(IMAGE_TAG)
+
+
+# Building in local environment
 local-clean:
 	@echo "### [Cleanning local building] ###"
 	@rm -Rf $(BIN_DIR)
