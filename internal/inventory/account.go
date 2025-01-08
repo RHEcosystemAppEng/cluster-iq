@@ -37,6 +37,9 @@ type Account struct {
 
 	// Account's password
 	password string
+
+	// Billing information flag
+	billing_enabled bool
 }
 
 // NewAccount create a new Could Provider account to store its instances
@@ -51,6 +54,7 @@ func NewAccount(id string, name string, provider CloudProvider, user string, pas
 		LastScanTimestamp: time.Now(),
 		user:              user,
 		password:          password,
+		billing_enabled:   false, // Disabled by default
 	}
 }
 
@@ -79,6 +83,21 @@ func (a *Account) AddCluster(cluster *Cluster) error {
 	a.Clusters[cluster.ID] = cluster
 	a.ClusterCount = len(a.Clusters)
 	return nil
+}
+
+// EnableBilling enables the billing information scanner for this account
+func (a *Account) EnableBilling() {
+	a.billing_enabled = true
+}
+
+// DisableBilling disables the billing information scanner for this account
+func (a *Account) DisableBilling() {
+	a.billing_enabled = false
+}
+
+// IsBillingEnabled returns a boolean value based on if the billing module is enabled or not
+func (a Account) IsBillingEnabled() bool {
+	return a.billing_enabled
 }
 
 // PrintAccount prints account info and every cluster on it by stdout

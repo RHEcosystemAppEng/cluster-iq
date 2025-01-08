@@ -37,7 +37,7 @@ The following graph shows the architecture of this project:
 This section explains how to deploy ClusterIQ and ClusterIQ Console.
 
 
-### Prerequisites: 
+### Prerequisites:
 #### Accounts Configuration
 1. Create a folder called `secrets` for saving the cloud credentials. This folder is ignored on this repo to keep your
    credentials safe.
@@ -52,9 +52,10 @@ This section explains how to deploy ClusterIQ and ClusterIQ Console.
     ```text
     echo "
     [ACCOUNT_NAME]
-    provider = aws/gcp/azure
+    provider = {aws/gcp/azure}
     user = XXXXXXX
     key = YYYYYYY
+    billing_enabled = {true/false}
     " >> $CLUSTER_IQ_CREDENTIALS_FILE
     ```
     :warning: The values for `provider` are: `aws`, `gcp` and `azure`, but the
@@ -65,6 +66,10 @@ This section explains how to deploy ClusterIQ and ClusterIQ Console.
     :exclamation: This file structure was design to be generic, but it works
     differently depending on the cloud provider. For AWS, `user` refers to the
     `ACCESS_KEY`, and `key` refers to `SECRET_ACCESS_KEY`.
+
+    :exclamation: Some Cloud Providers has extra costs when querying the Billing
+    APIs (like AWS Cost Explorer). Be careful when enable this module. Check your
+    account before enabling it.
 
 ### Openshift Deployment
 1. Prepare your cluster and CLI

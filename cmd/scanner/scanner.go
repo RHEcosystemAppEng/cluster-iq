@@ -12,19 +12,19 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
 	"go.uber.org/zap"
-	ini "gopkg.in/ini.v1"
 )
 
 const (
-	apiAccountEndpoint    = "/accounts"
-	apiClusterEndpoint    = "/clusters"
-	apiInstanceEndpoint   = "/instances"
-	apiExpenseEndpoint    = "/expenses"
-	defaultINISectionName = "__DEFAULT__"
+	apiAccountEndpoint  = "/accounts"
+	apiClusterEndpoint  = "/clusters"
+	apiInstanceEndpoint = "/instances"
+	apiExpenseEndpoint  = "/expenses"
 )
 
 var (
@@ -35,10 +35,6 @@ var (
 
 	// logger variable across the entire scanner code
 	logger *zap.Logger
-
-	// Global vars for taking the config from the EnvVars and use it as part of the scanner configuration
-	apiURL    string
-	credsFile string
 
 	// MD5 Checksum of credsFile
 	credsFileHash []byte
@@ -51,18 +47,25 @@ var (
 type Scanner struct {
 	inventory inventory.Inventory
 	stockers  []stocker.Stocker
-	apiURL    string
-	credsFile string
+	cfg       *config.ScannerConfig
 	logger    *zap.Logger
 }
 
 // NewScanner creates and returns a new Scanner instance
-func NewScanner(apiURL string, credsFile string, logger *zap.Logger) *Scanner {
+func NewScanner(cfg *config.ScannerConfig, logger *zap.Logger) *Scanner {
+	// Calculate Credentials file MD5 checksum for checking on runtime
+	hash := md5.Sum([]byte(cfg.CredentialsFile))
+	copy(hash[:], credsFileHash)
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client = http.Client{Transport: tr}
+
 	return &Scanner{
 		inventory: *inventory.NewInventory(),
 		stockers:  make([]stocker.Stocker, 0),
-		apiURL:    apiURL,
-		credsFile: credsFile,
+		cfg:       cfg,
 		logger:    logger,
 	}
 }
@@ -70,46 +73,31 @@ func NewScanner(apiURL string, credsFile string, logger *zap.Logger) *Scanner {
 func init() {
 	// Initialize logging configuration.
 	logger = ciqLogger.NewLogger()
-
-	// Load configuration from environment variables.
-	apiURL = os.Getenv("CIQ_API_URL")
-	credsFile = os.Getenv("CIQ_CREDS_FILE")
-
-	// Calculate Credentials file MD5 checksum for checking on runtime
-	md5 := md5.Sum([]byte(credsFile))
-	copy(md5[:], credsFileHash)
-
-	// Setting INI files default section name
-	ini.DefaultSection = defaultINISectionName
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client = http.Client{Transport: tr}
-
 }
 
 // readCloudProviderAccounts reads and loads cloud provider accounts from a credentials file.
 func (s *Scanner) readCloudProviderAccounts() error {
 	// Load cloud accounts credentials file.
-	cfg, err := ini.Load(s.credsFile)
+	accounts, err := credentials.ReadCloudAccounts(s.cfg.CredentialsFile)
 	if err != nil {
 		return err
 	}
 
-	// Removing the default sections because every account should have its own
-	// section, and any parameter outside of an account section will be considered
-	cfg.DeleteSection(defaultINISectionName)
-
 	// Read INI file content.
-	for _, account := range cfg.Sections() {
+	for _, account := range accounts {
 		newAccount := inventory.NewAccount(
 			"",
-			account.Name(),
-			inventory.GetProvider(account.Key("provider").String()),
-			account.Key("user").String(),
-			account.Key("key").String(),
+			account.Name,
+			account.Provider,
+			account.User,
+			account.Key,
 		)
+		// Getting billing enabled flag from config
+		if account.BillingEnabled {
+			newAccount.EnableBilling()
+		}
+
+		// Adding account to Inventory for scanning
 		if err := s.inventory.AddAccount(newAccount); err != nil {
 			return err
 		}
@@ -130,11 +118,14 @@ func (s *Scanner) createStockers() error {
 			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger))
 
 			// AWS Billing API Stoker
-			instancesToScan, err := s.getInstancesForBillingUpdate()
-			if err != nil {
-				s.logger.Error("Cannot obtain the list of instances for obtainning the billing information on AWS CostExplorer")
-			} else {
-				s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+			if account.IsBillingEnabled() {
+				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.Name))
+				instancesToScan, err := s.getInstancesForBillingUpdate()
+				if err != nil {
+					s.logger.Error("Cannot obtain the list of instances for obtainning the billing information on AWS CostExplorer")
+				} else {
+					s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+				}
 			}
 		case inventory.GCPProvider:
 			logger.Warn("Failed to scan GCP account",
@@ -142,14 +133,14 @@ func (s *Scanner) createStockers() error {
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when GCP Stocker is implemented
-			//s.stockers = append(s.stockers, stocker.NewGCPStocker(&account, logger))
+			// s.stockers = append(s.stockers, stocker.NewGCPStocker(&account, logger))
 		case inventory.AzureProvider:
 			logger.Warn("Failed to scan Azure account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when Azure Stocker is implemented
-			//s.stockers = append(s.stockers, stocker.NewAzureStocker(&account, logger))
+			// s.stockers = append(s.stockers, stocker.NewAzureStocker(&account, logger))
 		}
 	}
 
@@ -189,7 +180,7 @@ func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiInstanceEndpoint)
 
 	return postData(requestURL, b, s.logger)
 }
@@ -203,7 +194,7 @@ func (s *Scanner) postNewExpenses(expenses []inventory.Expense) error {
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiExpenseEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiExpenseEndpoint)
 
 	return postData(requestURL, b, s.logger)
 }
@@ -217,7 +208,7 @@ func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiClusterEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiClusterEndpoint)
 
 	return postData(requestURL, b, s.logger)
 }
@@ -231,13 +222,18 @@ func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiAccountEndpoint)
+	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiAccountEndpoint)
 
 	return postData(requestURL, b, s.logger)
 }
 
 func postData(url string, b []byte, logger *zap.Logger) error {
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
+	request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(b))
+	if err != nil {
+		logger.Error("Failed to create request", zap.Error(err))
+		return fmt.Errorf("creating request: %w", err)
+	}
+
 	response, err := client.Do(request)
 	if response != nil {
 		defer response.Body.Close()
@@ -305,20 +301,20 @@ func (s *Scanner) postScannerResults() error {
 }
 
 // signalHandler for managing incoming OS signals
-func signalHandler(signal os.Signal) {
-	if signal == syscall.SIGTERM {
+func signalHandler(sig os.Signal) {
+	if sig == syscall.SIGTERM {
 		logger.Fatal("SIGTERM signal received. Stopping ClusterIQ Scanner")
 		os.Exit(0)
-	} else {
-		logger.Warn("Ignoring signal: ", zap.String("signal_id", signal.String()))
 	}
+
+	logger.Warn("Ignoring signal: ", zap.String("signal_id", sig.String()))
 }
 
 // getInstances fetches instances from the backend API
 func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 	s.logger.Debug("Fetching instances for update billing from backend")
 
-	requestURL := fmt.Sprintf("%s%s", s.apiURL, apiInstanceEndpoint+"/expense_update")
+	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiInstanceEndpoint+"/expense_update")
 
 	resp, err := http.Get(requestURL)
 	if err != nil {
@@ -373,13 +369,20 @@ func main() {
 	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
 
-	scan := NewScanner(apiURL, credsFile, logger)
+	var err error
+
+	cfg, err := config.LoadScannerConfig()
+	if err != nil {
+		logger.Fatal("Failed to load config", zap.Error(err))
+	}
+
+	scan := NewScanner(cfg, logger)
 
 	scan.logger.Info("==================== Starting ClusterIQ Scanner ====================",
 		zap.String("version", version),
 		zap.String("commit", commit),
-		zap.String("credentials_file_path", credsFile),
-		zap.ByteString("credentials_file_path", credsFileHash),
+		zap.String("credentials_file_path", cfg.CredentialsFile),
+		zap.ByteString("credentials_file_hash", credsFileHash),
 	)
 
 	// Listen Signals block for receive OS signals. This is used by K8s/OCP for
@@ -391,8 +394,6 @@ func main() {
 		signalHandler(s)
 		logger.Info("Scanner stopped")
 	}()
-
-	var err error
 
 	// Get Cloud Accounts from credentials file
 	err = scan.readCloudProviderAccounts()
