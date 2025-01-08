@@ -47,30 +47,6 @@ check-dependencies:
 		$(if $(shell command -v $(bin) 2> /dev/null),,\
 			$(error ✗ $(bin) is required but not installed)))
 
-# Deployments
-deploy:
-	@$(K8S_CLI) apply -f $(DEPLOYMENTS_DIR)/openshift
-
-# Building using containers:
-clean:
-	@echo "### [Cleanning Docker images] ###"
-	@$(CONTAINER_ENGINE) images | grep $(PROJECT_NAME) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
-
-build: build-scanner swagger-doc build-api
-
-build-api:
-	@echo "### [Building API] ###"
-	@$(CONTAINER_ENGINE) build -t $(API_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-api .
-	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(VERSION)
-	@$(CONTAINER_ENGINE) tag $(API_IMAGE):latest $(API_IMAGE):$(IMAGE_TAG)
-
-build-scanner:
-	@echo "### [Building Scanner] ###"
-	@$(CONTAINER_ENGINE) build -t $(SCANNER_IMAGE):latest -f ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-scanner .
-	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(VERSION)
-	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(IMAGE_TAG)
-
-
 # Building in local environment
 local-clean:
 	@echo "### [Cleanning local building] ###"
@@ -90,7 +66,7 @@ local-build-scanner:
 # Container based working targets
 clean: ## Removes the container images for the API and the Scanner
 	@echo "### [Cleanning Container images] ###"
-	@$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
+	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
 build: ## Builds the container images for the API and the Scanner
 build: build-api build-scanner
@@ -119,7 +95,7 @@ stop-dev: ## Stops the container based development env
 	@echo "### [Stopping dev environment] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-devel.yaml down
 	@# If there are no containers attached to the network, remove it
-	@[ "$(shell $(CONTAINER_ENGINE) ps --all --filter network=$(COMPOSE_NETWORK) | tail -n +2 | wc -l)" -eq "0" ] && { $(CONTAINER_ENGINE) network rm $(COMPOSE_NETWORK); }
+	@[ "$(shell $(CONTAINER_ENGINE) ps --all --filter network=$(COMPOSE_NETWORK) | tail -n +2 | wc -l)" -eq "0" ] && { $(CONTAINER_ENGINE) network rm $(COMPOSE_NETWORK); } || { exit 0; }
 
 restart-dev: ## Restarts the container based development env
 restart-dev: stop-dev start-dev
