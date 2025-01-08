@@ -550,12 +550,10 @@ func refreshInventory() error {
 	if result = db.MustExec(UpdateTerminatedInstancesQuery); result == nil {
 		return fmt.Errorf("Cannot refresh terminated instances")
 	}
-	fmt.Println("====>", result)
 
 	if result = db.MustExec(UpdateTerminatedClustersQuery); result == nil {
 		return fmt.Errorf("Cannot refresh terminated clusters")
 	}
-	fmt.Println("====>", result)
 
 	return nil
 }
