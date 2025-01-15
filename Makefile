@@ -102,6 +102,7 @@ restart-dev: stop-dev start-dev
 
 
 # Tests targets
+.PHONY: test
 test:
 	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
 	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out

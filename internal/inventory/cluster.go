@@ -6,7 +6,13 @@ import (
 	"time"
 )
 
-const minInstances int = 3
+const (
+	// minInstances represents the minimum number of instances for evaulating a
+	// cluster and its status.  Openshift it's not supported if the amount of
+	// Master nodes is different than 3, so it's a good guideline for defining
+	// the minimun number of instances
+	minInstances int = 3
+)
 
 // Cluster is the object to store Openshift Clusters and its properties
 type Cluster struct {
