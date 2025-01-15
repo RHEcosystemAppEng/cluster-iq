@@ -59,7 +59,7 @@ spec:
              - -email-domain=redhat.com
              - -tls-cert=/etc/tls/private/tls.crt
              - -tls-key=/etc/tls/private/tls.key
-             - -upstream=http://localhost:{{ .Values.console.service.port }}
+             - -upstream=http://127.0.0.1:{{ .Values.console.service.port }}
              - -cookie-secret=ClusterIQ-Cookie
              - -openshift-service-account={{ include "cluster-iq.consoleServiceAccountName" . }}
              - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt

@@ -33,7 +33,7 @@ oc new-project cluster-iq
 ### Cloud Providers credentials file
 
 The credentials file required for scraping cloud resources by the scanner.
-The secret name must be `credentials`  and stored as a OpenShift secret.
+The secret name must be `credentials` and stored as a OpenShift secret.
 
 Example of a file with credentials
 
@@ -65,26 +65,30 @@ database:
 
 ## Installation Steps
 
-1. Navigate to the Chart Directory
-  Change to the `cluster-iq` chart directory:
+1. Navigate to the Chart directory
 
-  ```bash
-  cd deployments/helm
-  ```
+    ```bash
+    cd deployments/helm
+    ```
 
 2. Review and update `values.yaml` if needed
 3. Install the Chart
 
-   ```bash
-   helm upgrade --install cluster-iq  cluster-iq/  --namespace cluster-iq -f cluster-iq/values.yaml 
-   ```
+    ```bash
+    helm upgrade --install cluster-iq cluster-iq/ --namespace cluster-iq -f cluster-iq/values.yaml 
+    ```
 
 4. Verify the Installation
-After installation, verify the deployment:
 
-  ```bash
-  oc get all -n cluster-iq
-  ```
+    ```bash
+    oc get all -n cluster-iq
+    ```
+
+5. To avoid waiting for the first launch of the scanner, you can start the job manually
+
+    ```bash
+    oc create job --from=cronjob/scanner scanner-init -n cluster-iq
+    ```
 
 ## Uninstallation
 

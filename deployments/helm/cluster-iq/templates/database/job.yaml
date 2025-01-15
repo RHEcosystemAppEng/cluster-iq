@@ -14,8 +14,8 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "cluster-iq.labels" . | nindent 4 }}
-        {{- include "cluster-iq.componentLabels" "database" | nindent 4 }}
+        {{- include "cluster-iq.labels" . | nindent 8 }}
+        {{- include "cluster-iq.componentLabels" "database" | nindent 8 }}
     spec:
       volumes:
         - name: init
