@@ -37,6 +37,21 @@ services:
     networks:
       - cluster_iq
 
+  agent:
+    image: quay.io/ecosystem-appeng/cluster-iq-agent:latest
+    container_name: agent
+    environment:
+      CIQ_AGENT_LISTEN_URL: "0.0.0.0:50051"
+      CIQ_API_URL: "http://api:8080/api/v1"
+      CIQ_CREDS_FILE: "/credentials"
+      CIQ_LOG_LEVEL: "DEBUG"
+    ports:
+      - 50051:50051
+    volumes:
+      - ../../secrets/credentials:/credentials:ro,Z
+    networks:
+      - cluster_iq
+
   pgsql:
     image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
     container_name: pgsql
