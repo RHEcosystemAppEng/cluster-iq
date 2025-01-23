@@ -6,48 +6,53 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
-// InstanceDB is an intermediate struct to map the Instances and its tags into inventory.Instance objects
+// InstanceDB is an intermediate struct used to map instances and their tags into inventory.Instance objects.
+// It provides a detailed representation of an instance, including metadata, tags, and cost-related information.
 type InstanceDB struct {
-	// Uniq Identifier of the instance
+	// ID is the unique identifier of the instance.
 	ID string `db:"id"`
 
-	// Instance Name. In some Cloud Providers, the name is managed as a Tag
+	// Name represents the name of the instance.
+	// In some cloud providers, the name is managed as a tag.
 	Name string `db:"name"`
 
-	// Instance provider (public/private cloud provider)
+	// Provider specifies the cloud provider (public or private) where the instance is hosted.
 	Provider inventory.CloudProvider `db:"provider"`
 
-	// Instance type/size/flavour
+	// InstanceType represents the type, size, or flavor of the instance.
 	InstanceType string `db:"instance_type"`
 
-	// Availability Zone in which the instance is running on
+	// AvailabilityZone indicates the zone in which the instance is running.
 	AvailabilityZone string `db:"availability_zone"`
 
-	// Instance Status
+	// Status is the current operational status of the instance (e.g., running, stopped).
 	Status inventory.InstanceStatus `db:"status"`
 
-	// ClusterID
+	// ClusterID is the identifier of the cluster to which the instance belongs.
 	ClusterID string `db:"cluster_id"`
 
-	// instance Tags
-	TagKey   string `db:"key"`
+	// TagKey is the key of a tag associated with the instance.
+	TagKey string `db:"key"`
+
+	// TagValue is the value of a tag associated with the instance.
 	TagValue string `db:"value"`
 
-	// InstanceID from Tags table (not needed, defined just for parsing the join result)
+	// InstanceID is a field from the tags table, used internally for parsing join results.
+	// It is not needed directly in inventory.Instance objects.
 	InstanceID string `db:"instance_id"`
 
-	// Last scan timestamp of the instance
+	// LastScanTimestamp is the timestamp of the most recent scan performed on the instance.
 	LastScanTimestamp time.Time `db:"last_scan_timestamp"`
 
-	// CreationTimestamp of the instance
+	// CreationTimestamp is the timestamp when the instance was created.
 	CreationTimestamp time.Time `db:"creation_timestamp"`
 
-	// Ammount of days since the instance was created
+	// Age is the number of days since the instance was created.
 	Age int `db:"age"`
 
-	// DailyCost of the instance (US Dollar)
+	// DailyCost represents the daily cost of the instance in US dollars.
 	DailyCost float64 `db:"daily_cost"`
 
-	// TotalCost of the instance (US Dollar)
+	// TotalCost represents the total cost of the instance in US dollars since its creation.
 	TotalCost float64 `db:"total_cost"`
 }
