@@ -10,12 +10,24 @@ import (
 )
 
 const (
+	// PowerOffClusterSuccessfully defines the success message format for powering off a cluster.
 	PowerOffClusterSuccessfully = "Power Off for Cluster: %s(Acc: %s; Instances: %d) Successfull"
-	PowerOffClusterError        = "Power Off for Cluster: %s(Acc: %s; Instances: %d) Failed"
-	PowerOnClusterSuccessfully  = "Power On for Cluster: %s(Acc: %s; Instances: %d) Successfull"
-	PowerOnClusterError         = "Power On for Cluster: %s(Acc: %s; Instances: %d) Failed"
+	// PowerOffClusterError defines the error message format for powering off a cluster.
+	PowerOffClusterError = "Power Off for Cluster: %s(Acc: %s; Instances: %d) Failed"
+	// PowerOnClusterSuccessfully defines the success message format for powering on a cluster.
+	PowerOnClusterSuccessfully = "Power On for Cluster: %s(Acc: %s; Instances: %d) Successfull"
+	// PowerOnClusterError defines the error message format for powering on a cluster.
+	PowerOnClusterError = "Power On for Cluster: %s(Acc: %s; Instances: %d) Failed"
 )
 
+// GetExecutor retrieves the CloudExecutor associated with a given account name.
+//
+// Parameters:
+// - accountName: The name of the account for which the executor is requested.
+//
+// Returns:
+// - cexec.CloudExecutor: The executor for the specified account.
+// - error: An error if no executor is found for the given account.
 func (a *AgentService) GetExecutor(accountName string) (cexec.CloudExecutor, error) {
 	exec, ok := a.executors[accountName]
 	if !ok {
@@ -24,7 +36,15 @@ func (a *AgentService) GetExecutor(accountName string) (cexec.CloudExecutor, err
 	return exec, nil
 }
 
-// PowerOnCluster gRPC function for powering off a cluster
+// PowerOnCluster handles a gRPC request to power on a cluster.
+//
+// Parameters:
+// - ctx: The context for the gRPC request.
+// - req: The request object containing the cluster ID, account name, region, and instances.
+//
+// Returns:
+// - *pb.PowerOnClusterResponse: The response object containing a success or error message.
+// - error: An error if the operation fails.
 func (a *AgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
 	a.logger.Debug("Received PowerOnCluster Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
 
@@ -53,7 +73,9 @@ func (a *AgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnCluste
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
-		zap.Int("instances_num", len(req.InstancesIdList)))
+		zap.Int("instances_num", len(req.InstancesIdList)),
+	)
+
 	exec.PowerOnCluster(req.InstancesIdList)
 	return &pb.PowerOnClusterResponse{
 		Error:   0,
@@ -61,7 +83,15 @@ func (a *AgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnCluste
 	}, nil
 }
 
-// PowerOffCluster gRPC function for powering on a cluster
+// PowerOffCluster handles a gRPC request to power Off a cluster.
+//
+// Parameters:
+// - ctx: The context for the gRPC request.
+// - req: The request object containing the cluster ID, account name, region, and instances.
+//
+// Returns:
+// - *pb.PowerOffClusterResponse: The response object containing a success or error message.
+// - error: An error if the operation fails.
 func (a *AgentService) PowerOffCluster(ctx context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
 	a.logger.Debug("Received PowerOffCluster Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
 

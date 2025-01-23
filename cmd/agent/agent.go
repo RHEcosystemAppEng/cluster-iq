@@ -1,3 +1,18 @@
+// Package main implements the ClusterIQ Agent application.
+//
+// The ClusterIQ Agent is responsible for managing cloud provider accounts,
+// initializing cloud executors, and exposing gRPC services for external interaction.
+// It serves as a key component of the ClusterIQ system, enabling inventory management
+// and operations on cloud resources.
+//
+// Features of the ClusterIQ Agent:
+// - Manages configurations for multiple cloud providers.
+// - Initializes and maintains executors for cloud provider accounts.
+// - Provides a gRPC service interface for interacting with the ClusterIQ system.
+// - Logs detailed information about operations for debugging and monitoring.
+//
+// The application uses gRPC as the communication protocol and supports extensible
+// cloud executor implementations for AWS, GCP, and Azure.
 package main
 
 import (
@@ -128,6 +143,44 @@ func (a *AgentService) createExecutors() error {
 	return nil
 }
 
+// LoggingInterceptor is a gRPC interceptor that logs information about incoming requests and their responses.
+//
+// It logs details such as the client's IP address, the invoked method, and any errors that occur during method execution.
+// This interceptor can be used to enhance visibility and debugging in gRPC server operations.
+//
+// Parameters:
+// - ctx: The context of the gRPC request.
+// - req: The incoming request payload.
+// - info: Metadata about the invoked gRPC method (e.g., method name).
+// - handler: The actual handler function that processes the request.
+//
+// Returns:
+// - An interface{} representing the response from the handler.
+// - An error if the handler or any other operation fails.
+func LoggingInterceptor(
+	ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (interface{}, error) {
+	p, ok := peer.FromContext(ctx)
+	if ok {
+		logger.Info("Client connected", zap.String("ip", p.Addr.String()))
+	}
+
+	log.Printf("Invoked method: %s", info.FullMethod)
+
+	resp, err := handler(ctx, req)
+
+	if err != nil {
+		log.Printf("Error in method %s: %v", info.FullMethod, err)
+	} else {
+		log.Printf("Method %s executed successfully", info.FullMethod)
+	}
+
+	return resp, err
+}
+
 // main is the entry point for the ClusterIQ Agent application.
 // It initializes the Agent, loads configuration, creates cloud executors, and starts the gRPC server.
 func main() {
@@ -171,38 +224,10 @@ func main() {
 	} else {
 		logger.Info("gRPC ClusterIQ Agent initialization successfully", zap.String("listen_url", agent.cfg.ListenURL))
 	}
+
 	// Serving gRPC
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Error al servir: %v", err)
 	}
 	logger.Info("ClusterIQ Agent Finished")
-}
-
-// LoggingInterceptor loggea las solicitudes, respuestas y errores
-func LoggingInterceptor(
-	ctx context.Context,
-	req interface{},
-	info *grpc.UnaryServerInfo,
-	handler grpc.UnaryHandler,
-) (interface{}, error) {
-	// Obtener información del cliente
-	p, ok := peer.FromContext(ctx)
-	if ok {
-		log.Printf("Client connected: %s", p.Addr.String())
-	}
-
-	// Log del método invocado
-	log.Printf("Invoked method: %s", info.FullMethod)
-
-	// Llamar al manejador (handler) real
-	resp, err := handler(ctx, req)
-
-	// Log de la respuesta y errores, si los hay
-	if err != nil {
-		log.Printf("Error in method %s: %v", info.FullMethod, err)
-	} else {
-		log.Printf("Method %s executed successfully", info.FullMethod)
-	}
-
-	return resp, err
 }
