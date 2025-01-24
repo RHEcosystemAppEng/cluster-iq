@@ -138,10 +138,10 @@ swagger-editor: ## Opens web editor for modifying Swagger docs
 		swaggerapi/swagger-editor
 	@echo "Open your browser at http://127.0.0.1:8082"
 
-swagger-doc: # Generates Swagger documentation for ClusterIQ API
+swagger-doc: ## Generates Swagger documentation for ClusterIQ API
 	@echo "### [Generating Swagger Docs] ###"
 	@swag fmt
-	@swag init --generalInfo ./cmd/api/api_server.go --parseDependency --output ./cmd/api/docs
+	@swag init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
 
 
 # Set the default target to "help"
