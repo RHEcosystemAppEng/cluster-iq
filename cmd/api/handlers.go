@@ -10,121 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// HandlerGetExpenses handles the request for obtain the entire Expenses list
-//
-//	@Summary		Obtain every Expense
-//	@Description	Returns a list of Expenses with every expense in the inventory
-//	@Tags			Expenses
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{object}	ExpenseListResponse
-//	@Failure		500	{object}	nil
-//	@Router			/expenses [get]
-func (a APIServer) HandlerGetExpenses(c *gin.Context) {
-	a.logger.Debug("Retrieving complete expense inventory")
-	addHeaders(c)
-
-	expenses, err := a.sql.getExpenses()
-	if err != nil {
-		a.logger.Error("Can't retrieve Expenses list", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	response := NewExpenseListResponse(expenses)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// HandlerGetInstancesForBillingUpdate handles the request for obtain a list of instances that needs to update its billing information
-//
-//	@Summary		Obtain instances list with missing billing data
-//	@Description	Returns a list of Instances with outdated expenses or without any expense
-//	@Tags			Instances
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{object}	InstanceListResponse
-//	@Failure		500	{object}	nil
-//	@Router			/instances/expense_update [get]
-func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
-	a.logger.Debug("Retrieving instances with outdated billing information")
-	addHeaders(c)
-
-	instances, err := a.sql.getInstancesOutdatedBilling()
-	if err != nil {
-		a.logger.Error("Can't retrieve Last Expenses list", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	response := NewInstanceListResponse(instances)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// HandlerGetExpensesByInstance HandlerGetExpenseByID handles the request for obtain an Expense by its ID
-//
-//	@Summary		Obtain a single Expense by its ID
-//	@Description	Returns a list of Expenses with a single Expense filtered by ID
-//	@Tags			Expenses
-//	@Accept			json
-//	@Produce		json
-//	@Param			instance_id	path		string	true	"Instance ID"
-//	@Success		200			{object}	ExpenseListResponse
-//	@Failure		404			{object}	nil
-//	@Failure		500			{object}	nil
-//	@Router			/expenses/{instance_id} [get]
-func (a APIServer) HandlerGetExpensesByInstance(c *gin.Context) {
-	instanceID := c.Param("instance_id")
-	a.logger.Debug("Retrieving expenses by InstanceID", zap.String("instance_id", instanceID))
-	addHeaders(c)
-
-	expenses, err := a.sql.getExpensesByInstance(instanceID)
-	if err != nil {
-		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
-		c.PureJSON(http.StatusNotFound, nil)
-		return
-	}
-
-	response := NewExpenseListResponse(expenses)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// HandlerPostExpense handles the request for writing a new Expense in the inventory
-//
-//	@Summary		Creates a new Expense in the inventory
-//	@Description	Receives and write into the DB the information for a new Expense
-//	@Tags			Expenses
-//	@Accept			json
-//	@Produce		json
-//	@Param			instance	body		[]inventory.Expense	true	"New Expense to be added"
-//	@Success		200			{object}	nil
-//	@Failure		400			{object}	nil
-//	@Failure		500			{object}	nil
-//	@Router			/expenses [post]
-func (a APIServer) HandlerPostExpense(c *gin.Context) {
-	body, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		a.logger.Error("Can't get body from request", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	var expenses []inventory.Expense
-	err = json.Unmarshal(body, &expenses)
-	if err != nil {
-		a.logger.Error("Can't obtain data from body request", zap.Error(err))
-		c.PureJSON(http.StatusBadRequest, nil)
-		return
-	}
-
-	a.logger.Debug("Writing a new Expense", zap.Reflect("expenses", expenses))
-	err = a.sql.writeExpenses(expenses)
-	if err != nil {
-		a.logger.Error("Can't write new Expenses into DB", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-		return
-	}
-	c.PureJSON(http.StatusOK, nil)
-}
+// ==================== Health Checks Handlers ====================
 
 // HandlerHealthCheck handles the request for checking the health level of the API
 //
@@ -158,9 +44,103 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 		hc.APIHealth = true
 	}
 
-	response := HealthCheckResponse{HealthChecks: hc}
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, HealthCheckResponse{HealthChecks: hc})
 }
+
+// ==================== Expenses      Handlers ====================
+
+// HandlerGetExpenses handles the request for obtain the entire Expenses list
+//
+//	@Summary		Obtain every Expense
+//	@Description	Returns a list of Expenses with every expense in the inventory
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	ExpenseListResponse
+//	@Failure		500	{object}	Error
+//	@Router			/expenses [get]
+func (a APIServer) HandlerGetExpenses(c *gin.Context) {
+	a.logger.Debug("Retrieving complete expense inventory")
+	addHeaders(c)
+
+	expenses, err := a.sql.getExpenses()
+	if err != nil {
+		a.logger.Error("Can't retrieve Expenses list", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, NewExpenseListResponse(expenses))
+}
+
+// HandlerGetExpensesByInstance HandlerGetExpenseByID handles the request for obtain an Expense by its ID
+//
+//	@Summary		Obtain a single Expense by its ID
+//	@Description	Returns a list of Expenses with a single Expense filtered by ID
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Param			instance_id	path		string	true	"Instance ID"
+//	@Success		200			{object}	ExpenseListResponse
+//	@Failure		404			{object}	nil
+//	@Router			/expenses/{instance_id} [get]
+func (a APIServer) HandlerGetExpensesByInstance(c *gin.Context) {
+	instanceID := c.Param("instance_id")
+	a.logger.Debug("Retrieving expenses by InstanceID", zap.String("instance_id", instanceID))
+	addHeaders(c)
+
+	expenses, err := a.sql.getExpensesByInstance(instanceID)
+	if err != nil {
+		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
+		c.PureJSON(http.StatusNotFound, nil)
+		return
+	}
+
+	c.PureJSON(http.StatusOK, NewExpenseListResponse(expenses))
+}
+
+// HandlerPostExpense handles the request for writing a new Expense in the inventory
+//
+//	@Summary		Creates a new Expense in the inventory
+//	@Description	Receives and write into the DB the information for a new Expense
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Param			instance	body		[]inventory.Expense	true	"New Expense to be added"
+//	@Success		200			{object}	nil
+//	@Failure		400			{object}	Error
+//	@Failure		500			{object}	Error
+//	@Router			/expenses [post]
+func (a APIServer) HandlerPostExpense(c *gin.Context) {
+	// Getting expenses list on request's body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		a.logger.Error("Can't get body from request", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	var expenses []inventory.Expense
+	err = json.Unmarshal(body, &expenses)
+	if err != nil {
+		a.logger.Error("Can't obtain data from body request", zap.Error(err))
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Writting expenses
+	a.logger.Debug("Writing a new Expense", zap.Reflect("expenses", expenses))
+	err = a.sql.writeExpenses(expenses)
+	if err != nil {
+		a.logger.Error("Can't write new Expenses into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// ==================== Instances     Handlers ====================
 
 // HandlerGetInstances handles the request for obtain the entire Instances list
 //
@@ -170,7 +150,7 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
-//	@Failure		500	{object}	nil
+//	@Failure		500	{object}	Error
 //	@Router			/instances [get]
 func (a APIServer) HandlerGetInstances(c *gin.Context) {
 	a.logger.Debug("Retrieving complete instance inventory")
@@ -179,12 +159,35 @@ func (a APIServer) HandlerGetInstances(c *gin.Context) {
 	instances, err := a.sql.getInstances()
 	if err != nil {
 		a.logger.Error("Can't retrieve Instances list", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	response := NewInstanceListResponse(instances)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
+}
+
+// HandlerGetInstancesForBillingUpdate handles the request for obtain a list of instances that needs to update its billing information
+//
+//	@Summary		Obtain instances list with missing billing data
+//	@Description	Returns a list of Instances with outdated expenses or without any expense
+//	@Tags			Instances
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	InstanceListResponse
+//	@Failure		500	{object}	Error
+//	@Router			/instances/expense_update [get]
+func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
+	a.logger.Debug("Retrieving instances with outdated billing information")
+	addHeaders(c)
+
+	instances, err := a.sql.getInstancesOutdatedBilling()
+	if err != nil {
+		a.logger.Error("Can't retrieve Last Expenses list", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
 }
 
 // HandlerGetInstanceByID handles the request for obtain an Instance by its ID
@@ -197,7 +200,6 @@ func (a APIServer) HandlerGetInstances(c *gin.Context) {
 //	@Param			instance_id	path		string	true	"Instance ID"
 //	@Success		200			{object}	InstanceListResponse
 //	@Failure		404			{object}	nil
-//	@Failure		500			{object}	nil
 //	@Router			/instances/{instance_id} [get]
 func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 	instanceID := c.Param("instance_id")
@@ -211,8 +213,7 @@ func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 		return
 	}
 
-	response := NewInstanceListResponse(instances)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
 }
 
 // HandlerPostInstance handles the request for writing a new Instance in the inventory
@@ -224,13 +225,14 @@ func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		[]inventory.Instance	true	"New Instance to be added"
 //	@Success		200			{object}	nil
-//	@Failure		500			{object}	nil
+//	@Failure		400			{object}	Error
+//	@Failure		500			{object}	Error
 //	@Router			/instances [post]
 func (a APIServer) HandlerPostInstance(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		a.logger.Error("Can't get body from request", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
@@ -238,7 +240,7 @@ func (a APIServer) HandlerPostInstance(c *gin.Context) {
 	err = json.Unmarshal(body, &instances)
 	if err != nil {
 		a.logger.Error("Can't obtain data from body request", zap.Error(err))
-		c.PureJSON(http.StatusBadRequest, nil)
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
@@ -246,7 +248,7 @@ func (a APIServer) HandlerPostInstance(c *gin.Context) {
 	err = a.sql.writeInstances(instances)
 	if err != nil {
 		a.logger.Error("Can't write new instances into DB", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 	c.PureJSON(http.StatusOK, nil)
@@ -268,6 +270,7 @@ func (a APIServer) HandlerPostInstance(c *gin.Context) {
 func (a APIServer) HandlerDeleteInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Removing an Instance", zap.String("instance_id", instanceID))
+
 	if err := a.sql.deleteInstance(instanceID); err != nil {
 		a.logger.Error("Can't delete instance from DB", zap.String("instance_id", instanceID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
@@ -286,15 +289,18 @@ func (a APIServer) HandlerDeleteInstance(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		inventory.Instance	true	"Instance to be modified"
 //	@Param			instance_id	path		string				true	"Instance ID"
-//	@Success		200			{object}	nil
-//	@Failure		500			{object}	nil
 //	@Failure		501			{object}	nil	"Not Implemented"
 //	@Router			/instances/{instance_id} [patch]
+//
+// TODO: NOT IMPLEMENTED
 func (a APIServer) HandlerPatchInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Patching an Instance", zap.String("instance_id", instanceID))
+
 	c.PureJSON(http.StatusNotImplemented, nil)
 }
+
+// ==================== Clusters      Handlers ====================
 
 // HandlerGetClusters handles the request for obtaining the entire Cluster list
 //
@@ -304,7 +310,7 @@ func (a APIServer) HandlerPatchInstance(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	ClusterListResponse
-//	@Failure		500	{object}	nil
+//	@Failure		500	{object}	Error
 //	@Router			/clusters [get]
 func (a APIServer) HandlerGetClusters(c *gin.Context) {
 	a.logger.Debug("Retrieving complete clusters inventory")
@@ -313,12 +319,11 @@ func (a APIServer) HandlerGetClusters(c *gin.Context) {
 	clusters, err := a.sql.getClusters()
 	if err != nil {
 		a.logger.Error("Can't retrieve Clusters list", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	response := NewClusterListResponse(clusters)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewClusterListResponse(clusters))
 }
 
 // HandlerGetClustersByID handles the request for obtain a Cluster by its Name
@@ -331,7 +336,6 @@ func (a APIServer) HandlerGetClusters(c *gin.Context) {
 //	@Param			cluster_id	path		string	true	"Cluster ID"
 //	@Success		200			{object}	ClusterListResponse
 //	@Failure		404			{object}	nil
-//	@Failure		500			{object}	nil
 //	@Router			/clusters/{cluster_id} [get]
 func (a APIServer) HandlerGetClustersByID(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
@@ -345,35 +349,7 @@ func (a APIServer) HandlerGetClustersByID(c *gin.Context) {
 		return
 	}
 
-	response := NewClusterListResponse(clusters)
-	c.PureJSON(http.StatusOK, response)
-}
-
-// HandlerGetClusterTags handles the request for obtain the list of tags of a Cluster
-//
-//	@Summary		Obtain Cluster Tags
-//	@Description	Returns a list of Tags belonging to a Cluster given by ID
-//	@Tags			Clusters
-//	@Accept			json
-//	@Produce		json
-//	@Param			cluster_id	path		string	true	"Cluster ID"
-//	@Success		200			{object}	TagListResponse
-//	@Failure		500			{object}	nil
-//	@Router			/clusters/{cluster_id}/tags [get]
-func (a APIServer) HandlerGetClusterTags(c *gin.Context) {
-	clusterID := c.Param("cluster_id")
-	a.logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
-	addHeaders(c)
-
-	tags, err := a.sql.getClusterTags(clusterID)
-	if err != nil {
-		a.logger.Error("Can't retrieve Tags of cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	response := NewTagListResponse(tags)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewClusterListResponse(clusters))
 }
 
 // HandlerGetInstancesOnCluster handles the request for obtain the list of Instances belonging to a specific Cluster
@@ -395,12 +371,37 @@ func (a APIServer) HandlerGetInstancesOnCluster(c *gin.Context) {
 	instances, err := a.sql.getInstancesOnCluster(clusterID)
 	if err != nil {
 		a.logger.Error("Can't retrieve instances on cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	response := NewInstanceListResponse(instances)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
+}
+
+// HandlerGetClusterTags handles the request for obtain the list of tags of a Cluster
+//
+//	@Summary		Obtain Cluster Tags
+//	@Description	Returns a list of Tags belonging to a Cluster given by ID
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	TagListResponse
+//	@Failure		500			{object}	nil
+//	@Router			/clusters/{cluster_id}/tags [get]
+func (a APIServer) HandlerGetClusterTags(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	a.logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
+	addHeaders(c)
+
+	tags, err := a.sql.getClusterTags(clusterID)
+	if err != nil {
+		a.logger.Error("Can't retrieve Tags of cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, NewTagListResponse(tags))
 }
 
 // HandlerPostCluster handles the request for writing a new Cluster in the inventory
@@ -412,13 +413,14 @@ func (a APIServer) HandlerGetInstancesOnCluster(c *gin.Context) {
 //	@Produce		json
 //	@Param			cluster	body		inventory.Cluster	true	"New Cluster to be added"
 //	@Success		200		{object}	nil
-//	@Failure		500		{object}	nil
+//	@Failure		400		{object}	Error
+//	@Failure		500		{object}	Error
 //	@Router			/clusters [post]
 func (a APIServer) HandlerPostCluster(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		a.logger.Error("Can't get body from request", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
@@ -426,7 +428,7 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 	err = json.Unmarshal(body, &clusters)
 	if err != nil {
 		a.logger.Error("Can't obtain data from body request", zap.Error(err))
-		c.PureJSON(http.StatusBadRequest, nil)
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
@@ -434,54 +436,61 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 	err = a.sql.writeClusters(clusters)
 	if err != nil {
 		a.logger.Error("Can't write new Clusters into DB", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 	c.PureJSON(http.StatusOK, nil)
 }
 
-// HandlerDeleteCluster handles the request for removing a Cluster in the inventory
+// HandlerPowerOnCluster handles startup of cluster instances
 //
-//	@Summary		Deletes a Cluster in the inventory
-//	@Description	Deletes a Cluster present in the inventory by its Name
+//	@Summary		Power on cluster
+//	@Description	Starts all instances in the specified cluster
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
 //	@Param			cluster_id	path		string	true	"Cluster ID"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Router			/clusters/{cluster_id} [delete]
-//
-// TODO: Not Implemented
-func (a APIServer) HandlerDeleteCluster(c *gin.Context) {
-	clusterName := c.Param("cluster_id")
-	a.logger.Debug("Removing a Cluster", zap.String("cluster_id", clusterName))
-	if err := a.sql.deleteCluster(clusterName); err != nil {
-		a.logger.Error("Can't delete Cluster from DB", zap.String("cluster_id", clusterName), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+//	@Router			/clusters/{cluster_id}/power_on [post]
+func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	a.logger.Debug("Powering On Cluster", zap.String("cluster_id", clusterID))
+	addHeaders(c)
+
+	// Getting a new ClusterStatusChangeRequest for building the gRPC request
+	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
+	if err != nil {
+		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	c.PureJSON(http.StatusOK, nil)
-}
+	// RPC call for power on a cluster
+	if err := a.grpc.PowerOnCluster(cscr); err != nil {
+		a.logger.Error("Error processing Cluster Power On request", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+	a.logger.Info("Cluster Powered On successfully", zap.String("cluster_id", clusterID))
 
-// HandlerPatchCluster handles the request for patching a Cluster in the inventory
-//
-//	@Summary		Patches a Cluster in the inventory
-//	@Description	Receives and patch into the DB the information for an existing Cluster
-//	@Tags			Clusters
-//	@Accept			json
-//	@Produce		json
-//	@Param			cluster_id	path		string				true	"Cluster ID"
-//	@Param			cluster		body		inventory.Cluster	true	"Cluster to be modified"
-//	@Success		200			{object}	nil
-//	@Failure		500			{object}	nil
-//	@Failure		501			{object}	nil	"Not Implemented"
-//	@Router			/clusters/{cluster_id} [patch]
-func (a APIServer) HandlerPatchCluster(c *gin.Context) {
-	clusterID := c.Param("cluster_id")
-	a.logger.Debug("Patching a Cluster", zap.String("cluster_id", clusterID))
-	c.PureJSON(http.StatusNotImplemented, nil)
+	// Updating Cluster Status on the DB
+	if err := a.sql.updateClusterStatusByClusterID("Running", clusterID); err != nil {
+		a.logger.Error("Error updating status on DB when powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK,
+		NewClusterStatusChangeResponse(
+			cscr.AccountName,
+			cscr.ClusterID,
+			cscr.Region,
+			inventory.Running,
+			cscr.InstancesIdList,
+			nil,
+		),
+	)
 }
 
 // HandlerPowerOffCluster handles graceful shutdown of cluster instances
@@ -504,14 +513,14 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
 		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOff gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
 	// RPC call for power off a cluster
 	if err := a.grpc.PowerOffCluster(cscr); err != nil {
 		a.logger.Error("Error processing Cluster Power Off request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 	a.logger.Info("Cluster Powered Off successfully", zap.String("cluster_id", clusterID))
@@ -519,57 +528,68 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	// Updating Cluster Status on the DB
 	if err := a.sql.updateClusterStatusByClusterID("Stopped", clusterID); err != nil {
 		a.logger.Error("Error updating status on DB when powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	response := NewClusterStatusChangeResponse(cscr.AccountName, cscr.ClusterID, cscr.Region, inventory.Stopped, cscr.InstancesIdList, nil)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK,
+		NewClusterStatusChangeResponse(
+			cscr.AccountName,
+			cscr.ClusterID,
+			cscr.Region,
+			inventory.Running,
+			cscr.InstancesIdList,
+			nil,
+		),
+	)
 }
 
-// HandlerStartCluster handles startup of cluster instances
+// HandlerDeleteCluster handles the request for removing a Cluster in the inventory
 //
-//	@Summary		Power on cluster
-//	@Description	Starts all instances in the specified cluster
+//	@Summary		Deletes a Cluster in the inventory
+//	@Description	Deletes a Cluster present in the inventory by its Name
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
 //	@Param			cluster_id	path		string	true	"Cluster ID"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	nil
-//	@Failure		501			{object}	nil	"Not Implemented"
-//	@Router			/clusters/{cluster_id}/power_on [post]
-func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
-	clusterID := c.Param("cluster_id")
-	a.logger.Debug("Powering On Cluster", zap.String("cluster_id", clusterID))
-	addHeaders(c)
+//	@Router			/clusters/{cluster_id} [delete]
+func (a APIServer) HandlerDeleteCluster(c *gin.Context) {
+	clusterName := c.Param("cluster_id")
+	a.logger.Debug("Removing a Cluster", zap.String("cluster_id", clusterName))
 
-	// Getting a new ClusterStatusChangeRequest for building the gRPC request
-	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
-	if err != nil {
-		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+	if err := a.sql.deleteCluster(clusterName); err != nil {
+		a.logger.Error("Can't delete Cluster from DB", zap.String("cluster_id", clusterName), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	// RPC call for power on a cluster
-	if err := a.grpc.PowerOnCluster(cscr); err != nil {
-		a.logger.Error("Error processing Cluster Power On request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-		return
-	}
-	a.logger.Info("Cluster Powered On successfully", zap.String("cluster_id", clusterID))
-
-	// Updating Cluster Status on the DB
-	if err := a.sql.updateClusterStatusByClusterID("Running", clusterID); err != nil {
-		a.logger.Error("Error updating status on DB when powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-		return
-	}
-
-	response := NewClusterStatusChangeResponse(cscr.AccountName, cscr.ClusterID, cscr.Region, inventory.Running, cscr.InstancesIdList, nil)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, nil)
 }
+
+// HandlerPatchCluster handles the request for patching a Cluster in the inventory
+//
+//	@Summary		Patches a Cluster in the inventory
+//	@Description	Receives and patch into the DB the information for an existing Cluster
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Param			cluster_id	path		string				true	"Cluster ID"
+//	@Param			cluster		body		inventory.Cluster	true	"Cluster to be modified"
+//	@Success		200			{object}	nil
+//	@Failure		501			{object}	nil	"Not Implemented"
+//	@Router			/clusters/{cluster_id} [patch]
+//
+// TODO: NOT IMPLEMENTED
+func (a APIServer) HandlerPatchCluster(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	a.logger.Debug("Patching a Cluster", zap.String("cluster_id", clusterID))
+
+	c.PureJSON(http.StatusNotImplemented, nil)
+}
+
+// ==================== Accounts      Handlers ====================
 
 // HandlerGetAccounts handles the request for obtaining the entire Account list
 //
@@ -588,12 +608,11 @@ func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 	accounts, err := a.sql.getAccounts()
 	if err != nil {
 		a.logger.Error("Can't retrieve Accounts list", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	response := NewAccountListResponse(accounts)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewAccountListResponse(accounts))
 }
 
 // HandlerGetAccountsByName handles the request for obtain an Account by its Name
@@ -605,8 +624,7 @@ func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 //	@Produce		json
 //	@Param			account_name	path		string	true	"Account Name"
 //	@Success		200				{object}	AccountListResponse
-//	@Failure		404				{object}	nil
-//	@Failure		500				{object}	nil
+//	@Failure		404				{object}	Error
 //	@Router			/accounts/{account_name} [get]
 func (a APIServer) HandlerGetAccountsByName(c *gin.Context) {
 	accountName := c.Param("account_name")
@@ -616,12 +634,11 @@ func (a APIServer) HandlerGetAccountsByName(c *gin.Context) {
 	accounts, err := a.sql.getAccountByName(accountName)
 	if err != nil {
 		a.logger.Error("Account not found", zap.String("account_name", accountName), zap.Error(err))
-		c.PureJSON(http.StatusNotFound, nil)
+		c.PureJSON(http.StatusNotFound, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	response := NewAccountListResponse(accounts)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewAccountListResponse(accounts))
 }
 
 // HandlerGetClustersOnAccount handles the request for obtain the list of clusters deployed on a specific Account
@@ -643,12 +660,11 @@ func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 	clusters, err := a.sql.getClustersOnAccount(accountName)
 	if err != nil {
 		a.logger.Error("Can't retrieve clusters on account", zap.String("account_name", accountName), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	response := NewClusterListResponse(clusters)
-	c.PureJSON(http.StatusOK, response)
+	c.PureJSON(http.StatusOK, NewClusterListResponse(clusters))
 }
 
 // HandlerPostAccount handles the request for writing a new Account in the inventory
@@ -660,13 +676,14 @@ func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 //	@Produce		json
 //	@Param			account	body		inventory.Account	true	"New Account to be added"
 //	@Success		200		{object}	nil
-//	@Failure		500		{object}	nil
+//	@Failure		400		{object}	nil
+//	@Failure		500		{object}	Error
 //	@Router			/accounts [post]
 func (a APIServer) HandlerPostAccount(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		a.logger.Error("Can't get body from request", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
@@ -682,7 +699,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 	err = a.sql.writeAccounts(accounts)
 	if err != nil {
 		a.logger.Error("Can't write new Accounts into DB", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
@@ -698,7 +715,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 //	@Produce		json
 //	@Param			account_name	path		string	true	"Account Name"
 //	@Success		200				{object}	nil
-//	@Failure		500				{object}	nil
+//	@Failure		500				{object}	Error
 //	@Router			/accounts/{account_name} [delete]
 //
 // TODO: Not Implemented
@@ -707,7 +724,7 @@ func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 	a.logger.Debug("Removing an Account", zap.String("account", accountName))
 	if err := a.sql.deleteAccount(accountName); err != nil {
 		a.logger.Error("Can't delete Cluster from DB", zap.String("account_name", accountName), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
@@ -723,33 +740,35 @@ func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 //	@Produce		json
 //	@Param			Account			body		inventory.Account	true	"Account to be modified"
 //	@Param			account_name	path		string				true	"Account Name"
-//	@Success		200				{object}	nil
-//	@Failure		500				{object}	nil
 //	@Failure		501				{object}	nil	"Not Implemented"
 //	@Router			/accounts/{account_name} [patch]
 func (a APIServer) HandlerPatchAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Patching an Account", zap.String("account", accountName))
+
 	c.PureJSON(http.StatusNotImplemented, nil)
 }
+
+// ==================== Extra      Handlers ====================
 
 // HandlerRefreshInventory handles the request for refreshing the entire
 // inventory just after a full scan. This method is used for recalculating some
 // values and mark the missing clusters as "terminated"
 //
-//	@Summary		 Refresh data on inventory
-//	@Description Recalculating some values and mark the missing clusters as "terminated"
-//	@Tags			   Inventory
-//	@Accept			 json
-//	@Produce		 json
-//	@Success		 200	{object}	nil
-//	@Failure		 500	{object}	nil
-//	@Router			 /inventory/refresh [post]
+//	@Summary		Refresh data on inventory
+//	@Description	Recalculating some values and mark the missing clusters as "terminated"
+//	@Tags			Inventory
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	nil
+//	@Failure		500	{object}	nil
+//	@Router			/inventory/refresh [post]
 func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 	if err := a.sql.refreshInventory(); err != nil {
 		a.logger.Error("Can't refresh inventory data on DB", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
-	} else {
-		c.PureJSON(http.StatusOK, nil)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
 	}
+
+	c.PureJSON(http.StatusOK, nil)
 }
