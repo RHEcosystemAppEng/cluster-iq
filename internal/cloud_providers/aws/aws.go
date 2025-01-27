@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"go.uber.org/zap"
 )
 
 const (
@@ -26,14 +25,13 @@ type AWSConnection struct {
 	user         string
 	password     string
 	region       string
-	logger       *zap.Logger
 }
 
 // AWSConnectionOption defines the options for creating different sets of AWS services connections
 type AWSConnectionOption func(*AWSConnection)
 
 // NewAWSConnection creates a connection with AWS APIs. Based on the AWSConnectionOptions, it will create different clients for every available service
-func NewAWSConnection(user string, password string, region string, looger *zap.Logger, opts ...AWSConnectionOption) (*AWSConnection, error) {
+func NewAWSConnection(user string, password string, region string, opts ...AWSConnectionOption) (*AWSConnection, error) {
 	var token string = ""
 
 	// If there's no region specified, it will take the default one.
