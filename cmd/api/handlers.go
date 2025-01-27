@@ -722,6 +722,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Removing an Account", zap.String("account", accountName))
+
 	if err := a.sql.deleteAccount(accountName); err != nil {
 		a.logger.Error("Can't delete Cluster from DB", zap.String("account_name", accountName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -769,6 +770,5 @@ func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
-
-	c.PureJSON(http.StatusOK, nil)
+	// This funciton doesn't return any 200OK code for preventing duplicated responses
 }
