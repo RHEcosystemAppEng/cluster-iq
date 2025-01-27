@@ -162,7 +162,7 @@ func (c AWSEC2Connection) PowerOnInstanceById(id string) error {
 		return err
 	}
 
-	// Check if the instance is running before trying to stop it
+	// Check if the instance is running before trying to start it
 	isStopped, err := c.IsInstanceStopped(id)
 	if err != nil {
 		return err
@@ -171,12 +171,12 @@ func (c AWSEC2Connection) PowerOnInstanceById(id string) error {
 		return fmt.Errorf("Cannot power on a running instance")
 	}
 
-	// Generating StopInstance request
+	// Generating StartInstance request
 	input := &ec2.StartInstancesInput{
 		InstanceIds: []*string{aws.String(id)},
 	}
 
-	// Running StopInstance request
+	// Running StartInstance request
 	_, err = c.client.StartInstances(input)
 	if err != nil {
 		return fmt.Errorf("Error starting instance: %s on region: %s", id, c.GetRegion())
