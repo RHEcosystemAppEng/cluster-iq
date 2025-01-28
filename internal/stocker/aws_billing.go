@@ -23,7 +23,7 @@ type AWSBillingStocker struct {
 	Instances []inventory.Instance
 }
 
-// NewAWSStocker create and returns a pointer to a new AWSStocker instance
+// NewAWSBillingStocker create and returns a pointer to a new AWSBillingStocker instance
 func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instances []inventory.Instance) *AWSBillingStocker {
 	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
 	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithCostExplorer())
@@ -46,7 +46,8 @@ func (s *AWSBillingStocker) Connect() error {
 	return nil
 }
 
-// MakeStock TODO
+// MakeStock implements the Stocker interface. It starts the Stocker main
+// process getting the expenses of the instances stored in the Stocker object
 func (s *AWSBillingStocker) MakeStock() error {
 	for i := range s.Account.Clusters {
 		cluster := s.Account.Clusters[i]
@@ -74,6 +75,7 @@ func (s *AWSBillingStocker) MakeStock() error {
 	return nil
 }
 
+// getInstanceExpenses gets from the AWS CostExplorer API the expenses of a given Instance.
 // TODO: change argument to array of *instances
 // TODO: Calculate date intervals
 func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) error {
@@ -138,12 +140,12 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	return nil
 }
 
-// TODO: doc
+// PrintStock prints the stock (account) of the AWSBillingStocker as a string
 func (s AWSBillingStocker) PrintStock() {
 	s.Account.PrintAccount()
 }
 
-// TODO: doc
+// GetResults returns the account configured for this stocker
 func (s AWSBillingStocker) GetResults() inventory.Account {
 	return *s.Account
 }
