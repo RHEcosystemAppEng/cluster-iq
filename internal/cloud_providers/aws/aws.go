@@ -40,19 +40,10 @@ func NewAWSConnection(user string, password string, region string, opts ...AWSCo
 	}
 
 	// Third argument (token) it's not used. For more info check docs: https://pkg.go.dev/github.com/aws/aws-sdk-go/aws/credentials#NewStaticCredentials
-	credentials := credentials.NewStaticCredentials(user, password, token)
-	if credentials == nil {
-		return nil, fmt.Errorf("Cannot load StaticCredentials for AWS Cloud Provider")
-	}
+	creds := credentials.NewStaticCredentials(user, password, token)
 
 	conn := &AWSConnection{
-		credentials: credentials,
-		awsConfig:   nil,
-		awsSession:  nil,
-		EC2:         nil,
-		Route53:     nil,
-		STS:         nil,
-		accountID:   "",
+		credentials: creds,
 		user:        user,
 		password:    password,
 		region:      region,
@@ -73,7 +64,7 @@ func NewAWSConnection(user string, password string, region string, opts ...AWSCo
 		opt(conn)
 	}
 
-	// If the STS service was enabled, get the accountID for fullfilling the data
+	// If the STS service was enabled, get the accountID for fulfilling the data
 	if conn.STS != nil {
 		conn.accountID = conn.STS.getAWSAccountID()
 	}
@@ -121,7 +112,7 @@ func (conn *AWSConnection) GetAccountID() string {
 	return conn.accountID
 }
 
-// Connect stablish or refresh the AWS service clients for the AWSConnection
+// Connect establish or refresh the AWS service clients for the AWSConnection
 // object. This is needed because some clients needs to be re-created when
 // switching to a different region
 func (conn *AWSConnection) Connect() error {
