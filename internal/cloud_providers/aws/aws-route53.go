@@ -68,10 +68,11 @@ func (c *AWSRoute53Connection) GetHostedZoneRecords(hostedZoneID string) ([]*rou
 	var records []*route53.ResourceRecordSet
 
 	// API Call for getting DNS records
-	err := c.client.ListResourceRecordSetsPages(input, func(page *route53.ListResourceRecordSetsOutput, lastPage bool) bool {
-		records = append(records, page.ResourceRecordSets...)
-		return !lastPage // Continue if there are more record pages
-	})
+	err := c.client.ListResourceRecordSetsPages(input,
+		func(page *route53.ListResourceRecordSetsOutput, lastPage bool) bool {
+			records = append(records, page.ResourceRecordSets...)
+			return !lastPage // Continue if there are more record pages
+		})
 
 	if err != nil {
 		return nil, fmt.Errorf("Error getting the DNS registries: %v", err)

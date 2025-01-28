@@ -1,6 +1,8 @@
 package cloudprovider
 
 import (
+	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -44,16 +46,28 @@ func (c *AWSEC2Connection) GetRegionsList() ([]string, error) {
 }
 
 // GetInstances gets the list of EC2 instances and returns them as an Array if Inventory.Instances
+// Using paginated requests for more efficiency
+// Doc: (https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/#EC2.DescribeInstancesPages)
 func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
-	// Getting Instances list
-	reservations, err := c.client.DescribeInstances(&ec2.DescribeInstancesInput{})
+
+	// Define input for DescribeInstances. It's empty to obtain every instance in the configured Region
+	input := &ec2.DescribeInstancesInput{}
+
+	var reservations []*ec2.Reservation
+
+	// API Call for getting Instances list
+	err := c.client.DescribeInstancesPages(input,
+		func(page *ec2.DescribeInstancesOutput, lastPage bool) bool {
+			reservations = append(reservations, page.Reservations...)
+			return !lastPage // Continue if there are more Reservations pages
+		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting EC2 instances reservations: %v", err)
 	}
 
 	// Converting EC2 instances to inventory.Instance
 	var instances []inventory.Instance
-	for _, reser := range reservations.Reservations {
+	for _, reser := range reservations {
 		for _, instance := range reser.Instances {
 			instances = append(instances, *EC2InstanceToInventoryInstance(instance))
 		}
