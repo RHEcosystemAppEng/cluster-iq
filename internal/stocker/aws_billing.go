@@ -26,7 +26,7 @@ type AWSBillingStocker struct {
 // NewAWSStocker create and returns a pointer to a new AWSStocker instance
 func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instances []inventory.Instance) *AWSBillingStocker {
 	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
-	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", logger, cp.WithCostExplorer())
+	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithCostExplorer())
 	if err != nil {
 		logger.Error("Error creating a new AWSBillingStocker", zap.Error(err))
 		return nil
