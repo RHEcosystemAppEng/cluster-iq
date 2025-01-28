@@ -40,7 +40,7 @@ func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instan
 	}
 }
 
-// Connect Initialices the AWS API and CostExplorer sessions and clients
+// Connect initialices the AWS API and CostExplorer sessions and clients
 func (s *AWSBillingStocker) Connect() error {
 	s.logger.Info("AWS Session created", zap.String("account_id", s.Account.Name))
 	return nil
@@ -76,7 +76,6 @@ func (s *AWSBillingStocker) MakeStock() error {
 }
 
 // getInstanceExpenses gets from the AWS CostExplorer API the expenses of a given Instance.
-// TODO: change argument to array of *instances
 // TODO: Calculate date intervals
 func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) error {
 	// Logic for Setting the period to fetch the Expenses within
