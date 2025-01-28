@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"go.uber.org/zap"
 )
 
 const (
@@ -36,35 +35,26 @@ type AWSConnection struct {
 	user         string
 	password     string
 	region       string
-	logger       *zap.Logger
 }
 
 // AWSConnectionOption defines the options for creating different sets of AWS services connections
 type AWSConnectionOption func(*AWSConnection)
 
 // NewAWSConnection creates a connection with AWS APIs. Based on the AWSConnectionOptions, it will create different clients for every available service
-func NewAWSConnection(user string, password string, region string, looger *zap.Logger, opts ...AWSConnectionOption) (*AWSConnection, error) {
+func NewAWSConnection(user string, password string, region string, opts ...AWSConnectionOption) (*AWSConnection, error) {
+	var token string = ""
+
 	// If there's no region specified, it will take the default one.
 	if region == "" {
 		region = DefaultAWSRegion
 	}
 
 	// Third argument (token) it's not used. For more info check docs: https://pkg.go.dev/github.com/aws/aws-sdk-go/aws/credentials#NewStaticCredentials
-	var token string = ""
-	credentials := credentials.NewStaticCredentials(user, password, token)
-	if credentials == nil {
-		return nil, fmt.Errorf("Cannot load StaticCredentials for AWS Cloud Provider")
-	}
+	creds := credentials.NewStaticCredentials(user, password, token)
 
 	// AccountID is empty by default. It will be configured automatically if the developer includes the STS service option
 	conn := &AWSConnection{
-		credentials: credentials,
-		awsConfig:   nil,
-		awsSession:  nil,
-		EC2:         nil,
-		Route53:     nil,
-		STS:         nil,
-		accountID:   "",
+		credentials: creds,
 		user:        user,
 		password:    password,
 		region:      region,
@@ -85,7 +75,7 @@ func NewAWSConnection(user string, password string, region string, looger *zap.L
 		opt(conn)
 	}
 
-	// If the STS service was enabled, get the accountID for fullfilling the data
+	// If the STS service was enabled, get the accountID for fulfilling the data
 	if conn.STS != nil {
 		conn.accountID = conn.STS.getAWSAccountID()
 	}
@@ -133,7 +123,7 @@ func (conn *AWSConnection) GetAccountID() string {
 	return conn.accountID
 }
 
-// Connect stablish or refresh the AWS service clients for the AWSConnection
+// Connect establish or refresh the AWS service clients for the AWSConnection
 // object. This is needed because some clients needs to be re-created when
 // switching to a different region
 func (conn *AWSConnection) Connect() error {

@@ -17,7 +17,7 @@ type AWSExecutor struct {
 // configures the AWSConnection and stablishes the conection with AWS for
 // validating the conection is correct
 func NewAWSExecutor(account *inventory.Account, logger *zap.Logger) *AWSExecutor {
-	conn, err := cpaws.NewAWSConnection(account.GetUser(), account.GetPassword(), "", logger, cpaws.WithEC2())
+	conn, err := cpaws.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cpaws.WithEC2())
 	if err != nil {
 		logger.Error("Cannot create an AWS connection for the AWS Executor", zap.Error(err))
 		return nil
