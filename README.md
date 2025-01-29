@@ -22,7 +22,7 @@ available for every cloud provider:
 
 | Cloud Provider | Compute Resources | Billing | Managing |
 |----------------|-------------------|---------|----------|
-| AWS            | Yes               | Yes     | No       |
+| AWS            | Yes               | Yes     | Yes      |
 | Azure          | No                | No      | No       |
 | GCP            | No                | No      | No       |
 
@@ -30,7 +30,7 @@ available for every cloud provider:
 ## Architecture
 
 The following graph shows the architecture of this project:
-![ClusterIQ architecture diagram](./doc/arch.png)
+![ClusterIQ architecture diagram](./doc/architecture.png)
 
 
 ## Installation
@@ -72,6 +72,10 @@ This section explains how to deploy ClusterIQ and ClusterIQ Console.
     account before enabling it.
 
 ### Openshift Deployment
+Since version 0.3, ClusterIQ includes its own Helm Chart placed on
+`./deployments/helm/cluster-iq`.
+For more information about the
+   supported parameters, check the [Configuration Section](#configuration).
 1. Prepare your cluster and CLI
     ```sh
     oc login ...
@@ -87,44 +91,21 @@ This section explains how to deploy ClusterIQ and ClusterIQ Console.
       --from-file=credentials=$CLUSTER_IQ_CREDENTIALS_FILE
     ```
 
-3. Configure your cluster-iq deployment using
-   `./deployments/openshift/00_config.yaml` file. For more information about the
-   supported parameters, check the [Configuration Section](#configuration).
+3. Configure your cluster-iq deployment by modifying the
+   `./deployments/helm/cluster-iq/values.yaml` file.
+
+4. Deploy the Helm Chart
     ```sh
-    oc apply -n $NAMESPACE -f ./deployments/openshift/00_config.yaml
+    helm upgrade cluster-iq ./deployments/helm/cluster-iq/ \
+      --install \
+      --namespace $NAMESPACE \
+      -f ./deployments/helm/cluster-iq/values.yaml
     ```
 
-4. Create the Service Account for Cluster-IQ, and bind it with the `anyuid` SCC.
+5. Monitor every resource was created correctly:
     ```sh
-    oc apply -n $NAMESPACE -f ./deployments/openshift/01_service_account.yaml
-    oc adm policy add-scc-to-user anyuid -z cluster-iq
-    ```
-
-5. Deploy and configure the Database:
-    ```sh
-    oc create configmap -n $NAMESPACE pgsql-init --from-file=init.sql=./db/sql/init.sql
-    oc apply -n $NAMESPACE -f ./deployments/openshift/02_database.yaml
-    ```
-
-6. Deploy API:
-    ```sh
-    oc apply -n $NAMESPACE -f ./deployments/openshift/03_api.yaml
-    ```
-
-7. Reconfigure ConfigMap with API's route hostname.
-    ```sh
-    ROUTE_HOSTNAME=$(oc get route api -o jsonpath='{.spec.host}')
-    oc get cm config -o yaml | sed 's/REACT_APP_CIQ_API_URL: .*/REACT_APP_CIQ_API_URL: https:\/\/'$ROUTE_HOSTNAME'\/api\/v1/
-    ```
-
-7. Deploy Scanner:
-    ```sh
-    oc apply -n $NAMESPACE -f ./deployments/openshift/04_scanner.yaml
-    ```
-
-8. Deploy Console:
-    ```sh
-    oc apply -n $NAMESPACE -f ./deployments/openshift/05_console.yaml
+    oc get pods -w -n $NAMESPACE
+    helm list
     ```
 
 
