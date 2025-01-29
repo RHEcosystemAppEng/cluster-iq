@@ -28,6 +28,7 @@ BIN_DIR ?= $(BUILD_DIR)/bin
 CMD_DIR ?= ./cmd
 PKG_DIR ?= ./internal
 DEPLOYMENTS_DIR ?= ./deployments
+GENERATED_DIR ?= ./generated
 
 # Images
 API_IMG_NAME ?= $(PROJECT_NAME)-api
@@ -36,6 +37,10 @@ API_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-api
 SCANNER_IMG_NAME ?= $(PROJECT_NAME)-scanner
 SCANNER_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(SCANNER_IMG_NAME)
 SCANNER_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-scanner
+AGENT_IMG_NAME ?= $(PROJECT_NAME)-agent
+AGENT_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(AGENT_IMG_NAME)
+AGENT_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-agent
+AGENT_PROTO_PATH ?= ./cmd/agent/proto/agent.proto
 
 # Standard targets
 all: ## Stops, build and starts the development environment based on containers
@@ -51,6 +56,7 @@ check-dependencies:
 local-clean:
 	@echo "### [Cleanning local building] ###"
 	@rm -Rf $(BIN_DIR)
+	@rm -Rf $(GENERATED_DIR)
 
 local-build: local-build-scanner local-build-api
 
@@ -62,6 +68,12 @@ local-build-scanner:
 	@echo "### [Building Scanner] ###"
 	@go build -o $(BIN_DIR)/scanners/scanner $(LDFLAGS) ./cmd/scanner
 
+local-build-agent:
+	@echo "### [Building Agent] ###"
+	@[ ! -d $(GENERATED_DIR) ] && { mkdir $(GENERATED_DIR); } || { exit 0; }
+	@protoc --go_out=$(GENERATED_DIR) --go-grpc_out=$(GENERATED_DIR) $(AGENT_PROTO_PATH)
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/agent/agent $(LDFLAGS) ./cmd/agent
+
 
 # Container based working targets
 clean: ## Removes the container images for the API and the Scanner
@@ -69,7 +81,7 @@ clean: ## Removes the container images for the API and the Scanner
 	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
 build: ## Builds the container images for the API and the Scanner
-build: build-api build-scanner
+build: build-api build-scanner build-agent
 
 build-api: ## Builds the API Container image
 	@echo "### [Building API container image] ###"
@@ -81,6 +93,12 @@ build-scanner: ## Builds the Scanner Container image
 	@echo "### [Building Scanner container image] ###"
 	@$(CONTAINER_ENGINE) build -t $(SCANNER_IMAGE):latest -f $(SCANNER_CONTAINERFILE) .
 	@$(CONTAINER_ENGINE) tag $(SCANNER_IMAGE):latest $(SCANNER_IMAGE):$(SHORT_COMMIT_HASH)
+	@echo "Build Successful"
+
+build-agent: ## Builds the Agent Container image
+	@echo "### [Building Agent container image] ###"
+	$(CONTAINER_ENGINE) build -t $(AGENT_IMAGE):latest -f $(AGENT_CONTAINERFILE) .
+	$(CONTAINER_ENGINE) tag $(AGENT_IMAGE):latest $(AGENT_IMAGE):$(SHORT_COMMIT_HASH)
 	@echo "Build Successful"
 
 
@@ -120,10 +138,10 @@ swagger-editor: ## Opens web editor for modifying Swagger docs
 		swaggerapi/swagger-editor
 	@echo "Open your browser at http://127.0.0.1:8082"
 
-swagger-doc: # Generates Swagger documentation for ClusterIQ API
+swagger-doc: ## Generates Swagger documentation for ClusterIQ API
 	@echo "### [Generating Swagger Docs] ###"
 	@swag fmt
-	@swag init --generalInfo ./cmd/api/api_server.go --parseDependency --output ./cmd/api/docs
+	@swag init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
 
 
 # Set the default target to "help"
