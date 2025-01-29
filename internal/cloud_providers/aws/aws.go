@@ -13,6 +13,16 @@ const (
 	DefaultAWSRegion = "eu-west-1"
 )
 
+// AWSConnection defines the connexion with AWS APIs and its different
+// services. It can be customized depending on the user wants to use. For
+// adding a new service to the AWSConnection, include the corresponding
+// "With<SERVICE>()" method available on this packge
+//
+// Currently supported services:
+// * EC2 (computing)
+// * Route53 (DNS)
+// * STS (SecurityTokenService)
+// * CostExplorer (billing data)
 type AWSConnection struct {
 	credentials  *credentials.Credentials
 	awsConfig    *aws.Config
@@ -42,6 +52,7 @@ func NewAWSConnection(user string, password string, region string, opts ...AWSCo
 	// Third argument (token) it's not used. For more info check docs: https://pkg.go.dev/github.com/aws/aws-sdk-go/aws/credentials#NewStaticCredentials
 	creds := credentials.NewStaticCredentials(user, password, token)
 
+	// AccountID is empty by default. It will be configured automatically if the developer includes the STS service option
 	conn := &AWSConnection{
 		credentials: creds,
 		user:        user,
@@ -130,7 +141,7 @@ func (conn *AWSConnection) Connect() error {
 		return err
 	}
 
-	// Refreshing service client objects for the AWS Connection
+	// Refreshing service client objects for the AWSConnection if it's defined
 	if conn.EC2 != nil {
 		WithEC2()(conn)
 	}
