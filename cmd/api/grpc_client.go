@@ -7,6 +7,7 @@ import (
 	pb "github.com/RHEcosystemAppEng/cluster-iq/generated/agent"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -39,7 +40,7 @@ type APIGRPCClient struct {
 // - An error if the connection cannot be established.
 func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, error) {
 	// Initializing gRPC Client
-	conn, err := grpc.Dial(agentURL, grpc.WithInsecure())
+	conn, err := grpc.NewClient(agentURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
