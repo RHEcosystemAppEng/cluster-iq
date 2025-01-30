@@ -1,0 +1,35 @@
+---
+name: Container Image CI
+
+on:
+  push:
+    branches:
+      - "main"
+      - "release-.*"
+    paths:
+      - 'deployments/containerfiles/Containerfile-api'
+  pull_request:
+    branches:
+      - "main"
+      - "release-.*"
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | docker login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
+      - name: Build and push image
+        run: |
+          IMAGE_NAME="quay.io/ecosystem-appeng/cluster-iq-api:latest-test"
+          docker build -t $IMAGE_NAME -f deployments/containerfiles/Containerfile-api .
+          docker push $IMAGE_NAME
+
+      - name: Logout from Quay.io
+        run: docker logout quay.io
