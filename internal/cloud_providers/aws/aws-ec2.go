@@ -2,6 +2,7 @@ package cloudprovider
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws"
@@ -13,6 +14,9 @@ const (
 	// AWS-SDK string values for InstanceState
 	InstanceStateRunning = "running"
 	InstanceStateStopped = "stopped"
+	// Reference https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html#available-ec2-device-names
+	rootDeviceXvda = "/dev/xvda"
+	rootDeviceSda  = "/dev/sda1"
 )
 
 // AWSEC2Connection represents the EC2 client for AWS
@@ -207,7 +211,6 @@ func (c *AWSEC2Connection) GetRegionsList() ([]string, error) {
 // Using paginated requests for more efficiency
 // Doc: (https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/#EC2.DescribeInstancesPages)
 func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
-
 	// Define input for DescribeInstances. It's empty to obtain every instance in the configured Region
 	input := &ec2.DescribeInstancesInput{}
 
@@ -245,8 +248,7 @@ func EC2InstanceToInventoryInstance(instance *ec2.Instance) *inventory.Instance 
 	availabilityZone := *instance.Placement.AvailabilityZone
 	status := inventory.AsInstanceStatus(*instance.State.Name)
 	clusterID := inventory.GetClusterIDFromTags(tags)
-	creationTimestamp := *instance.LaunchTime
-
+	creationTimestamp := getInstanceCreationTimestamp(*instance)
 	return inventory.NewInstance(
 		id,
 		name,
@@ -258,4 +260,16 @@ func EC2InstanceToInventoryInstance(instance *ec2.Instance) *inventory.Instance 
 		tags,
 		creationTimestamp,
 	)
+}
+
+// getInstanceCreationTimestamp retrieves the creation timestamp of an EC2 instance.
+// It determines the instance creation time based on the attach time of the root block device.
+// If the root device is not found among the block device mappings, it returns an empty time.Time.
+func getInstanceCreationTimestamp(instance ec2.Instance) time.Time {
+	for _, mapping := range instance.BlockDeviceMappings {
+		if *mapping.DeviceName == rootDeviceXvda || *mapping.DeviceName == rootDeviceSda {
+			return *mapping.Ebs.AttachTime
+		}
+	}
+	return time.Time{}
 }
