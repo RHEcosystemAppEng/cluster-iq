@@ -117,44 +117,32 @@ For deploying ClusterIQ in local for development purposes, check the following
 
 ### Configuration
 Available configuration via Env Vars:
-| Key                  | Value                         | Description                               |
-|----------------------|-------------------------------|-------------------------------------------|
-| CIQ_API_HOST         | string (Default: "127.0.0.1") | Inventory API listen host                 |
-| CIQ_API_PORT         | string (Default: "6379")      | Inventory API listen port                 |
-| CIQ_API_PUBLIC_HOST  | string (Default: "")          | Inventory API public endpoint             |
-| CIQ_DB_HOST          | string (Default: "127.0.0.1") | Inventory database listen host            |
-| CIQ_DB_PORT          | string (Default: "6379")      | Inventory database listen port            |
-| CIQ_DB_PASS          | string (Default: "")          | Inventory database password               |
-| CIQ_CREDS_FILE       | string (Default: "")          | Cloud providers accounts credentials file |
-
-These variables are defined in `./<PROJECT_FOLDER>/.env` to be used on Makefile
-and on `./<PROJECT_FOLDER>/deploy/openshift/config.yaml` to deploy it on Openshift.
+| Key                  | Value                             | Description                               |
+| -------------------- | --------------------------------- | ----------------------------------------- |
+| CIQ_API_LISTEN_URL   | string (Default: "0.0.0.0:8080")  | ClusterIQ API listen URL                  |
+| CIQ_API_URL          | string (Default: "")              | ClusterIQ API public endpoint             |
+| CIQ_AGENT_LISTEN_URL | string (Default: "0.0.0.0:50051") | ClusterIQ Agent listen URL                |
+| CIQ_AGENT_URL        | string (Default: "")              | ClusterIQ Agent public endpoint           |
+| CIQ_DB_HOST          | string (Default: "0.0.0.0:5432")  | ClusterIQ DB listen URL                   |
+| CIQ_CREDS_FILE       | string (Default: "")              | Cloud providers accounts credentials file |
+| CIQ_LOG_LEVEL        | string (Default: "INFO")          | ClusterIQ Logs verbosity mode             |
 
 
-### Scanners
+### Scanner
 [![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-scanner/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner)
 
-As each cloud provider has a different API and because of this, a specific
-scanner adapted to the provider is required.
-
-To build every available scanner, use the following makefile rules:
-
+The scanner searches each region for instances (servers) that are part of an
+Openshift cluster. As each provider and each service has different
+specifications, the Scanner includes a specific module dedicated to each of
+them. These modules are automatically activated or deactivated depending on the
+configured accounts and their configuration.
 ```shell
-make build-scanners
+# Building in a container
+make build-scanner
+
+# Building in local
+make local-build-scanner
 ```
-
-By default, every build rule will be performed using the Dockerfile for each
-specific scanner
-
-#### AWS Scanner
-The scanner should run periodically to keep the inventory up to date.
-
-```shell
-# Building
-make build-aws-scanner
-```
-
-
 
 ## API Server
 [![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-api/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-api)
@@ -162,9 +150,25 @@ make build-aws-scanner
 The API server interacts between the UI and the DB.
 
 ```shell
-# Building
+# Building in a container
 make build-api
 
-# Run
-make start-api
+# Building in local
+make local-build-api
+```
+
+## Agent (gRPC)
+[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-agent/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-agent)
+
+The Agent performs actions over the selected cloud resources. It only accepts
+incoming requests from the API.
+
+Currently, on release 0.3.*, the agent only supports PowerOn/Off clusters on AWS.
+
+```shell
+# Building in a container
+make build-agent
+
+# Building in local
+make local-build-agent
 ```
