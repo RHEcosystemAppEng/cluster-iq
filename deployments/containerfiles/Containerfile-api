@@ -3,11 +3,15 @@
 ####################
 FROM golang:1.22.10 AS builder
 
+# Build arguments
+ARG VERSION
+ARG COMMIT
+
 # Code copy
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/api/*.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT}" ./cmd/api/*.go
 
 ## Run
 ####################

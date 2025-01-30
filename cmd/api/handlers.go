@@ -57,7 +57,7 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	ExpenseListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/expenses [get]
 func (a APIServer) HandlerGetExpenses(c *gin.Context) {
 	a.logger.Debug("Retrieving complete expense inventory")
@@ -108,8 +108,8 @@ func (a APIServer) HandlerGetExpensesByInstance(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		[]inventory.Expense	true	"New Expense to be added"
 //	@Success		200			{object}	nil
-//	@Failure		400			{object}	Error
-//	@Failure		500			{object}	Error
+//	@Failure		400			{object}	GenericErrorResponse
+//	@Failure		500			{object}	GenericErrorResponse
 //	@Router			/expenses [post]
 func (a APIServer) HandlerPostExpense(c *gin.Context) {
 	// Getting expenses list on request's body
@@ -128,7 +128,7 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 		return
 	}
 
-	// Writting expenses
+	// Writing expenses
 	a.logger.Debug("Writing a new Expense", zap.Reflect("expenses", expenses))
 	err = a.sql.writeExpenses(expenses)
 	if err != nil {
@@ -150,7 +150,7 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/instances [get]
 func (a APIServer) HandlerGetInstances(c *gin.Context) {
 	a.logger.Debug("Retrieving complete instance inventory")
@@ -174,7 +174,7 @@ func (a APIServer) HandlerGetInstances(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/instances/expense_update [get]
 func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 	a.logger.Debug("Retrieving instances with outdated billing information")
@@ -225,8 +225,8 @@ func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		[]inventory.Instance	true	"New Instance to be added"
 //	@Success		200			{object}	nil
-//	@Failure		400			{object}	Error
-//	@Failure		500			{object}	Error
+//	@Failure		400			{object}	GenericErrorResponse
+//	@Failure		500			{object}	GenericErrorResponse
 //	@Router			/instances [post]
 func (a APIServer) HandlerPostInstance(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
@@ -310,7 +310,7 @@ func (a APIServer) HandlerPatchInstance(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	ClusterListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/clusters [get]
 func (a APIServer) HandlerGetClusters(c *gin.Context) {
 	a.logger.Debug("Retrieving complete clusters inventory")
@@ -413,8 +413,8 @@ func (a APIServer) HandlerGetClusterTags(c *gin.Context) {
 //	@Produce		json
 //	@Param			cluster	body		inventory.Cluster	true	"New Cluster to be added"
 //	@Success		200		{object}	nil
-//	@Failure		400		{object}	Error
-//	@Failure		500		{object}	Error
+//	@Failure		400		{object}	GenericErrorResponse
+//	@Failure		500		{object}	GenericErrorResponse
 //	@Router			/clusters [post]
 func (a APIServer) HandlerPostCluster(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
@@ -624,7 +624,7 @@ func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 //	@Produce		json
 //	@Param			account_name	path		string	true	"Account Name"
 //	@Success		200				{object}	AccountListResponse
-//	@Failure		404				{object}	Error
+//	@Failure		404				{object}	GenericErrorResponse
 //	@Router			/accounts/{account_name} [get]
 func (a APIServer) HandlerGetAccountsByName(c *gin.Context) {
 	accountName := c.Param("account_name")
@@ -677,7 +677,7 @@ func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 //	@Param			account	body		inventory.Account	true	"New Account to be added"
 //	@Success		200		{object}	nil
 //	@Failure		400		{object}	nil
-//	@Failure		500		{object}	Error
+//	@Failure		500		{object}	GenericErrorResponse
 //	@Router			/accounts [post]
 func (a APIServer) HandlerPostAccount(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
@@ -715,7 +715,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 //	@Produce		json
 //	@Param			account_name	path		string	true	"Account Name"
 //	@Success		200				{object}	nil
-//	@Failure		500				{object}	Error
+//	@Failure		500				{object}	GenericErrorResponse
 //	@Router			/accounts/{account_name} [delete]
 //
 // TODO: Not Implemented
@@ -770,5 +770,5 @@ func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
-	// This funciton doesn't return any 200OK code for preventing duplicated responses
+	// This function doesn't return any 200OK code for preventing duplicated responses
 }

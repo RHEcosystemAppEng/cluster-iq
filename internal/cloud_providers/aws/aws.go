@@ -13,10 +13,10 @@ const (
 	DefaultAWSRegion = "eu-west-1"
 )
 
-// AWSConnection defines the connexion with AWS APIs and its different
-// services. It can be customized depending on the user wants to use. For
-// adding a new service to the AWSConnection, include the corresponding
-// "With<SERVICE>()" method available on this packge
+// AWSConnection defines the connection with AWS APIs and its various
+// services. It can be customized based on the user's requirements.
+// To add a new service to AWSConnection, include the corresponding
+// "With<SERVICE>()" method available in this package.
 //
 // Currently supported services:
 // * EC2 (computing)
