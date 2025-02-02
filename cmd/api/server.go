@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/cmd/api/docs"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
@@ -58,13 +57,8 @@ type APIServer struct {
 // Returns:
 // - Pointer to the newly created APIServer.
 func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, error) {
-	// Configuring GIN router
-	router := setupGin(logger)
-	// Configure HTTP server
-	server := &http.Server{
-		Addr:    cfg.ListenURL,
-		Handler: router,
-	}
+	// Configuring GIN engine
+	engine := setupGin(logger)
 
 	// Creating gRPC client
 	gRPCClient, err := NewAPIGRPCClient(cfg.AgentURL, logger)
@@ -78,20 +72,31 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}
 
-	return &APIServer{
+	apiServer := &APIServer{
 		cfg:    cfg,
 		logger: logger,
-		server: server,
-		router: router,
-		grpc:   gRPCClient,
-		sql:    sqlClient,
-	}, nil
+		router: engine,
+		server: &http.Server{
+			Addr:    cfg.ListenURL,
+			Handler: engine,
+		},
+		grpc: gRPCClient,
+		sql:  sqlClient,
+	}
+
+	// Initialize routes
+	router := NewRouter(apiServer)
+	router.SetupRoutes()
+
+	return apiServer, nil
 }
 
 func setupGin(logger *zap.Logger) *gin.Engine {
 	// TODO. Configure via env vars
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
+	// Configure default middleware
+	router.Use()
 	router.Use(middleware.SetCommonHeaders())
 	// Configure Gin to use Zap
 	router.Use(ginzap.GinzapWithConfig(logger, &ginzap.Config{
@@ -99,28 +104,12 @@ func setupGin(logger *zap.Logger) *gin.Engine {
 		UTC:        true,
 		SkipPaths:  []string{"/api/v1/healthcheck"},
 	}))
-	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	router.Use(gin.Recovery())
 	return router
 }
 
-func (a *APIServer) setupSwagger() {
-	docs.SwaggerInfo.Title = "Cluster IP API doc"
-	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
-	docs.SwaggerInfo.Version = "0.3"
-	docs.SwaggerInfo.Host = "localhost"
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	docs.SwaggerInfo.Schemes = []string{"http"}
-}
-
 // Start starts the HTTP server in a goroutine
 func (a *APIServer) Start() error {
-	// Configure route
-	a.setupRouter()
-	// Configure Swagger
-	a.setupSwagger()
-	// Configure default middleware
-	a.router.Use()
 	a.logger.Info("==================== Starting ClusterIQ API ====================",
 		zap.String("version", version),
 		zap.String("commit", commit),

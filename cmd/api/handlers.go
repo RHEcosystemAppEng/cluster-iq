@@ -281,7 +281,7 @@ func (a APIServer) HandlerDeleteInstance(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		inventory.Instance	true	"Instance to be modified"
 //	@Param			instance_id	path		string				true	"Instance ID"
-//	@Failure		501			{object}	nil	"Not Implemented"
+//	@Failure		501			{object}	nil					"Not Implemented"
 //	@Router			/instances/{instance_id} [patch]
 //
 // TODO: NOT IMPLEMENTED
@@ -724,7 +724,7 @@ func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 //	@Produce		json
 //	@Param			Account			body		inventory.Account	true	"Account to be modified"
 //	@Param			account_name	path		string				true	"Account Name"
-//	@Failure		501				{object}	nil	"Not Implemented"
+//	@Failure		501				{object}	nil					"Not Implemented"
 //	@Router			/accounts/{account_name} [patch]
 func (a APIServer) HandlerPatchAccount(c *gin.Context) {
 	accountName := c.Param("account_name")

@@ -1,69 +1,92 @@
 package main
 
 import (
+	"github.com/RHEcosystemAppEng/cluster-iq/cmd/api/docs"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"     // swagger embed files
 	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
 )
 
-func (a *APIServer) setupRouter() {
+type Router struct {
+	engine *gin.Engine
+	api    *APIServer
+}
+
+func NewRouter(api *APIServer) *Router {
+	return &Router{
+		engine: api.router,
+		api:    api,
+	}
+}
+
+func (r *Router) SetupRoutes() {
 	// API Endpoints
-	baseGroup := a.router.Group("/api/v1")
-	a.setupHealthcheckRoutes(baseGroup)
-	a.setupExpensesGroupRoutes(baseGroup)
-	a.setupInstancesRoutes(baseGroup)
-	a.setupClustersRoutes(baseGroup)
-	a.setupAccountsRoutes(baseGroup)
-	a.setupSwaggerRoutes(baseGroup)
+	r.setupSwagger()
+	baseGroup := r.engine.Group("/api/v1")
+	r.setupHealthcheckRoutes(baseGroup)
+	r.setupExpensesGroupRoutes(baseGroup)
+	r.setupInstancesRoutes(baseGroup)
+	r.setupClustersRoutes(baseGroup)
+	r.setupAccountsRoutes(baseGroup)
+	r.setupSwaggerRoutes(baseGroup)
 }
 
-func (a *APIServer) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
 	healthcheckGroup := baseGroup.Group("/healthcheck")
-	healthcheckGroup.GET("", a.HandlerHealthCheck)
+	healthcheckGroup.GET("", r.api.HandlerHealthCheck)
 }
 
-func (a *APIServer) setupExpensesGroupRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupExpensesGroupRoutes(baseGroup *gin.RouterGroup) {
 	expensesGroup := baseGroup.Group("/expenses")
-	expensesGroup.GET("", a.HandlerGetExpenses)
-	expensesGroup.GET("/:instance_id", a.HandlerGetExpensesByInstance)
-	expensesGroup.POST("", a.HandlerPostExpense)
+	expensesGroup.GET("", r.api.HandlerGetExpenses)
+	expensesGroup.GET("/:instance_id", r.api.HandlerGetExpensesByInstance)
+	expensesGroup.POST("", r.api.HandlerPostExpense)
 }
 
-func (a *APIServer) setupInstancesRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupInstancesRoutes(baseGroup *gin.RouterGroup) {
 	instancesGroup := baseGroup.Group("/instances")
-	instancesGroup.Use(a.HandlerRefreshInventory)
-	instancesGroup.GET("", a.HandlerGetInstances)
-	instancesGroup.GET("/expense_update", a.HandlerGetInstancesForBillingUpdate)
-	instancesGroup.GET("/:instance_id", a.HandlerGetInstanceByID)
-	instancesGroup.POST("", a.HandlerPostInstance)
-	instancesGroup.DELETE("/:instance_id", a.HandlerDeleteInstance)
-	instancesGroup.PATCH("/:instance_id", a.HandlerPatchInstance)
+	instancesGroup.Use(r.api.HandlerRefreshInventory)
+	instancesGroup.GET("", r.api.HandlerGetInstances)
+	instancesGroup.GET("/expense_update", r.api.HandlerGetInstancesForBillingUpdate)
+	instancesGroup.GET("/:instance_id", r.api.HandlerGetInstanceByID)
+	instancesGroup.POST("", r.api.HandlerPostInstance)
+	instancesGroup.DELETE("/:instance_id", r.api.HandlerDeleteInstance)
+	instancesGroup.PATCH("/:instance_id", r.api.HandlerPatchInstance)
 }
 
-func (a *APIServer) setupClustersRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupClustersRoutes(baseGroup *gin.RouterGroup) {
 	clustersGroup := baseGroup.Group("/clusters")
-	clustersGroup.Use(a.HandlerRefreshInventory)
-	clustersGroup.GET("", a.HandlerGetClusters)
-	clustersGroup.GET("/:cluster_id", a.HandlerGetClustersByID)
-	clustersGroup.GET("/:cluster_id/instances", a.HandlerGetInstancesOnCluster)
-	clustersGroup.GET("/:cluster_id/tags", a.HandlerGetClusterTags)
-	clustersGroup.POST("", a.HandlerPostCluster)
-	clustersGroup.POST("/:cluster_id/power_on", a.HandlerPowerOnCluster)
-	clustersGroup.POST("/:cluster_id/power_off", a.HandlerPowerOffCluster)
-	clustersGroup.DELETE("/:cluster_id", a.HandlerDeleteCluster)
-	clustersGroup.PATCH("/:cluster_id", a.HandlerPatchCluster)
+	clustersGroup.Use(r.api.HandlerRefreshInventory)
+	clustersGroup.GET("", r.api.HandlerGetClusters)
+	clustersGroup.GET("/:cluster_id", r.api.HandlerGetClustersByID)
+	clustersGroup.GET("/:cluster_id/instances", r.api.HandlerGetInstancesOnCluster)
+	clustersGroup.GET("/:cluster_id/tags", r.api.HandlerGetClusterTags)
+	clustersGroup.POST("", r.api.HandlerPostCluster)
+	clustersGroup.POST("/:cluster_id/power_on", r.api.HandlerPowerOnCluster)
+	clustersGroup.POST("/:cluster_id/power_off", r.api.HandlerPowerOffCluster)
+	clustersGroup.DELETE("/:cluster_id", r.api.HandlerDeleteCluster)
+	clustersGroup.PATCH("/:cluster_id", r.api.HandlerPatchCluster)
 }
 
-func (a *APIServer) setupAccountsRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupAccountsRoutes(baseGroup *gin.RouterGroup) {
 	accountsGroup := baseGroup.Group("/accounts")
-	accountsGroup.GET("", a.HandlerGetAccounts)
-	accountsGroup.GET("/:account_name", a.HandlerGetAccountsByName)
-	accountsGroup.GET("/:account_name/clusters", a.HandlerGetClustersOnAccount)
-	accountsGroup.POST("", a.HandlerPostAccount)
-	accountsGroup.DELETE("/:account_name", a.HandlerDeleteAccount)
-	accountsGroup.PATCH("/:account_name", a.HandlerPatchAccount)
+	accountsGroup.GET("", r.api.HandlerGetAccounts)
+	accountsGroup.GET("/:account_name", r.api.HandlerGetAccountsByName)
+	accountsGroup.GET("/:account_name/clusters", r.api.HandlerGetClustersOnAccount)
+	accountsGroup.POST("", r.api.HandlerPostAccount)
+	accountsGroup.DELETE("/:account_name", r.api.HandlerDeleteAccount)
+	accountsGroup.PATCH("/:account_name", r.api.HandlerPatchAccount)
 }
 
-func (a *APIServer) setupSwaggerRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupSwaggerRoutes(baseGroup *gin.RouterGroup) {
 	baseGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+}
+
+func (a *Router) setupSwagger() {
+	docs.SwaggerInfo.Title = "Cluster IP API doc"
+	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
+	docs.SwaggerInfo.Version = "0.3"
+	docs.SwaggerInfo.Host = "localhost"
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
 }
