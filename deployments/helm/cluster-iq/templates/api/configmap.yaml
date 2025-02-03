@@ -7,4 +7,5 @@ metadata:
     {{- include "cluster-iq.componentLabels" "api" | nindent 4 }}
 data:
   CIQ_API_LISTEN_URL: 0.0.0.0:{{ .Values.api.service.port }}
+  CIQ_AGENT_URL: agent:{{ .Values.agent.service.port }}
   CIQ_LOG_LEVEL: DEBUG

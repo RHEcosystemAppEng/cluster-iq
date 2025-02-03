@@ -91,6 +91,17 @@ Create the name of the Scanner service account
 {{- end }}
 
 {{/*
+Create the name of the Agent service account
+*/}}
+{{- define "cluster-iq.agentServiceAccountName" -}}
+{{- if .Values.agent.serviceAccount.create }}
+{{- default "agent" .Values.agent.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.agent.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
 Create the name of the Database service account
 */}}
 {{- define "cluster-iq.databaseServiceAccountName" -}}
