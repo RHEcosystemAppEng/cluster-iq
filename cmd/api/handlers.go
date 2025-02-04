@@ -22,9 +22,6 @@ import (
 //	@Success		200	{object}	HealthCheckResponse
 //	@Router			/healthcheck [get]
 func (a APIServer) HandlerHealthCheck(c *gin.Context) {
-	a.logger.Debug("Running Health Checks")
-	addHeaders(c)
-
 	hc := HealthChecks{
 		APIHealth: false,
 		DBHealth:  false,
@@ -57,11 +54,10 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	ExpenseListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/expenses [get]
 func (a APIServer) HandlerGetExpenses(c *gin.Context) {
 	a.logger.Debug("Retrieving complete expense inventory")
-	addHeaders(c)
 
 	expenses, err := a.sql.getExpenses()
 	if err != nil {
@@ -87,7 +83,6 @@ func (a APIServer) HandlerGetExpenses(c *gin.Context) {
 func (a APIServer) HandlerGetExpensesByInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Retrieving expenses by InstanceID", zap.String("instance_id", instanceID))
-	addHeaders(c)
 
 	expenses, err := a.sql.getExpensesByInstance(instanceID)
 	if err != nil {
@@ -108,8 +103,8 @@ func (a APIServer) HandlerGetExpensesByInstance(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		[]inventory.Expense	true	"New Expense to be added"
 //	@Success		200			{object}	nil
-//	@Failure		400			{object}	Error
-//	@Failure		500			{object}	Error
+//	@Failure		400			{object}	GenericErrorResponse
+//	@Failure		500			{object}	GenericErrorResponse
 //	@Router			/expenses [post]
 func (a APIServer) HandlerPostExpense(c *gin.Context) {
 	// Getting expenses list on request's body
@@ -128,7 +123,7 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 		return
 	}
 
-	// Writting expenses
+	// Writing expenses
 	a.logger.Debug("Writing a new Expense", zap.Reflect("expenses", expenses))
 	err = a.sql.writeExpenses(expenses)
 	if err != nil {
@@ -150,11 +145,10 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/instances [get]
 func (a APIServer) HandlerGetInstances(c *gin.Context) {
 	a.logger.Debug("Retrieving complete instance inventory")
-	addHeaders(c)
 
 	instances, err := a.sql.getInstances()
 	if err != nil {
@@ -174,11 +168,10 @@ func (a APIServer) HandlerGetInstances(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	InstanceListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/instances/expense_update [get]
 func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 	a.logger.Debug("Retrieving instances with outdated billing information")
-	addHeaders(c)
 
 	instances, err := a.sql.getInstancesOutdatedBilling()
 	if err != nil {
@@ -204,7 +197,6 @@ func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Retrieving instance by ID", zap.String("instance_id", instanceID))
-	addHeaders(c)
 
 	instances, err := a.sql.getInstanceByID(instanceID)
 	if err != nil {
@@ -225,8 +217,8 @@ func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		[]inventory.Instance	true	"New Instance to be added"
 //	@Success		200			{object}	nil
-//	@Failure		400			{object}	Error
-//	@Failure		500			{object}	Error
+//	@Failure		400			{object}	GenericErrorResponse
+//	@Failure		500			{object}	GenericErrorResponse
 //	@Router			/instances [post]
 func (a APIServer) HandlerPostInstance(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
@@ -289,7 +281,7 @@ func (a APIServer) HandlerDeleteInstance(c *gin.Context) {
 //	@Produce		json
 //	@Param			instance	body		inventory.Instance	true	"Instance to be modified"
 //	@Param			instance_id	path		string				true	"Instance ID"
-//	@Failure		501			{object}	nil	"Not Implemented"
+//	@Failure		501			{object}	nil					"Not Implemented"
 //	@Router			/instances/{instance_id} [patch]
 //
 // TODO: NOT IMPLEMENTED
@@ -310,11 +302,10 @@ func (a APIServer) HandlerPatchInstance(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	ClusterListResponse
-//	@Failure		500	{object}	Error
+//	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/clusters [get]
 func (a APIServer) HandlerGetClusters(c *gin.Context) {
 	a.logger.Debug("Retrieving complete clusters inventory")
-	addHeaders(c)
 
 	clusters, err := a.sql.getClusters()
 	if err != nil {
@@ -340,7 +331,6 @@ func (a APIServer) HandlerGetClusters(c *gin.Context) {
 func (a APIServer) HandlerGetClustersByID(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster Tags by ID", zap.String("cluster_id", clusterID))
-	addHeaders(c)
 
 	clusters, err := a.sql.getClusterByID(clusterID)
 	if err != nil {
@@ -366,7 +356,6 @@ func (a APIServer) HandlerGetClustersByID(c *gin.Context) {
 func (a APIServer) HandlerGetInstancesOnCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster's Instances", zap.String("cluster_id", clusterID))
-	addHeaders(c)
 
 	instances, err := a.sql.getInstancesOnCluster(clusterID)
 	if err != nil {
@@ -392,7 +381,6 @@ func (a APIServer) HandlerGetInstancesOnCluster(c *gin.Context) {
 func (a APIServer) HandlerGetClusterTags(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
-	addHeaders(c)
 
 	tags, err := a.sql.getClusterTags(clusterID)
 	if err != nil {
@@ -413,8 +401,8 @@ func (a APIServer) HandlerGetClusterTags(c *gin.Context) {
 //	@Produce		json
 //	@Param			cluster	body		inventory.Cluster	true	"New Cluster to be added"
 //	@Success		200		{object}	nil
-//	@Failure		400		{object}	Error
-//	@Failure		500		{object}	Error
+//	@Failure		400		{object}	GenericErrorResponse
+//	@Failure		500		{object}	GenericErrorResponse
 //	@Router			/clusters [post]
 func (a APIServer) HandlerPostCluster(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
@@ -456,7 +444,6 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Powering On Cluster", zap.String("cluster_id", clusterID))
-	addHeaders(c)
 
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
@@ -507,7 +494,6 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Powering Off Cluster", zap.String("cluster_id", clusterID))
-	addHeaders(c)
 
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
@@ -603,7 +589,6 @@ func (a APIServer) HandlerPatchCluster(c *gin.Context) {
 //	@Router			/accounts [get]
 func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 	a.logger.Debug("Retrieving complete Accounts inventory")
-	addHeaders(c)
 
 	accounts, err := a.sql.getAccounts()
 	if err != nil {
@@ -624,12 +609,11 @@ func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 //	@Produce		json
 //	@Param			account_name	path		string	true	"Account Name"
 //	@Success		200				{object}	AccountListResponse
-//	@Failure		404				{object}	Error
+//	@Failure		404				{object}	GenericErrorResponse
 //	@Router			/accounts/{account_name} [get]
 func (a APIServer) HandlerGetAccountsByName(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Retrieving Account by Name", zap.String("account_name", accountName))
-	addHeaders(c)
 
 	accounts, err := a.sql.getAccountByName(accountName)
 	if err != nil {
@@ -655,7 +639,6 @@ func (a APIServer) HandlerGetAccountsByName(c *gin.Context) {
 func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Retrieving Account's Clusters", zap.String("account_name", accountName))
-	addHeaders(c)
 
 	clusters, err := a.sql.getClustersOnAccount(accountName)
 	if err != nil {
@@ -677,7 +660,7 @@ func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 //	@Param			account	body		inventory.Account	true	"New Account to be added"
 //	@Success		200		{object}	nil
 //	@Failure		400		{object}	nil
-//	@Failure		500		{object}	Error
+//	@Failure		500		{object}	GenericErrorResponse
 //	@Router			/accounts [post]
 func (a APIServer) HandlerPostAccount(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
@@ -715,7 +698,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 //	@Produce		json
 //	@Param			account_name	path		string	true	"Account Name"
 //	@Success		200				{object}	nil
-//	@Failure		500				{object}	Error
+//	@Failure		500				{object}	GenericErrorResponse
 //	@Router			/accounts/{account_name} [delete]
 //
 // TODO: Not Implemented
@@ -741,7 +724,7 @@ func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 //	@Produce		json
 //	@Param			Account			body		inventory.Account	true	"Account to be modified"
 //	@Param			account_name	path		string				true	"Account Name"
-//	@Failure		501				{object}	nil	"Not Implemented"
+//	@Failure		501				{object}	nil					"Not Implemented"
 //	@Router			/accounts/{account_name} [patch]
 func (a APIServer) HandlerPatchAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
@@ -770,5 +753,5 @@ func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
-	// This funciton doesn't return any 200OK code for preventing duplicated responses
+	// This function doesn't return any 200OK code for preventing duplicated responses
 }

@@ -5,22 +5,20 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/cmd/api/docs"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
-
-	swaggerFiles "github.com/swaggo/files"     // swagger embed files
-	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
 )
 
 const (
@@ -58,45 +56,96 @@ type APIServer struct {
 //
 // Returns:
 // - Pointer to the newly created APIServer.
-func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) *APIServer {
-	// Configuring GIN router
-	gin.SetMode(gin.ReleaseMode)
-	router := gin.New()
-
-	// Configure GIN to use ZAP
-	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
-
-	// Configure HTTP server
-	server := &http.Server{
-		Addr:    cfg.ListenURL,
-		Handler: router.Handler(),
-	}
+func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, error) {
+	// Configuring GIN engine
+	engine := setupGin(logger)
 
 	// Creating gRPC client
 	gRPCClient, err := NewAPIGRPCClient(cfg.AgentURL, logger)
 	if err != nil {
-		logger.Error("Cannot create gRPC Client", zap.String("agent_url", cfg.AgentURL), zap.Error(err))
-		return nil
+		return nil, fmt.Errorf("failed to create gRPC client: %w", err)
 	}
 
 	// Creating DB client
 	sqlClient, err := NewAPISQLClient(cfg.DBURL, logger)
 	if err != nil {
-		logger.Error("Cannot create SQL Client", zap.String("db_url", cfg.DBURL), zap.Error(err))
-		return nil
+		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}
 
-	return &APIServer{
+	apiServer := &APIServer{
 		cfg:    cfg,
 		logger: logger,
-		server: server,
-		router: router,
-		grpc:   gRPCClient,
-		sql:    sqlClient,
+		router: engine,
+		server: &http.Server{
+			Addr:    cfg.ListenURL,
+			Handler: engine,
+		},
+		grpc: gRPCClient,
+		sql:  sqlClient,
 	}
+
+	// Initialize routes
+	router := NewRouter(apiServer)
+	router.SetupRoutes()
+
+	return apiServer, nil
 }
 
-func init() {
+func setupGin(logger *zap.Logger) *gin.Engine {
+	// TODO. Configure via env vars
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	// Configure default middleware
+	router.Use()
+	router.Use(middleware.SetCommonHeaders())
+	// Configure Gin to use Zap
+	router.Use(ginzap.GinzapWithConfig(logger, &ginzap.Config{
+		TimeFormat: time.RFC3339,
+		UTC:        true,
+		SkipPaths:  []string{"/api/v1/healthcheck"},
+	}))
+	router.Use(gin.Recovery())
+	return router
+}
+
+// Start starts the HTTP server in a goroutine
+func (a *APIServer) Start() error {
+	a.logger.Info("==================== Starting ClusterIQ API ====================",
+		zap.String("version", version),
+		zap.String("commit", commit),
+		zap.String("api_url", a.cfg.ListenURL),
+		zap.String("db_url", a.cfg.DBURL),
+		zap.String("agent_url", a.cfg.AgentURL))
+
+	// Start API
+	go func() {
+		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			a.logger.Fatal("Server listen and serve error", zap.Error(err))
+			os.Exit(1)
+		}
+	}()
+	a.logger.Info("API Ready to serve")
+	return nil
+}
+
+// Run starts the server and handles graceful shutdown
+func (a *APIServer) Run() error {
+	if err := a.Start(); err != nil {
+		return err
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	s := <-quit
+	// Re-register to catch force shutdown
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-quit // Second signal
+		os.Exit(1)
+	}()
+
+	return a.signalHandler(s)
 }
 
 // signalHandler handles OS signals for graceful server shutdown.  It shuts
@@ -105,25 +154,23 @@ func init() {
 //
 // Parameters:
 // - signal: The OS signal to handle.
-func (a APIServer) signalHandler(signal os.Signal) {
+func (a APIServer) signalHandler(signal os.Signal) error {
 	if signal == syscall.SIGTERM {
-		ctx, cancel := context.WithTimeout(context.Background(), APITimeoutSeconds*time.Second)
-		defer cancel()
 		a.logger.Warn("SIGTERM signal received. Stopping ClusterIQ API server")
-
-		if err := a.server.Shutdown(ctx); err != nil {
-			a.logger.Fatal("API Shutdown error", zap.Error(err))
-			os.Exit(-1)
-		}
 	} else {
-		a.logger.Warn("Ignoring signal: ", zap.String("signal_id", signal.String()))
+		a.logger.Warn("Shutting down server...", zap.String("signal", signal.String()))
 	}
-}
 
-// addHeaders adds the required HTTP headers for API working
-func addHeaders(c *gin.Context) {
-	// To deal with CORS
-	c.Header("Access-Control-Allow-Origin", "*")
+	ctx, cancel := context.WithTimeout(context.Background(), APITimeoutSeconds*time.Second)
+	defer cancel()
+
+	if err := a.server.Shutdown(ctx); err != nil {
+		a.logger.Fatal("API Shutdown error", zap.Error(err))
+		return err
+	}
+
+	a.logger.Info("API server stopped")
+	return nil
 }
 
 //	@title			ClusterIQ API
@@ -159,88 +206,14 @@ func main() {
 	}
 
 	// Initializing APIServer instance
-	api := NewAPIServer(cfg, logger)
-
-	api.logger.Info("==================== Starting ClusterIQ API ====================",
-		zap.String("version", version),
-		zap.String("commit", commit),
-	)
-	api.logger.Info("Connection properties", zap.String("api_url", api.cfg.ListenURL), zap.String("db_url", api.cfg.DBURL), zap.String("agent_url", api.cfg.AgentURL))
-	api.logger.Debug("Debug Mode active!")
-
-	// Preparing API Endpoints
-	baseGroup := api.router.Group("/api/v1")
-	{
-		healthcheckGroup := baseGroup.Group("/healthcheck")
-		{
-			healthcheckGroup.GET("", api.HandlerHealthCheck)
-		}
-		expensesGroup := baseGroup.Group("/expenses")
-		{
-			expensesGroup.GET("", api.HandlerGetExpenses)
-			expensesGroup.GET("/:instance_id", api.HandlerGetExpensesByInstance)
-			expensesGroup.POST("", api.HandlerPostExpense)
-		}
-		instancesGroup := baseGroup.Group("/instances")
-		instancesGroup.Use(api.HandlerRefreshInventory)
-		{
-			instancesGroup.GET("", api.HandlerGetInstances)
-			instancesGroup.GET("/expense_update", api.HandlerGetInstancesForBillingUpdate)
-			instancesGroup.GET("/:instance_id", api.HandlerGetInstanceByID)
-			instancesGroup.POST("", api.HandlerPostInstance)
-			instancesGroup.DELETE("/:instance_id", api.HandlerDeleteInstance)
-			instancesGroup.PATCH("/:instance_id", api.HandlerPatchInstance)
-		}
-
-		clustersGroup := baseGroup.Group("/clusters")
-		clustersGroup.Use(api.HandlerRefreshInventory)
-		{
-			clustersGroup.GET("", api.HandlerGetClusters)
-			clustersGroup.GET("/:cluster_id", api.HandlerGetClustersByID)
-			clustersGroup.GET("/:cluster_id/instances", api.HandlerGetInstancesOnCluster)
-			clustersGroup.GET("/:cluster_id/tags", api.HandlerGetClusterTags)
-			clustersGroup.POST("", api.HandlerPostCluster)
-			clustersGroup.POST("/:cluster_id/power_on", api.HandlerPowerOnCluster)
-			clustersGroup.POST("/:cluster_id/power_off", api.HandlerPowerOffCluster)
-			clustersGroup.DELETE("/:cluster_id", api.HandlerDeleteCluster)
-			clustersGroup.PATCH("/:cluster_id", api.HandlerPatchCluster)
-		}
-
-		accountsGroup := baseGroup.Group("/accounts")
-		{
-			accountsGroup.GET("", api.HandlerGetAccounts)
-			accountsGroup.GET("/:account_name", api.HandlerGetAccountsByName)
-			accountsGroup.GET("/:account_name/clusters", api.HandlerGetClustersOnAccount)
-			accountsGroup.POST("", api.HandlerPostAccount)
-			accountsGroup.DELETE("/:account_name", api.HandlerDeleteAccount)
-			accountsGroup.PATCH("/:account_name", api.HandlerPatchAccount)
-		}
-		baseGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	api, err := NewAPIServer(cfg, logger)
+	if err != nil {
+		logger.Fatal("Error creating API server", zap.Error(err))
+		return
 	}
 
-	// Swagger endpoint
-	// programmatically set swagger info
-	docs.SwaggerInfo.Title = "Cluster IP API doc"
-	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
-	docs.SwaggerInfo.Version = "0.3"
-	docs.SwaggerInfo.Host = "localhost"
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	docs.SwaggerInfo.Schemes = []string{"http"}
-
-	// Start API
-	go func() {
-		if err := api.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatal("Server listen and serve error", zap.Error(err))
-			os.Exit(-1)
-		}
-	}()
-
-	// Log API is running
-	api.logger.Info("API Ready to serve")
-
-	quitChan := make(chan os.Signal, 1)
-	signal.Notify(quitChan, syscall.SIGTERM)
-	s := <-quitChan
-	api.signalHandler(s)
-	api.logger.Info("API server stopped")
+	if err := api.Run(); err != nil {
+		logger.Fatal("Error running API server", zap.Error(err))
+		return
+	}
 }
