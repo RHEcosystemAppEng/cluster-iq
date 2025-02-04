@@ -1,0 +1,48 @@
+{{- $job := lookup "batch/v1" "Job" .Release.Namespace "init-pgsql" -}}
+{{- if not $job }}
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: init-pgsql
+  labels:
+    {{- include "cluster-iq.labels" . | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "database" | nindent 4 }}
+spec:
+  manualSelector: false
+  backoffLimit: 6
+  completions: 1
+  template:
+    metadata:
+      labels:
+        {{- include "cluster-iq.labels" . | nindent 8 }}
+        {{- include "cluster-iq.componentLabels" "database" | nindent 8 }}
+    spec:
+      volumes:
+        - name: init
+          configMap:
+            name: postgresql-init
+      containers:
+        - name: init-pgsql
+          command:
+            - /bin/sh
+            - '-c'
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: init
+              mountPath: /var/lib/pgsql/init.sql
+              subPath: init.sql
+          env:
+            - name: CIQ_DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: POSTGRESQL_CONNECTION_STRING
+          image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag | default .Chart.AppVersion }}"
+          args:
+            - |
+              while true; do
+              psql "$CIQ_DB_URL" -c "SELECT true" && break || sleep 2;
+              done
+              psql "$CIQ_DB_URL" < /var/lib/pgsql/init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+      restartPolicy: OnFailure
+{{- end }}

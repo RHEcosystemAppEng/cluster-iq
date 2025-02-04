@@ -6,11 +6,17 @@ import (
 	"time"
 )
 
-const minInstances int = 3
+const (
+	// minInstances represents the minimum number of instances for evaluating a
+	// cluster and its status.  Openshift it's not supported if the amount of
+	// Master nodes is different than 3, so it's a good guideline for defining
+	// the minimum number of instances
+	minInstances int = 3
+)
 
 // Cluster is the object to store Openshift Clusters and its properties
 type Cluster struct {
-	// ID is the uniq key to idenfity every cluster independently of which account it belongs
+	// ID is the unique key to identify every cluster independently of which account it belongs
 	// Its built as "name+infra_id+account"
 	ID string `db:"id" json:"id"`
 
@@ -44,7 +50,7 @@ type Cluster struct {
 	// Timestamp when the cluster was created
 	CreationTimestamp time.Time `db:"creation_timestamp" json:"creationTimestamp"`
 
-	// Ammount of days since the cluster was created
+	// Amount of days since the cluster was created
 	Age int `db:"age" json:"age"`
 
 	// Cluster's owner
@@ -100,7 +106,7 @@ func (c Cluster) isClusterRunning() bool {
 	return false
 }
 
-// UpdateClusterInfo as a update funciton wrapper
+// UpdateClusterInfo as a update function wrapper
 func (c *Cluster) Update() error {
 	var err error
 
@@ -149,7 +155,7 @@ func (c *Cluster) UpdateCosts() error {
 	}
 
 	if c.TotalCost < newCost {
-		return fmt.Errorf("New estimated cost is lower than exspected. Review the cluster/instanes costs. Current Cost: %f, New estimated cost: %f", c.TotalCost, newCost)
+		return fmt.Errorf("New estimated cost is lower than expected. Review the cluster/instances costs. Current Cost: %f, New estimated cost: %f", c.TotalCost, newCost)
 	}
 
 	c.TotalCost = newCost

@@ -1,89 +1,55 @@
 package stocker
 
 import (
-	"fmt"
-
+	cp "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_providers/aws"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"go.uber.org/zap"
 )
 
 const (
-	// Default Region for AWS CLI
-	defaultAWSRegion = "eu-west-1"
-	// Regular expresion for extracting the InfrastructureID configured by `openshift-installer` from AWS Tags
-	infraIDRegexp = "kubernetes.io/cluster/.*-(.{5}?)$"
-	// Regular expresion for extracting the Cluster's Name configured by `openshift-installer` from AWS Tags
-	clusterNameRegexp = "kubernetes.io/cluster/(.*?)-.{5}$"
-
 	// Default codes for Unknown parameters
-	unknownAccountIDCode   = "Unknown Account ID"
-	unknownClusterNameCode = "NO_CLUSTER"
-	unknownConsoleLinkCode = "Unknown Console Link"
+	unknownAccountIDCode = "Unknown Account ID"
 )
 
 // AWSStocker object to make stock on AWS
 type AWSStocker struct {
-	region  string
 	Account *inventory.Account
 	logger  *zap.Logger
-	// AWS Session objects
-	apiSession *session.Session
+	conn    *cp.AWSConnection
 }
 
 // NewAWSStocker create and returns a pointer to a new AWSStocker instance
 func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
-	st := AWSStocker{region: defaultAWSRegion, logger: logger}
-	st.Account = account
-
-	// Creating Session for the AWS API
-	if err := st.Connect(); err != nil {
-		st.logger.Error("Failed to initialize new session during AWSStocker creation", zap.Error(err))
-		return nil
-	}
-
-	accountID, err := getAWSAccountID(st.apiSession)
+	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
+	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithEC2(), cp.WithRoute53(), cp.WithSTS())
 	if err != nil {
-		st.logger.Error("Can't obtain AccountID", zap.Error(err))
+		logger.Error("Error creating a new AWSStocker", zap.Error(err))
 		return nil
 	}
 
-	st.Account.ID = accountID
+	// Getting AWS AccountID if it's empty
+	if account.ID == "" {
+		account.ID = conn.GetAccountID()
+	}
 
-	return &st
+	return &AWSStocker{
+		Account: account,
+		logger:  logger,
+		conn:    conn,
+	}
 }
 
 // Connect Initialices the AWS API and CostExplorer sessions and clients
 func (s *AWSStocker) Connect() error {
-	var err error
-	// Third argument (token) it's not used. For more info check docs: https://pkg.go.dev/github.com/aws/aws-sdk-go/aws/credentials#NewStaticCredentials
-	creds := credentials.NewStaticCredentials(s.Account.GetUser(), s.Account.GetPassword(), "")
-	if creds == nil {
-		return fmt.Errorf("Cannot obtain AWS credentials for Account: %s\n", s.Account.ID)
-	}
-
-	// Preparing AWSConfig for new AWS API Session
-	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(s.region)
-	if awsConfig == nil {
-		return fmt.Errorf("Cannot obtain AWS config for Account: %s\n", s.Account.ID)
-	}
-
-	// Creating Session for AWS API
-	s.apiSession, err = session.NewSession(awsConfig)
-	if err != nil {
-		s.logger.Error("Cannot Create new AWS client session", zap.Error(err))
-		return err
-	}
-
-	s.logger.Info("AWS Session created", zap.String("account_id", s.Account.Name))
-	return nil
+	return s.conn.Connect()
 }
 
 // MakeStock Implements the interface Stocker for triggering the entire process of making stock about a AWS account
 func (s *AWSStocker) MakeStock() error {
-	regions := s.getRegions()
+	regions, err := s.conn.EC2.GetRegionsList()
+	if err != nil {
+		return err
+	}
 
 	// TODO: Can we paralelize this?
 	for _, region := range regions {
