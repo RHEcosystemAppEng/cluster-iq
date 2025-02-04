@@ -69,7 +69,7 @@ func (a *AgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnCluste
 
 	// PowerOn
 	logger.Warn("Powering On Cluster",
-		zap.String("accound_id", req.AccountName),
+		zap.String("account_name", req.AccountName),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
@@ -115,8 +115,8 @@ func (a *AgentService) PowerOffCluster(ctx context.Context, req *pb.PowerOffClus
 	}
 
 	// PowerOff
-	logger.Warn("Powering On Cluster",
-		zap.String("accound_id", req.AccountName),
+	logger.Warn("Powering Off Cluster",
+		zap.String("account_name", req.AccountName),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),

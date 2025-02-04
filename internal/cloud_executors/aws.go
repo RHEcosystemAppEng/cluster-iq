@@ -13,9 +13,9 @@ type AWSExecutor struct {
 	logger  *zap.Logger
 }
 
-// NewAWSExecutor creates a new AWSExecutor for a specific intentory Account,
-// configures the AWSConnection and stablishes the conection with AWS for
-// validating the conection is correct
+// NewAWSExecutor creates a new AWSExecutor for a specific inventory Account,
+// configures the AWSConnection, and establishes the connection with AWS
+// to validate that the connection is correct.
 func NewAWSExecutor(account *inventory.Account, logger *zap.Logger) *AWSExecutor {
 	conn, err := cpaws.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cpaws.WithEC2())
 	if err != nil {
@@ -63,7 +63,7 @@ func (e *AWSExecutor) PowerOnCluster(instances []string) {
 	e.logger.Info("Powered On Cluster")
 }
 
-// Connect stablishes the connection with AWS
+// Connect establishes the connection with AWS.
 func (e *AWSExecutor) Connect() error {
 	return e.conn.Connect()
 }

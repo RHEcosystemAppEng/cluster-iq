@@ -39,6 +39,12 @@ import (
 var (
 	// logger is a shared logging instance used across the entire Agent application.
 	logger *zap.Logger
+	// version reflects the current version of the Agent.
+	// It is populated at build time using build flags.
+	version string
+	// commit reflects the git short-hash of the compiled version.
+	// It provides traceability for the exact source code version used to build the binary.
+	commit string
 )
 
 // AgentService represents the main structure for managing cloud executors and configuration.
@@ -209,11 +215,8 @@ func main() {
 	// Initializing gRPC server
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(LoggingInterceptor))
 	reflection.Register(grpcServer)
-	if grpcServer == nil {
-		fmt.Println("la jodimos")
-	}
 
-	// Registering Agent serice on gRPC server
+	// Registering Agent service on gRPC server
 	pb.RegisterAgentServiceServer(grpcServer, agent)
 
 	// Listener config
@@ -221,13 +224,14 @@ func main() {
 	if err != nil {
 		logger.Error("Error initializing gRPC server on ClusterIQ Agent", zap.Error(err))
 		return
-	} else {
-		logger.Info("gRPC ClusterIQ Agent initialization successfully", zap.String("listen_url", agent.cfg.ListenURL))
 	}
-
+	logger.Info("gRPC ClusterIQ Agent initialization successfully",
+		zap.String("listen_url", agent.cfg.ListenURL),
+		zap.String("version", version),
+		zap.String("commit", commit))
 	// Serving gRPC
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Error al servir: %v", err)
+		logger.Fatal("failed to start server", zap.Error(err))
 	}
 	logger.Info("ClusterIQ Agent Finished")
 }

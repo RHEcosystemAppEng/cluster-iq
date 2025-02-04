@@ -223,7 +223,7 @@ func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
 			return !lastPage // Continue if there are more Reservations pages
 		})
 	if err != nil {
-		return nil, fmt.Errorf("Error getting EC2 instances reservations: %v", err)
+		return nil, fmt.Errorf("Error getting EC2 instances reservations: %w", err)
 	}
 
 	// Converting EC2 instances to inventory.Instance

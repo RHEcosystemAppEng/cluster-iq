@@ -3,12 +3,16 @@
 ####################
 FROM golang:1.22.10 AS builder
 
+# Build arguments
+ARG VERSION
+ARG COMMIT
+
 # Versions for Protobuf and gRPC
-ENV PROTOC_VERSION=3.14.0
+ENV PROTOC_VERSION=29.3
 ENV PROTOC_GEN_GO_VERSION=v1.36.2
 ENV PROTOC_GEN_GO_GRPC_VERSION=v1.5.1
 
-# Installing ProtoBuf 3.14
+# Installing ProtoBuf 29.3
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     curl && \
@@ -28,8 +32,7 @@ ENV PATH="${PATH}:/go/bin"
 WORKDIR /app
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-agent -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT" ./cmd/agent
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o client-grpc ./client-grpc.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-agent -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT}" ./cmd/agent
 
 ## Run
 ####################
