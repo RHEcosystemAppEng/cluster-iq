@@ -82,7 +82,7 @@ func (r *Router) setupSwaggerRoutes(baseGroup *gin.RouterGroup) {
 	baseGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
-func (a *Router) setupSwagger() {
+func (r *Router) setupSwagger() {
 	docs.SwaggerInfo.Title = "Cluster IP API doc"
 	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
 	docs.SwaggerInfo.Version = "0.3"
