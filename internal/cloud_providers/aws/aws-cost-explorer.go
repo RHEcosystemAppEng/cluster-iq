@@ -20,7 +20,7 @@ func NewAWSCostExplorerConnection(session *session.Session) *AWSCostExplorerConn
 // WithCostExplorer configures an AWSConnection instance for including the CostExplorer client
 func WithCostExplorer() AWSConnectionOption {
 	return func(conn *AWSConnection) {
-		conn.STS = NewAWSSTSConnection(conn.awsSession)
+		conn.CostExplorer = NewAWSCostExplorerConnection(conn.awsSession)
 	}
 }
 
