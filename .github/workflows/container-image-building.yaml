@@ -20,7 +20,7 @@ jobs:
       - rhel-ubi
 
     permissions:
-      content: read
+      contents: read
       packages: write
 
     steps:
