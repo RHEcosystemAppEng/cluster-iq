@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 )
 
-const ()
-
 type AWSRoute53Connection struct {
 	client *route53.Route53
 }
@@ -29,28 +27,44 @@ func WithRoute53() AWSConnectionOption {
 	}
 }
 
-// getRoute53HostedZones get a list of every Hosted Zone on the Route53 service
-func (c *AWSRoute53Connection) GetRoute53HostedZones() ([]*route53.HostedZone, error) {
+type HostedZone struct {
+	Zone *route53.HostedZone
+	Tags []*route53.Tag
+}
+
+// GetZonesWithTags retrieves all hosted zones and their associated tags from AWS Route53
+func (c *AWSRoute53Connection) GetZonesWithTags() ([]HostedZone, error) {
+	// Route 53 returns up to 100 items in each response.
+	// If you have a lot of hosted zones, use the MaxItems parameter to list them in groups of up to 100.
+	// https://pkg.go.dev/github.com/aws/aws-sdk-go/service/route53#Route53.ListHostedZonesByName
 	input := route53.ListHostedZonesByNameInput{}
 	result, err := c.client.ListHostedZonesByName(&input)
 	if err != nil {
 		return nil, err
 	}
-	return result.HostedZones, nil
+	zonesWithTags := make([]HostedZone, 0, len(result.HostedZones))
+
+	for _, zone := range result.HostedZones {
+		hztype := route53.TagResourceTypeHostedzone
+		tags, err := c.client.ListTagsForResource(&route53.ListTagsForResourceInput{
+			ResourceType: &hztype,
+			ResourceId:   aws.String(*zone.Id),
+		})
+		if err != nil {
+			continue
+		}
+		zonesWithTags = append(zonesWithTags, HostedZone{
+			Zone: zone,
+			Tags: tags.ResourceTagSet.Tags,
+		})
+
+	}
+	return zonesWithTags, nil
 }
 
-// CheckIfHostedZoneBelongsToCluster returns true or false if the hosted zone is associated to a cluster Ingress (routers)
-func (c *AWSRoute53Connection) CheckIfHostedZoneBelongsToCluster(cluster *inventory.Cluster, hostedZone *route53.HostedZone) bool {
-	hztype := route53.TagResourceTypeHostedzone
-	output, err := c.client.ListTagsForResource(&route53.ListTagsForResourceInput{
-		ResourceType: &hztype,
-		ResourceId:   aws.String(*hostedZone.Id),
-	})
-	if err != nil {
-		return false
-	}
-
-	for _, tag := range output.ResourceTagSet.Tags {
+// ZoneBelongsToCluster returns true or false if the hosted zone is associated to a cluster Ingress (routers)
+func (c *AWSRoute53Connection) ZoneBelongsToCluster(cluster *inventory.Cluster, zoneWithTags HostedZone) bool {
+	for _, tag := range zoneWithTags.Tags {
 		if strings.Contains(*(tag.Key), cluster.Name) {
 			return true
 		}
@@ -73,11 +87,9 @@ func (c *AWSRoute53Connection) GetHostedZoneRecords(hostedZoneID string) ([]*rou
 			records = append(records, page.ResourceRecordSets...)
 			return !lastPage // Continue if there are more record pages
 		})
-
 	if err != nil {
 		return nil, fmt.Errorf("Error getting the DNS registries: %w", err)
 	}
 
 	return records, nil
-
 }

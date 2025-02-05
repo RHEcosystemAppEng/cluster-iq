@@ -2,6 +2,7 @@ package stocker
 
 import (
 	"strings"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws"
@@ -50,20 +51,22 @@ func (s *AWSStocker) getConsoleLinkOfCluster(cluster *inventory.Cluster, hostedZ
 
 // FindOpenshiftConsoleURLs iterates every Cluster and every Route53 HostedZone for looking for the corresponding URLs for the OCP console
 func (s *AWSStocker) FindOpenshiftConsoleURLs() error {
-	hostedZones, err := s.conn.Route53.GetRoute53HostedZones()
+	start := time.Now()
+	hostedZones, err := s.conn.Route53.GetZonesWithTags()
 	if err != nil {
 		return err
 	}
-
 	for i, cluster := range s.Account.Clusters {
 		for _, hostedZone := range hostedZones {
 			// Checking if the current hosted zone belongs to the current cluster
-			if s.conn.Route53.CheckIfHostedZoneBelongsToCluster(cluster, hostedZone) {
-				s.logger.Debug("Found Hosted Zone for Cluster", zap.String("hosted_zone_id", *hostedZone.Id), zap.String("cluster_id", cluster.ID))
-				s.Account.Clusters[i].ConsoleLink = s.getConsoleLinkOfCluster(cluster, hostedZone)
+			if s.conn.Route53.ZoneBelongsToCluster(cluster, hostedZone) {
+				s.logger.Debug("Found Hosted Zone for Cluster", zap.String("hosted_zone_id", *hostedZone.Zone.Name), zap.String("cluster_id", cluster.ID))
+
+				s.Account.Clusters[i].ConsoleLink = s.getConsoleLinkOfCluster(cluster, hostedZone.Zone)
 			}
 		}
 	}
-
+	s.logger.Debug("Finished finding OpenShift console URLs",
+		zap.Duration("duration", time.Since(start)))
 	return nil
 }
