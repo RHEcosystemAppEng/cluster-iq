@@ -30,16 +30,6 @@ jobs:
           sudo apt update
           sudo apt -y install podman
 
-      - name: Install Golang
-        run: |
-          sudo add-apt-repository ppa:longsleep/golang-backports
-          sudo apt update
-          sudo apt install golang-go
-
-      - name: Go tidy modules
-        run: |
-          go mod tidy
-
       - name: debug
         run: |
           ls -lartR .
