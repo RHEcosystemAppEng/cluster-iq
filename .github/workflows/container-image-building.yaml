@@ -15,9 +15,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on:
-      - self-hosted
-      - rhel-ubi
+    runs-on: ubuntu-latest
 
     permissions:
       contents: read
