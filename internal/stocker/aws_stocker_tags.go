@@ -1,9 +1,15 @@
 package stocker
 
+import (
+	"strings"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/aws/aws-sdk-go/service/ec2"
+)
+
 // getInfraIDFromTags search and return the infrastructure associted to the instance,
 // if it belongs to a cluster. Empty string is returned if the
 // instance doesn't belong to any cluster
-/*
 func getInfraIDFromTags(instance ec2.Instance) string {
 	var tags []ec2.Tag
 	tags = *(lookForTagByValue("owned", instance.Tags))
@@ -61,4 +67,14 @@ func lookForTagByValue(value string, tags []*ec2.Tag) *[]ec2.Tag {
 	}
 	return &resultTags
 }
-*/
+
+// lookForTagByKey returns an array of ec2.Tag with every tag found with the specified key
+func lookForTagByKey(key string, tags []*ec2.Tag) *[]ec2.Tag {
+	var resultTags []ec2.Tag
+	for _, tag := range tags {
+		if *tag.Key == key {
+			resultTags = append(resultTags, *tag)
+		}
+	}
+	return &resultTags
+}

@@ -9,4 +9,3 @@
 # Include specific folders
 !internal/
 !cmd/
-!generated/
