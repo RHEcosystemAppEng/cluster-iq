@@ -27,7 +27,8 @@ jobs:
 
       - name: Install Podman and Buildah
         run: |
-          sudo dnf install -y podman buildah skopeo
+          sudo apt update
+          sudo apt -y install podman
 
       - name: Login to Quay.io with Podman
         run: |
