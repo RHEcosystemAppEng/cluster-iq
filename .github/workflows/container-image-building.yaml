@@ -23,7 +23,7 @@ jobs:
       content: read
       packages: write
 
-		steps:
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -56,8 +56,8 @@ jobs:
               -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-${IMAGE}:${IMAGE_TAG} \
               -f ./deployments/containerfiles/Containerfile-${IMAGE} .
 
-						podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-${IMAGE}:${IMAGE_TAG}
+            podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-${IMAGE}:${IMAGE_TAG}
 
           done
 
-					podman logout
+          podman logout
