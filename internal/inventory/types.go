@@ -1,8 +1,6 @@
 package inventory
 
-import (
-	"strings"
-)
+import "strings"
 
 // InstanceStatus defines the status of the instance
 type InstanceStatus string

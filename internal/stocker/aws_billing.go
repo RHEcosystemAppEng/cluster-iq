@@ -1,53 +1,76 @@
 package stocker
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
-	cp "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_providers/aws"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/costexplorer"
 	"go.uber.org/zap"
 )
 
 // AWSBillingStocker object to obtain costs and expenses from AWS Cost Explorer API
 type AWSBillingStocker struct {
-	// Account to scan on this stocker
+	region  string
 	Account *inventory.Account
-	// Stocker Logger
-	logger *zap.Logger
-	// AWS connection interface
-	conn *cp.AWSConnection
-	// List of instances to obtain its expenses
+	logger  *zap.Logger
+	// AWS Session objects
+	apiSession          *session.Session
+	costExplorerSession *costexplorer.CostExplorer
+	// List of instances that needs expense updates
 	Instances []inventory.Instance
 }
 
-// NewAWSBillingStocker create and returns a pointer to a new AWSBillingStocker instance
+// NewAWSStocker create and returns a pointer to a new AWSStocker instance
 func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instances []inventory.Instance) *AWSBillingStocker {
-	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
-	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithCostExplorer())
-	if err != nil {
-		logger.Error("Error creating a new AWSBillingStocker", zap.Error(err))
+	st := AWSBillingStocker{Account: account, region: defaultAWSRegion, logger: logger, Instances: instances}
+
+	// Creating Session for the AWS API
+	if err := st.Connect(); err != nil {
+		st.logger.Error("Failed to initialize new session during AWSBillingStocker creation", zap.Error(err))
 		return nil
 	}
 
-	return &AWSBillingStocker{
-		Account:   account,
-		logger:    logger,
-		Instances: instances,
-		conn:      conn,
-	}
+	return &st
 }
 
-// Connect initialices the AWS API and CostExplorer sessions and clients
+// Connect Initialices the AWS API and CostExplorer sessions and clients
 func (s *AWSBillingStocker) Connect() error {
+	var err error
+	// Third argument (token) it's not used. For more info check docs: https://pkg.go.dev/github.com/aws/aws-sdk-go/aws/credentials#NewStaticCredentials
+	creds := credentials.NewStaticCredentials(s.Account.GetUser(), s.Account.GetPassword(), "")
+	if creds == nil {
+		return fmt.Errorf("Cannot obtain AWS credentials for Account: %s\n", s.Account.ID)
+	}
+
+	// Preparing AWSConfig
+	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(s.region)
+	if awsConfig == nil {
+		return fmt.Errorf("Cannot obtain AWS config for Account: %s\n", s.Account.ID)
+	}
+
+	// Creating Session for AWS API
+	s.apiSession, err = session.NewSession(awsConfig)
+	if err != nil {
+		s.logger.Error("Cannot Create new AWS client session", zap.Error(err))
+		return err
+	}
+
+	// Creating Session for AWS Cost Explorer
+	s.costExplorerSession = costexplorer.New(s.apiSession)
+	if s.costExplorerSession == nil {
+		return fmt.Errorf("Cannot obtain AWS Cost Explorer session for Account: %s\n", s.Account.ID)
+	}
+
 	s.logger.Info("AWS Session created", zap.String("account_id", s.Account.Name))
 	return nil
 }
 
-// MakeStock implements the Stocker interface. It starts the Stocker main
-// process getting the expenses of the instances stored in the Stocker object
+// MakeStock TODO
 func (s *AWSBillingStocker) MakeStock() error {
 	for i := range s.Account.Clusters {
 		cluster := s.Account.Clusters[i]
@@ -75,8 +98,8 @@ func (s *AWSBillingStocker) MakeStock() error {
 	return nil
 }
 
-// getInstanceExpenses gets from the AWS CostExplorer API the expenses of a given Instance.
-// TODO: Calculate date intervals
+//TODO: change argument to array of *instances
+//TODO: Calculate date intervals
 func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) error {
 	// Logic for Setting the period to fetch the Expenses within
 	// End date is equivalent to today's date
@@ -107,7 +130,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	}
 
 	// Fetch the Costs from AWS API
-	result, err := s.conn.CostExplorer.GetCostAndUsageWithResources(input)
+	result, err := s.costExplorerSession.GetCostAndUsageWithResources(input)
 	if err != nil {
 		s.logger.Error("Error getting cost and usage with resources", zap.String("instance_id", instance.ID), zap.Error(err))
 		return err
@@ -123,14 +146,12 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 					s.logger.Error("Error parsing cost amount", zap.Float64("amount", amount), zap.Error(err))
 					return err
 				}
-
 				// Getting Expense Date as Time
 				expenseDate, err := time.Parse(time.RFC3339, *resultByTime.TimePeriod.Start)
 				if err != nil {
 					s.logger.Error("Error parsing start date", zap.String("start", *resultByTime.TimePeriod.Start), zap.Error(err))
 					return err
 				}
-
 				instance.Expenses = append(instance.Expenses, *inventory.NewExpense(instance.ID, amount, expenseDate))
 			}
 		}
@@ -139,12 +160,12 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	return nil
 }
 
-// PrintStock prints the stock (account) of the AWSBillingStocker as a string
+// TODO: doc
 func (s AWSBillingStocker) PrintStock() {
 	s.Account.PrintAccount()
 }
 
-// GetResults returns the account configured for this stocker
+// TODO: doc
 func (s AWSBillingStocker) GetResults() inventory.Account {
 	return *s.Account
 }
