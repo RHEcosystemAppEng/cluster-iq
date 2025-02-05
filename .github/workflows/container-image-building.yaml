@@ -25,19 +25,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Podman and Buildah
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt -y install podman
 
-      - name: debug
-        run: |
-          ls -lartR .
-
       - name: Login to Quay.io with Podman
         run: |
           echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
 
       - name: Determine Image Tags
         id: vars
