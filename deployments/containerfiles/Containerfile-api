@@ -35,10 +35,11 @@ COPY . .
 # Installing swagger
 RUN go install github.com/swaggo/swag/cmd/swag@latest
 RUN export PATH=$PATH:$(go env GOPATH)/bin
+RUN ls -la
 RUN swag fmt
 RUN swag init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
 # gRPC code generation
-RUN mkdir ./generated
+RUN mkdir -p ./generated
 RUN protoc --go_out=./generated --go-grpc_out=./generated ./cmd/agent/proto/agent.proto
 # API building
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-api -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT}" ./cmd/api/*.go
