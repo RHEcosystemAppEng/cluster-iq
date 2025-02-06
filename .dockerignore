@@ -1,9 +1,6 @@
 # Ignore all files and directories
 **
 
-# Ignore swagger doc files
-cmd/api/docs
-
 # Include Go and mod files
 !*.go
 !*.mod
@@ -13,3 +10,6 @@ cmd/api/docs
 !internal/
 !cmd/
 !generated/
+#
+# Ignore swagger doc files
+cmd/api/docs
