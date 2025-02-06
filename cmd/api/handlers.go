@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -754,4 +756,61 @@ func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 		return
 	}
 	// This function doesn't return any 200OK code for preventing duplicated responses
+}
+
+// HandlerGetClusterEvents handles the request for obtain the list of events of a Cluster
+//
+//	@Summary		Obtain cluster events
+//	@Description	Returns a list of events belonging to a cluster given by ID
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	EventListResponse
+//	@Failure		500			{object}	nil
+//	@Router			/clusters/{cluster_id}/events [get]
+func (a APIServer) HandlerGetClusterEvents(c *gin.Context) {
+	// TODO. Add validation
+	clusterID := c.Param("cluster_id")
+
+	if clusterID == "" {
+		a.logger.Error("Empty cluster ID provided")
+		// TODO. Not the best way, we must clearly indicate to the client what the error is.
+		c.PureJSON(http.StatusBadRequest, nil)
+		return
+	}
+	a.logger.Debug("Retrieving cluster events", zap.String("cluster_id", clusterID))
+
+	dbEvents, err := a.sql.getClusterEvents(clusterID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// TODO. Error or Info? I guess it should be info
+			a.logger.Error("Cluster not found", zap.String("cluster_id", clusterID), zap.Error(err))
+			// TODO. 404 or 204??
+			c.PureJSON(http.StatusNotFound, nil)
+			return
+		}
+
+		a.logger.Error("Failed to retrieve cluster events",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	appEvents := make([]inventory.AuditEvent, len(dbEvents))
+	for i, dbEvent := range dbEvents {
+		appEvents[i] = inventory.AuditEvent{
+			ID:             dbEvent.ID,
+			ActionName:     dbEvent.ActionName,
+			EventTimestamp: dbEvent.EventTimestamp,
+			Reason:         dbEvent.Reason,
+			ResourceID:     dbEvent.ResourceID,
+			ResourceType:   dbEvent.ResourceType,
+			Result:         dbEvent.Result,
+			Severity:       dbEvent.Severity,
+			TriggeredBy:    dbEvent.TriggeredBy,
+		}
+	}
+	c.PureJSON(http.StatusOK, NewClusterEventsListResponse(appEvents))
 }

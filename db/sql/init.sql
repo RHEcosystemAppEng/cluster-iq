@@ -96,6 +96,21 @@ CREATE TABLE IF NOT EXISTS expenses (
   PRIMARY KEY (instance_id, date)
 );
 
+-- Audit logs
+CREATE TABLE IF NOT EXISTS audit_log (
+	id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY NOT NULL,
+	event_timestamp timestamptz DEFAULT CURRENT_TIMESTAMP,
+	triggered_by text NOT NULL,
+	action_name text NOT NULL,
+	resource_id text NOT NULL,
+	resource_type text NOT NULL,
+	result text NOT NULL,
+	reason text NULL,
+	severity text DEFAULT 'info'::text NOT NULL,
+	CONSTRAINT audit_log_pkey PRIMARY KEY (id),
+	CONSTRAINT audit_log_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+);
+
 -- ## Functions ##
 -- Updates the total cost of an instance after a new expense record is inserted
 CREATE OR REPLACE FUNCTION update_instance_total_costs_after_insert()

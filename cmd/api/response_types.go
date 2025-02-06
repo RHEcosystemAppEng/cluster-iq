@@ -48,6 +48,13 @@ type TagListResponse struct {
 	Tags  []inventory.Tag `json:"tags"`            // List of tags.
 }
 
+// EventListResponse represents the API response containing a list of audit events.
+// TODO. This repetitive code is definitely sh***y
+type EventListResponse struct {
+	Count  int                    `json:"count,omitempty"` // Number of events, omitted if empty.
+	Events []inventory.AuditEvent `json:"events"`          // List of events.
+}
+
 // NewTagListResponse creates a new TagListResponse instance.
 // It ensures that an empty array is returned if the input tag list is empty.
 //
@@ -244,4 +251,26 @@ func NewClusterStatusChangeResponse(accountName string, clusterID string, region
 		Instances:   instances,
 		Error:       err.Error(),
 	}
+}
+
+// TODO. this repetitive code is definitely sh***y
+// NewClusterEventsListResponse creates and returns an EventListResponse instance.
+func NewClusterEventsListResponse(events []inventory.AuditEvent) *EventListResponse {
+	numEvents := len(events)
+
+	// If there is no events, an empty array is returned instead of null
+	if numEvents == 0 {
+		events = []inventory.AuditEvent{}
+	}
+
+	response := EventListResponse{
+		Count:  numEvents,
+		Events: events,
+	}
+	// If there is more than one event, the response contains a 'count' field
+	if numEvents > 1 {
+		response.Count = numEvents
+	}
+
+	return &response
 }

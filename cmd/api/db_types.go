@@ -56,3 +56,27 @@ type InstanceDB struct {
 	// TotalCost represents the total cost of the instance in US dollars since its creation.
 	TotalCost float64 `db:"total_cost"`
 }
+
+// AuditLog represents an immutable record of an action taken within the system.
+// It provides key metadata such as the action performed, the resource involved,
+// the result, severity, and the user who triggered the event.
+type AuditLog struct {
+	// Unique identifier for the log entry.
+	ID int64 `db:"id"`
+	// Name of the action performed (e.g., "cluster_stopped").
+	ActionName string `db:"action_name"`
+	// UTC timestamp of when the action occurred.
+	EventTimestamp time.Time `db:"event_timestamp"`
+	// Optional reason for the action; can be nil.
+	Reason *string `db:"reason"`
+	// ID of the affected resource (e.g., cluster_id, instance_id).
+	ResourceID string `db:"resource_id"`
+	// Type of resource affected (e.g., "cluster", "instance").
+	ResourceType string `db:"resource_type"`
+	// Outcome of the action (e.g., "success", "error").
+	Result string `db:"result"`
+	// Log severity level (e.g., "info", "warning", "error").
+	Severity string `db:"severity"`
+	// User or system entity responsible for the action.
+	TriggeredBy string `db:"triggered_by"`
+}

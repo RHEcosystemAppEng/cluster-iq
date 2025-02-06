@@ -61,6 +61,7 @@ func (r *Router) setupClustersRoutes(baseGroup *gin.RouterGroup) {
 	clustersGroup.GET("/:cluster_id", r.api.HandlerGetClustersByID)
 	clustersGroup.GET("/:cluster_id/instances", r.api.HandlerGetInstancesOnCluster)
 	clustersGroup.GET("/:cluster_id/tags", r.api.HandlerGetClusterTags)
+	clustersGroup.GET("/:cluster_id/events", r.api.HandlerGetClusterEvents)
 	clustersGroup.POST("", r.api.HandlerPostCluster)
 	clustersGroup.POST("/:cluster_id/power_on", r.api.HandlerPowerOnCluster)
 	clustersGroup.POST("/:cluster_id/power_off", r.api.HandlerPowerOffCluster)
