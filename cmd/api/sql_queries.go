@@ -86,6 +86,22 @@ const (
 		SELECT * FROM clusters
 		ORDER BY name
 	`
+	// SelectClusterEvents returns audit log events related to a specific cluster.
+	SelectClusterEvents = `
+	SELECT 
+		al.id, 
+		al.event_timestamp, 
+		al.triggered_by, 
+		al.action_name,
+		al.resource_id, 
+		al.resource_type, 
+		al.result, 
+		al.reason, 
+		al.severity
+	FROM audit_log al
+	JOIN clusters c ON al.resource_id = c.id
+	WHERE c.id = $1 AND al.resource_type = 'cluster'
+	`
 
 	// SelectClusterAccountNameQuery returns an cluster by its Name
 	SelectClusterAccountNameQuery = `

@@ -566,3 +566,15 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 
 	return instances
 }
+
+// getClusterEvents retrieves audit log events associated with the given clusterID.
+// It queries the audit_log table for events linked to the specified cluster.
+// If the query fails, it returns an error and a nil slice.
+func (a APISQLClient) getClusterEvents(clusterID string) ([]AuditLog, error) {
+	var events []AuditLog
+	// TODO. Should we handle not existing cluster_id?
+	if err := a.db.Select(&events, SelectClusterEvents, clusterID); err != nil {
+		return nil, err
+	}
+	return events, nil
+}
