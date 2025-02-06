@@ -33,7 +33,8 @@ WORKDIR /app
 COPY . .
 
 # gRPC code generation
-RUN protoc --go_out=./generated --go-grpc_out=./generated ./cmd/agent/proto/agent.proto
+RUN mkdir -p ./generated && \
+  protoc --go_out=./generated --go-grpc_out=./generated ./cmd/agent/proto/agent.proto
 # Agent building
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cluster-iq-agent -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT}" ./cmd/agent
 
