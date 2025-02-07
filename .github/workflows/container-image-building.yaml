@@ -210,7 +210,7 @@ jobs:
       - scanner
     steps:
       - name: Validating
-        run:
+        run: |
           podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }}
           podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }}
           podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }}
