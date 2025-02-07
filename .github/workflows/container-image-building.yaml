@@ -6,7 +6,6 @@ on:
       - main
       - release-.*
       - release-.*-rc-.*
-      - feature/gh-actions-122
   pull_request:
     branches:
       - main
