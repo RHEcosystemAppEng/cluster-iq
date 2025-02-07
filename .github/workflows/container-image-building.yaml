@@ -44,6 +44,10 @@ jobs:
           echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "VERSION=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
+      - name: Login to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
 
   api:
     runs-on: ubuntu-latest
@@ -66,18 +70,9 @@ jobs:
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }} \
             -f ./deployments/containerfiles/Containerfile-api .
 
-      - name: Login to Quay.io
-        run: |
-          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
-
-      - name: Logout from Quay.io
-        if: always()
-        run: |
-          podman logout
 
   agent:
     runs-on: ubuntu-latest
@@ -100,18 +95,9 @@ jobs:
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }} \
             -f ./deployments/containerfiles/Containerfile-agent .
 
-      - name: Login to Quay.io
-        run: |
-          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
-
-      - name: Logout from Quay.io
-        if: always()
-        run: |
-          podman logout
 
   scanner:
     runs-on: ubuntu-latest
@@ -134,15 +120,19 @@ jobs:
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }} \
             -f ./deployments/containerfiles/Containerfile-scanner .
 
-      - name: Login to Quay.io
-        run: |
-          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
 
+
+  final:
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - api
+      - agent
+      - scanner
+    steps:
       - name: Logout from Quay.io
-        if: always()
         run: |
-          podman logout
+          podman logout quay.io
