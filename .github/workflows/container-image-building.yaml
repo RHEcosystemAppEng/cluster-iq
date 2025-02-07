@@ -42,19 +42,16 @@ jobs:
           COMMIT=$(git rev-parse --short HEAD)
           echo "COMMIT=${COMMIT}" >> $GITHUB_OUTPUT
 
+          # Getting version tag if available
           GIT_TAG=$(git tag --points-at HEAD | head -n 1)
           if [[ -n "$TAG" ]]; then
             echo "VERSION=$GIT_TAG" >> $GITHUB_OUTPUT
           fi
 
-        echo "Building Tags:
-          * COMMIT: ${COMMIT}
-          * VERSION: ${GIT_TAG}
-          * IMAGE_TAG: ${IMAGE_TAG}
-          "
-
-
-
+        echo "Building Tags:"
+        echo "  * COMMIT: ${COMMIT}"
+        echo "  * VERSION: ${GIT_TAG}"
+        echo "  * IMAGE_TAG: ${IMAGE_TAG}"
 
   api:
     runs-on: ubuntu-latest
