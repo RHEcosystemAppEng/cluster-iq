@@ -56,12 +56,13 @@ jobs:
     steps:
       - name: Container image building
         run: |
-            podman build \
-              --platform linux/amd64 \
-              --build-arg VERSION=${VERSION} \
-              --build-arg COMMIT=${COMMIT} \
-              -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${IMAGE_TAG} \
-              -f ./deployments/containerfiles/Containerfile-api .
+          echo "Building API (${IMAGE_TAG})"
+          podman build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${VERSION} \
+            --build-arg COMMIT=${COMMIT} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${IMAGE_TAG} \
+            -f ./deployments/containerfiles/Containerfile-api .
 
       - name: Login to Quay.io
         run: |
@@ -86,12 +87,13 @@ jobs:
     steps:
       - name: Container image building
         run: |
-            podman build \
-              --platform linux/amd64 \
-              --build-arg VERSION=${VERSION} \
-              --build-arg COMMIT=${COMMIT} \
-              -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${IMAGE_TAG} \
-              -f ./deployments/containerfiles/Containerfile-agent .
+          echo "Building Agent (${IMAGE_TAG})"
+          podman build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${VERSION} \
+            --build-arg COMMIT=${COMMIT} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${IMAGE_TAG} \
+            -f ./deployments/containerfiles/Containerfile-agent .
 
       - name: Login to Quay.io
         run: |
@@ -116,12 +118,13 @@ jobs:
     steps:
       - name: Container image building
         run: |
-            podman build \
-              --platform linux/amd64 \
-              --build-arg VERSION=${VERSION} \
-              --build-arg COMMIT=${COMMIT} \
-              -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${IMAGE_TAG} \
-              -f ./deployments/containerfiles/Containerfile-scanner .
+          echo "Building Scanner (${IMAGE_TAG})"
+          podman build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${VERSION} \
+            --build-arg COMMIT=${COMMIT} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${IMAGE_TAG} \
+            -f ./deployments/containerfiles/Containerfile-scanner .
 
       - name: Login to Quay.io
         run: |
