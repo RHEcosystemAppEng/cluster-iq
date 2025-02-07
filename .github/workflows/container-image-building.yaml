@@ -30,18 +30,29 @@ jobs:
       - name: Determine Image Tags
         id: vars
         run: |
+          # Getting IMAGE_TAG
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             IMAGE_TAG="latest"
           else
             IMAGE_TAG=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///' | tr '/' '-')
           fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+          # Getting Commit hash
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "COMMIT=${COMMIT}" >> $GITHUB_OUTPUT
 
           GIT_TAG=$(git tag --points-at HEAD | head -n 1)
           if [[ -n "$TAG" ]]; then
             echo "VERSION=$GIT_TAG" >> $GITHUB_OUTPUT
           fi
+
+        echo "Building Tags:
+          * COMMIT: ${COMMIT}
+          * VERSION: ${GIT_TAG}
+          * IMAGE_TAG: ${IMAGE_TAG}
+          "
+
 
 
 
@@ -203,6 +214,6 @@ jobs:
     steps:
       - name: Validating
         run:
-          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
-          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
-          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
+          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }}
+          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }}
+          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }}
