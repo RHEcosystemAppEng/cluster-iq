@@ -48,10 +48,10 @@ jobs:
             echo "VERSION=$GIT_TAG" >> $GITHUB_OUTPUT
           fi
 
-        echo "Building Tags:"
-        echo "  * COMMIT: ${COMMIT}"
-        echo "  * VERSION: ${GIT_TAG}"
-        echo "  * IMAGE_TAG: ${IMAGE_TAG}"
+          echo "Building Tags:"
+          echo "  * COMMIT: ${COMMIT}"
+          echo "  * VERSION: ${GIT_TAG}"
+          echo "  * IMAGE_TAG: ${IMAGE_TAG}"
 
   api:
     runs-on: ubuntu-latest
