@@ -53,6 +53,9 @@ jobs:
       packages: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Container image building
         run: |
           echo "Building API (${{ needs.setup.outputs.IMAGE_TAG }})"
@@ -84,6 +87,9 @@ jobs:
       packages: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Container image building
         run: |
           echo "Building Agent (${{ needs.setup.outputs.IMAGE_TAG }})"
@@ -115,6 +121,9 @@ jobs:
       packages: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Container image building
         run: |
           echo "Building Scanner (${{ needs.setup.outputs.IMAGE_TAG }})"
