@@ -40,9 +40,9 @@ jobs:
           else
             TAG=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///' | tr '/' '-')
           fi
-          echo "IMAGE_TAG=${TAG}" >> $GITHUB_ENV
-          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "VERSION=$(cat ./VERSION)" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "VERSION=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
 
   api:
@@ -55,12 +55,12 @@ jobs:
     steps:
       - name: Container image building
         run: |
-          echo "Building API (${{ env.IMAGE_TAG }})"
+          echo "Building API (${{ needs.setup.outputs.IMAGE_TAG }})"
           podman build \
             --platform linux/amd64 \
-            --build-arg VERSION=${{ env.VERSION }} \
-            --build-arg COMMIT=${{ env.COMMIT }} \
-            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ env.IMAGE_TAG }} \
+            --build-arg VERSION=${{ needs.setup.outputs.VERSION }} \
+            --build-arg COMMIT=${{ needs.setup.outputs.COMMIT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }} \
             -f ./deployments/containerfiles/Containerfile-api .
 
       - name: Login to Quay.io
@@ -69,7 +69,7 @@ jobs:
 
       - name: Container image pushing
         run: |
-          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ env.IMAGE_TAG }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
 
       - name: Logout from Quay.io
         if: always()
@@ -86,12 +86,12 @@ jobs:
     steps:
       - name: Container image building
         run: |
-          echo "Building Agent (${{ env.IMAGE_TAG }})"
+          echo "Building Agent (${{ needs.setup.outputs.IMAGE_TAG }})"
           podman build \
             --platform linux/amd64 \
-            --build-arg VERSION=${{ env.VERSION }} \
-            --build-arg COMMIT=${{ env.COMMIT }} \
-            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ env.IMAGE_TAG }} \
+            --build-arg VERSION=${{ needs.setup.outputs.VERSION }} \
+            --build-arg COMMIT=${{ needs.setup.outputs.COMMIT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }} \
             -f ./deployments/containerfiles/Containerfile-agent .
 
       - name: Login to Quay.io
@@ -100,7 +100,7 @@ jobs:
 
       - name: Container image pushing
         run: |
-          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ env.IMAGE_TAG }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
 
       - name: Logout from Quay.io
         if: always()
@@ -117,12 +117,12 @@ jobs:
     steps:
       - name: Container image building
         run: |
-          echo "Building Scanner (${{ env.IMAGE_TAG }})"
+          echo "Building Scanner (${{ needs.setup.outputs.IMAGE_TAG }})"
           podman build \
             --platform linux/amd64 \
-            --build-arg VERSION=${{ env.VERSION }} \
-            --build-arg COMMIT=${{ env.COMMIT }} \
-            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ env.IMAGE_TAG }} \
+            --build-arg VERSION=${{ needs.setup.outputs.VERSION }} \
+            --build-arg COMMIT=${{ needs.setup.outputs.COMMIT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }} \
             -f ./deployments/containerfiles/Containerfile-scanner .
 
       - name: Login to Quay.io
@@ -131,7 +131,7 @@ jobs:
 
       - name: Container image pushing
         run: |
-          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ env.IMAGE_TAG }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
 
       - name: Logout from Quay.io
         if: always()
