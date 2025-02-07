@@ -31,13 +31,17 @@ jobs:
         id: vars
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            TAG="latest"
+            IMAGE_TAG="latest"
           else
-            TAG=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///' | tr '/' '-')
+            IMAGE_TAG=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///' | tr '/' '-')
           fi
-          echo "IMAGE_TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "VERSION=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+
+          GIT_TAG=$(git tag --points-at HEAD | head -n 1)
+          if [[ -n "$TAG" ]]; then
+            echo "VERSION=$GIT_TAG" >> $GITHUB_OUTPUT
+          fi
 
 
 
@@ -66,21 +70,25 @@ jobs:
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
             -f ./deployments/containerfiles/Containerfile-api .
 
-      - name: Tagging image
+      - name: Tagging images
         run: |
           podman tag \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
 
-          podman tag \
-            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
-            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.VERSION }}
-
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }}
-          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.VERSION }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Generating fixed version image
+        if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
+        run: |
+          echo "Building Tagged version image: ${{ needs.setup.outputs.VERSION }}"
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.VERSION }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.VERSION }}
 
       - name: Logout from Quay.io
         run: |
@@ -111,21 +119,25 @@ jobs:
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
             -f ./deployments/containerfiles/Containerfile-agent .
 
-      - name: Tagging image
+      - name: Tagging images
         run: |
           podman tag \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
 
-          podman tag \
-            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
-            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.VERSION }}
-
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }}
-          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.VERSION }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Generating fixed version image
+        if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
+        run: |
+          echo "Building Tagged version image: ${{ needs.setup.outputs.VERSION }}"
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.VERSION }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.VERSION }}
 
       - name: Logout from Quay.io
         run: |
@@ -156,21 +168,25 @@ jobs:
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
             -f ./deployments/containerfiles/Containerfile-scanner .
 
-      - name: Tagging image
+      - name: Tagging images
         run: |
           podman tag \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
 
-          podman tag \
-            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
-            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.VERSION }}
-
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }}
-          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.VERSION }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Generating fixed version image
+        if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
+        run: |
+          echo "Building Tagged version image: ${{ needs.setup.outputs.VERSION }}"
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.VERSION }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.VERSION }}
 
       - name: Logout from Quay.io
         run: |
