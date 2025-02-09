@@ -3,11 +3,16 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
+
+// Ensure APISQLClient implements SQLEventClient
+var _ events.SQLEventClient = (*APISQLClient)(nil)
 
 // APISQLClient defines the SQL interface for the API to interact with the database.
 // It manages database connections and provides methods for interacting with various entities like instances, clusters, accounts, and expenses.
@@ -16,6 +21,59 @@ type APISQLClient struct {
 	db *sqlx.DB
 	// logger is used for logging database operations and errors.
 	logger *zap.Logger
+}
+
+// getClusterEvents retrieves audit log events associated with the given clusterID.
+// It queries the audit_log table for events linked to the specified cluster.
+// If the query fails, it returns an error and a nil slice.
+func (a APISQLClient) getClusterEvents(clusterID string) ([]models.AuditLog, error) {
+	var clusterEvents []models.AuditLog
+	// TODO. Should we handle not existing cluster_id?
+	if err := a.db.Select(&clusterEvents, SelectClusterEvents, clusterID); err != nil {
+		return nil, err
+	}
+	return clusterEvents, nil
+}
+
+const (
+	UpdateEventStatusQuery = `UPDATE audit_log SET result=$1 WHERE id=$2`
+)
+
+func (a APISQLClient) AddEvent(event models.AuditLog) (int64, error) {
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var eventID int64
+	row, err := tx.NamedQuery(InsertEvent, event)
+	if err == nil && row.Next() {
+		err = row.Scan(&eventID)
+	} else {
+		err = fmt.Errorf("failed to retrieve inserted event ID")
+	}
+	if err != nil {
+		a.logger.Error("Failed to insert event", zap.Error(err), zap.Reflect("event", event))
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return eventID, nil
+}
+
+func (a APISQLClient) UpdateEventStatus(eventID int64, result string) error {
+	_, err := a.db.Exec(UpdateEventStatusQuery, result, eventID)
+	if err != nil {
+		a.logger.Error("Failed to update event status", zap.Int64("event_id", eventID), zap.Error(err))
+	}
+	return err
 }
 
 // NewAPISQLClient initializes a new APISQLClient with the given database URL and logger.
@@ -115,7 +173,7 @@ func (a APISQLClient) writeExpenses(expenses []inventory.Expense) error {
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
 func (a APISQLClient) getInstances() ([]inventory.Instance, error) {
-	var dbinstances []InstanceDB
+	var dbinstances []models.InstanceDB
 	if err := a.db.Select(&dbinstances, SelectInstancesQuery); err != nil {
 		return nil, err
 	}
@@ -134,7 +192,7 @@ func (a APISQLClient) getInstances() ([]inventory.Instance, error) {
 // - A slice of inventory.Instance objects (usually one element).
 // - An error if the query fails.
 func (a APISQLClient) getInstanceByID(instanceID string) ([]inventory.Instance, error) {
-	var dbinstances []InstanceDB
+	var dbinstances []models.InstanceDB
 	if err := a.db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
 	}
@@ -530,7 +588,7 @@ func (a APISQLClient) checkStatusValue(status string) (bool, error) {
 //
 // Returns:
 // - A slice of inventory.Instance objects.
-func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
+func joinInstancesTags(dbinstances []models.InstanceDB) []inventory.Instance {
 	instanceMap := make(map[string]*inventory.Instance)
 	for _, dbinstance := range dbinstances {
 		if _, ok := instanceMap[dbinstance.ID]; ok {
@@ -565,16 +623,4 @@ func joinInstancesTags(dbinstances []InstanceDB) []inventory.Instance {
 	}
 
 	return instances
-}
-
-// getClusterEvents retrieves audit log events associated with the given clusterID.
-// It queries the audit_log table for events linked to the specified cluster.
-// If the query fails, it returns an error and a nil slice.
-func (a APISQLClient) getClusterEvents(clusterID string) ([]AuditLog, error) {
-	var events []AuditLog
-	// TODO. Should we handle not existing cluster_id?
-	if err := a.db.Select(&events, SelectClusterEvents, clusterID); err != nil {
-		return nil, err
-	}
-	return events, nil
 }

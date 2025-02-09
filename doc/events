@@ -1,0 +1,36 @@
+User/Client -> APIServer: Request to Power On Cluster
+APIServer -> ValidateRequest: Validate cluster_id and reason (if provided)
+ValidateRequest -> APIServer: Returns validated request or error
+APIServer -> EventService: Log "Pending" event in DB
+EventService -> Database: Insert audit log entry
+Database -> EventService: Return event ID
+EventService -> APIServer: Return event ID
+
+APIServer -> APISQLClient: Fetch cluster details (AccountName, Region)
+APISQLClient -> Database: Query cluster information
+Database -> APISQLClient: Return cluster details
+APISQLClient -> APISQLClient: Fetch cluster instances
+APISQLClient -> Database: Query instances in cluster
+Database -> APISQLClient: Return instances list
+APISQLClient -> APIServer: If no instances, return error
+
+APIServer -> EventService: Update event status to "Failed"
+EventService -> Database: Update event status
+Database -> EventService: Acknowledgement
+APIServer -> User/Client: Return "No instances found for Cluster" error
+
+APIServer -> gRPCService: Send PowerOn request
+gRPCService -> Cloud Provider: Process power on
+Cloud Provider -> gRPCService: Response (Success/Failure)
+gRPCService -> APIServer: Return response
+
+APIServer -> EventService: Update event status to "Success" or "Failed"
+EventService -> Database: Update event status
+Database -> EventService: Acknowledgement
+
+APIServer -> APISQLClient: Update Cluster status in DB
+APISQLClient -> Database: Update cluster state to "Running"
+Database -> APISQLClient: Acknowledgement
+APISQLClient -> APIServer: Acknowledgement
+
+APIServer -> User/Client: Return response (200 OK or Error)

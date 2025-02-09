@@ -86,6 +86,27 @@ const (
 		SELECT * FROM clusters
 		ORDER BY name
 	`
+	// InsertEvent insert a new audit event
+	InsertEvent = `
+    INSERT INTO audit_log(
+        event_timestamp,
+        triggered_by,
+        action_name,
+        resource_id,
+        resource_type,
+        result,
+        reason,
+        severity
+    ) VALUES (
+        CURRENT_TIMESTAMP,
+        :triggered_by,
+        :action_name,
+        :resource_id,
+        :resource_type,
+        :result,
+        :reason,
+        :severity
+    ) RETURNING id`
 	// SelectClusterEvents returns audit log events related to a specific cluster.
 	SelectClusterEvents = `
 	SELECT 

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"net/http"
 	"os"
 	"os/signal"
@@ -39,12 +40,13 @@ var (
 
 // APIServer represents the API server, including configuration, logger, router, and clients for gRPC and SQL.
 type APIServer struct {
-	cfg    *config.APIServerConfig // Configuration for the API server
-	logger *zap.Logger             // Logger instance
-	router *gin.Engine             // Gin router for handling HTTP requests
-	server *http.Server            // HTTP server instance
-	grpc   *APIGRPCClient          // gRPC client for communication with external services
-	sql    *APISQLClient           // SQL client for database operations
+	cfg          *config.APIServerConfig // Configuration for the API server
+	logger       *zap.Logger             // Logger instance
+	router       *gin.Engine             // Gin router for handling HTTP requests
+	server       *http.Server            // HTTP server instance
+	grpc         *APIGRPCClient          // gRPC client for communication with external services
+	sql          *APISQLClient           // SQL client for database operations
+	eventService *events.EventService    // Service for handling audit logs
 }
 
 // NewAPIServer initializes a new instance of the APIServer.
@@ -72,6 +74,7 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}
 
+	eventService := events.NewEventService(sqlClient)
 	apiServer := &APIServer{
 		cfg:    cfg,
 		logger: logger,
@@ -80,8 +83,9 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 			Addr:    cfg.ListenURL,
 			Handler: engine,
 		},
-		grpc: gRPCClient,
-		sql:  sqlClient,
+		grpc:         gRPCClient,
+		sql:          sqlClient,
+		eventService: eventService,
 	}
 
 	// Initialize routes
