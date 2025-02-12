@@ -9,66 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// AuditEvent represents an action taken within the system.
-// It provides key metadata such as the action performed, the resource involved,
-// the result, severity, and the user who triggered the event.
-type AuditEvent struct {
-	// Unique identifier for the log entry.
-	ID int64 `json:"id"`
-	// Name of the action performed (e.g., "cluster_stopped").
-	ActionName string `json:"action_name"`
-	// UTC timestamp of when the action occurred.
-	EventTimestamp time.Time `json:"event_timestamp"`
-	// Optional reason for the action; can be nil.
-	Reason *string `json:"reason,omitempty"`
-	// ID of the affected resource (e.g., cluster_id, instance_id).
-	ResourceID string `json:"resource_id"`
-	// Type of resource affected (e.g., "cluster", "instance").
-	ResourceType string `json:"resource_type"`
-	// Outcome of the action (e.g., "success", "error").
-	Result string `json:"result"`
-	// Log severity level (e.g., "info", "warning", "error").
-	Severity string `json:"severity"`
-	// User or system entity responsible for the action.
-	TriggeredBy string `json:"triggered_by"`
-}
-
-const (
-	ResultPending = "Pending"
-	ResultSuccess = "Success"
-	ResultFailed  = "Failed"
-
-	SeverityInfo    = "Info"
-	SeverityError   = "Error"
-	SeverityWarning = "Warning"
-
-	ClusterPowerOnAction  = "PowerOn"
-	ClusterPowerOffAction = "PowerOff"
-
-	ClusterResourceType  = "cluster"
-	InstanceResourceType = "instance"
-)
-
-type SQLEventClient interface {
-	AddEvent(event models.AuditLog) (int64, error)
-	UpdateEventStatus(eventID int64, result string) error
-}
-
-type EventService struct {
-	sqlClient SQLEventClient
-	logger    *zap.Logger
-}
-
-type EventOptions struct {
-	Action       string
-	Reason       *string
-	ResourceID   string
-	ResourceType string
-	Result       string
-	Severity     string
-	TriggeredBy  string
-}
-
 func NewEventService(sqlClient SQLEventClient, logger *zap.Logger) *EventService {
 	return &EventService{
 		sqlClient: sqlClient,
@@ -104,6 +44,32 @@ func (e *EventService) UpdateEventStatus(eventID int64, result string) error {
 		return err
 	}
 	return nil
+}
+
+func (e *EventService) StartTracking(opts *EventOptions) *EventTracker {
+	eventID, err := e.LogEvent(*opts)
+	if err != nil {
+		e.logger.Error("Failed to log initial event", zap.Error(err))
+		return nil
+	}
+
+	return &EventTracker{
+		eventID: eventID,
+		service: e,
+		logger:  e.logger,
+	}
+}
+
+func (t *EventTracker) Success() {
+	if err := t.service.UpdateEventStatus(t.eventID, ResultSuccess); err != nil {
+		t.logger.Error("Failed to update event status", zap.Error(err))
+	}
+}
+
+func (t *EventTracker) Failed() {
+	if err := t.service.UpdateEventStatus(t.eventID, ResultFailed); err != nil {
+		t.logger.Error("Failed to update event status", zap.Error(err))
+	}
 }
 
 func ToAuditEvents(logs []models.AuditLog) []AuditEvent {

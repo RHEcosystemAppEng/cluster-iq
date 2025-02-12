@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -444,6 +445,7 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 //	@Failure		500			{object}	nil
 //	@Router			/clusters/{cluster_id}/power_on [post]
 func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
+	// TODO. We must add validation logic (middleware, validator, whatever)
 	clusterID := c.Param("cluster_id")
 
 	var request struct {
@@ -456,50 +458,54 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 		return
 	}
 
-	a.logger.Debug("Powering On Cluster",
+	a.logger.Debug("Power On Cluster request received",
 		zap.String("cluster_id", clusterID),
 		zap.String("triggered_by", request.TriggeredBy))
 
-	// Log initial event
-	// TODO maybe simplify to success/failed without pending?
-	eventID, err := a.eventService.LogEvent(events.EventOptions{
-		Action:       events.ClusterPowerOnAction,
-		Reason:       request.Reason,
-		ResourceID:   clusterID,
-		ResourceType: events.ClusterResourceType,
-		Result:       events.ResultPending,
-		Severity:     events.SeverityInfo,
-		TriggeredBy:  request.TriggeredBy,
-	})
-	// Should we stop and return????
+	resp, err := a.handlePowerOn(clusterID, request.TriggeredBy, request.Reason)
 	if err != nil {
-		a.logger.Error("Failed to log initial event",
+		a.logger.Error("Failed to power on cluster",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("Failed to log event"))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
+	c.PureJSON(http.StatusOK, resp)
+}
+
+func (a APIServer) handlePowerOn(clusterID, triggeredBy string, reason *string) (*ClusterStatusChangeResponse, error) {
+	a.logger.Debug("Powering On Cluster",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", triggeredBy))
+
+	// Initialize event tracker
+	tracker := a.eventService.StartTracking(&events.EventOptions{
+		Action:       inventory.ClusterPowerOnAction,
+		Reason:       reason,
+		ResourceID:   clusterID,
+		ResourceType: inventory.ClusterResourceType,
+		Result:       events.ResultPending,
+		Severity:     events.SeverityInfo,
+		TriggeredBy:  triggeredBy,
+	})
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
-		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
-		// TODO. Should we update the status here???
-		if updateErr := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); updateErr != nil {
-			a.logger.Error("Failed to update event status", zap.Error(updateErr))
-		}
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("cannot get cluster status: %w", err)
 	}
 
 	// RPC call for power on a cluster
 	if err := a.grpc.PowerOnCluster(cscr); err != nil {
-		a.logger.Error("Error processing Cluster Power On request", zap.String("cluster_id", clusterID), zap.Error(err))
-		if updateErr := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); updateErr != nil {
-			a.logger.Error("Failed to update event status", zap.Error(updateErr))
-		}
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Error processing Cluster Power On request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("error processing power on request: %w", err)
 	}
 
 	a.logger.Info("Cluster Powered On successfully", zap.String("cluster_id", clusterID))
@@ -509,28 +515,21 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 		a.logger.Error("Error updating status in DB",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
-		if err := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); err != nil {
-			a.logger.Error("Failed to update event status", zap.Error(err))
-		}
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		tracker.Failed()
+		return nil, fmt.Errorf("error updating cluster status: %w", err)
 	}
 
 	// Log successful completion
-	if err := a.eventService.UpdateEventStatus(eventID, events.ResultSuccess); err != nil {
-		a.logger.Error("Failed to update event status", zap.Error(err))
-	}
+	tracker.Success()
 
-	c.PureJSON(http.StatusOK,
-		NewClusterStatusChangeResponse(
-			cscr.AccountName,
-			cscr.ClusterID,
-			cscr.Region,
-			inventory.Running,
-			cscr.InstancesIdList,
-			nil,
-		),
-	)
+	return NewClusterStatusChangeResponse(
+		cscr.AccountName,
+		cscr.ClusterID,
+		cscr.Region,
+		inventory.Running,
+		cscr.InstancesIdList,
+		nil,
+	), nil
 }
 
 // HandlerPowerOffCluster handles graceful shutdown of cluster instances
@@ -545,88 +544,91 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 //	@Failure		500			{object}	nil
 //	@Router			/clusters/{cluster_id}/power_off [post]
 func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
+	// TODO. We must add validation logic (middleware, validator, whatever)
 	clusterID := c.Param("cluster_id")
+
 	var request struct {
 		TriggeredBy string  `json:"triggered_by"`
 		Reason      *string `json:"reason,omitempty"`
 	}
+
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("Invalid request body"))
 		return
 	}
 
-	a.logger.Debug("Powering Off Cluster",
+	a.logger.Debug("Power Off Cluster request received",
 		zap.String("cluster_id", clusterID),
 		zap.String("triggered_by", request.TriggeredBy))
 
-	// Log initial event
-	// TODO maybe simplify to success/failed without pending?
-	eventID, err := a.eventService.LogEvent(events.EventOptions{
-		Action:       "PowerOff",
-		Reason:       request.Reason,
-		ResourceID:   clusterID,
-		ResourceType: "cluster",
-		Result:       events.ResultPending,
-		Severity:     events.SeverityWarning,
-		TriggeredBy:  request.TriggeredBy,
-	})
-	// Should we stop and return????
+	resp, err := a.handlePowerOff(clusterID, request.TriggeredBy, request.Reason)
 	if err != nil {
-		a.logger.Error("Failed to log initial event",
+		a.logger.Error("Failed to power off cluster",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("Failed to log event"))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
+	c.PureJSON(http.StatusOK, resp)
+}
+
+func (a APIServer) handlePowerOff(clusterID, triggeredBy string, reason *string) (*ClusterStatusChangeResponse, error) {
+	a.logger.Debug("Powering Off Cluster",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", triggeredBy))
+
+	// Initialize event tracker
+	tracker := a.eventService.StartTracking(&events.EventOptions{
+		Action:       inventory.ClusterPowerOffAction,
+		Reason:       reason,
+		ResourceID:   clusterID,
+		ResourceType: inventory.ClusterResourceType,
+		Result:       events.ResultPending,
+		Severity:     events.SeverityWarning,
+		TriggeredBy:  triggeredBy,
+	})
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
-		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOff gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
-		// TODO. Should we update the status here???
-		if updateErr := a.eventService.UpdateEventStatus(eventID, "Failed"); updateErr != nil {
-			a.logger.Error("Failed to update event status", zap.Error(updateErr))
-		}
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOff gRPC request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("cannot get cluster status: %w", err)
 	}
 
-	// RPC call for power off a cluster
+	// RPC call for power on a cluster
 	if err := a.grpc.PowerOffCluster(cscr); err != nil {
-		a.logger.Error("Error processing Cluster Power Off request", zap.String("cluster_id", clusterID), zap.Error(err))
-		if updateErr := a.eventService.UpdateEventStatus(eventID, "Failed"); updateErr != nil {
-			a.logger.Error("Failed to update event status", zap.Error(updateErr))
-		}
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Error processing Cluster Power Off request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("error processing power off request: %w", err)
 	}
+
 	a.logger.Info("Cluster Powered Off successfully", zap.String("cluster_id", clusterID))
 
-	// Updating Cluster Status on the DB
-	if err := a.sql.updateClusterStatusByClusterID("Stopped", clusterID); err != nil {
-		a.logger.Error("Error updating status on DB when powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		if err := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); err != nil {
-			a.logger.Error("Failed to update event status", zap.Error(err))
-		}
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+	// Update cluster status in DB
+	if err := a.sql.updateClusterStatusByClusterID("Running", clusterID); err != nil {
+		a.logger.Error("Error updating status in DB",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("error updating cluster status: %w", err)
 	}
 
-	// Update events
-	if err := a.eventService.UpdateEventStatus(eventID, events.ResultSuccess); err != nil {
-		a.logger.Error("Failed to update event status", zap.Error(err))
-	}
+	// Log successful completion
+	tracker.Success()
 
-	c.PureJSON(http.StatusOK,
-		NewClusterStatusChangeResponse(
-			cscr.AccountName,
-			cscr.ClusterID,
-			cscr.Region,
-			inventory.Running,
-			cscr.InstancesIdList,
-			nil,
-		),
-	)
+	return NewClusterStatusChangeResponse(
+		cscr.AccountName,
+		cscr.ClusterID,
+		cscr.Region,
+		inventory.Stopped,
+		cscr.InstancesIdList,
+		nil,
+	), nil
 }
 
 // HandlerDeleteCluster handles the request for removing a Cluster in the inventory
