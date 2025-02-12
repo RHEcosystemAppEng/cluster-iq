@@ -1,0 +1,215 @@
+name: Cluster IQ Container image building
+
+on:
+  push:
+    branches:
+      - main
+      - release-.*
+      - release-.*-rc-.*
+  pull_request:
+    branches:
+      - main
+      - release-.*
+      - release-.*-rc-.*
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      IMAGE_TAG: ${{ steps.vars.outputs.IMAGE_TAG }}
+      COMMIT: ${{ steps.vars.outputs.COMMIT }}
+      VERSION: ${{ steps.vars.outputs.VERSION }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine Image Tags
+        id: vars
+        run: |
+          # Getting IMAGE_TAG
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            IMAGE_TAG="latest"
+          else
+            IMAGE_TAG=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///' | tr '/' '-')
+          fi
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+          # Getting Commit hash
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "COMMIT=${COMMIT}" >> $GITHUB_OUTPUT
+
+          # Getting version tag if available
+          GIT_TAG=$(git tag --points-at HEAD | head -n 1)
+          if [[ -n "$TAG" ]]; then
+            echo "VERSION=$GIT_TAG" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Building Tags:"
+          echo "  * COMMIT: ${COMMIT}"
+          echo "  * VERSION: ${GIT_TAG}"
+          echo "  * IMAGE_TAG: ${IMAGE_TAG}"
+
+  api:
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
+      - name: Container image building
+        run: |
+          echo "Building API (${{ needs.setup.outputs.IMAGE_TAG }})"
+          podman build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${{ needs.setup.outputs.VERSION }} \
+            --build-arg COMMIT=${{ needs.setup.outputs.COMMIT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
+            -f ./deployments/containerfiles/Containerfile-api .
+
+      - name: Tagging images
+        run: |
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Container image pushing
+        run: |
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Generating fixed version image
+        if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
+        run: |
+          echo "Building Tagged version image: ${{ needs.setup.outputs.VERSION }}"
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.VERSION }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.VERSION }}
+
+      - name: Logout from Quay.io
+        run: |
+          podman logout quay.io
+
+  agent:
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
+      - name: Container image building
+        run: |
+          echo "Building Agent (${{ needs.setup.outputs.IMAGE_TAG }})"
+          podman build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${{ needs.setup.outputs.VERSION }} \
+            --build-arg COMMIT=${{ needs.setup.outputs.COMMIT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
+            -f ./deployments/containerfiles/Containerfile-agent .
+
+      - name: Tagging images
+        run: |
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Container image pushing
+        run: |
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Generating fixed version image
+        if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
+        run: |
+          echo "Building Tagged version image: ${{ needs.setup.outputs.VERSION }}"
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.VERSION }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.VERSION }}
+
+      - name: Logout from Quay.io
+        run: |
+          podman logout quay.io
+
+  scanner:
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
+      - name: Container image building
+        run: |
+          echo "Building Scanner (${{ needs.setup.outputs.IMAGE_TAG }})"
+          podman build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${{ needs.setup.outputs.VERSION }} \
+            --build-arg COMMIT=${{ needs.setup.outputs.COMMIT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
+            -f ./deployments/containerfiles/Containerfile-scanner .
+
+      - name: Tagging images
+        run: |
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Container image pushing
+        run: |
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Generating fixed version image
+        if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
+        run: |
+          echo "Building Tagged version image: ${{ needs.setup.outputs.VERSION }}"
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.VERSION }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.VERSION }}
+
+      - name: Logout from Quay.io
+        run: |
+          podman logout quay.io
+
+
+  final:
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - api
+      - agent
+      - scanner
+    steps:
+      - name: Validating
+        run: |
+          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }}
+          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }}
+          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }}
