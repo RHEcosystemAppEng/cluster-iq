@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
@@ -51,8 +52,8 @@ type TagListResponse struct {
 // EventListResponse represents the API response containing a list of audit events.
 // TODO. This repetitive code is definitely sh***y
 type EventListResponse struct {
-	Count  int          `json:"count,omitempty"` // Number of events, omitted if empty.
-	Events []AuditEvent `json:"events"`          // List of events.
+	Count  int                 `json:"count,omitempty"` // Number of events, omitted if empty.
+	Events []events.AuditEvent `json:"events"`          // List of events.
 }
 
 // NewTagListResponse creates a new TagListResponse instance.
@@ -254,17 +255,17 @@ func NewClusterStatusChangeResponse(accountName string, clusterID string, region
 }
 
 // NewClusterEventsListResponse creates and returns an EventListResponse instance.
-func NewClusterEventsListResponse(events []AuditEvent) *EventListResponse {
-	numEvents := len(events)
+func NewClusterEventsListResponse(auditEvents []events.AuditEvent) *EventListResponse {
+	numEvents := len(auditEvents)
 
 	// If there is no events, an empty array is returned instead of null
 	if numEvents == 0 {
-		events = []AuditEvent{}
+		auditEvents = []events.AuditEvent{}
 	}
 
 	response := EventListResponse{
 		Count:  numEvents,
-		Events: events,
+		Events: auditEvents,
 	}
 	// If there is more than one event, the response contains a 'count' field
 	if numEvents > 1 {

@@ -2,15 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -447,33 +444,48 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 //	@Failure		500			{object}	nil
 //	@Router			/clusters/{cluster_id}/power_on [post]
 func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
-	clusterID, req, err := a.validatePowerOnRequest(c)
-	if err != nil {
-		a.logger.Error("Invalid request", zap.Error(err))
-		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
+	clusterID := c.Param("cluster_id")
+
+	var request struct {
+		TriggeredBy string  `json:"triggered_by"`
+		Reason      *string `json:"reason,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("Invalid request body"))
 		return
 	}
-	a.logger.Debug("Powering On Cluster", zap.String("cluster_id", clusterID))
+
+	a.logger.Debug("Powering On Cluster",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", request.TriggeredBy))
+
+	// Log initial event
 	// TODO maybe simplify to success/failed without pending?
 	eventID, err := a.eventService.LogEvent(events.EventOptions{
-		Action:       "PowerOn",
-		Reason:       req.Reason,
+		Action:       events.ClusterPowerOnAction,
+		Reason:       request.Reason,
 		ResourceID:   clusterID,
-		ResourceType: "cluster",
-		Result:       "Pending",
-		Severity:     "Info",
-		TriggeredBy:  "fake@example.com",
+		ResourceType: events.ClusterResourceType,
+		Result:       events.ResultPending,
+		Severity:     events.SeverityInfo,
+		TriggeredBy:  request.TriggeredBy,
 	})
+	// Should we stop and return????
 	if err != nil {
+		a.logger.Error("Failed to log initial event",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("Failed to log event"))
 		return
 	}
+
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
 		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
 		// TODO. Should we update the status here???
-		if updateErr := a.eventService.UpdateEventStatus(eventID, "Failed"); updateErr != nil {
+		if updateErr := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); updateErr != nil {
 			a.logger.Error("Failed to update event status", zap.Error(updateErr))
 		}
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -483,22 +495,32 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 	// RPC call for power on a cluster
 	if err := a.grpc.PowerOnCluster(cscr); err != nil {
 		a.logger.Error("Error processing Cluster Power On request", zap.String("cluster_id", clusterID), zap.Error(err))
-		if updateErr := a.eventService.UpdateEventStatus(eventID, "Failed"); updateErr != nil {
+		if updateErr := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); updateErr != nil {
 			a.logger.Error("Failed to update event status", zap.Error(updateErr))
 		}
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
+
 	a.logger.Info("Cluster Powered On successfully", zap.String("cluster_id", clusterID))
-	if updateErr := a.eventService.UpdateEventStatus(eventID, "Success"); updateErr != nil {
-		a.logger.Error("Failed to update event status", zap.Error(updateErr))
-	}
-	// Updating Cluster Status on the DB
+
+	// Update cluster status in DB
 	if err := a.sql.updateClusterStatusByClusterID("Running", clusterID); err != nil {
-		a.logger.Error("Error updating status on DB when powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		a.logger.Error("Error updating status in DB",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		if err := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); err != nil {
+			a.logger.Error("Failed to update event status", zap.Error(err))
+		}
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
+
+	// Log successful completion
+	if err := a.eventService.UpdateEventStatus(eventID, events.ResultSuccess); err != nil {
+		a.logger.Error("Failed to update event status", zap.Error(err))
+	}
+
 	c.PureJSON(http.StatusOK,
 		NewClusterStatusChangeResponse(
 			cscr.AccountName,
@@ -524,12 +546,47 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 //	@Router			/clusters/{cluster_id}/power_off [post]
 func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
-	a.logger.Debug("Powering Off Cluster", zap.String("cluster_id", clusterID))
+	var request struct {
+		TriggeredBy string  `json:"triggered_by"`
+		Reason      *string `json:"reason,omitempty"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("Invalid request body"))
+		return
+	}
+
+	a.logger.Debug("Powering Off Cluster",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", request.TriggeredBy))
+
+	// Log initial event
+	// TODO maybe simplify to success/failed without pending?
+	eventID, err := a.eventService.LogEvent(events.EventOptions{
+		Action:       "PowerOff",
+		Reason:       request.Reason,
+		ResourceID:   clusterID,
+		ResourceType: "cluster",
+		Result:       events.ResultPending,
+		Severity:     events.SeverityWarning,
+		TriggeredBy:  request.TriggeredBy,
+	})
+	// Should we stop and return????
+	if err != nil {
+		a.logger.Error("Failed to log initial event",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("Failed to log event"))
+		return
+	}
 
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
 		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOff gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
+		// TODO. Should we update the status here???
+		if updateErr := a.eventService.UpdateEventStatus(eventID, "Failed"); updateErr != nil {
+			a.logger.Error("Failed to update event status", zap.Error(updateErr))
+		}
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
@@ -537,6 +594,9 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	// RPC call for power off a cluster
 	if err := a.grpc.PowerOffCluster(cscr); err != nil {
 		a.logger.Error("Error processing Cluster Power Off request", zap.String("cluster_id", clusterID), zap.Error(err))
+		if updateErr := a.eventService.UpdateEventStatus(eventID, "Failed"); updateErr != nil {
+			a.logger.Error("Failed to update event status", zap.Error(updateErr))
+		}
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
@@ -545,8 +605,16 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	// Updating Cluster Status on the DB
 	if err := a.sql.updateClusterStatusByClusterID("Stopped", clusterID); err != nil {
 		a.logger.Error("Error updating status on DB when powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		if err := a.eventService.UpdateEventStatus(eventID, events.ResultFailed); err != nil {
+			a.logger.Error("Failed to update event status", zap.Error(err))
+		}
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
+	}
+
+	// Update events
+	if err := a.eventService.UpdateEventStatus(eventID, events.ResultSuccess); err != nil {
+		a.logger.Error("Failed to update event status", zap.Error(err))
 	}
 
 	c.PureJSON(http.StatusOK,
@@ -800,11 +868,6 @@ func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 //	@Router			/clusters/{cluster_id}/events [get]
 func (a APIServer) HandlerGetClusterEvents(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
-	// TODO. Move to the middleware
-	if clusterID == "" {
-		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("cluster ID required"))
-		return
-	}
 	a.logger.Debug("Retrieving cluster events", zap.String("cluster_id", clusterID))
 
 	dbEvents, err := a.sql.getClusterEvents(clusterID)
@@ -817,65 +880,6 @@ func (a APIServer) HandlerGetClusterEvents(c *gin.Context) {
 		return
 	}
 
-	appEvents := convertToAuditEvents(dbEvents)
+	appEvents := events.ToAuditEvents(dbEvents)
 	c.PureJSON(http.StatusOK, NewClusterEventsListResponse(appEvents))
-}
-
-type PowerOnRequest struct {
-	Reason *string `json:"reason,omitempty"`
-}
-
-func (a APIServer) validatePowerOnRequest(c *gin.Context) (string, PowerOnRequest, error) {
-	clusterID := c.Param("cluster_id")
-	if clusterID == "" {
-		return "", PowerOnRequest{}, errors.New("cluster ID is required")
-	}
-
-	var req PowerOnRequest
-	// TODO. This trick because of the potential empty "reason"
-	// TODO. Find the proper way
-	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
-		return "", PowerOnRequest{}, errors.New("invalid request payload")
-	}
-
-	return clusterID, req, nil
-}
-
-func convertToAuditEvents(dbEvents []models.AuditLog) []AuditEvent {
-	auditEvents := make([]AuditEvent, len(dbEvents))
-	for i, log := range dbEvents {
-		auditEvents[i] = AuditEvent{
-			ID:             log.ID,
-			ActionName:     log.ActionName,
-			EventTimestamp: log.EventTimestamp,
-			Reason:         log.Reason,
-			ResourceID:     log.ResourceID,
-			ResourceType:   log.ResourceType,
-			Result:         log.Result,
-			Severity:       log.Severity,
-			TriggeredBy:    log.TriggeredBy,
-		}
-	}
-	return auditEvents
-}
-
-type AuditEvent struct {
-	// Unique identifier for the log entry.
-	ID int64 `json:"id"`
-	// Name of the action performed (e.g., "cluster_stopped").
-	ActionName string `json:"action_name"`
-	// UTC timestamp of when the action occurred.
-	EventTimestamp time.Time `json:"event_timestamp"`
-	// Optional reason for the action; can be nil.
-	Reason *string `json:"reason,omitempty"`
-	// ID of the affected resource (e.g., cluster_id, instance_id).
-	ResourceID string `json:"resource_id"`
-	// Type of resource affected (e.g., "cluster", "instance").
-	ResourceType string `json:"resource_type"`
-	// Outcome of the action (e.g., "success", "error").
-	Result string `json:"result"`
-	// Log severity level (e.g., "info", "warning", "error").
-	Severity string `json:"severity"`
-	// User or system entity responsible for the action.
-	TriggeredBy string `json:"triggered_by"`
 }

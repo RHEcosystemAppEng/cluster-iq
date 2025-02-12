@@ -6,12 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
@@ -74,7 +75,7 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}
 
-	eventService := events.NewEventService(sqlClient)
+	eventService := events.NewEventService(sqlClient, logger)
 	apiServer := &APIServer{
 		cfg:    cfg,
 		logger: logger,

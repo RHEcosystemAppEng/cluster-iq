@@ -1,8 +1,9 @@
 package events
 
 import (
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"time"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"go.uber.org/zap"
@@ -32,6 +33,22 @@ type AuditEvent struct {
 	TriggeredBy string `json:"triggered_by"`
 }
 
+const (
+	ResultPending = "Pending"
+	ResultSuccess = "Success"
+	ResultFailed  = "Failed"
+
+	SeverityInfo    = "Info"
+	SeverityError   = "Error"
+	SeverityWarning = "Warning"
+
+	ClusterPowerOnAction  = "PowerOn"
+	ClusterPowerOffAction = "PowerOff"
+
+	ClusterResourceType  = "cluster"
+	InstanceResourceType = "instance"
+)
+
 type SQLEventClient interface {
 	AddEvent(event models.AuditLog) (int64, error)
 	UpdateEventStatus(eventID int64, result string) error
@@ -39,6 +56,7 @@ type SQLEventClient interface {
 
 type EventService struct {
 	sqlClient SQLEventClient
+	logger    *zap.Logger
 }
 
 type EventOptions struct {
@@ -51,9 +69,10 @@ type EventOptions struct {
 	TriggeredBy  string
 }
 
-func NewEventService(sqlClient SQLEventClient) *EventService {
+func NewEventService(sqlClient SQLEventClient, logger *zap.Logger) *EventService {
 	return &EventService{
 		sqlClient: sqlClient,
+		logger:    logger,
 	}
 }
 
@@ -85,4 +104,22 @@ func (e *EventService) UpdateEventStatus(eventID int64, result string) error {
 		return err
 	}
 	return nil
+}
+
+func ToAuditEvents(logs []models.AuditLog) []AuditEvent {
+	events := make([]AuditEvent, len(logs))
+	for i, log := range logs {
+		events[i] = AuditEvent{
+			ID:             log.ID,
+			ActionName:     log.ActionName,
+			EventTimestamp: log.EventTimestamp,
+			Reason:         log.Reason,
+			ResourceID:     log.ResourceID,
+			ResourceType:   log.ResourceType,
+			Result:         log.Result,
+			Severity:       log.Severity,
+			TriggeredBy:    log.TriggeredBy,
+		}
+	}
+	return events
 }
