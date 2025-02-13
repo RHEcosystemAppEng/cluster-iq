@@ -450,7 +450,7 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 
 	var request struct {
 		TriggeredBy string  `json:"triggered_by"`
-		Reason      *string `json:"reason,omitempty"`
+		Description *string `json:"description,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -462,7 +462,7 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 		zap.String("cluster_id", clusterID),
 		zap.String("triggered_by", request.TriggeredBy))
 
-	resp, err := a.handlePowerOn(clusterID, request.TriggeredBy, request.Reason)
+	resp, err := a.handlePowerOn(clusterID, request.TriggeredBy, request.Description)
 	if err != nil {
 		a.logger.Error("Failed to power on cluster",
 			zap.String("cluster_id", clusterID),
@@ -474,7 +474,7 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 	c.PureJSON(http.StatusOK, resp)
 }
 
-func (a APIServer) handlePowerOn(clusterID, triggeredBy string, reason *string) (*ClusterStatusChangeResponse, error) {
+func (a APIServer) handlePowerOn(clusterID, triggeredBy string, description *string) (*ClusterStatusChangeResponse, error) {
 	a.logger.Debug("Powering On Cluster",
 		zap.String("cluster_id", clusterID),
 		zap.String("triggered_by", triggeredBy))
@@ -482,7 +482,7 @@ func (a APIServer) handlePowerOn(clusterID, triggeredBy string, reason *string) 
 	// Initialize event tracker
 	tracker := a.eventService.StartTracking(&events.EventOptions{
 		Action:       inventory.ClusterPowerOnAction,
-		Reason:       reason,
+		Description:  description,
 		ResourceID:   clusterID,
 		ResourceType: inventory.ClusterResourceType,
 		Result:       events.ResultPending,
@@ -549,7 +549,7 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 
 	var request struct {
 		TriggeredBy string  `json:"triggered_by"`
-		Reason      *string `json:"reason,omitempty"`
+		Description *string `json:"description,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -561,7 +561,7 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 		zap.String("cluster_id", clusterID),
 		zap.String("triggered_by", request.TriggeredBy))
 
-	resp, err := a.handlePowerOff(clusterID, request.TriggeredBy, request.Reason)
+	resp, err := a.handlePowerOff(clusterID, request.TriggeredBy, request.Description)
 	if err != nil {
 		a.logger.Error("Failed to power off cluster",
 			zap.String("cluster_id", clusterID),
@@ -573,7 +573,7 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	c.PureJSON(http.StatusOK, resp)
 }
 
-func (a APIServer) handlePowerOff(clusterID, triggeredBy string, reason *string) (*ClusterStatusChangeResponse, error) {
+func (a APIServer) handlePowerOff(clusterID, triggeredBy string, description *string) (*ClusterStatusChangeResponse, error) {
 	a.logger.Debug("Powering Off Cluster",
 		zap.String("cluster_id", clusterID),
 		zap.String("triggered_by", triggeredBy))
@@ -581,7 +581,7 @@ func (a APIServer) handlePowerOff(clusterID, triggeredBy string, reason *string)
 	// Initialize event tracker
 	tracker := a.eventService.StartTracking(&events.EventOptions{
 		Action:       inventory.ClusterPowerOffAction,
-		Reason:       reason,
+		Description:  description,
 		ResourceID:   clusterID,
 		ResourceType: inventory.ClusterResourceType,
 		Result:       events.ResultPending,
@@ -598,7 +598,7 @@ func (a APIServer) handlePowerOff(clusterID, triggeredBy string, reason *string)
 		return nil, fmt.Errorf("cannot get cluster status: %w", err)
 	}
 
-	// RPC call for power on a cluster
+	// RPC call for power off a cluster
 	if err := a.grpc.PowerOffCluster(cscr); err != nil {
 		a.logger.Error("Error processing Cluster Power Off request",
 			zap.String("cluster_id", clusterID),
@@ -610,7 +610,7 @@ func (a APIServer) handlePowerOff(clusterID, triggeredBy string, reason *string)
 	a.logger.Info("Cluster Powered Off successfully", zap.String("cluster_id", clusterID))
 
 	// Update cluster status in DB
-	if err := a.sql.updateClusterStatusByClusterID("Running", clusterID); err != nil {
+	if err := a.sql.updateClusterStatusByClusterID("Stopped", clusterID); err != nil {
 		a.logger.Error("Error updating status in DB",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))

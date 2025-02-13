@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 
@@ -29,6 +30,7 @@ type APISQLClient struct {
 func (a APISQLClient) getClusterEvents(clusterID string) ([]models.AuditLog, error) {
 	var clusterEvents []models.AuditLog
 	// TODO. Should we handle not existing cluster_id?
+	// Handle it properly IF NOT EVENTS
 	if err := a.db.Select(&clusterEvents, SelectClusterEvents, clusterID); err != nil {
 		return nil, err
 	}
@@ -520,12 +522,12 @@ func (a APISQLClient) refreshInventory() error {
 // - An error if the status is invalid, the update operation fails, or no rows are affected.
 func (a APISQLClient) updateClusterStatusByClusterID(status string, clusterID string) error {
 	// Checking if the requested status is available on the DB
-	if exists, err := a.checkStatusValue(status); err != nil {
+	exists, err := a.checkStatusValue(status)
+	if err != nil {
 		return err
-	} else {
-		if !exists {
-			return fmt.Errorf("The requested status (%s) doesn't exist on the DB", status)
-		}
+	}
+	if !exists {
+		return fmt.Errorf("The requested status (%s) doesn't exist on the DB", status)
 	}
 
 	// Updating cluster status

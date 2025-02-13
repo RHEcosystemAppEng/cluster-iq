@@ -39,7 +39,7 @@ type EventTracker struct {
 
 type EventOptions struct {
 	Action       string
-	Reason       *string
+	Description  *string
 	ResourceID   string
 	ResourceType string
 	Result       string
@@ -57,8 +57,8 @@ type AuditEvent struct {
 	ActionName string `json:"action_name"`
 	// UTC timestamp of when the action occurred.
 	EventTimestamp time.Time `json:"event_timestamp"`
-	// Optional reason for the action; can be nil.
-	Reason *string `json:"reason,omitempty"`
+	// Optional description for the action; can be nil.
+	Description *string `json:"description,omitempty"`
 	// ID of the affected resource (e.g., cluster_id, instance_id).
 	ResourceID string `json:"resource_id"`
 	// Type of resource affected (e.g., "cluster", "instance").

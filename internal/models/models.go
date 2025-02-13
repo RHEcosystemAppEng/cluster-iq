@@ -67,8 +67,8 @@ type AuditLog struct {
 	ActionName string `db:"action_name"`
 	// UTC timestamp of when the action occurred.
 	EventTimestamp time.Time `db:"event_timestamp"`
-	// Optional reason for the action; can be nil.
-	Reason *string `db:"reason"`
+	// Optional description for the action; can be nil.
+	Description *string `db:"description"`
 	// ID of the affected resource (e.g., cluster_id, instance_id).
 	ResourceID string `db:"resource_id"`
 	// Type of resource affected (e.g., "cluster", "instance").

@@ -24,7 +24,7 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 		ResourceID:     opts.ResourceID,
 		ResourceType:   opts.ResourceType,
 		Result:         opts.Result,
-		Reason:         opts.Reason,
+		Description:    opts.Description,
 		Severity:       opts.Severity,
 		EventTimestamp: time.Now(),
 	}
@@ -79,7 +79,7 @@ func ToAuditEvents(logs []models.AuditLog) []AuditEvent {
 			ID:             log.ID,
 			ActionName:     log.ActionName,
 			EventTimestamp: log.EventTimestamp,
-			Reason:         log.Reason,
+			Description:    log.Description,
 			ResourceID:     log.ResourceID,
 			ResourceType:   log.ResourceType,
 			Result:         log.Result,

@@ -95,7 +95,7 @@ const (
         resource_id,
         resource_type,
         result,
-        reason,
+        description,
         severity
     ) VALUES (
         CURRENT_TIMESTAMP,
@@ -104,7 +104,7 @@ const (
         :resource_id,
         :resource_type,
         :result,
-        :reason,
+        :description,
         :severity
     ) RETURNING id`
 	// SelectClusterEvents returns audit log events related to a specific cluster.
@@ -117,7 +117,7 @@ const (
 		al.resource_id, 
 		al.resource_type, 
 		al.result, 
-		al.reason, 
+		al.description, 
 		al.severity
 	FROM audit_log al
 	JOIN clusters c ON al.resource_id = c.id
