@@ -9,9 +9,9 @@ import (
 
 // Event states
 const (
-	ResultPending = "Pending"
 	ResultSuccess = "Success"
 	ResultFailed  = "Failed"
+	ResultPending = "Pending"
 )
 
 // Event severity levels
@@ -47,9 +47,6 @@ type EventOptions struct {
 	TriggeredBy  string
 }
 
-// AuditEvent represents an action taken within the system.
-// It provides key metadata such as the action performed, the resource involved,
-// the result, severity, and the user who triggered the event.
 type AuditEvent struct {
 	// Unique identifier for the log entry.
 	ID int64 `json:"id"`
@@ -69,4 +66,13 @@ type AuditEvent struct {
 	Severity string `json:"severity"`
 	// User or system entity responsible for the action.
 	TriggeredBy string `json:"triggered_by"`
+}
+
+// SystemAuditEvent extends AuditEvent with system-specific fields.
+type SystemAuditEvent struct {
+	AuditEvent
+	// AccountID is the unique identifier of the cloud provider account.
+	AccountID string `json:"account_id"`
+	// Provider is the name of the cloud provider (e.g., "AWS", "GCP", "Azure").
+	Provider string `json:"provider"`
 }

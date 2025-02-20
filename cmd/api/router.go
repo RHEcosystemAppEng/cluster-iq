@@ -29,6 +29,7 @@ func (r *Router) SetupRoutes() {
 	r.setupClustersRoutes(baseGroup)
 	r.setupAccountsRoutes(baseGroup)
 	r.setupSwaggerRoutes(baseGroup)
+	r.setupEventsRoutes(baseGroup)
 }
 
 func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
@@ -77,6 +78,10 @@ func (r *Router) setupAccountsRoutes(baseGroup *gin.RouterGroup) {
 	accountsGroup.POST("", r.api.HandlerPostAccount)
 	accountsGroup.DELETE("/:account_name", r.api.HandlerDeleteAccount)
 	accountsGroup.PATCH("/:account_name", r.api.HandlerPatchAccount)
+}
+
+func (r *Router) setupEventsRoutes(baseGroup *gin.RouterGroup) {
+	baseGroup.GET("/events", r.api.HandlerGetSystemEvents)
 }
 
 func (r *Router) setupSwaggerRoutes(baseGroup *gin.RouterGroup) {

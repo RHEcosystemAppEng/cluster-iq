@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS expenses (
 );
 
 -- Audit logs
-CREATE TABLE IF NOT EXISTS audit_log (
+CREATE TABLE IF NOT EXISTS audit_logs (
 	id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
 	event_timestamp timestamptz DEFAULT CURRENT_TIMESTAMP,
 	triggered_by text NOT NULL,
@@ -107,8 +107,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
 	result text NOT NULL,
 	description text NULL,
 	severity text DEFAULT 'info'::text NOT NULL,
-	CONSTRAINT audit_log_pkey PRIMARY KEY (id),
-	CONSTRAINT audit_log_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+	CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+	CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
 );
 
 -- ## Functions ##

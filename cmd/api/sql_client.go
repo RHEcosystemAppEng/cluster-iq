@@ -24,22 +24,25 @@ type APISQLClient struct {
 	logger *zap.Logger
 }
 
-// getClusterEvents retrieves audit log events associated with the given clusterID.
-// It queries the audit_log table for events linked to the specified cluster.
-// If the query fails, it returns an error and a nil slice.
-func (a APISQLClient) getClusterEvents(clusterID string) ([]models.AuditLog, error) {
-	var clusterEvents []models.AuditLog
-	// TODO. Should we handle not existing cluster_id?
-	// Handle it properly IF NOT EVENTS
-	if err := a.db.Select(&clusterEvents, SelectClusterEvents, clusterID); err != nil {
+// getSystemEvents retrieves system-wide events.
+func (a APISQLClient) getSystemEvents() ([]models.SystemAuditLogs, error) {
+	var auditLogs []models.SystemAuditLogs
+	if err := a.db.Select(&auditLogs, SelectSystemEvents); err != nil {
 		return nil, err
 	}
-	return clusterEvents, nil
+
+	return auditLogs, nil
 }
 
-const (
-	UpdateEventStatusQuery = `UPDATE audit_log SET result=$1 WHERE id=$2`
-)
+// getClusterEvents retrieves events associated with the given clusterID.
+func (a APISQLClient) getClusterEvents(clusterID string) ([]models.AuditLog, error) {
+	var auditLogs []models.AuditLog
+	if err := a.db.Select(&auditLogs, SelectClusterEvents, clusterID); err != nil {
+		return nil, err
+	}
+
+	return auditLogs, nil
+}
 
 func (a APISQLClient) AddEvent(event models.AuditLog) (int64, error) {
 	tx, err := a.db.Beginx()

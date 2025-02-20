@@ -80,3 +80,13 @@ type AuditLog struct {
 	// User or system entity responsible for the action.
 	TriggeredBy string `db:"triggered_by"`
 }
+
+// SystemAuditLogs extends AuditLog with cloud provider metadata.
+type SystemAuditLogs struct {
+	// Base audit log data.
+	AuditLog
+	// Cloud provider account ID.
+	AccountID string `db:"account_id"`
+	// Cloud provider name (e.g., AWS, GCP).
+	Provider string `db:"provider"`
+}

@@ -5,7 +5,6 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +16,6 @@ func NewEventService(sqlClient SQLEventClient, logger *zap.Logger) *EventService
 }
 
 func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
-	log := logger.NewLogger()
 	event := models.AuditLog{
 		TriggeredBy:    opts.TriggeredBy,
 		ActionName:     opts.Action,
@@ -30,17 +28,16 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 	}
 	eventID, err := e.sqlClient.AddEvent(event)
 	if err != nil {
-		log.Error("Failed to log event", zap.Error(err))
+		e.logger.Error("Failed to log event", zap.Error(err))
 		return 0, err
 	}
 	return eventID, nil
 }
 
 func (e *EventService) UpdateEventStatus(eventID int64, result string) error {
-	log := logger.NewLogger()
 	err := e.sqlClient.UpdateEventStatus(eventID, result)
 	if err != nil {
-		log.Error("Failed to update event status", zap.Int64("event_id", eventID), zap.Error(err))
+		e.logger.Error("Failed to update event status", zap.Int64("event_id", eventID), zap.Error(err))
 		return err
 	}
 	return nil
@@ -72,20 +69,39 @@ func (t *EventTracker) Failed() {
 	}
 }
 
+// ToAuditEvents converts AuditLogs to AuditEvents
 func ToAuditEvents(logs []models.AuditLog) []AuditEvent {
 	events := make([]AuditEvent, len(logs))
 	for i, log := range logs {
-		events[i] = AuditEvent{
-			ID:             log.ID,
-			ActionName:     log.ActionName,
-			EventTimestamp: log.EventTimestamp,
-			Description:    log.Description,
-			ResourceID:     log.ResourceID,
-			ResourceType:   log.ResourceType,
-			Result:         log.Result,
-			Severity:       log.Severity,
-			TriggeredBy:    log.TriggeredBy,
+		events[i] = convertToAuditEvent(log)
+	}
+	return events
+}
+
+// ToSystemAuditEvents converts SystemAuditLogs to SystemAuditEvents
+func ToSystemAuditEvents(logs []models.SystemAuditLogs) []SystemAuditEvent {
+	events := make([]SystemAuditEvent, len(logs))
+	for i, log := range logs {
+		events[i] = SystemAuditEvent{
+			AuditEvent: convertToAuditEvent(log.AuditLog),
+			AccountID:  log.AccountID,
+			Provider:   log.Provider,
 		}
 	}
 	return events
+}
+
+// convertToAuditEvent converts single AuditLog to AuditEvent
+func convertToAuditEvent(log models.AuditLog) AuditEvent {
+	return AuditEvent{
+		ID:             log.ID,
+		ActionName:     log.ActionName,
+		EventTimestamp: log.EventTimestamp,
+		Description:    log.Description,
+		ResourceID:     log.ResourceID,
+		ResourceType:   log.ResourceType,
+		Result:         log.Result,
+		Severity:       log.Severity,
+		TriggeredBy:    log.TriggeredBy,
+	}
 }

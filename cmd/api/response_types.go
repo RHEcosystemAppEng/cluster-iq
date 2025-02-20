@@ -49,11 +49,16 @@ type TagListResponse struct {
 	Tags  []inventory.Tag `json:"tags"`            // List of tags.
 }
 
-// EventListResponse represents the API response containing a list of audit events.
-// TODO. This repetitive code is definitely sh***y
-type EventListResponse struct {
+// EventsListResponse represents the API response containing a list of resource-specific audit events.
+type EventsListResponse struct {
 	Count  int                 `json:"count,omitempty"` // Number of events, omitted if empty.
 	Events []events.AuditEvent `json:"events"`          // List of events.
+}
+
+// SystemEventsListResponse represents the API response containing a list of system-wide audit events.
+type SystemEventsListResponse struct {
+	Count  int                       `json:"count,omitempty"` // Number of events, omitted if empty.
+	Events []events.SystemAuditEvent `json:"events"`          // List of events.
 }
 
 // NewTagListResponse creates a new TagListResponse instance.
@@ -254,8 +259,29 @@ func NewClusterStatusChangeResponse(accountName string, clusterID string, region
 	}
 }
 
-// NewClusterEventsListResponse creates and returns an EventListResponse instance.
-func NewClusterEventsListResponse(auditEvents []events.AuditEvent) *EventListResponse {
+// NewSystemEventsListResponse creates and returns a SystemEventsListResponse instance.
+func NewSystemEventsListResponse(auditEvents []events.SystemAuditEvent) *SystemEventsListResponse {
+	numEvents := len(auditEvents)
+
+	// If there is no events, an empty array is returned instead of null
+	if numEvents == 0 {
+		auditEvents = []events.SystemAuditEvent{}
+	}
+
+	response := SystemEventsListResponse{
+		Count:  numEvents,
+		Events: auditEvents,
+	}
+	// If there is more than one event, the response contains a 'count' field
+	if numEvents > 1 {
+		response.Count = numEvents
+	}
+
+	return &response
+}
+
+// NewEventsListResponse creates and returns an EventsListResponse instance.
+func NewEventsListResponse(auditEvents []events.AuditEvent) *EventsListResponse {
 	numEvents := len(auditEvents)
 
 	// If there is no events, an empty array is returned instead of null
@@ -263,7 +289,7 @@ func NewClusterEventsListResponse(auditEvents []events.AuditEvent) *EventListRes
 		auditEvents = []events.AuditEvent{}
 	}
 
-	response := EventListResponse{
+	response := EventsListResponse{
 		Count:  numEvents,
 		Events: auditEvents,
 	}

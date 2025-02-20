@@ -88,7 +88,7 @@ const (
 	`
 	// InsertEvent insert a new audit event
 	InsertEvent = `
-    INSERT INTO audit_log(
+    INSERT INTO audit_logs(
         event_timestamp,
         triggered_by,
         action_name,
@@ -107,23 +107,50 @@ const (
         :description,
         :severity
     ) RETURNING id`
+
 	// SelectClusterEvents returns audit log events related to a specific cluster.
 	SelectClusterEvents = `
 	SELECT 
 		al.id, 
 		al.event_timestamp, 
 		al.triggered_by, 
-		al.action_name,
+		al.action_name, 
 		al.resource_id, 
 		al.resource_type, 
 		al.result, 
 		al.description, 
 		al.severity
-	FROM audit_log al
-	JOIN clusters c ON al.resource_id = c.id
-	WHERE c.id = $1 AND al.resource_type = 'cluster'
+	FROM audit_logs al
+	WHERE al.resource_id = $1
+	ORDER BY al.event_timestamp DESC;
+	`
+	// SelectSystemEvents returns system-wide audit logs.
+	SelectSystemEvents = `
+	SELECT 
+		al.id, 
+		al.event_timestamp, 
+		al.triggered_by, 
+		al.action_name, 
+		al.resource_id, 
+		al.resource_type, 
+		al.result, 
+		al.description, 
+		al.severity,
+		acc.id AS account_id,
+		acc.provider
+	FROM audit_logs al
+	LEFT JOIN accounts acc ON acc.name = (
+		CASE 
+			WHEN al.resource_type = 'cluster' 
+			THEN (SELECT c.account_name FROM clusters c WHERE c.id = al.resource_id)
+			WHEN al.resource_type = 'instance' 
+			THEN (SELECT c.account_name FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = al.resource_id))
+		END
+	)
+	ORDER BY al.event_timestamp DESC;
 	`
 
+	UpdateEventStatusQuery = `UPDATE audit_logs SET result=$1 WHERE id=$2`
 	// SelectClusterAccountNameQuery returns an cluster by its Name
 	SelectClusterAccountNameQuery = `
 		SELECT account_name FROM clusters

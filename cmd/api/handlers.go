@@ -857,6 +857,30 @@ func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 	// This function doesn't return any 200OK code for preventing duplicated responses
 }
 
+// HandlerGetSystemEvents handles the request for obtain the list of system events
+//
+//	@Summary		Obtain system events
+//	@Description	Returns a list of events
+//	@Tags			Events
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	EventsListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/events [get]
+func (a APIServer) HandlerGetSystemEvents(c *gin.Context) {
+	a.logger.Debug("Retrieving system-wide events")
+
+	dbEvents, err := a.sql.getSystemEvents()
+	if err != nil {
+		a.logger.Error("Failed to retrieve system-wide events", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("failed to retrieve system-wide events"))
+		return
+	}
+
+	appEvents := events.ToSystemAuditEvents(dbEvents)
+	c.PureJSON(http.StatusOK, NewSystemEventsListResponse(appEvents))
+}
+
 // HandlerGetClusterEvents handles the request for obtain the list of events of a Cluster
 //
 //	@Summary		Obtain cluster events
@@ -865,7 +889,7 @@ func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			cluster_id	path		string	true	"Cluster ID"
-//	@Success		200			{object}	EventListResponse
+//	@Success		200			{object}	EventsListResponse
 //	@Failure		500			{object}	nil
 //	@Router			/clusters/{cluster_id}/events [get]
 func (a APIServer) HandlerGetClusterEvents(c *gin.Context) {
@@ -881,7 +905,6 @@ func (a APIServer) HandlerGetClusterEvents(c *gin.Context) {
 			NewGenericErrorResponse("failed to retrieve cluster events"))
 		return
 	}
-
 	appEvents := events.ToAuditEvents(dbEvents)
-	c.PureJSON(http.StatusOK, NewClusterEventsListResponse(appEvents))
+	c.PureJSON(http.StatusOK, NewEventsListResponse(appEvents))
 }
