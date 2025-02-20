@@ -29,6 +29,7 @@ func (r *Router) SetupRoutes() {
 	r.setupClustersRoutes(baseGroup)
 	r.setupAccountsRoutes(baseGroup)
 	r.setupSwaggerRoutes(baseGroup)
+	r.setupEventsRoutes(baseGroup)
 }
 
 func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
@@ -61,6 +62,7 @@ func (r *Router) setupClustersRoutes(baseGroup *gin.RouterGroup) {
 	clustersGroup.GET("/:cluster_id", r.api.HandlerGetClustersByID)
 	clustersGroup.GET("/:cluster_id/instances", r.api.HandlerGetInstancesOnCluster)
 	clustersGroup.GET("/:cluster_id/tags", r.api.HandlerGetClusterTags)
+	clustersGroup.GET("/:cluster_id/events", r.api.HandlerGetClusterEvents)
 	clustersGroup.POST("", r.api.HandlerPostCluster)
 	clustersGroup.POST("/:cluster_id/power_on", r.api.HandlerPowerOnCluster)
 	clustersGroup.POST("/:cluster_id/power_off", r.api.HandlerPowerOffCluster)
@@ -76,6 +78,10 @@ func (r *Router) setupAccountsRoutes(baseGroup *gin.RouterGroup) {
 	accountsGroup.POST("", r.api.HandlerPostAccount)
 	accountsGroup.DELETE("/:account_name", r.api.HandlerDeleteAccount)
 	accountsGroup.PATCH("/:account_name", r.api.HandlerPatchAccount)
+}
+
+func (r *Router) setupEventsRoutes(baseGroup *gin.RouterGroup) {
+	baseGroup.GET("/events", r.api.HandlerGetSystemEvents)
 }
 
 func (r *Router) setupSwaggerRoutes(baseGroup *gin.RouterGroup) {
