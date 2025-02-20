@@ -2,6 +2,8 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/RHEcosystemAppEng/cluster-iq)](https://goreportcard.com/report/github.com/RHEcosystemAppEng/cluster-iq)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RHEcosystemAppEng/cluster-iq.svg)](https://pkg.go.dev/github.com/RHEcosystemAppEng/cluster-iq)
+[![Cluster IQ Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml)
+---
 
 Cluster IQ is a tool for making stock of the Openshift Clusters and its
 resources running on the most common cloud providers and collects relevant
@@ -38,6 +40,21 @@ This section explains how to deploy ClusterIQ and ClusterIQ Console.
 
 
 ### Prerequisites:
+#### Cloud provider RBAC configuration
+Before configuring credentials for ClusterIQ, it is recommended to access the
+user and permission management service and create a dedicated user exclusively
+for ClusterIQ. This user should have the minimum necessary permissions to
+function properly. This approach enhances the security of your public cloud
+provider accounts by enforcing the principle of least privilege.
+
+Each Cloud Provider has a different way for configuring users and permissions.
+Before continuing, check and follow the steps for each Cloud Provider you want
+to configure:
+
+* **[Amazon Web Services (AWS)](./doc/aws-user-permissions-config.md)**
+* **Microsoft Azure** Not available.
+* **Google cloud Platform:** Not available.
+
 #### Accounts Configuration
 1. Create a folder called `secrets` for saving the cloud credentials. This folder is ignored on this repo to keep your
    credentials safe.
@@ -129,8 +146,6 @@ Available configuration via Env Vars:
 
 
 ### Scanner
-[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-scanner/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-aws-scanner)
-
 The scanner searches each region for instances (servers) that are part of an
 Openshift cluster. As each provider and each service has different
 specifications, the Scanner includes a specific module dedicated to each of
@@ -145,8 +160,6 @@ make local-build-scanner
 ```
 
 ## API Server
-[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-api/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-api)
-
 The API server interacts between the UI and the DB.
 
 ```shell
@@ -158,8 +171,6 @@ make local-build-api
 ```
 
 ## Agent (gRPC)
-[![Docker Repository on Quay](https://quay.io/repository/ecosystem-appeng/cluster-iq-agent/status "Docker Repository on Quay")](https://quay.io/repository/ecosystem-appeng/cluster-iq-agent)
-
 The Agent performs actions over the selected cloud resources. It only accepts
 incoming requests from the API.
 
