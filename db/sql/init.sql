@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS expenses (
 -- Audit logs
 CREATE TABLE IF NOT EXISTS audit_logs (
 	id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-	event_timestamp timestamptz DEFAULT CURRENT_TIMESTAMP,
+	event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 	triggered_by text NOT NULL,
 	action_name text NOT NULL,
 	resource_id text NOT NULL,

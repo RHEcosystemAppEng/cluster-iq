@@ -1,3 +1,4 @@
+// Package events provides functionality for audit logging and event tracking.
 package events
 
 import (
@@ -8,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// NewEventService creates a new EventService instance.
 func NewEventService(sqlClient SQLEventClient, logger *zap.Logger) *EventService {
 	return &EventService{
 		sqlClient: sqlClient,
@@ -15,6 +17,7 @@ func NewEventService(sqlClient SQLEventClient, logger *zap.Logger) *EventService
 	}
 }
 
+// LogEvent creates a new audit log entry and returns its ID.
 func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 	event := models.AuditLog{
 		TriggeredBy:    opts.TriggeredBy,
@@ -34,6 +37,7 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 	return eventID, nil
 }
 
+// UpdateEventStatus updates the result status of an existing event.
 func (e *EventService) UpdateEventStatus(eventID int64, result string) error {
 	err := e.sqlClient.UpdateEventStatus(eventID, result)
 	if err != nil {
@@ -43,6 +47,7 @@ func (e *EventService) UpdateEventStatus(eventID int64, result string) error {
 	return nil
 }
 
+// StartTracking begins tracking a new event and returns an EventTracker.
 func (e *EventService) StartTracking(opts *EventOptions) *EventTracker {
 	eventID, err := e.LogEvent(*opts)
 	if err != nil {
@@ -57,12 +62,14 @@ func (e *EventService) StartTracking(opts *EventOptions) *EventTracker {
 	}
 }
 
+// Failed marks the tracked event status as failed.
 func (t *EventTracker) Success() {
 	if err := t.service.UpdateEventStatus(t.eventID, ResultSuccess); err != nil {
 		t.logger.Error("Failed to update event status", zap.Error(err))
 	}
 }
 
+// Failed marks the tracked event as failed.
 func (t *EventTracker) Failed() {
 	if err := t.service.UpdateEventStatus(t.eventID, ResultFailed); err != nil {
 		t.logger.Error("Failed to update event status", zap.Error(err))

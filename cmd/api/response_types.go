@@ -261,42 +261,18 @@ func NewClusterStatusChangeResponse(accountName string, clusterID string, region
 
 // NewSystemEventsListResponse creates and returns a SystemEventsListResponse instance.
 func NewSystemEventsListResponse(auditEvents []events.SystemAuditEvent) *SystemEventsListResponse {
-	numEvents := len(auditEvents)
-
-	// If there is no events, an empty array is returned instead of null
-	if numEvents == 0 {
-		auditEvents = []events.SystemAuditEvent{}
-	}
-
 	response := SystemEventsListResponse{
-		Count:  numEvents,
 		Events: auditEvents,
+		Count:  len(auditEvents),
 	}
-	// If there is more than one event, the response contains a 'count' field
-	if numEvents > 1 {
-		response.Count = numEvents
-	}
-
 	return &response
 }
 
 // NewEventsListResponse creates and returns an EventsListResponse instance.
 func NewEventsListResponse(auditEvents []events.AuditEvent) *EventsListResponse {
-	numEvents := len(auditEvents)
-
-	// If there is no events, an empty array is returned instead of null
-	if numEvents == 0 {
-		auditEvents = []events.AuditEvent{}
-	}
-
 	response := EventsListResponse{
-		Count:  numEvents,
 		Events: auditEvents,
+		Count:  len(auditEvents),
 	}
-	// If there is more than one event, the response contains a 'count' field
-	if numEvents > 1 {
-		response.Count = numEvents
-	}
-
 	return &response
 }

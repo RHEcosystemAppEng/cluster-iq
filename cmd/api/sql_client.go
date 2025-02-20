@@ -27,7 +27,7 @@ type APISQLClient struct {
 // getSystemEvents retrieves system-wide events.
 func (a APISQLClient) getSystemEvents() ([]models.SystemAuditLogs, error) {
 	var auditLogs []models.SystemAuditLogs
-	if err := a.db.Select(&auditLogs, SelectSystemEvents); err != nil {
+	if err := a.db.Select(&auditLogs, SelectSystemEventsQuery); err != nil {
 		return nil, err
 	}
 
@@ -37,13 +37,14 @@ func (a APISQLClient) getSystemEvents() ([]models.SystemAuditLogs, error) {
 // getClusterEvents retrieves events associated with the given clusterID.
 func (a APISQLClient) getClusterEvents(clusterID string) ([]models.AuditLog, error) {
 	var auditLogs []models.AuditLog
-	if err := a.db.Select(&auditLogs, SelectClusterEvents, clusterID); err != nil {
+	if err := a.db.Select(&auditLogs, SelectClusterEventsQuery, clusterID); err != nil {
 		return nil, err
 	}
 
 	return auditLogs, nil
 }
 
+// AddEvent inserts a new audit event into the database and returns the event ID.
 func (a APISQLClient) AddEvent(event models.AuditLog) (int64, error) {
 	tx, err := a.db.Beginx()
 	if err != nil {
@@ -56,7 +57,7 @@ func (a APISQLClient) AddEvent(event models.AuditLog) (int64, error) {
 	}()
 
 	var eventID int64
-	row, err := tx.NamedQuery(InsertEvent, event)
+	row, err := tx.NamedQuery(InsertEventQuery, event)
 	if err == nil && row.Next() {
 		err = row.Scan(&eventID)
 	} else {
@@ -73,6 +74,7 @@ func (a APISQLClient) AddEvent(event models.AuditLog) (int64, error) {
 	return eventID, nil
 }
 
+// UpdateEventStatus updates the result status of an audit event.
 func (a APISQLClient) UpdateEventStatus(eventID int64, result string) error {
 	_, err := a.db.Exec(UpdateEventStatusQuery, result, eventID)
 	if err != nil {
