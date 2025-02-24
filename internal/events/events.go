@@ -27,7 +27,7 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 		Result:         opts.Result,
 		Description:    opts.Description,
 		Severity:       opts.Severity,
-		EventTimestamp: time.Now(),
+		EventTimestamp: time.Now().UTC(),
 	}
 	eventID, err := e.sqlClient.AddEvent(event)
 	if err != nil {
