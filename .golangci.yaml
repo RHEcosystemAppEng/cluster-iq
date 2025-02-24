@@ -1,0 +1,52 @@
+linters:
+  disable-all: true
+  enable:
+    - containedctx
+    - copyloopvar
+    - cyclop
+    - errcheck
+    - exhaustive
+    - gci
+    - gochecksumtype
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - inamedparam
+    - ineffassign
+    - misspell
+    - mnd
+    - nestif
+    - noctx
+    - revive
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unused
+issues:
+  # fix only newly added issue
+  # https://golangci-lint.run/welcome/faq/#how-to-integrate-golangci-lint-into-large-project-with-thousands-of-issues
+  new-from-rev: HEAD~1
+  # OR https://github.com/golangci/golangci-lint-action?tab=readme-ov-file#only-new-issues
+  uniq-by-line: true
+  exclude-dirs:
+    - generated/agent
+  exclude-files:
+  # intentionally until we fix the import
+    - internal/inventory/tag_test.go
+    - .*.pb.go
+linters-settings:
+  goimports:
+    local-prefixes: github.com/RHEcosystemAppEng/cluster-iq
+run:
+  timeout: "20m"
+  relative-path-mode: gomod
+  # intentionally until we add proper tests
+  tests: false
+  # fails when any changes to go.mod are needed. 
+  # this setting is most useful in a continuous integration and testing system
+  modules-download-mode: readonly
