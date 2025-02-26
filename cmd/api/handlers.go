@@ -44,6 +44,12 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 	c.PureJSON(http.StatusOK, HealthCheckResponse{HealthChecks: hc})
 }
 
+// ==================== Actions       Handlers ====================
+func (a APIServer) HandlerGetScheduledActions(c *gin.Context)   {}
+func (a APIServer) HandlerGetScheduleActionByID(c *gin.Context) {}
+func (a APIServer) HandlerPostScheduledAction(c *gin.Context)   {}
+func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {}
+
 // ==================== Expenses      Handlers ====================
 
 // HandlerGetExpenses handles the request for obtain the entire Expenses list

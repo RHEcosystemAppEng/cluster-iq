@@ -1,0 +1,42 @@
+
+	// Getting Executor for the requested account
+	exec, err := a.GetExecutor(req.AccountName)
+	if err != nil {
+		a.logger.Error("Can't get executor for PowerOnCluster", zap.String("account_name", req.AccountName), zap.Error(err))
+		return &pb.PowerOnClusterResponse{
+			Error:   1,
+			Message: fmt.Sprintf(PowerOnClusterError, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		}, err
+	}
+
+	// Configuring Region
+	if err := exec.SetRegion(req.Region); err != nil {
+		a.logger.Error("Error configuring region before executing a PowerOnCluster", zap.Error(err))
+		return &pb.PowerOnClusterResponse{
+			Error:   1,
+			Message: fmt.Sprintf(PowerOnClusterError, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		}, err
+	}
+
+
+
+
+
+	// Getting Executor for the requested account
+	exec, err := a.GetExecutor(req.AccountName)
+	if err != nil {
+		a.logger.Error("Can't get executor for PowerOffCluster", zap.String("account_name", req.AccountName), zap.Error(err))
+		return &pb.PowerOffClusterResponse{
+			Error:   1,
+			Message: fmt.Sprintf(PowerOffClusterError, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		}, err
+	}
+
+	// Configuring Region
+	if err := exec.SetRegion(req.Region); err != nil {
+		a.logger.Error("Error configuring region before executing a PowerOffCluster", zap.Error(err))
+		return &pb.PowerOffClusterResponse{
+			Error:   1,
+			Message: fmt.Sprintf(PowerOffClusterError, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		}, err
+	}

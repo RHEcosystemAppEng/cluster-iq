@@ -15,6 +15,19 @@ VALUES
 ;
 
 
+-- Actions
+CREATE TABLE IF NOT EXISTS actions (
+  name TEXT PRIMARY KEY
+);
+
+-- Default values for Cloud Providers table
+INSERT INTO
+  actions(name)
+VALUES
+  ('PowerOnCluster'),
+  ('PowerOffCluster')
+;
+
 -- Status
 CREATE TABLE IF NOT EXISTS status (
   value TEXT PRIMARY KEY
@@ -94,6 +107,15 @@ CREATE TABLE IF NOT EXISTS expenses (
   date DATE,
   amount REAL,
   PRIMARY KEY (instance_id, date)
+);
+
+
+-- Scheduled actions
+CREATE TABLE IF NOT EXISTS scheduled_actions (
+  id TEXT PRIMARY KEY,
+  time TIMESTAMP WITH TIME ZONE,
+  action TEXT REFERENCES actions(name),
+  target TEXT REFERENCES clusters(id)
 );
 
 -- ## Functions ##

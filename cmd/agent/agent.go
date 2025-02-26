@@ -19,16 +19,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
+	"os"
+	"sync"
 
-	"google.golang.org/grpc/reflection"
-
-	pb "github.com/RHEcosystemAppEng/cluster-iq/generated/agent"
-
-	cexec "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_executors"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"go.uber.org/zap"
@@ -47,15 +42,6 @@ var (
 	commit string
 )
 
-// AgentService represents the main structure for managing cloud executors and configuration.
-// It also embeds the gRPC server interface for handling gRPC requests.
-type AgentService struct {
-	cfg       *config.AgentConfig
-	executors map[string]cexec.CloudExecutor
-	logger    *zap.Logger
-	pb.UnimplementedAgentServiceServer
-}
-
 // init initializes the global logger configuration.
 // This is automatically invoked before the main function.
 func init() {
@@ -63,89 +49,105 @@ func init() {
 	logger = ciqLogger.NewLogger()
 }
 
-// NewAgentService creates and initializes a new AgentService instance.
-//
-// Parameters:
-//   - cfg: Pointer to AgentConfig containing the configuration details.
-//   - logger: Pointer to zap.Logger for logging.
-//
-// Returns:
-//   - *AgentService: A pointer to the newly created Agent instance.
-func NewAgentService(cfg *config.AgentConfig, logger *zap.Logger) *AgentService {
-	return &AgentService{
-		cfg:       cfg,
-		executors: make(map[string]cexec.CloudExecutor, 0),
-		logger:    logger,
+// Agent represents the main structure for the ClusterIQ Agent. It includes the
+// AgentService for implementing the gRPC server and the AgentCron for getting
+// and executing the Scheduled actions to be run by the AgentService when it's
+// needed
+type Agent struct {
+	cfg            *config.AgentConfig
+	ias            *InstantAgentService
+	cas            *CronAgentService
+	eas            *ExecutorAgentService
+	actionsChannel chan actions.Action
+	logger         *zap.Logger
+	wg             *sync.WaitGroup
+}
+
+func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) *Agent {
+	var ch chan actions.Action
+	var wg sync.WaitGroup
+
+	ch = make(chan actions.Action)
+
+	// Creating InstantAgentService (gRPC)
+	ias := NewInstantAgentService(&cfg.InstantAgentServiceConfig, ch, &wg, logger)
+	if ias == nil {
+		logger.Error("Cannot create InstantAgentService")
+		return nil
+	}
+
+	// Creating CronAgentService (scheduled actions)
+	cas := NewCronAgentService(&cfg.CronAgentServiceConfig, ch, &wg, logger)
+	if ias == nil {
+		logger.Error("Cannot create CronAgentService")
+		return nil
+	}
+
+	// Creating ExecutorAgentService (executing actions)
+	eas := NewExecutorAgentService(&cfg.ExecutorAgentServiceConfig, ch, &wg, logger)
+	if eas == nil {
+		logger.Error("Cannot create ExecutorAgentService")
+		return nil
+	}
+
+	return &Agent{
+		cfg:            cfg,
+		ias:            ias,
+		cas:            cas,
+		eas:            eas,
+		actionsChannel: ch,
+		logger:         logger,
+		wg:             &wg,
 	}
 }
 
-// AddExecutor adds a new CloudExecutor to the AgentService.
-//
-// Parameters:
-//   - exec: CloudExecutor instance to add.
-//
-// Returns:
-//   - error: An error if the executor is nil; otherwise, nil.
-func (a *AgentService) AddExecutor(exec cexec.CloudExecutor) error {
-	if exec == nil {
-		return fmt.Errorf("Cannot add a nil Executor")
-	}
+func (a *Agent) StartAgentServices() error {
+	var err error
+	errChan := make(chan error, 3)
 
-	a.executors[exec.GetAccountName()] = exec
-
-	return nil
-}
-
-// readCloudProviderAccounts reads cloud provider account configurations from the credentials file.
-//
-// Returns:
-//   - []credentials.AccountConfig: A slice of account configurations.
-//   - error: An error if reading the file fails.
-func (a *AgentService) readCloudProviderAccounts() ([]credentials.AccountConfig, error) {
-	accounts, err := credentials.ReadCloudAccounts(a.cfg.Credentials.CredentialsFile)
-	if err != nil {
-		return nil, err
-	}
-
-	return accounts, nil
-}
-
-// createExecutors initializes CloudExecutors for all configured cloud provider accounts.
-//
-// Returns:
-//   - error: An error if any executor initialization fails.
-func (a *AgentService) createExecutors() error {
-	accounts, err := a.readCloudProviderAccounts()
-	if err != nil {
-		return err
-	}
-
-	// Generating a CloudExecutor by account. The creation of the CloudExecutor depends on the Cloud Provider
-	for _, account := range accounts {
-		switch account.Provider {
-		case inventory.AWSProvider: // AWS
-			a.logger.Info("Creating Executor for AWS account", zap.String("account_name", account.Name))
-			exec := cexec.NewAWSExecutor(inventory.NewAccount("", account.Name, account.Provider, account.User, account.Key), logger)
-			err := a.AddExecutor(exec)
-			if err != nil {
-				a.logger.Error("Cannot create an AWSEexecutor for account", zap.String("account_name", account.Name), zap.Error(err))
-				return err
-			}
-
-		case inventory.GCPProvider: // GCP
-			a.logger.Warn("Failed to create Executor for GCP account",
-				zap.String("account", account.Name),
-				zap.String("reason", "not implemented"),
-			)
-
-		case inventory.AzureProvider: // Azure
-			a.logger.Warn("Failed to create Executor for Azure account",
-				zap.String("account", account.Name),
-				zap.String("reason", "not implemented"),
-			)
-
+	// Starting InstantAgentService
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		if err = a.ias.Start(); err != nil {
+			errChan <- fmt.Errorf("Instant AgentService (gRPC) failed: %w", err)
+			return
 		}
+		a.logger.Info("Instant Agent Service (gRPC) started")
+	}()
+
+	// Starting CronAgentService
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		if err = a.cas.Start(); err != nil {
+			errChan <- fmt.Errorf("Scheduled Agent Service failed: %w", err)
+			return
+		}
+		a.logger.Info("Scheduled Agent Service started")
+	}()
+
+	// Starting ExecutorAgentService
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		if err = a.eas.Start(); err != nil {
+			errChan <- fmt.Errorf("Executor Agent Service failed: %w", err)
+			return
+		}
+		a.logger.Info("Executor Agent Service started")
+	}()
+
+	a.logger.Info("ClusterIQ Agent Started")
+
+	// Wait for goroutines to finish
+	a.wg.Wait()
+	close(errChan)
+
+	if len(errChan) > 0 {
+		return <-errChan
 	}
+
 	return nil
 }
 
@@ -202,36 +204,18 @@ func main() {
 	}
 
 	// Creating AgentService with the specified configuration
-	agent := NewAgentService(cfg, logger)
-
-	// Creating Executors
-	err = agent.createExecutors()
-	if err != nil {
-		agent.logger.Panic("Error during CloudExecutors initialization", zap.Error(err))
-	} else {
-		agent.logger.Info("CloudExecutors initialization successfully", zap.Int("executors_count", len(agent.executors)))
+	agent := NewAgent(cfg, logger)
+	if agent == nil {
+		logger.Error("Error during AgentService setup. Aborting Agent")
+		os.Exit(-1)
 	}
 
-	// Initializing gRPC server
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(LoggingInterceptor))
-	reflection.Register(grpcServer)
-
-	// Registering Agent service on gRPC server
-	pb.RegisterAgentServiceServer(grpcServer, agent)
-
-	// Listener config
-	lis, err := net.Listen("tcp", agent.cfg.ListenURL)
-	if err != nil {
-		logger.Error("Error initializing gRPC server on ClusterIQ Agent", zap.Error(err))
-		return
+	if err := agent.StartAgentServices(); err != nil {
+		agent.logger.Error("Error starting Agent Services", zap.Error(err))
+		os.Exit(-1)
 	}
-	logger.Info("gRPC ClusterIQ Agent initialization successfully",
-		zap.String("listen_url", agent.cfg.ListenURL),
-		zap.String("version", version),
-		zap.String("commit", commit))
-	// Serving gRPC
-	if err := grpcServer.Serve(lis); err != nil {
-		logger.Fatal("failed to start server", zap.Error(err))
-	}
-	logger.Info("ClusterIQ Agent Finished")
+
+	// TODO: add signal management
+
+	agent.logger.Info("ClusterIQ Agent Finished")
 }

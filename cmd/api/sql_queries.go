@@ -1,6 +1,47 @@
 package main
 
 const (
+	// SelectScheduledActionQuery returns every scheduled action on the inventory
+	SelectScheduledActionQuery = `
+		SELECT * FROM scheduled_actions
+		ORDER BY id
+	`
+	// SelectScheduledActionByIDQuery returns scheduled action on the inventory for a specific ID
+	SelectScheduledActionByIDQuery = `
+		SELECT * FROM scheduled_actions
+		WHERE id = $1
+		ORDER BY id
+	`
+
+	// SelectScheduledActionByTargetQuery returns scheduled action on the inventory for a specific Target
+	SelectScheduledActionByTargetQuery = `
+		SELECT * FROM scheduled_actions
+		WHERE target = $1
+		ORDER BY id
+	`
+
+	// TODO DOCUMENT
+	// InsertScheduledActionQuery
+	InsertScheduledActionQuery = `
+		INSERT INTO scheduled_actions (
+			id,
+			time,
+			action,
+			target
+		) VALUES (
+			:id,
+			:time,
+			:action,
+			:target
+		) ON CONFLICT (id) DO UPDATE SET
+			time = EXCLUDED.time,
+			action = EXCLUDED.action,
+			target = EXCLUDED.target
+	`
+
+	// DeleteScheduledActionQuery
+	DeleteScheduledActionQuery = `DELETE FROM scheduled_actions WHERE id=$1`
+
 	// SelectExpensesQuery returns every expense in the inventory ordered by instanceID
 	SelectExpensesQuery = `
 		SELECT * FROM expenses

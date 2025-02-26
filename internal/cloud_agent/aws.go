@@ -22,5 +22,5 @@ func NewAWSAgent(account *inventory.Account, logger *zap.Logger) *AWSAgent {
 }
 
 func (a *AWSAgent) Connect() error {
-
+	return nil
 }

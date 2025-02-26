@@ -125,6 +125,12 @@ For more information about the
     helm list
     ```
 
+6. Once every pod is up and running, trigger the scanner manually for
+   initializing the inventory
+   ```sh
+   oc create job --from=cronjob/scanner scanner-init -n $NAMESPACE
+   ```
+
 
 ## Local Deployment (for development)
 For deploying ClusterIQ in local for development purposes, check the following
