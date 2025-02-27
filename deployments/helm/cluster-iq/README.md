@@ -12,6 +12,7 @@ deployments/helm/cluster-iq/
 ├── Chart.yaml
 ├── README.md
 ├── templates
+│   ├── agent
 │   ├── api
 │   ├── console
 │   ├── database
@@ -68,14 +69,14 @@ database:
 1. Navigate to the Chart directory
 
     ```bash
-    cd deployments/helm
+    cd deployments/helm/cluster-iq
     ```
 
 2. Review and update `values.yaml` if needed
 3. Install the Chart
 
     ```bash
-    helm upgrade --install cluster-iq cluster-iq/ --namespace cluster-iq -f cluster-iq/values.yaml 
+    helm upgrade --install cluster-iq . --namespace cluster-iq -f values.yaml
     ```
 
 4. Verify the Installation
