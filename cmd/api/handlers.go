@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -45,10 +46,114 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 }
 
 // ==================== Actions       Handlers ====================
-func (a APIServer) HandlerGetScheduledActions(c *gin.Context)   {}
-func (a APIServer) HandlerGetScheduleActionByID(c *gin.Context) {}
-func (a APIServer) HandlerPostScheduledAction(c *gin.Context)   {}
-func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {}
+//
+// HandlerGetScheduledActions handles the request to obtain the entire Scheduled Actions list
+//
+//	@Summary		  Obtain every Scheduled action
+//	@Description	Returns a list of Scheduled actions
+//	@Tags			    actions
+//	@Accept			  json
+//	@Produce		  json
+//	@Success		  200	{object}	ScheduledActionListResponse
+//	@Failure		  500	{object}	GenericErrorResponse
+//	@Router			  /schedule [get]
+func (a APIServer) HandlerGetScheduledActions(c *gin.Context) {
+	a.logger.Debug("Retrieving complete scheduled actions list")
+
+	schedule, err := a.sql.getScheduledActions()
+	if err != nil {
+		a.logger.Error("Can't retrieve Schedule list", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+	}
+
+	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
+}
+
+// HandlerGetScheduledActionsByID handles the request to obtain a specific scheduled action
+//
+//	@Summary		  Obtain a specific Scheduled action
+//	@Description	Returns a Scheduled actions
+//	@Tags			    actions
+//	@Accept			  json
+//	@Produce		  json
+//	@Success		  200	{object}	ScheduledActionListResponse
+//	@Failure		  500	{object}	GenericErrorResponse
+//	@Router			  /schedule [get]
+func (a APIServer) HandlerGetScheduleActionByID(c *gin.Context) {
+	actionID := c.Param("action_id")
+	a.logger.Debug("Retrieving complete scheduled actions list")
+
+	schedule, err := a.sql.getScheduledActionByID(actionID)
+	if err != nil {
+		a.logger.Error("Can't retrieve Schedule Action", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+	}
+
+	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
+}
+
+// HandlerPostScheduledAction handles the request to create a new Scheduled Action
+//
+//	@Summary		  Creates a new Scheduled action
+//	@Description	Creates and registers a new scheduled action on the DB
+//	@Tags			    actions
+//	@Accept			  json
+//	@Produce		  json
+//	@Success		  200	{object}  nil
+//	@Failure		  500	{object}	GenericErrorResponse
+//	@Router			  /schedule [get]
+func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
+	a.logger.Debug("Inserting list of Scheduled Actions")
+	// Getting scheduled actions list on request's body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		a.logger.Error("Can't get body from request", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	var actions []actions.ScheduledAction
+	err = json.Unmarshal(body, &actions)
+	if err != nil {
+		a.logger.Error("Can't obtain data from body request", zap.Error(err))
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Writing scheduled action
+	a.logger.Debug("Writing a new Scheduled Action", zap.Reflect("actions", actions))
+	err = a.sql.writeScheduledActions(actions)
+	if err != nil {
+		a.logger.Error("Can't write new Scheduled Actions into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerDeleteScheduledAction handles the request to remove a Scheduled Action
+//
+//	@Summary		  Deletes a Scheduled action
+//	@Description	Deletes a specified scheduled action from the DB
+//	@Tags			    actions
+//	@Accept			  json
+//	@Produce		  json
+//	@Success		  200	{object}	nil
+//	@Failure		  500	{object}	GenericErrorResponse
+//	@Router			  /schedule [get]
+func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {
+	actionID := c.Param("action_id")
+	a.logger.Debug("Removing an Scheduled Action", zap.String("action_id", actionID))
+
+	if err := a.sql.deleteScheduledAction(actionID); err != nil {
+		a.logger.Error("Can't delete instance from DB", zap.String("action_id", actionID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
 
 // ==================== Expenses      Handlers ====================
 
@@ -63,7 +168,7 @@ func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {}
 //	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/expenses [get]
 func (a APIServer) HandlerGetExpenses(c *gin.Context) {
-	a.logger.Debug("Retrieving complete expense inventory")
+	a.logger.Debug("Retrieving complete expenses list")
 
 	expenses, err := a.sql.getExpenses()
 	if err != nil {

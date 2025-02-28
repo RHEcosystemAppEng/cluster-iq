@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -37,6 +38,57 @@ func NewAPISQLClient(dbURL string, logger *zap.Logger) (*APISQLClient, error) {
 		db:     db,
 		logger: logger,
 	}, nil
+}
+
+func (a APISQLClient) getScheduledActions() ([]actions.ScheduledAction, error) {
+	var dbactions []actions.ScheduledAction
+	if err := a.db.Select(&dbactions, SelectScheduledActionsQuery); err != nil {
+		return nil, err
+	}
+
+	return dbactions, nil
+}
+
+func (a APISQLClient) getScheduledActionByID(actionID string) ([]actions.ScheduledAction, error) {
+	var dbactions []actions.ScheduledAction
+	if err := a.db.Select(&dbactions, SelectScheduledActionsByIDQuery, actionID); err != nil {
+		return nil, err
+	}
+
+	return dbactions, nil
+}
+
+func (a APISQLClient) writeScheduledActions(actions []actions.ScheduledAction) error {
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	// Writing Scheduled Actions
+	if _, err := tx.NamedExec(InsertScheduledActionsQuery, actions); err != nil {
+		a.logger.Error("Can't prepare Insert Scheduled Actions query", zap.Error(err))
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a APISQLClient) deleteScheduledAction(actionID string) error {
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	tx.MustExec(DeleteScheduledActionsQuery, actionID)
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // getExpenses retrieves all expenses from the database.

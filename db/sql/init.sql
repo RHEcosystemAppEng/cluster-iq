@@ -111,8 +111,8 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 
 -- Scheduled actions
-CREATE TABLE IF NOT EXISTS scheduled_actions (
-  id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS schedule (
+  id SERIAL PRIMARY KEY,
   time TIMESTAMP WITH TIME ZONE,
   action TEXT REFERENCES actions(name),
   target TEXT REFERENCES clusters(id)
