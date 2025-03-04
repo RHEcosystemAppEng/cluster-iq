@@ -1,22 +1,37 @@
-package main
+package sqlclient
 
 const (
 	// SelectScheduledActionQuery returns every scheduled action on the inventory
 	SelectScheduledActionsQuery = `
-		SELECT * FROM schedule
+		SELECT
+			id,
+			time,
+			action,
+			target as "target.clusterID"
+		FROM schedule
 		ORDER BY id
 	`
 
 	// SelectScheduledActionByIDQuery returns scheduled action on the inventory for a specific ID
 	SelectScheduledActionsByIDQuery = `
-		SELECT * FROM schedule
+		SELECT
+			id,
+			time,
+			action,
+			target as "target.clusterID"
+		FROM schedule
 		WHERE id = $1
 		ORDER BY id
 	`
 
 	// SelectScheduledActionByTargetQuery returns scheduled action on the inventory for a specific Target
 	SelectScheduledActionsByTargetQuery = `
-		SELECT * FROM schedule
+		SELECT
+			id,
+			time,
+			action,
+			target as "target.clusterID"
+		FROM schedule
 		WHERE target = $1
 		ORDER BY id
 	`
@@ -30,8 +45,8 @@ const (
 		) VALUES (
 			:time,
 			:action,
-			:target
-		) 
+			:target.clusterID
+		)
 	`
 
 	// DeleteScheduledActionQuery

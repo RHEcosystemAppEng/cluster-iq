@@ -29,12 +29,10 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 	}
 
 	// Checking DB Connection status
-	if a.sql.db != nil {
-		if err := a.sql.db.Ping(); err == nil {
-			hc.DBHealth = true
-		} else {
-			a.logger.Error("Can't ping DB", zap.Error(err))
-		}
+	if err := a.sql.Ping(); err == nil {
+		hc.DBHealth = true
+	} else {
+		a.logger.Error("Can't ping DB", zap.Error(err))
 	}
 
 	// Checking API's Router status
@@ -60,7 +58,7 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 func (a APIServer) HandlerGetScheduledActions(c *gin.Context) {
 	a.logger.Debug("Retrieving complete scheduled actions list")
 
-	schedule, err := a.sql.getScheduledActions()
+	schedule, err := a.sql.GetScheduledActions()
 	if err != nil {
 		a.logger.Error("Can't retrieve Schedule list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -83,7 +81,7 @@ func (a APIServer) HandlerGetScheduleActionByID(c *gin.Context) {
 	actionID := c.Param("action_id")
 	a.logger.Debug("Retrieving complete scheduled actions list")
 
-	schedule, err := a.sql.getScheduledActionByID(actionID)
+	schedule, err := a.sql.GetScheduledActionByID(actionID)
 	if err != nil {
 		a.logger.Error("Can't retrieve Schedule Action", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -122,7 +120,7 @@ func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
 
 	// Writing scheduled action
 	a.logger.Debug("Writing a new Scheduled Action", zap.Reflect("actions", actions))
-	err = a.sql.writeScheduledActions(actions)
+	err = a.sql.WriteScheduledActions(actions)
 	if err != nil {
 		a.logger.Error("Can't write new Scheduled Actions into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -146,7 +144,7 @@ func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {
 	actionID := c.Param("action_id")
 	a.logger.Debug("Removing an Scheduled Action", zap.String("action_id", actionID))
 
-	if err := a.sql.deleteScheduledAction(actionID); err != nil {
+	if err := a.sql.DeleteScheduledAction(actionID); err != nil {
 		a.logger.Error("Can't delete instance from DB", zap.String("action_id", actionID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
@@ -170,7 +168,7 @@ func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {
 func (a APIServer) HandlerGetExpenses(c *gin.Context) {
 	a.logger.Debug("Retrieving complete expenses list")
 
-	expenses, err := a.sql.getExpenses()
+	expenses, err := a.sql.GetExpenses()
 	if err != nil {
 		a.logger.Error("Can't retrieve Expenses list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -195,7 +193,7 @@ func (a APIServer) HandlerGetExpensesByInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Retrieving expenses by InstanceID", zap.String("instance_id", instanceID))
 
-	expenses, err := a.sql.getExpensesByInstance(instanceID)
+	expenses, err := a.sql.GetExpensesByInstance(instanceID)
 	if err != nil {
 		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, nil)
@@ -236,7 +234,7 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 
 	// Writing expenses
 	a.logger.Debug("Writing a new Expense", zap.Reflect("expenses", expenses))
-	err = a.sql.writeExpenses(expenses)
+	err = a.sql.WriteExpenses(expenses)
 	if err != nil {
 		a.logger.Error("Can't write new Expenses into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -261,7 +259,7 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 func (a APIServer) HandlerGetInstances(c *gin.Context) {
 	a.logger.Debug("Retrieving complete instance inventory")
 
-	instances, err := a.sql.getInstances()
+	instances, err := a.sql.GetInstances()
 	if err != nil {
 		a.logger.Error("Can't retrieve Instances list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -284,7 +282,7 @@ func (a APIServer) HandlerGetInstances(c *gin.Context) {
 func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 	a.logger.Debug("Retrieving instances with outdated billing information")
 
-	instances, err := a.sql.getInstancesOutdatedBilling()
+	instances, err := a.sql.GetInstancesOutdatedBilling()
 	if err != nil {
 		a.logger.Error("Can't retrieve Last Expenses list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -309,7 +307,7 @@ func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Retrieving instance by ID", zap.String("instance_id", instanceID))
 
-	instances, err := a.sql.getInstanceByID(instanceID)
+	instances, err := a.sql.GetInstanceByID(instanceID)
 	if err != nil {
 		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, nil)
@@ -348,7 +346,7 @@ func (a APIServer) HandlerPostInstance(c *gin.Context) {
 	}
 
 	a.logger.Debug("Writing a new Instance", zap.Reflect("instance", instances))
-	err = a.sql.writeInstances(instances)
+	err = a.sql.WriteInstances(instances)
 	if err != nil {
 		a.logger.Error("Can't write new instances into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -374,7 +372,7 @@ func (a APIServer) HandlerDeleteInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Removing an Instance", zap.String("instance_id", instanceID))
 
-	if err := a.sql.deleteInstance(instanceID); err != nil {
+	if err := a.sql.DeleteInstance(instanceID); err != nil {
 		a.logger.Error("Can't delete instance from DB", zap.String("instance_id", instanceID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
@@ -418,7 +416,7 @@ func (a APIServer) HandlerPatchInstance(c *gin.Context) {
 func (a APIServer) HandlerGetClusters(c *gin.Context) {
 	a.logger.Debug("Retrieving complete clusters inventory")
 
-	clusters, err := a.sql.getClusters()
+	clusters, err := a.sql.GetClusters()
 	if err != nil {
 		a.logger.Error("Can't retrieve Clusters list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -443,7 +441,7 @@ func (a APIServer) HandlerGetClustersByID(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster Tags by ID", zap.String("cluster_id", clusterID))
 
-	clusters, err := a.sql.getClusterByID(clusterID)
+	clusters, err := a.sql.GetClusterByID(clusterID)
 	if err != nil {
 		a.logger.Error("Cluster not found", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, nil)
@@ -468,7 +466,7 @@ func (a APIServer) HandlerGetInstancesOnCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster's Instances", zap.String("cluster_id", clusterID))
 
-	instances, err := a.sql.getInstancesOnCluster(clusterID)
+	instances, err := a.sql.GetInstancesOnCluster(clusterID)
 	if err != nil {
 		a.logger.Error("Can't retrieve instances on cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -493,7 +491,7 @@ func (a APIServer) HandlerGetClusterTags(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
 
-	tags, err := a.sql.getClusterTags(clusterID)
+	tags, err := a.sql.GetClusterTags(clusterID)
 	if err != nil {
 		a.logger.Error("Can't retrieve Tags of cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -532,7 +530,7 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 	}
 
 	a.logger.Debug("Writing new Clusters", zap.Reflect("clusters", clusters))
-	err = a.sql.writeClusters(clusters)
+	err = a.sql.WriteClusters(clusters)
 	if err != nil {
 		a.logger.Error("Can't write new Clusters into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -573,7 +571,7 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 	a.logger.Info("Cluster Powered On successfully", zap.String("cluster_id", clusterID))
 
 	// Updating Cluster Status on the DB
-	if err := a.sql.updateClusterStatusByClusterID("Running", clusterID); err != nil {
+	if err := a.sql.UpdateClusterStatusByClusterID("Running", clusterID); err != nil {
 		a.logger.Error("Error updating status on DB when powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
@@ -623,7 +621,7 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	a.logger.Info("Cluster Powered Off successfully", zap.String("cluster_id", clusterID))
 
 	// Updating Cluster Status on the DB
-	if err := a.sql.updateClusterStatusByClusterID("Stopped", clusterID); err != nil {
+	if err := a.sql.UpdateClusterStatusByClusterID("Stopped", clusterID); err != nil {
 		a.logger.Error("Error updating status on DB when powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
@@ -656,7 +654,7 @@ func (a APIServer) HandlerDeleteCluster(c *gin.Context) {
 	clusterName := c.Param("cluster_id")
 	a.logger.Debug("Removing a Cluster", zap.String("cluster_id", clusterName))
 
-	if err := a.sql.deleteCluster(clusterName); err != nil {
+	if err := a.sql.DeleteCluster(clusterName); err != nil {
 		a.logger.Error("Can't delete Cluster from DB", zap.String("cluster_id", clusterName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
@@ -701,7 +699,7 @@ func (a APIServer) HandlerPatchCluster(c *gin.Context) {
 func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 	a.logger.Debug("Retrieving complete Accounts inventory")
 
-	accounts, err := a.sql.getAccounts()
+	accounts, err := a.sql.GetAccounts()
 	if err != nil {
 		a.logger.Error("Can't retrieve Accounts list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -726,7 +724,7 @@ func (a APIServer) HandlerGetAccountsByName(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Retrieving Account by Name", zap.String("account_name", accountName))
 
-	accounts, err := a.sql.getAccountByName(accountName)
+	accounts, err := a.sql.GetAccountByName(accountName)
 	if err != nil {
 		a.logger.Error("Account not found", zap.String("account_name", accountName), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, NewGenericErrorResponse(err.Error()))
@@ -751,7 +749,7 @@ func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Retrieving Account's Clusters", zap.String("account_name", accountName))
 
-	clusters, err := a.sql.getClustersOnAccount(accountName)
+	clusters, err := a.sql.GetClustersOnAccount(accountName)
 	if err != nil {
 		a.logger.Error("Can't retrieve clusters on account", zap.String("account_name", accountName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -790,7 +788,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 	}
 
 	a.logger.Debug("Writing a new Account", zap.Reflect("accounts", accounts))
-	err = a.sql.writeAccounts(accounts)
+	err = a.sql.WriteAccounts(accounts)
 	if err != nil {
 		a.logger.Error("Can't write new Accounts into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -811,13 +809,11 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 //	@Success		200				{object}	nil
 //	@Failure		500				{object}	GenericErrorResponse
 //	@Router			/accounts/{account_name} [delete]
-//
-// TODO: Not Implemented
 func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Removing an Account", zap.String("account", accountName))
 
-	if err := a.sql.deleteAccount(accountName); err != nil {
+	if err := a.sql.DeleteAccount(accountName); err != nil {
 		a.logger.Error("Can't delete Cluster from DB", zap.String("account_name", accountName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
@@ -859,7 +855,7 @@ func (a APIServer) HandlerPatchAccount(c *gin.Context) {
 //	@Failure		500	{object}	nil
 //	@Router			/inventory/refresh [post]
 func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
-	if err := a.sql.refreshInventory(); err != nil {
+	if err := a.sql.RefreshInventory(); err != nil {
 		a.logger.Error("Can't refresh inventory data on DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return

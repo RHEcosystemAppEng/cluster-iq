@@ -1,4 +1,4 @@
-package main
+package sqlclient
 
 import (
 	"database/sql"
@@ -10,37 +10,41 @@ import (
 	"go.uber.org/zap"
 )
 
-// APISQLClient defines the SQL interface for the API to interact with the database.
+// SQLClient defines the SQL interface for the API to interact with the database.
 // It manages database connections and provides methods for interacting with various entities like instances, clusters, accounts, and expenses.
-type APISQLClient struct {
+type SQLClient struct {
 	// db is the database connection object.
 	db *sqlx.DB
 	// logger is used for logging database operations and errors.
 	logger *zap.Logger
 }
 
-// NewAPISQLClient initializes a new APISQLClient with the given database URL and logger.
+// NewSQLClient initializes a new SQLClient with the given database URL and logger.
 //
 // Parameters:
 // - dbURL: The connection string for the PostgreSQL database.
 // - logger: Logger instance for logging.
 //
 // Returns:
-// - A pointer to an APISQLClient instance.
+// - A pointer to an SQLClient instance.
 // - An error if the database connection fails.
-func NewAPISQLClient(dbURL string, logger *zap.Logger) (*APISQLClient, error) {
+func NewSQLClient(dbURL string, logger *zap.Logger) (*SQLClient, error) {
 	db, err := sqlx.Connect("postgres", dbURL)
 	if err != nil {
 		return nil, err
 	}
 
-	return &APISQLClient{
+	return &SQLClient{
 		db:     db,
 		logger: logger,
 	}, nil
 }
 
-func (a APISQLClient) getScheduledActions() ([]actions.ScheduledAction, error) {
+func (a SQLClient) Ping() error {
+	return a.db.Ping()
+}
+
+func (a SQLClient) GetScheduledActions() ([]actions.ScheduledAction, error) {
 	var dbactions []actions.ScheduledAction
 	if err := a.db.Select(&dbactions, SelectScheduledActionsQuery); err != nil {
 		return nil, err
@@ -49,7 +53,7 @@ func (a APISQLClient) getScheduledActions() ([]actions.ScheduledAction, error) {
 	return dbactions, nil
 }
 
-func (a APISQLClient) getScheduledActionByID(actionID string) ([]actions.ScheduledAction, error) {
+func (a SQLClient) GetScheduledActionByID(actionID string) ([]actions.ScheduledAction, error) {
 	var dbactions []actions.ScheduledAction
 	if err := a.db.Select(&dbactions, SelectScheduledActionsByIDQuery, actionID); err != nil {
 		return nil, err
@@ -58,7 +62,7 @@ func (a APISQLClient) getScheduledActionByID(actionID string) ([]actions.Schedul
 	return dbactions, nil
 }
 
-func (a APISQLClient) writeScheduledActions(actions []actions.ScheduledAction) error {
+func (a SQLClient) WriteScheduledActions(actions []actions.ScheduledAction) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -78,7 +82,7 @@ func (a APISQLClient) writeScheduledActions(actions []actions.ScheduledAction) e
 	return nil
 }
 
-func (a APISQLClient) deleteScheduledAction(actionID string) error {
+func (a SQLClient) DeleteScheduledAction(actionID string) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -96,7 +100,7 @@ func (a APISQLClient) deleteScheduledAction(actionID string) error {
 // Returns:
 // - A slice of inventory.Expense objects.
 // - An error if the query fails.
-func (a APISQLClient) getExpenses() ([]inventory.Expense, error) {
+func (a SQLClient) GetExpenses() ([]inventory.Expense, error) {
 	var dbexpenses []inventory.Expense
 	if err := a.db.Select(&dbexpenses, SelectExpensesQuery); err != nil {
 		return nil, err
@@ -110,7 +114,7 @@ func (a APISQLClient) getExpenses() ([]inventory.Expense, error) {
 // Returns:
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
-func (a APISQLClient) getInstancesOutdatedBilling() ([]inventory.Instance, error) {
+func (a SQLClient) GetInstancesOutdatedBilling() ([]inventory.Instance, error) {
 	var dbexpenses []inventory.Instance
 	if err := a.db.Select(&dbexpenses, SelectLastExpensesQuery); err != nil {
 		return nil, err
@@ -127,7 +131,7 @@ func (a APISQLClient) getInstancesOutdatedBilling() ([]inventory.Instance, error
 // Returns:
 // - A slice of inventory.Expense objects associated with the instance.
 // - An error if the query fails.
-func (a APISQLClient) getExpensesByInstance(instanceID string) ([]inventory.Expense, error) {
+func (a SQLClient) GetExpensesByInstance(instanceID string) ([]inventory.Expense, error) {
 	var dbexpenses []inventory.Expense
 	if err := a.db.Select(&dbexpenses, SelectExpensesByInstanceQuery, instanceID); err != nil {
 		return nil, err
@@ -143,7 +147,7 @@ func (a APISQLClient) getExpensesByInstance(instanceID string) ([]inventory.Expe
 //
 // Returns:
 // - An error if the transaction fails.
-func (a APISQLClient) writeExpenses(expenses []inventory.Expense) error {
+func (a SQLClient) WriteExpenses(expenses []inventory.Expense) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -166,7 +170,7 @@ func (a APISQLClient) writeExpenses(expenses []inventory.Expense) error {
 // Returns:
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
-func (a APISQLClient) getInstances() ([]inventory.Instance, error) {
+func (a SQLClient) GetInstances() ([]inventory.Instance, error) {
 	var dbinstances []InstanceDB
 	if err := a.db.Select(&dbinstances, SelectInstancesQuery); err != nil {
 		return nil, err
@@ -185,7 +189,7 @@ func (a APISQLClient) getInstances() ([]inventory.Instance, error) {
 // Returns:
 // - A slice of inventory.Instance objects (usually one element).
 // - An error if the query fails.
-func (a APISQLClient) getInstanceByID(instanceID string) ([]inventory.Instance, error) {
+func (a SQLClient) GetInstanceByID(instanceID string) ([]inventory.Instance, error) {
 	var dbinstances []InstanceDB
 	if err := a.db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
@@ -203,7 +207,7 @@ func (a APISQLClient) getInstanceByID(instanceID string) ([]inventory.Instance, 
 //
 // Returns:
 // - An error if the transaction fails.
-func (a APISQLClient) writeInstances(instances []inventory.Instance) error {
+func (a SQLClient) WriteInstances(instances []inventory.Instance) error {
 	var tags []inventory.Tag
 	for _, instance := range instances {
 		tags = append(tags, instance.Tags...)
@@ -242,7 +246,7 @@ func (a APISQLClient) writeInstances(instances []inventory.Instance) error {
 //
 // Returns:
 // - An error if the transaction fails.
-func (a APISQLClient) deleteInstance(instanceID string) error {
+func (a SQLClient) DeleteInstance(instanceID string) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -261,7 +265,7 @@ func (a APISQLClient) deleteInstance(instanceID string) error {
 // Returns:
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
-func (a APISQLClient) getClusters() ([]inventory.Cluster, error) {
+func (a SQLClient) GetClusters() ([]inventory.Cluster, error) {
 	var clusters []inventory.Cluster
 	if err := a.db.Select(&clusters, SelectClustersQuery); err != nil {
 		return nil, err
@@ -277,7 +281,7 @@ func (a APISQLClient) getClusters() ([]inventory.Cluster, error) {
 // Returns:
 // - A string representing the account name.
 // - An error if the query fails or the cluster ID does not exist.
-func (a APISQLClient) getClusterAccountName(clusterID string) (string, error) {
+func (a SQLClient) GetClusterAccountName(clusterID string) (string, error) {
 	var accountName string
 	if err := a.db.Get(&accountName, SelectClusterAccountNameQuery, clusterID); err != nil {
 		return "", err
@@ -293,7 +297,7 @@ func (a APISQLClient) getClusterAccountName(clusterID string) (string, error) {
 // Returns:
 // - A string representing the region of the cluster.
 // - An error if the query fails or the cluster ID does not exist.
-func (a APISQLClient) getClusterRegion(clusterID string) (string, error) {
+func (a SQLClient) GetClusterRegion(clusterID string) (string, error) {
 	var region string
 	if err := a.db.Get(&region, SelectClusterRegionQuery, clusterID); err != nil {
 		return "", err
@@ -309,7 +313,7 @@ func (a APISQLClient) getClusterRegion(clusterID string) (string, error) {
 // Returns:
 // - A slice containing a single inventory.Cluster object.
 // - An error if the query fails or the cluster ID does not exist.
-func (a APISQLClient) getClusterByID(clusterID string) ([]inventory.Cluster, error) {
+func (a SQLClient) GetClusterByID(clusterID string) ([]inventory.Cluster, error) {
 	var cluster inventory.Cluster
 	if err := a.db.Get(&cluster, SelectClustersByIDuery, clusterID); err != nil {
 		return nil, err
@@ -325,7 +329,7 @@ func (a APISQLClient) getClusterByID(clusterID string) ([]inventory.Cluster, err
 // Returns:
 // - A slice of inventory.Tag objects representing the cluster's tags.
 // - An error if the query fails.
-func (a APISQLClient) getClusterTags(clusterID string) ([]inventory.Tag, error) {
+func (a SQLClient) GetClusterTags(clusterID string) ([]inventory.Tag, error) {
 	var tags []inventory.Tag
 	if err := a.db.Select(&tags, SelectClusterTags, clusterID); err != nil {
 		return nil, err
@@ -341,7 +345,7 @@ func (a APISQLClient) getClusterTags(clusterID string) ([]inventory.Tag, error) 
 // Returns:
 // - A slice of inventory.Instance objects representing the instances in the cluster.
 // - An error if the query fails.
-func (a APISQLClient) getInstancesOnCluster(clusterID string) ([]inventory.Instance, error) {
+func (a SQLClient) GetInstancesOnCluster(clusterID string) ([]inventory.Instance, error) {
 	var instances []inventory.Instance
 	if err := a.db.Select(&instances, SelectInstancesOnClusterQuery, clusterID); err != nil {
 		return nil, err
@@ -356,7 +360,7 @@ func (a APISQLClient) getInstancesOnCluster(clusterID string) ([]inventory.Insta
 //
 // Returns:
 // - An error if the transaction fails or the query encounters an issue.
-func (a APISQLClient) writeClusters(clusters []inventory.Cluster) error {
+func (a SQLClient) WriteClusters(clusters []inventory.Cluster) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -384,7 +388,7 @@ func (a APISQLClient) writeClusters(clusters []inventory.Cluster) error {
 //
 // Returns:
 // - An error if the database transaction fails.
-func (a APISQLClient) deleteCluster(clusterName string) error {
+func (a SQLClient) DeleteCluster(clusterName string) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -402,7 +406,7 @@ func (a APISQLClient) deleteCluster(clusterName string) error {
 // Returns:
 // - A slice of inventory.Account objects.
 // - An error if the query fails.
-func (a APISQLClient) getAccounts() ([]inventory.Account, error) {
+func (a SQLClient) GetAccounts() ([]inventory.Account, error) {
 	var accounts []inventory.Account
 	if err := a.db.Select(&accounts, SelectAccountsQuery); err != nil {
 		return nil, err
@@ -418,7 +422,7 @@ func (a APISQLClient) getAccounts() ([]inventory.Account, error) {
 // Returns:
 // - A slice of inventory.Account objects (usually containing one element).
 // - An error if the query fails.
-func (a APISQLClient) getAccountByName(accountName string) ([]inventory.Account, error) {
+func (a SQLClient) GetAccountByName(accountName string) ([]inventory.Account, error) {
 	var account inventory.Account
 	if err := a.db.Get(&account, SelectAccountsByNameQuery, accountName); err != nil {
 		return nil, err
@@ -434,7 +438,7 @@ func (a APISQLClient) getAccountByName(accountName string) ([]inventory.Account,
 // Returns:
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
-func (a APISQLClient) getClustersOnAccount(accountName string) ([]inventory.Cluster, error) {
+func (a SQLClient) GetClustersOnAccount(accountName string) ([]inventory.Cluster, error) {
 	var clusters []inventory.Cluster
 	if err := a.db.Select(&clusters, SelectClustersOnAccountQuery, accountName); err != nil {
 		return nil, err
@@ -449,7 +453,7 @@ func (a APISQLClient) getClustersOnAccount(accountName string) ([]inventory.Clus
 //
 // Returns:
 // - An error if the transaction fails.
-func (a APISQLClient) writeAccounts(accounts []inventory.Account) error {
+func (a SQLClient) WriteAccounts(accounts []inventory.Account) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -469,7 +473,7 @@ func (a APISQLClient) writeAccounts(accounts []inventory.Account) error {
 //
 // Returns:
 // - An error if the transaction fails.
-func (a APISQLClient) deleteAccount(accountName string) error {
+func (a SQLClient) DeleteAccount(accountName string) error {
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -486,7 +490,7 @@ func (a APISQLClient) deleteAccount(accountName string) error {
 //
 // Returns:
 // - An error if any update query fails.
-func (a APISQLClient) refreshInventory() error {
+func (a SQLClient) RefreshInventory() error {
 	var result sql.Result
 
 	if result = a.db.MustExec(UpdateTerminatedInstancesQuery); result == nil {
@@ -512,9 +516,9 @@ func (a APISQLClient) refreshInventory() error {
 //
 // Returns:
 // - An error if the status is invalid, the update operation fails, or no rows are affected.
-func (a APISQLClient) updateClusterStatusByClusterID(status string, clusterID string) error {
+func (a SQLClient) UpdateClusterStatusByClusterID(status string, clusterID string) error {
 	// Checking if the requested status is available on the DB
-	if exists, err := a.checkStatusValue(status); err != nil {
+	if exists, err := a.CheckStatusValue(status); err != nil {
 		return err
 	} else {
 		if !exists {
@@ -567,7 +571,7 @@ func (a APISQLClient) updateClusterStatusByClusterID(status string, clusterID st
 // Returns:
 // - A boolean indicating whether the status exists (true) or not (false).
 // - An error if the query fails.
-func (a APISQLClient) checkStatusValue(status string) (bool, error) {
+func (a SQLClient) CheckStatusValue(status string) (bool, error) {
 	var exists bool
 	if err := a.db.QueryRow(CheckStatusQuery, status).Scan(&exists); err != nil {
 		return false, err

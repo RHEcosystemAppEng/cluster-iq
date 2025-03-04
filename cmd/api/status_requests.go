@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
+)
 
 // ClusterStatusChangeRequest represents the request to the gRPC Agent for powering on/off clusters.
 // It includes details such as the account name, region, cluster ID, and the list of instance IDs associated with the cluster.
@@ -21,21 +25,21 @@ type ClusterStatusChangeRequest struct {
 // Returns:
 // - Pointer to the newly created ClusterStatusChangeRequest.
 // - An error if there is an issue retrieving any of the required data.
-func NewClusterStatusChangeRequest(sql *APISQLClient, clusterID string) (*ClusterStatusChangeRequest, error) {
+func NewClusterStatusChangeRequest(sql *sqlclient.SQLClient, clusterID string) (*ClusterStatusChangeRequest, error) {
 	// Get AccountName
-	accountName, err := sql.getClusterAccountName(clusterID)
+	accountName, err := sql.GetClusterAccountName(clusterID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get Cluster Region
-	region, err := sql.getClusterRegion(clusterID)
+	region, err := sql.GetClusterRegion(clusterID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get Cluster's instances
-	instances, err := sql.getInstancesOnCluster(clusterID)
+	instances, err := sql.GetInstancesOnCluster(clusterID)
 	if err != nil {
 		return nil, err
 	}

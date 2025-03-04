@@ -15,6 +15,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
+	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -44,7 +45,7 @@ type APIServer struct {
 	router *gin.Engine             // Gin router for handling HTTP requests
 	server *http.Server            // HTTP server instance
 	grpc   *APIGRPCClient          // gRPC client for communication with external services
-	sql    *APISQLClient           // SQL client for database operations
+	sql    *sqlclient.SQLClient    // SQL client for database operations
 }
 
 // NewAPIServer initializes a new instance of the APIServer.
@@ -67,7 +68,7 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 	}
 
 	// Creating DB client
-	sqlClient, err := NewAPISQLClient(cfg.DBURL, logger)
+	sqlClient, err := sqlclient.NewSQLClient(cfg.DBURL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}

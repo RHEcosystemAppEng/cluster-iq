@@ -101,6 +101,7 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) *Agent {
 	}
 }
 
+// TODO DOC
 func (a *Agent) StartAgentServices() error {
 	var err error
 	errChan := make(chan error, 3)
