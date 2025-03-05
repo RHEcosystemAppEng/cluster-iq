@@ -1,10 +1,7 @@
 package main
 
 import (
-	"github.com/RHEcosystemAppEng/cluster-iq/cmd/api/docs"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"     // swagger embed files
-	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
 )
 
 type Router struct {
@@ -21,14 +18,12 @@ func NewRouter(api *APIServer) *Router {
 
 func (r *Router) SetupRoutes() {
 	// API Endpoints
-	r.setupSwagger()
 	baseGroup := r.engine.Group("/api/v1")
 	r.setupHealthcheckRoutes(baseGroup)
 	r.setupExpensesGroupRoutes(baseGroup)
 	r.setupInstancesRoutes(baseGroup)
 	r.setupClustersRoutes(baseGroup)
 	r.setupAccountsRoutes(baseGroup)
-	r.setupSwaggerRoutes(baseGroup)
 	r.setupEventsRoutes(baseGroup)
 }
 
@@ -82,17 +77,4 @@ func (r *Router) setupAccountsRoutes(baseGroup *gin.RouterGroup) {
 
 func (r *Router) setupEventsRoutes(baseGroup *gin.RouterGroup) {
 	baseGroup.GET("/events", r.api.HandlerGetSystemEvents)
-}
-
-func (r *Router) setupSwaggerRoutes(baseGroup *gin.RouterGroup) {
-	baseGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-}
-
-func (r *Router) setupSwagger() {
-	docs.SwaggerInfo.Title = "Cluster IP API doc"
-	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
-	docs.SwaggerInfo.Version = "0.3"
-	docs.SwaggerInfo.Host = "localhost"
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	docs.SwaggerInfo.Schemes = []string{"http"}
 }
