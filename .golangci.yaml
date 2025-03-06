@@ -11,14 +11,12 @@ linters:
     - goconst
     - gocritic
     - gofmt
-    - goimports
     - gosimple
     - govet
     - inamedparam
     - ineffassign
     - misspell
     - mnd
-    - nestif
     - noctx
     - revive
     - sqlclosecheck
@@ -39,9 +37,6 @@ issues:
   # intentionally until we fix the import
     - internal/inventory/tag_test.go
     - .*.pb.go
-linters-settings:
-  goimports:
-    local-prefixes: github.com/RHEcosystemAppEng/cluster-iq
 run:
   timeout: "20m"
   relative-path-mode: gomod
