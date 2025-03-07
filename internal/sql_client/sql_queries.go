@@ -1,27 +1,50 @@
 package sqlclient
 
 const (
-	// SelectScheduledActionQuery returns every scheduled action on the inventory
+	// SelectScheduledActionsQuery returns the list of scheduled pending actions on the inventory with all the parameters needed for action execution
+	// ARRAY_AGG is used for joining every instance on the same row
 	SelectScheduledActionsQuery = `
 		SELECT
-			id,
-			time,
-			action,
-			target as "target.clusterID"
+			schedule.id,
+		  schedule.time,
+			schedule.action,
+			clusters.id AS cluster_id,
+			clusters.region,
+			clusters.account_name,
+		ARRAY_AGG(instances.id::TEXT) FILTER (WHERE instances IS NOT NULL) AS instances
 		FROM schedule
-		ORDER BY id
-	`
+		JOIN clusters ON schedule.target = clusters.id
+		JOIN instances ON clusters.id = instances.cluster_id
+		GROUP BY
+			schedule.id,
+			schedule.time,
+			schedule.action,
+			clusters.id
+		ORDER BY
+			id ASC
+`
 
 	// SelectScheduledActionByIDQuery returns scheduled action on the inventory for a specific ID
 	SelectScheduledActionsByIDQuery = `
 		SELECT
-			id,
-			time,
-			action,
-			target as "target.clusterID"
+			schedule.id,
+		  schedule.time,
+			schedule.action,
+			clusters.id AS cluster_id,
+			clusters.region,
+			clusters.account_name,
+		ARRAY_AGG(instances.id::TEXT) FILTER (WHERE instances IS NOT NULL) AS instances
 		FROM schedule
-		WHERE id = $1
-		ORDER BY id
+		JOIN clusters ON schedule.target = clusters.id
+		JOIN instances ON clusters.id = instances.cluster_id
+		WHERE schedule.id = $1
+		GROUP BY
+			schedule.id,
+			schedule.time,
+			schedule.action,
+			clusters.id
+		ORDER BY
+			id ASC
 	`
 
 	// SelectScheduledActionByTargetQuery returns scheduled action on the inventory for a specific Target
@@ -59,7 +82,7 @@ const (
 	`
 
 	// SelectLastExpensesQuery returns the last expense for every instance older
-	// than 1 day. This is used for obtainning the list of instances that need
+	// than 1 day. This is used for obtaining the list of instances that need
 	// Billing information update because all the instances returned by this
 	// query doesn't have expenses for the current day
 	SelectLastExpensesQuery = `
@@ -165,7 +188,7 @@ const (
 		WHERE cluster_id = $1
 	`
 
-	// SelectInstancesOnClusterQuery returns every instance belonging to a acluster
+	// SelectInstancesOnClusterQuery returns every instance belonging to a cluster
 	SelectInstancesOnClusterQuery = `
 		SELECT * FROM instances
 		WHERE cluster_id = $1

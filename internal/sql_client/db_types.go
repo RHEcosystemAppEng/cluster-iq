@@ -3,7 +3,10 @@ package sqlclient
 import (
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
 
 // InstanceDB is an intermediate struct used to map instances and their tags into inventory.Instance objects.
@@ -55,4 +58,47 @@ type InstanceDB struct {
 
 	// TotalCost represents the total cost of the instance in US dollars since its creation.
 	TotalCost float64 `db:"total_cost"`
+}
+
+// DBScheduledAction is an intermediate struct used to map Scheduled Actions and their target's data into actions.ScheduledActions
+// It provides a detailed representation of when, what action, and which target the action has
+type DBScheduledAction struct {
+	// ID is the unique identifier of the Action
+	ID string `db:"id"`
+
+	// Timestamp is the time when the action will be executed
+	Timestamp time.Time `db:"time"`
+
+	// Action specifies which action will be performed over the target
+	Action actions.ActionType `db:"action"`
+
+	// ClusterID specifies the cluster as the action's target
+	ClusterID string `db:"cluster_id"`
+
+	// Region is the region where the cluster is running
+	Region string `db:"region"`
+
+	// AccountName is the account where the cluster is located
+	AccountName string `db:"account_name"`
+
+	// Instances is the list of instances of the cluster that will be impacted by the aciton
+	Instances pq.StringArray `db:"instances"`
+}
+
+// FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
+func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.ScheduledAction {
+	ba := *actions.NewBaseAction(
+		action.Action,
+		*actions.NewActionTarget(
+			action.AccountName,
+			action.Region,
+			action.ClusterID,
+			action.Instances,
+		),
+	)
+	ba.ID = action.ID
+	return &actions.ScheduledAction{
+		When:       action.Timestamp,
+		BaseAction: ba,
+	}
 }

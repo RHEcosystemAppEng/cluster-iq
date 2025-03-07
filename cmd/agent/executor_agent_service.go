@@ -1,3 +1,4 @@
+// ExecutorAgentService receives and executes the actions
 package main
 
 import (
@@ -12,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// ExecutorAgentService represents the main structure for receiving and executing actions
 type ExecutorAgentService struct {
 	cfg            *config.ExecutorAgentServiceConfig
 	executors      map[string]cexec.CloudExecutor
@@ -19,6 +21,16 @@ type ExecutorAgentService struct {
 	AgentService
 }
 
+// NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
+//
+// Parameters:
+//   - cfg: Pointer to ScheduleAgentServiceConfig containing the configuration details.
+//   - actionsChannel: channel actions.Action
+//   - wg: Sync.WaitGroup
+//   - logger: Pointer to zap.Logger for logging.
+//
+// Returns:
+//   - *ExecutorAgentService: A pointer to the newly created ExecutorAgentService
 func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChannel <-chan actions.Action, wg *sync.WaitGroup, logger *zap.Logger) *ExecutorAgentService {
 	eas := ExecutorAgentService{
 		cfg:            cfg,
@@ -123,12 +135,12 @@ func (e *ExecutorAgentService) createExecutors() error {
 // Returns:
 // - cexec.CloudExecutor: The executor for the specified account.
 // - error: An error if no executor is found for the given account.
-func (e *ExecutorAgentService) GetExecutor(accountName string) cexec.CloudExecutor {
+func (e *ExecutorAgentService) GetExecutor(accountName string) *cexec.CloudExecutor {
 	exec, ok := e.executors[accountName]
 	if !ok {
 		return nil
 	}
-	return exec
+	return &exec
 }
 
 func (e *ExecutorAgentService) Start() error {
@@ -141,9 +153,16 @@ func (e *ExecutorAgentService) Start() error {
 		)
 
 		target := action.GetTarget()
-		cexec := e.GetExecutor(target.GetAccountName())
-		if err := cexec.ProcessAction(action); err != nil {
+		cexec := *(e.GetExecutor(target.GetAccountName()))
+		if cexec == nil {
 			return fmt.Errorf("There's no Executor available for the requested account")
+		}
+		if err := cexec.ProcessAction(action); err != nil {
+			e.logger.Error("Error while processing action", zap.String("action_id", action.GetID()))
+			continue
+			//return fmt.Errorf("Error while processing action", zap.String("action_id", action.GetID()))
+		} else {
+			e.logger.Info("Action execution correct", zap.String("action_id", action.GetID()))
 		}
 	}
 

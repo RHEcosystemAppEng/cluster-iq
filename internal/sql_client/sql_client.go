@@ -1,3 +1,4 @@
+// sqlclient is the packaged for interacting with the ClusterIQ database. It should be only used by the API to maintain the architecture and the security and integrity of the data.
 package sqlclient
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/jmoiron/sqlx"
+
 	"go.uber.org/zap"
 )
 
@@ -40,29 +42,75 @@ func NewSQLClient(dbURL string, logger *zap.Logger) (*SQLClient, error) {
 	}, nil
 }
 
+// Ping performs a ping operation to check if the DB is alive
+//
+// Parameters:
+//
+// Returns:
+//   - An error if the ping fails
 func (a SQLClient) Ping() error {
 	return a.db.Ping()
 }
 
+// GetScheduledActions runs the db select query for retrieving the scheduled actions on the DB
+//
+// Parameters:
+//
+// Returns:
+//   - An array of actions.ScheduledAction with the scheduled actions declared on the DB
+//   - An error if the query fails
 func (a SQLClient) GetScheduledActions() ([]actions.ScheduledAction, error) {
-	var dbactions []actions.ScheduledAction
-	if err := a.db.Select(&dbactions, SelectScheduledActionsQuery); err != nil {
+	// Getting results from DB
+	var dbresult []DBScheduledAction
+	if err := a.db.Select(&dbresult, SelectScheduledActionsQuery); err != nil {
+		a.logger.Error("Can't prepare Select Scheduled Actions query", zap.Error(err))
 		return nil, err
+	}
+
+	// Transform from DBScheduledAction to ScheduledAction
+	var dbactions []actions.ScheduledAction
+	for _, dbresult := range dbresult {
+		dbactions = append(dbactions, *FromDBScheduledActionToScheduledAction(dbresult))
 	}
 
 	return dbactions, nil
 }
 
+// GetScheduledActions runs the db select query for retrieving a specific scheduled action by its ID
+//
+// Parameters:
+//
+// Returns:
+//   - An array of actions.ScheduledAction with the scheduled actions declared on
+//     the DB. It's expected to return an array with a single element, but still
+//     being an array for code compatibility
+//   - An error if the query fails
 func (a SQLClient) GetScheduledActionByID(actionID string) ([]actions.ScheduledAction, error) {
-	var dbactions []actions.ScheduledAction
-	if err := a.db.Select(&dbactions, SelectScheduledActionsByIDQuery, actionID); err != nil {
+	// Getting results from DB
+	var dbresult []DBScheduledAction
+	if err := a.db.Select(&dbresult, SelectScheduledActionsByIDQuery, actionID); err != nil {
+		a.logger.Error("Can't prepare Select Scheduled Actions query", zap.Error(err))
 		return nil, err
+	}
+
+	// Transform from DBScheduledAction to ScheduledAction
+	var dbactions []actions.ScheduledAction
+	for _, dbresult := range dbresult {
+		dbactions = append(dbactions, *FromDBScheduledActionToScheduledAction(dbresult))
 	}
 
 	return dbactions, nil
 }
 
+// WriteScheduledActions receives an array of actions.ScheduledAction and writes them on the DB
+//
+// Parameters:
+//   - An array of actions.ScheduledAction to write on the DB
+//
+// Returns:
+//   - An error if the insert fails
 func (a SQLClient) WriteScheduledActions(actions []actions.ScheduledAction) error {
+	// Begin transaction
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
@@ -71,7 +119,10 @@ func (a SQLClient) WriteScheduledActions(actions []actions.ScheduledAction) erro
 	// Writing Scheduled Actions
 	if _, err := tx.NamedExec(InsertScheduledActionsQuery, actions); err != nil {
 		a.logger.Error("Can't prepare Insert Scheduled Actions query", zap.Error(err))
-		tx.Rollback()
+		if rberr := tx.Rollback(); rberr != nil {
+			a.logger.Error("Error Rolling Back Insert Scheduled Actions query", zap.Error(rberr))
+			return fmt.Errorf("%w; %w;", err, rberr)
+		}
 		return err
 	}
 
@@ -82,20 +133,37 @@ func (a SQLClient) WriteScheduledActions(actions []actions.ScheduledAction) erro
 	return nil
 }
 
+// DeleteScheduledAction removes an actions.ScheduledAction action from the DB based on its ID
+//
+// Parameters:
+//   - A string containing the action ID to be removed
+//
+// Returns:
+//   - An error if the delete query fails
 func (a SQLClient) DeleteScheduledAction(actionID string) error {
+	// Begin transaction
 	tx, err := a.db.Beginx()
 	if err != nil {
+		if rberr := tx.Rollback(); rberr != nil {
+			a.logger.Error("Error Rolling Back Delete Scheduled Actions query", zap.Error(rberr))
+			return fmt.Errorf("%w; %w;", err, rberr)
+		}
 		return err
 	}
 
+	// Deleting
 	tx.MustExec(DeleteScheduledActionsQuery, actionID)
+
+	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// getExpenses retrieves all expenses from the database.
+// GetExpenses retrieves all expenses from the database.
+//
+// Parameters:
 //
 // Returns:
 // - A slice of inventory.Expense objects.
@@ -109,7 +177,9 @@ func (a SQLClient) GetExpenses() ([]inventory.Expense, error) {
 	return dbexpenses, nil
 }
 
-// getInstancesOutdatedBilling retrieves instances with outdated billing information.
+// GetInstancesOutdatedBilling retrieves instances with outdated billing information.
+//
+// Parameters:
 //
 // Returns:
 // - A slice of inventory.Instance objects.
@@ -123,7 +193,7 @@ func (a SQLClient) GetInstancesOutdatedBilling() ([]inventory.Instance, error) {
 	return dbexpenses, nil
 }
 
-// getExpensesByInstance retrieves expenses for a specific instance.
+// GetExpensesByInstance retrieves expenses for a specific instance.
 //
 // Parameters:
 // - instanceID: The ID of the instance.
@@ -140,7 +210,7 @@ func (a SQLClient) GetExpensesByInstance(instanceID string) ([]inventory.Expense
 	return dbexpenses, nil
 }
 
-// writeExpenses writes a batch of expenses to the database in a transaction.
+// WriteExpenses writes a batch of expenses to the database in a transaction.
 //
 // Parameters:
 // - expenses: A slice of inventory.Expense objects to insert.
@@ -165,7 +235,7 @@ func (a SQLClient) WriteExpenses(expenses []inventory.Expense) error {
 	return nil
 }
 
-// getInstances retrieves all instances from the database and maps them to inventory.Instance objects.
+// GetInstances retrieves all instances from the database and maps them to inventory.Instance objects.
 //
 // Returns:
 // - A slice of inventory.Instance objects.
@@ -221,6 +291,7 @@ func (a SQLClient) WriteInstances(instances []inventory.Instance) error {
 	// Writing Instances
 	if _, err := tx.NamedExec(InsertInstancesQuery, instances); err != nil {
 		a.logger.Error("Can't prepare Insert instances query", zap.Error(err))
+		// TODO: check errors on Rollback
 		tx.Rollback()
 		return err
 	}
@@ -228,6 +299,7 @@ func (a SQLClient) WriteInstances(instances []inventory.Instance) error {
 	// Writing tags
 	if _, err := tx.NamedExec(InsertTagsQuery, tags); err != nil {
 		a.logger.Error("Can't prepare Insert tags query", zap.Error(err))
+		// TODO: check errors on Rollback
 		tx.Rollback()
 		return err
 	}
@@ -459,6 +531,7 @@ func (a SQLClient) WriteAccounts(accounts []inventory.Account) error {
 		return err
 	}
 
+	// TODO: check errors on NamedExec
 	tx.NamedExec(InsertAccountsQuery, accounts)
 	if err := tx.Commit(); err != nil {
 		return err

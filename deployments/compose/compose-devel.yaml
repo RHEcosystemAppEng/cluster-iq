@@ -42,10 +42,12 @@ services:
     image: quay.io/ecosystem-appeng/cluster-iq-agent:latest
     container_name: agent
     environment:
-      CIQ_AGENT_GRPC_LISTEN_URL: "0.0.0.0:50051"
-      CIQ_AGENT_CRON_API_URL: "http://api:8080/api/v1"
+      CIQ_AGENT_API_URL: "http://api:8080/api/v1"
+      CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL: "0.0.0.0:50051"
       CIQ_CREDS_FILE: "/credentials"
       CIQ_LOG_LEVEL: "DEBUG"
+      CIQ_AGENT_CRON_SERVICE_POLLING_INTERVAL: 20
+      CIQ_AGENT_SCHEDULE_SERVICE_POLLING_INTERVAL: 20
     ports:
       - 50051:50051
     volumes:

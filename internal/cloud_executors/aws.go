@@ -43,33 +43,7 @@ func NewAWSExecutor(account *inventory.Account, ch <-chan actions.Action, logger
 	return &exec
 }
 
-func (e *AWSExecutor) Start() error {
-	// Reading from Channel meanwhile it's open
-	for action := range e.executionChannel {
-		e.logger.Debug("AWSExecutor received an Action",
-			zap.String("account_name", e.account.Name),
-			zap.Any("action", action.GetActionType()),
-		)
-
-		// Processing Action
-		if err := e.ProcessAction(action); err != nil {
-			e.logger.Error("Error processing transaction on AWSExecutor",
-				zap.String("account_name", e.account.Name),
-				zap.Any("action", action.GetActionType()),
-				zap.Error(err),
-			)
-		} else {
-			e.logger.Debug("Action executed successfully",
-				zap.String("account_name", e.account.Name),
-				zap.Any("action", action.GetActionType()),
-			)
-		}
-	}
-
-	// Channel closed
-	return fmt.Errorf("Actions Channel closed for AWSExecutor")
-}
-
+// ProcessAction gets an action, and starts the procude for the defined ActionType
 func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 	e.logger.Debug("Processing incoming action")
 	target := action.GetTarget()

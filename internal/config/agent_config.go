@@ -1,20 +1,32 @@
+// Configuration structures for ClusterIQ Agent and AgentServices
 package config
 
 import env "github.com/caarlos0/env/v11"
 
-// TODO: Doc
-
+// ExecutorAgentServiceConfig contains the config parameters for the ExecutorAgentService
 type ExecutorAgentServiceConfig struct {
+	// Credentials for accessing the cloud providers accounts
 	Credentials CloudCredentialsConfig
 }
 
-// TODO: Add debug mode
+// InstantAgentServiceConfig contains the config parameters for the InstantAgentService (gRPC)
 type InstantAgentServiceConfig struct {
-	ListenURL string `env:"CIQ_AGENT_GRPC_LISTEN_URL,required"`
+	// ListenURL is the gRPC server listening adress
+	ListenURL string `env:"CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL,required"`
+}
+
+type ScheduleAgentServiceConfig struct {
+	// APIURL refers to the ClusterIQ API Endpoint
+	APIURL string `env:"CIQ_AGENT_API_URL,required"`
+	// PollingInterval defines the amount of time between Schedule refreshes (polling frecuency)
+	PollingInterval int `env:"CIQ_AGENT_SCHEDULE_SERVICE_POLLING_INTERVAL,required"`
 }
 
 type CronAgentServiceConfig struct {
-	APIURL string `env:"CIQ_AGENT_CRON_API_URL,required"`
+	// APIURL refers to the ClusterIQ API Endpoint
+	APIURL string `env:"CIQ_AGENT_API_URL,required"`
+	// PollingInterval defines the amount of time between Schedule refreshes (polling frecuency)
+	PollingInterval int `env:"CIQ_AGENT_CRON_SERVICE_POLLING_INTERVAL,required"`
 }
 
 // AgentConfig defines the config parameters for the ClusterIQ Agent

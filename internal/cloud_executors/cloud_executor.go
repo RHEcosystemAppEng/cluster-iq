@@ -6,8 +6,6 @@ import "github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 // the implementation for connecting and sending orders to a specific cloud
 // provider
 type CloudExecutor interface {
-	// Starts listening for incoming actions
-	Start() error
 	// Connect logs in into the cloud provider
 	Connect() error
 	// ProcessAction recieves and action and process it depending on its type
