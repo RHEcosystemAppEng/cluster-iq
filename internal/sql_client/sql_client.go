@@ -483,6 +483,17 @@ func (a SQLClient) GetInstances() ([]inventory.Instance, error) {
 	return instances, nil
 }
 
+// GetInstancesOverview returns a summary of instances grouped by their status.
+// It provides the total count along with counts of running and stopped instances.
+func (a SQLClient) GetInstancesOverview() (models.InstancesSummary, error) {
+	var instances models.InstancesSummary
+	if err := a.db.Get(&instances, SelectInstancesOverview); err != nil {
+		return models.InstancesSummary{}, err
+	}
+
+	return instances, nil
+}
+
 // getInstanceByID retrieves an instance by its ID.
 //
 // Parameters:
@@ -575,6 +586,16 @@ func (a SQLClient) GetClusters() ([]inventory.Cluster, error) {
 		return nil, err
 	}
 	return clusters, nil
+}
+
+// GetClustersOverview returns a summary of cluster statuses
+// It counts the number of clusters that are running, stopped, unknown, or terminated.
+func (a SQLClient) GetClustersOverview() (models.ClustersSummary, error) {
+	var clustersOverview models.ClustersSummary
+	if err := a.db.Get(&clustersOverview, SelectClustersOverview); err != nil {
+		return models.ClustersSummary{}, err
+	}
+	return clustersOverview, nil
 }
 
 // getClusterAccountName retrieves the account name associated with a specific cluster.
@@ -716,6 +737,42 @@ func (a SQLClient) GetAccounts() ([]inventory.Account, error) {
 		return nil, err
 	}
 	return accounts, nil
+}
+
+// GetProvidersOverview returns a summary of cloud providers (AWS, GCP, Azure) with
+// their respective account and cluster counts.
+func (a SQLClient) GetProvidersOverview() (models.ProvidersSummary, error) {
+	var providerRows []struct {
+		Provider     string `db:"provider"`
+		AccountCount int    `db:"account_count"`
+		ClusterCount int    `db:"cluster_count"`
+	}
+
+	if err := a.db.Select(&providerRows, SelectProvidersOverviewQuery); err != nil {
+		return models.ProvidersSummary{}, err
+	}
+
+	// Initialize the summary
+	summary := models.ProvidersSummary{}
+
+	// Map each provider to its proper field
+	for _, row := range providerRows {
+		detail := models.ProviderDetail{
+			AccountCount: row.AccountCount,
+			ClusterCount: row.ClusterCount,
+		}
+
+		switch strings.ToLower(row.Provider) {
+		case "aws":
+			summary.AWS = detail
+		case "gcp":
+			summary.GCP = detail
+		case "azure":
+			summary.Azure = detail
+		}
+	}
+
+	return summary, nil
 }
 
 // getAccountByName retrieves an account by its name from the database.
