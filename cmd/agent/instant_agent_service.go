@@ -110,6 +110,8 @@ func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerO
 			req.ClusterId,
 			req.InstancesIdList,
 		),
+		"Pending",
+		true,
 	)
 
 	i.actionsChannel <- action
@@ -148,6 +150,8 @@ func (i *InstantAgentService) PowerOffCluster(ctx context.Context, req *pb.Power
 			req.ClusterId,
 			req.InstancesIdList,
 		),
+		"Pending",
+		true,
 	)
 
 	i.actionsChannel <- action

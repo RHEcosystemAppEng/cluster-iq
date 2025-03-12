@@ -8,16 +8,16 @@ import (
 )
 
 type ScheduledActionListResponse struct {
-	Count   int                       `json:"count,omitempty"` // Number of actions omitted if empty.
-	Actions []actions.ScheduledAction `json:"actions"`         // List of actions
+	Count   int              `json:"count,omitempty"` // Number of actions omitted if empty.
+	Actions []actions.Action `json:"actions"`         // List of actions
 }
 
-func NewScheduledActionListResponse(actionList []actions.ScheduledAction) *ScheduledActionListResponse {
+func NewScheduledActionListResponse(actionList []actions.Action) *ScheduledActionListResponse {
 	numActions := len(actionList)
 
 	// If there is no actions, an empty array is returned instead of null
 	if numActions == 0 {
-		actionList = []actions.ScheduledAction{}
+		actionList = []actions.Action{}
 	}
 
 	response := ScheduledActionListResponse{

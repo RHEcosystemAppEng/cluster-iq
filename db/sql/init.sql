@@ -15,14 +15,14 @@ VALUES
 ;
 
 
--- Actions
-CREATE TABLE IF NOT EXISTS actions (
+-- Action Operations
+CREATE TABLE IF NOT EXISTS action_operations (
   name TEXT PRIMARY KEY
 );
 
 -- Default values for Cloud Providers table
 INSERT INTO
-  actions(name)
+  action_operations(name)
 VALUES
   ('PowerOnCluster'),
   ('PowerOffCluster')
@@ -110,13 +110,46 @@ CREATE TABLE IF NOT EXISTS expenses (
 );
 
 
+-- Action types table
+CREATE TABLE IF NOT EXISTS action_types (
+  name TEXT PRIMARY KEY
+);
+
+-- Default values for Action Types
+INSERT INTO
+  action_types(name)
+VALUES
+  ('cron_action'),
+  ('scheduled_action')
+;
+
+-- Action Status table
+CREATE TABLE IF NOT EXISTS action_status (
+  name TEXT PRIMARY KEY
+);
+
+-- Default values for Action Types
+INSERT INTO
+  action_status(name)
+VALUES
+  ('Success'),
+  ('Failed'),
+  ('Pending'),
+  ('Unknown')
+;
+
 -- Scheduled actions
 CREATE TABLE IF NOT EXISTS schedule (
   id SERIAL PRIMARY KEY,
+  type TEXT REFERENCES action_types(name),
   time TIMESTAMP WITH TIME ZONE,
-  action TEXT REFERENCES actions(name),
-  target TEXT REFERENCES clusters(id)
+  cron_exp TEXT,
+  operation TEXT REFERENCES action_operations(name),
+  target TEXT REFERENCES clusters(id),
+  status TEXT REFERENCES action_status(name),
+  enabled BOOLEAN
 );
+
 
 -- ## Functions ##
 -- Updates the total cost of an instance after a new expense record is inserted

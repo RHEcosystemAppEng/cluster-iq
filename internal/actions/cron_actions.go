@@ -1,32 +1,30 @@
 package actions
 
-import "time"
-
-// ScheduledAction represents an action that is scheduled to be executed at a specific time.
+// CronAction represents an action that is scheduled to be executed at a specific time.
 // It embeds BaseAction to inherit common action properties and includes a timestamp indicating when the action should be executed.
-type ScheduledAction struct {
+type CronAction struct {
 	// When specifies the scheduled time for the action execution.
-	When time.Time `db:"time" json:"time"`
+	Expression string `db:"cron_exp" json:"cron_exp"`
 
 	Type string `db:"type" json:"type"`
 
 	BaseAction
 }
 
-// NewScheduledAction creates and initializes a new ScheduledAction.
+// NewCronAction creates and initializes a new CronAction.
 //
 // Parameters:
-// - actionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
+// - ActionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
 // - target: The target resource (cluster and instances) affected by the action.
 // - when: The scheduled time for executing the action.
 //
 // Returns:
-// - A pointer to a newly created ScheduledAction instance.
-func NewScheduledAction(ao ActionOperation, target ActionTarget, status string, enabled bool, when time.Time) *ScheduledAction {
-	return &ScheduledAction{
-		BaseAction: *NewBaseAction(ao, target, status, enabled),
-		Type:       "scheduled_action",
-		When:       when,
+// - A pointer to a newly created CronAction instance.
+func NewCronAction(ActionOperation ActionOperation, target ActionTarget, status string, enabled bool, cron_exp string) *CronAction {
+	return &CronAction{
+		BaseAction: *NewBaseAction(ActionOperation, target, status, enabled),
+		Type:       "cron_action",
+		Expression: cron_exp,
 	}
 }
 
@@ -34,7 +32,7 @@ func NewScheduledAction(ao ActionOperation, target ActionTarget, status string, 
 //
 // Returns:
 // - An ActionOperation representing the action type (e.g., PowerOnCluster, PowerOffCluster).
-func (s ScheduledAction) GetActionOperation() ActionOperation {
+func (s CronAction) GetActionOperation() ActionOperation {
 	return s.Operation
 }
 
@@ -42,7 +40,7 @@ func (s ScheduledAction) GetActionOperation() ActionOperation {
 //
 // Returns:
 // - A string representing the cloud region.
-func (s ScheduledAction) GetRegion() string {
+func (s CronAction) GetRegion() string {
 	return s.Target.GetRegion()
 }
 
@@ -50,7 +48,7 @@ func (s ScheduledAction) GetRegion() string {
 //
 // Returns:
 // - An ActionTarget representing the target cluster and instances affected by the action.
-func (s ScheduledAction) GetTarget() ActionTarget {
+func (s CronAction) GetTarget() ActionTarget {
 	return s.Target
 }
 
@@ -58,6 +56,14 @@ func (s ScheduledAction) GetTarget() ActionTarget {
 //
 // Returns:
 // - A string representing the unique action ID.
-func (s ScheduledAction) GetID() string {
+func (s CronAction) GetID() string {
 	return s.ID
+}
+
+// GetCronExpression returns the cron expression for running this action
+//
+// Returns:
+// - A string representing the cron expression
+func (s CronAction) GetCronExpression() string {
+	return s.Expression
 }

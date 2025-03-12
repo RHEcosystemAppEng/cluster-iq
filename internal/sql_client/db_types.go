@@ -66,11 +66,17 @@ type DBScheduledAction struct {
 	// ID is the unique identifier of the Action
 	ID string `db:"id"`
 
+	// Type represents the type of the action (Cron based, Scheduled...)
+	Type string `db:"type"`
+
 	// Timestamp is the time when the action will be executed
 	Timestamp time.Time `db:"time"`
 
+	// CronExpression is the cron string used for re-scheduling the action like a CronTab
+	CronExpression string `db:"cron_exp"`
+
 	// Action specifies which action will be performed over the target
-	Action actions.ActionType `db:"action"`
+	Operation actions.ActionOperation `db:"operation"`
 
 	// ClusterID specifies the cluster as the action's target
 	ClusterID string `db:"cluster_id"`
@@ -83,22 +89,67 @@ type DBScheduledAction struct {
 
 	// Instances is the list of instances of the cluster that will be impacted by the aciton
 	Instances pq.StringArray `db:"instances"`
+
+	// Status represents the status of the current action. Check action_status table for more info
+	Status string `db:"status"`
+
+	// Enabled is a boolean for enable/disable this action execution
+	Enable bool `db:"enabled"`
+}
+
+func FromDBScheduledActionToActions(dbactions []DBScheduledAction) []actions.Action {
+	var resultActions []actions.Action
+
+	for _, action := range dbactions {
+		switch action.Type {
+		case "scheduled_action":
+			resultActions = append(resultActions, FromDBScheduledActionToScheduledAction(action))
+		case "cron_action":
+			resultActions = append(resultActions, FromDBScheduledActionToCronAction(action))
+		}
+	}
+
+	return resultActions
 }
 
 // FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
 func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.ScheduledAction {
 	ba := *actions.NewBaseAction(
-		action.Action,
+		action.Operation,
 		*actions.NewActionTarget(
 			action.AccountName,
 			action.Region,
 			action.ClusterID,
 			action.Instances,
 		),
+		action.Status,
+		action.Enable,
 	)
 	ba.ID = action.ID
 	return &actions.ScheduledAction{
 		When:       action.Timestamp,
+		Type:       action.Type,
+		BaseAction: ba,
+	}
+}
+
+// FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
+func FromDBScheduledActionToCronAction(action DBScheduledAction) *actions.CronAction {
+	ba := *actions.NewBaseAction(
+		action.Operation,
+		*actions.NewActionTarget(
+			action.AccountName,
+			action.Region,
+			action.ClusterID,
+			action.Instances,
+		),
+		action.Status,
+		action.Enable,
+	)
+	ba.ID = action.ID
+	return &actions.CronAction{
+		Expression: action.CronExpression,
+		Type:       action.Type,
 		BaseAction: ba,
 	}
 }

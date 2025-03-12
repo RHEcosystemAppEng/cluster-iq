@@ -1,4 +1,5 @@
 // sqlclient is the packaged for interacting with the ClusterIQ database. It should be only used by the API to maintain the architecture and the security and integrity of the data.
+// TODO: Review documentaiton comments
 package sqlclient
 
 import (
@@ -59,7 +60,7 @@ func (a SQLClient) Ping() error {
 // Returns:
 //   - An array of actions.ScheduledAction with the scheduled actions declared on the DB
 //   - An error if the query fails
-func (a SQLClient) GetScheduledActions() ([]actions.ScheduledAction, error) {
+func (a SQLClient) GetScheduledActions() ([]actions.Action, error) {
 	// Getting results from DB
 	var dbresult []DBScheduledAction
 	if err := a.db.Select(&dbresult, SelectScheduledActionsQuery); err != nil {
@@ -68,12 +69,109 @@ func (a SQLClient) GetScheduledActions() ([]actions.ScheduledAction, error) {
 	}
 
 	// Transform from DBScheduledAction to ScheduledAction
-	var dbactions []actions.ScheduledAction
-	for _, dbresult := range dbresult {
-		dbactions = append(dbactions, *FromDBScheduledActionToScheduledAction(dbresult))
+	return FromDBScheduledActionToActions(dbresult), nil
+}
+
+// GetEnabledScheduledActions runs the db select query for retrieving the enabled scheduled actions on the DB
+//
+// Parameters:
+//
+// Returns:
+//   - An array of actions.ScheduledAction with the scheduled actions declared on the DB that are enabled
+//   - An error if the query fails
+func (a SQLClient) GetEnabledScheduledActions() ([]actions.Action, error) {
+	// Getting results from DB
+	var dbresult []DBScheduledAction
+	if err := a.db.Select(&dbresult, SelectEnabledScheduledActionsQuery); err != nil {
+		a.logger.Error("Can't prepare Select Enabled Scheduled Actions query", zap.Error(err))
+		return nil, err
 	}
 
-	return dbactions, nil
+	// Transform from DBScheduledAction to ScheduledAction
+	return FromDBScheduledActionToActions(dbresult), nil
+}
+
+// GetToScheduleActions runs the db select query for retrieving the enabled scheduled actions on the DB
+//
+// Parameters:
+//
+// Returns:
+//   - An array of actions.ScheduledAction with the scheduled actions declared on the DB that are enabled
+//   - An error if the query fails
+func (a SQLClient) GetToScheduleActions() ([]actions.Action, error) {
+	// Getting results from DB
+	var dbresult []DBScheduledAction
+	if err := a.db.Select(&dbresult, SelectToScheduledActionsQuery); err != nil {
+		a.logger.Error("Can't prepare Select Enabled Scheduled Actions query", zap.Error(err))
+		return nil, err
+	}
+
+	// Transform from DBScheduledAction to ScheduledAction
+	return FromDBScheduledActionToActions(dbresult), nil
+}
+
+// EnableScheduledAction enables an Action by its ID
+//
+// Parameters:
+//   - Action ID
+//
+// Returns:
+//   - An array of actions.ScheduledAction with the scheduled actions declared on the DB that are enabled
+//   - An error if the query fails
+func (a SQLClient) EnableScheduledAction(actionID string) error {
+	// Begin transaction
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	// Writing Scheduled Actions
+	if _, err := tx.Exec(EnableActionQuery, actionID); err != nil {
+		a.logger.Error("Can't prepare Enable Scheduled Actions query", zap.Error(err))
+		if rberr := tx.Rollback(); rberr != nil {
+			a.logger.Error("Error Rolling Back Enable Scheduled Actions query", zap.Error(rberr))
+			return fmt.Errorf("%w; %w;", err, rberr)
+		}
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DisableScheduledAction Disables an Action by its ID
+//
+// Parameters:
+//   - Action ID
+//
+// Returns:
+//   - An array of actions.ScheduledAction with the scheduled actions declared on the DB that are enabled
+//   - An error if the query fails
+func (a SQLClient) DisableScheduledAction(actionID string) error {
+	// Begin transaction
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	// Writing Scheduled Actions
+	if _, err := tx.Exec(DisableActionQuery, actionID); err != nil {
+		a.logger.Error("Can't prepare Disable Scheduled Actions query", zap.Error(err))
+		if rberr := tx.Rollback(); rberr != nil {
+			a.logger.Error("Error Rolling Back Disable Scheduled Actions query", zap.Error(rberr))
+			return fmt.Errorf("%w; %w;", err, rberr)
+		}
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetScheduledActions runs the db select query for retrieving a specific scheduled action by its ID
@@ -85,7 +183,7 @@ func (a SQLClient) GetScheduledActions() ([]actions.ScheduledAction, error) {
 //     the DB. It's expected to return an array with a single element, but still
 //     being an array for code compatibility
 //   - An error if the query fails
-func (a SQLClient) GetScheduledActionByID(actionID string) ([]actions.ScheduledAction, error) {
+func (a SQLClient) GetScheduledActionByID(actionID string) ([]actions.Action, error) {
 	// Getting results from DB
 	var dbresult []DBScheduledAction
 	if err := a.db.Select(&dbresult, SelectScheduledActionsByIDQuery, actionID); err != nil {
@@ -94,12 +192,7 @@ func (a SQLClient) GetScheduledActionByID(actionID string) ([]actions.ScheduledA
 	}
 
 	// Transform from DBScheduledAction to ScheduledAction
-	var dbactions []actions.ScheduledAction
-	for _, dbresult := range dbresult {
-		dbactions = append(dbactions, *FromDBScheduledActionToScheduledAction(dbresult))
-	}
-
-	return dbactions, nil
+	return FromDBScheduledActionToActions(dbresult), nil
 }
 
 // WriteScheduledActions receives an array of actions.ScheduledAction and writes them on the DB

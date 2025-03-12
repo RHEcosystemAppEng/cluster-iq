@@ -56,7 +56,7 @@ func init() {
 type Agent struct {
 	cfg            *config.AgentConfig
 	ias            *InstantAgentService
-	cas            *CronAgentService
+	cas            *ScheduleAgentService
 	eas            *ExecutorAgentService
 	actionsChannel chan actions.Action
 	logger         *zap.Logger
@@ -76,8 +76,8 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) *Agent {
 		return nil
 	}
 
-	// Creating CronAgentService (scheduled actions)
-	cas := NewCronAgentService(&cfg.CronAgentServiceConfig, ch, &wg, logger)
+	// Creating ScheduleAgentService (scheduled actions)
+	cas := NewScheduleAgentService(&cfg.ScheduleAgentServiceConfig, ch, &wg, logger)
 	if ias == nil {
 		logger.Error("Cannot create CronAgentService")
 		return nil

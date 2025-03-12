@@ -9,23 +9,23 @@ type InstantAction struct {
 // NewInstantAction creates and initializes a new InstantAction.
 //
 // Parameters:
-// - actionType: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
+// - ao: The operation of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
 // - target: The target resource (cluster and instances) affected by the action.
 //
 // Returns:
 // - A pointer to a newly created InstantAction instance.
-func NewInstantAction(actionType ActionType, target ActionTarget) *InstantAction {
+func NewInstantAction(ao ActionOperation, target ActionTarget, status string, enabled bool) *InstantAction {
 	return &InstantAction{
-		BaseAction: *NewBaseAction(actionType, target),
+		BaseAction: *NewBaseAction(ao, target, status, enabled),
 	}
 }
 
-// GetActionType returns the type of action being performed.
+// GetActionOperation returns the type of action being performed.
 //
 // Returns:
-// - An ActionType representing the action type (e.g., PowerOnCluster, PowerOffCluster).
-func (i InstantAction) GetActionType() ActionType {
-	return i.Type
+// - An ActionOperation representing the action type (e.g., PowerOnCluster, PowerOffCluster).
+func (i InstantAction) GetActionOperation() ActionOperation {
+	return i.Operation
 }
 
 // GetRegion returns the cloud region where the action is executed.

@@ -19,6 +19,7 @@ type ExecutorAgentService struct {
 	executors      map[string]cexec.CloudExecutor
 	actionsChannel <-chan actions.Action
 	AgentService
+	// TODO Add api client for updating acitons with results
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
@@ -148,7 +149,7 @@ func (e *ExecutorAgentService) Start() error {
 
 	for action := range e.actionsChannel {
 		e.logger.Debug("New action arrived to ExecutorAgentService",
-			zap.Any("action", action.GetActionType()),
+			zap.Any("action", action.GetActionOperation()),
 			zap.Any("target", action.GetTarget()),
 		)
 
@@ -160,7 +161,8 @@ func (e *ExecutorAgentService) Start() error {
 		if err := cexec.ProcessAction(action); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", action.GetID()))
 			continue
-			//return fmt.Errorf("Error while processing action", zap.String("action_id", action.GetID()))
+			// TODO generate audit event based on err
+			// TODO remove
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", action.GetID()))
 		}

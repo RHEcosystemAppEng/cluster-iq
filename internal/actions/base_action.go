@@ -1,19 +1,23 @@
 package actions
 
+// BaseAction defines the common parameters that every action has
 type BaseAction struct {
-	ID     string       `db:"id" json:"id"`
-	Type   ActionType   `db:"action" json:"action"`
-	Target ActionTarget `db:"target" json:"target"`
-	//Target string `db:"target" json:"target"`
+	ID        string          `db:"id" json:"id"`
+	Operation ActionOperation `db:"operation" json:"operation"`
+	Target    ActionTarget    `db:"target" json:"target"`
+	Status    string          `db:"status" json:"status"`
+	Enabled   bool            `db:"enabled" json:"enabled"`
 }
 
-func NewBaseAction(actionType ActionType, target ActionTarget) *BaseAction {
+func NewBaseAction(ao ActionOperation, target ActionTarget, status string, enabled bool) *BaseAction {
 	return &BaseAction{
-		Type:   actionType,
-		Target: target,
+		Operation: ao,
+		Target:    target,
+		Status:    status,
+		Enabled:   enabled,
 	}
 }
 
-func (b BaseAction) GetActionType() ActionType {
-	return b.Type
+func (b BaseAction) GetActionOperation() ActionOperation {
+	return b.Operation
 }

@@ -1,13 +1,17 @@
 package sqlclient
 
 const (
-	// SelectScheduledActionsQuery returns the list of scheduled pending actions on the inventory with all the parameters needed for action execution
+	// SelectScheduledActionsQuery returns the list of scheduled actions on the inventory with all the parameters needed for action execution
 	// ARRAY_AGG is used for joining every instance on the same row
 	SelectScheduledActionsQuery = `
 		SELECT
 			schedule.id,
+			schedule.type,
 		  schedule.time,
-			schedule.action,
+		  schedule.cron_exp,
+			schedule.operation,
+			schedule.status,
+			schedule.enabled,
 			clusters.id AS cluster_id,
 			clusters.region,
 			clusters.account_name,
@@ -18,18 +22,94 @@ const (
 		GROUP BY
 			schedule.id,
 			schedule.time,
-			schedule.action,
+			schedule.operation,
 			clusters.id
 		ORDER BY
 			id ASC
+`
+
+	// SelectEnabledScheduledActionsQuery returns the list of enabled scheduled actions on the inventory with all the parameters needed for action execution
+	SelectEnabledScheduledActionsQuery = `
+		SELECT
+			schedule.id,
+			schedule.type,
+		  schedule.time,
+		  schedule.cron_exp,
+			schedule.operation,
+			schedule.status,
+			schedule.enabled,
+			clusters.id AS cluster_id,
+			clusters.region,
+			clusters.account_name,
+		ARRAY_AGG(instances.id::TEXT) FILTER (WHERE instances IS NOT NULL) AS instances
+		FROM schedule
+		JOIN clusters ON schedule.target = clusters.id
+		JOIN instances ON clusters.id = instances.cluster_id
+		WHERE schedule.enabled = true
+		GROUP BY
+			schedule.id,
+			schedule.time,
+			schedule.operation,
+			clusters.id
+		ORDER BY
+			id ASC
+`
+
+	// SelectToScheduledActionsQuery returns the list of scheduled actions on the inventory with all the parameters needed for action execution
+	SelectToScheduledActionsQuery = `
+		SELECT
+			schedule.id,
+			schedule.type,
+		  schedule.time,
+		  schedule.cron_exp,
+			schedule.operation,
+			schedule.status,
+			schedule.enabled,
+			clusters.id AS cluster_id,
+			clusters.region,
+			clusters.account_name,
+		ARRAY_AGG(instances.id::TEXT) FILTER (WHERE instances IS NOT NULL) AS instances
+		FROM schedule
+		JOIN clusters ON schedule.target = clusters.id
+		JOIN instances ON clusters.id = instances.cluster_id
+		WHERE schedule.enabled = true AND schedule.status = 'Pending'
+		GROUP BY
+			schedule.id,
+			schedule.time,
+			schedule.operation,
+			clusters.id
+		ORDER BY
+			id ASC
+`
+
+	// EnableActionQuery enables the action to be re-scheduled on next agent polling
+	EnableActionQuery = `
+		UPDATE
+			schedule
+		SET
+			enabled = true
+		WHERE id = $1
+`
+
+	// DisableActionQuery disables the action to don't be re-scheduled on next agent polling
+	DisableActionQuery = `
+		UPDATE
+			schedule
+		SET
+			enabled = false
+		WHERE id = $1
 `
 
 	// SelectScheduledActionByIDQuery returns scheduled action on the inventory for a specific ID
 	SelectScheduledActionsByIDQuery = `
 		SELECT
 			schedule.id,
+			schedule.type,
 		  schedule.time,
-			schedule.action,
+		  schedule.cron_exp,
+			schedule.operation,
+			schedule.status,
+			schedule.enabled,
 			clusters.id AS cluster_id,
 			clusters.region,
 			clusters.account_name,
@@ -41,7 +121,7 @@ const (
 		GROUP BY
 			schedule.id,
 			schedule.time,
-			schedule.action,
+			schedule.operation,
 			clusters.id
 		ORDER BY
 			id ASC

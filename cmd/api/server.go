@@ -73,6 +73,7 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}
 
+	// Creating APIServer
 	apiServer := &APIServer{
 		cfg:    cfg,
 		logger: logger,

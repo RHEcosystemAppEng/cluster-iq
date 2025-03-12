@@ -24,7 +24,7 @@ func (r *Router) SetupRoutes() {
 	r.setupSwagger()
 	baseGroup := r.engine.Group("/api/v1")
 	r.setupHealthcheckRoutes(baseGroup)
-	r.setupActionsRoutes(baseGroup)
+	r.setupScheduledActionsRoutes(baseGroup)
 	r.setupExpensesRoutes(baseGroup)
 	r.setupInstancesRoutes(baseGroup)
 	r.setupClustersRoutes(baseGroup)
@@ -37,11 +37,16 @@ func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
 	healthcheckGroup.GET("", r.api.HandlerHealthCheck)
 }
 
-func (r *Router) setupActionsRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupScheduledActionsRoutes(baseGroup *gin.RouterGroup) {
 	actionsGroup := baseGroup.Group("/schedule")
 	actionsGroup.GET("", r.api.HandlerGetScheduledActions)
-	actionsGroup.GET("/:action_id", r.api.HandlerGetScheduleActionByID)
+	actionsGroup.GET("/enabled", r.api.HandlerGetEnabledScheduledActions) // TODO: remove it and use query parameters
+	actionsGroup.GET("/schedule", r.api.HandlerGetToScheduleActions)      // TODO: remove it and use query parameters
+	actionsGroup.GET("/:action_id", r.api.HandlerGetScheduledActionByID)
+	actionsGroup.POST("/:action_id/enable", r.api.HandlerEnableScheduledAction)
+	actionsGroup.POST("/:action_id/disable", r.api.HandlerDisableScheduledAction)
 	actionsGroup.POST("", r.api.HandlerPostScheduledAction)
+	// TODO Add update status handler
 	actionsGroup.DELETE("/:action_id", r.api.HandlerDeleteScheduledAction)
 }
 

@@ -43,7 +43,7 @@ func NewAWSExecutor(account *inventory.Account, ch <-chan actions.Action, logger
 	return &exec
 }
 
-// ProcessAction gets an action, and starts the procude for the defined ActionType
+// ProcessAction gets an action, and starts the procude for the defined ActionOperation
 func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 	e.logger.Debug("Processing incoming action")
 	target := action.GetTarget()
@@ -51,15 +51,15 @@ func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 		return err
 	}
 
-	switch a := action.GetActionType(); a {
+	switch a := action.GetActionOperation(); a {
 	case actions.PowerOnCluster:
 		return e.PowerOnCluster(target.GetInstances())
 
 	case actions.PowerOffCluster:
 		return e.PowerOffCluster(target.GetInstances())
 
-	default: // No registed ActionType
-		return fmt.Errorf("Cannot identify ActionType while processing an Action")
+	default: // No registed ActionOperation
+		return fmt.Errorf("Cannot identify ActionOperation while processing an Action")
 	}
 }
 
