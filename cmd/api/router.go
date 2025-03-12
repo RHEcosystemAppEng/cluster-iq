@@ -40,8 +40,6 @@ func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
 func (r *Router) setupScheduledActionsRoutes(baseGroup *gin.RouterGroup) {
 	actionsGroup := baseGroup.Group("/schedule")
 	actionsGroup.GET("", r.api.HandlerGetScheduledActions)
-	actionsGroup.GET("/enabled", r.api.HandlerGetEnabledScheduledActions) // TODO: remove it and use query parameters
-	actionsGroup.GET("/schedule", r.api.HandlerGetToScheduleActions)      // TODO: remove it and use query parameters
 	actionsGroup.GET("/:action_id", r.api.HandlerGetScheduledActionByID)
 	actionsGroup.POST("/:action_id/enable", r.api.HandlerEnableScheduledAction)
 	actionsGroup.POST("/:action_id/disable", r.api.HandlerDisableScheduledAction)

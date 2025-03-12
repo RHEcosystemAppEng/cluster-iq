@@ -5,6 +5,7 @@ package sqlclient
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -60,49 +61,28 @@ func (a SQLClient) Ping() error {
 // Returns:
 //   - An array of actions.ScheduledAction with the scheduled actions declared on the DB
 //   - An error if the query fails
-func (a SQLClient) GetScheduledActions() ([]actions.Action, error) {
+func (a SQLClient) GetScheduledActions(conditions []string, args []interface{}) ([]actions.Action, error) {
+	var whereCondition string
+	if len(conditions) > 0 {
+		whereCondition += "WHERE " + strings.Join(conditions, " AND ")
+	} else {
+		whereCondition = ""
+	}
+
+	// Prepares the query replacing the placeholder "<CONDITION>" by the conditions and replaces '?' for '$x' for PSQL adaption
+	query := sqlx.Rebind(
+		sqlx.DOLLAR,
+		strings.ReplaceAll(
+			SelectScheduledActionsQuery,
+			SelectScheduledActionsQueryConditionsPlaceholder,
+			whereCondition,
+		),
+	)
+
 	// Getting results from DB
 	var dbresult []DBScheduledAction
-	if err := a.db.Select(&dbresult, SelectScheduledActionsQuery); err != nil {
+	if err := a.db.Select(&dbresult, query, args...); err != nil {
 		a.logger.Error("Can't prepare Select Scheduled Actions query", zap.Error(err))
-		return nil, err
-	}
-
-	// Transform from DBScheduledAction to ScheduledAction
-	return FromDBScheduledActionToActions(dbresult), nil
-}
-
-// GetEnabledScheduledActions runs the db select query for retrieving the enabled scheduled actions on the DB
-//
-// Parameters:
-//
-// Returns:
-//   - An array of actions.ScheduledAction with the scheduled actions declared on the DB that are enabled
-//   - An error if the query fails
-func (a SQLClient) GetEnabledScheduledActions() ([]actions.Action, error) {
-	// Getting results from DB
-	var dbresult []DBScheduledAction
-	if err := a.db.Select(&dbresult, SelectEnabledScheduledActionsQuery); err != nil {
-		a.logger.Error("Can't prepare Select Enabled Scheduled Actions query", zap.Error(err))
-		return nil, err
-	}
-
-	// Transform from DBScheduledAction to ScheduledAction
-	return FromDBScheduledActionToActions(dbresult), nil
-}
-
-// GetToScheduleActions runs the db select query for retrieving the enabled scheduled actions on the DB
-//
-// Parameters:
-//
-// Returns:
-//   - An array of actions.ScheduledAction with the scheduled actions declared on the DB that are enabled
-//   - An error if the query fails
-func (a SQLClient) GetToScheduleActions() ([]actions.Action, error) {
-	// Getting results from DB
-	var dbresult []DBScheduledAction
-	if err := a.db.Select(&dbresult, SelectToScheduledActionsQuery); err != nil {
-		a.logger.Error("Can't prepare Select Enabled Scheduled Actions query", zap.Error(err))
 		return nil, err
 	}
 

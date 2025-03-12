@@ -48,7 +48,7 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 
 // ==================== Sched Actions Handlers ====================
 
-// HandlerGetScheduledActions handles the request to obtain the entire Scheduled Actions list
+// HandlerGetScheduledActions handles the request to obtain the entire Scheduled Actions list. Filters can be added using query params
 //
 //	@Summary		  Obtain every Scheduled action
 //	@Description	Returns a list of Scheduled actions
@@ -59,55 +59,28 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 //	@Failure		  500	{object}	GenericErrorResponse
 //	@Router			  /schedule [get]
 func (a APIServer) HandlerGetScheduledActions(c *gin.Context) {
-	a.logger.Debug("Retrieving complete scheduled actions list")
+	a.logger.Debug("Retrieving schedule action list")
 
-	schedule, err := a.sql.GetScheduledActions()
+	// Capturing query params
+	var conditions []string
+	var args []interface{}
+
+	enabled := c.Query("enabled")
+	if enabled != "" {
+		conditions = append(conditions, "schedule.enabled = ?")
+		args = append(args, enabled)
+	}
+
+	status := c.Query("status")
+	if status != "" {
+		conditions = append(conditions, "schedule.status = ?")
+		args = append(args, status)
+	}
+
+	// Running sql client function
+	schedule, err := a.sql.GetScheduledActions(conditions, args)
 	if err != nil {
 		a.logger.Error("Can't retrieve Schedule list", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-	}
-
-	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
-}
-
-// HandlerGetEnabledScheduledActions handles the request to obtain the list of enabled Scheduled Actions
-//
-//	@Summary		  Obtain enabled Scheduled action
-//	@Description	Returns a list of Scheduled actions
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}	ScheduledActionListResponse
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
-func (a APIServer) HandlerGetEnabledScheduledActions(c *gin.Context) {
-	a.logger.Debug("Retrieving enabled scheduled actions list")
-
-	schedule, err := a.sql.GetEnabledScheduledActions()
-	if err != nil {
-		a.logger.Error("Can't retrieve enabled Schedule list", zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-	}
-
-	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
-}
-
-// HandlerGetToScheduleActions handles the request to obtain the list of enabled Scheduled Actions
-//
-//	@Summary		  Obtains the list of actions for scheduling
-//	@Description	Obtains the list of actions that needs to be rescheduled by the agent
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}	ScheduledActionListResponse
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
-func (a APIServer) HandlerGetToScheduleActions(c *gin.Context) {
-	a.logger.Debug("Retrieving enabled scheduled actions list")
-
-	schedule, err := a.sql.GetToScheduleActions()
-	if err != nil {
-		a.logger.Error("Can't retrieve to Schedule actions list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 	}
 
