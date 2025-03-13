@@ -1,6 +1,7 @@
 package sqlclient
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -70,7 +71,7 @@ type DBScheduledAction struct {
 	Type string `db:"type"`
 
 	// Timestamp is the time when the action will be executed
-	Timestamp time.Time `db:"time"`
+	Timestamp sql.NullTime `db:"time"`
 
 	// CronExpression is the cron string used for re-scheduling the action like a CronTab
 	CronExpression string `db:"cron_exp"`
@@ -114,6 +115,12 @@ func FromDBScheduledActionToActions(dbactions []DBScheduledAction) []actions.Act
 
 // FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
 func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.ScheduledAction {
+	// Checking if scanned timestamp is valid. No Scheduled action can be created without its timestamp
+	if !action.Timestamp.Valid {
+		return nil
+	}
+
+	// Processinb BaseAction fleds
 	ba := *actions.NewBaseAction(
 		action.Operation,
 		*actions.NewActionTarget(
@@ -126,8 +133,10 @@ func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.S
 		action.Enable,
 	)
 	ba.ID = action.ID
+
+	// Creating and returning ScheduledAction
 	return &actions.ScheduledAction{
-		When:       action.Timestamp,
+		When:       action.Timestamp.Time,
 		Type:       action.Type,
 		BaseAction: ba,
 	}
@@ -135,6 +144,7 @@ func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.S
 
 // FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
 func FromDBScheduledActionToCronAction(action DBScheduledAction) *actions.CronAction {
+	// Processinb BaseAction fleds
 	ba := *actions.NewBaseAction(
 		action.Operation,
 		*actions.NewActionTarget(
