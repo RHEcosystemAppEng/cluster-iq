@@ -283,7 +283,9 @@ func (a SQLClient) PatchScheduledActionStatus(actionID string, status string) er
 		return err
 	}
 
-	if _, err := tx.Exec(PatchActionStatusQuery, actionID, status); err != nil {
+	enabled := status == "Pending"
+
+	if _, err := tx.Exec(PatchActionStatusQuery, actionID, status, enabled); err != nil {
 		a.logger.Error("Can't prepare Patch Action Status query", zap.Error(err))
 		if rberr := tx.Rollback(); rberr != nil {
 			a.logger.Error("Error Rolling Back Patch Action Status query", zap.Error(rberr))

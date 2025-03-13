@@ -143,7 +143,7 @@ const (
 		UPDATE
 			schedule
 		SET
-			cron_exp = :cron_exp
+			cron_exp = :cron_exp,
 			operation = :operation,
 			target = :target.cluster_id,
 			enabled = :enabled
@@ -156,7 +156,8 @@ const (
 		UPDATE
 			schedule
 		SET
-			status = $2
+			status = $2,
+			enabled = $3
 		WHERE
 			id = $1
 	`
