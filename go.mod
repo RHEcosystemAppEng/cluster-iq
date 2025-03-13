@@ -11,8 +11,6 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.9
-	github.com/swaggo/files v1.0.1
-	github.com/swaggo/gin-swagger v1.3.2
 	github.com/swaggo/swag v1.16.2
 	go.uber.org/zap v1.25.0
 	google.golang.org/grpc v1.69.4

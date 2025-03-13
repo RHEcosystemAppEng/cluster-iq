@@ -1,10 +1,7 @@
 package main
 
 import (
-	"github.com/RHEcosystemAppEng/cluster-iq/cmd/api/docs"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"     // swagger embed files
-	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
 )
 
 type Router struct {
@@ -21,7 +18,6 @@ func NewRouter(api *APIServer) *Router {
 
 func (r *Router) SetupRoutes() {
 	// API Endpoints
-	r.setupSwagger()
 	baseGroup := r.engine.Group("/api/v1")
 	r.setupHealthcheckRoutes(baseGroup)
 	r.setupScheduledActionsRoutes(baseGroup)
@@ -29,7 +25,7 @@ func (r *Router) SetupRoutes() {
 	r.setupInstancesRoutes(baseGroup)
 	r.setupClustersRoutes(baseGroup)
 	r.setupAccountsRoutes(baseGroup)
-	r.setupSwaggerRoutes(baseGroup)
+	r.setupEventsRoutes(baseGroup)
 }
 
 func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
@@ -74,6 +70,7 @@ func (r *Router) setupClustersRoutes(baseGroup *gin.RouterGroup) {
 	clustersGroup.GET("/:cluster_id", r.api.HandlerGetClustersByID)
 	clustersGroup.GET("/:cluster_id/instances", r.api.HandlerGetInstancesOnCluster)
 	clustersGroup.GET("/:cluster_id/tags", r.api.HandlerGetClusterTags)
+	clustersGroup.GET("/:cluster_id/events", r.api.HandlerGetClusterEvents)
 	clustersGroup.POST("", r.api.HandlerPostCluster)
 	clustersGroup.POST("/:cluster_id/power_on", r.api.HandlerPowerOnCluster)
 	clustersGroup.POST("/:cluster_id/power_off", r.api.HandlerPowerOffCluster)
@@ -91,15 +88,6 @@ func (r *Router) setupAccountsRoutes(baseGroup *gin.RouterGroup) {
 	accountsGroup.PATCH("/:account_name", r.api.HandlerPatchAccount)
 }
 
-func (r *Router) setupSwaggerRoutes(baseGroup *gin.RouterGroup) {
-	baseGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-}
-
-func (r *Router) setupSwagger() {
-	docs.SwaggerInfo.Title = "Cluster IP API doc"
-	docs.SwaggerInfo.Description = "This the API of the ClusterIQ project"
-	docs.SwaggerInfo.Version = "0.3"
-	docs.SwaggerInfo.Host = "localhost"
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	docs.SwaggerInfo.Schemes = []string{"http"}
+func (r *Router) setupEventsRoutes(baseGroup *gin.RouterGroup) {
+	baseGroup.GET("/events", r.api.HandlerGetSystemEvents)
 }

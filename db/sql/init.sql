@@ -109,7 +109,6 @@ CREATE TABLE IF NOT EXISTS expenses (
   PRIMARY KEY (instance_id, date)
 );
 
-
 -- Action types table
 CREATE TABLE IF NOT EXISTS action_types (
   name TEXT PRIMARY KEY
@@ -150,6 +149,21 @@ CREATE TABLE IF NOT EXISTS schedule (
   enabled BOOLEAN
 );
 
+
+-- Audit logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+	id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+	event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+	triggered_by text NOT NULL,
+	action_name text NOT NULL,
+	resource_id text NOT NULL,
+	resource_type text NOT NULL,
+	result text NOT NULL,
+	description text NULL,
+	severity text DEFAULT 'info'::text NOT NULL,
+	CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+	CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+);
 
 -- ## Functions ##
 -- Updates the total cost of an instance after a new expense record is inserted

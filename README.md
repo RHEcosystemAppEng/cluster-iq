@@ -34,6 +34,12 @@ available for every cloud provider:
 The following graph shows the architecture of this project:
 ![ClusterIQ architecture diagram](./doc/architecture.png)
 
+## Documentation
+
+The following documentation is available:
+
+- [Events Documentation](doc/events/README.md) - Event flows and sequence diagrams
+- [Development Setup](doc/development-setup.md) - Local development guide
 
 ## Installation
 This section explains how to deploy ClusterIQ and ClusterIQ Console.
