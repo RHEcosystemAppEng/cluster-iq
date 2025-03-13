@@ -187,6 +187,9 @@ func (e *ExecutorAgentService) Start() error {
 		q := request.URL.Query()
 		q.Add("status", actionStatus)
 
+		// Assign query params to request
+		request.URL.RawQuery = q.Encode()
+
 		// Performing API request
 		if _, err := e.client.Do(request); err != nil {
 			return err

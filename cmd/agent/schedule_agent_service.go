@@ -313,7 +313,7 @@ func (a *ScheduleAgentService) ReScheduleActions() {
 		if actions, err := a.fetchScheduledActions(); err != nil {
 			a.logger.Error("Error when fetching Schedule", zap.Error(err))
 		} else {
-			a.logger.Info("Rescheduling Loop...", zap.Time("timestamp", time.Now()))
+			a.logger.Info("Rescheduling Loop...", zap.Int("running_actions", len(a.schedule)), zap.Time("timestamp", time.Now()))
 			a.ScheduleNewActions(*actions)
 		}
 		<-ticker.C
