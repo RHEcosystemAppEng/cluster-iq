@@ -2,7 +2,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -15,11 +17,12 @@ import (
 
 // ExecutorAgentService represents the main structure for receiving and executing actions
 type ExecutorAgentService struct {
-	cfg            *config.ExecutorAgentServiceConfig
+	cfg *config.ExecutorAgentServiceConfig
+	AgentService
 	executors      map[string]cexec.CloudExecutor
 	actionsChannel <-chan actions.Action
-	AgentService
-	// TODO Add api client for updating acitons with results
+	// HTTP Client for retrieving the schedule from API
+	client http.Client
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
@@ -33,6 +36,12 @@ type ExecutorAgentService struct {
 // Returns:
 //   - *ExecutorAgentService: A pointer to the newly created ExecutorAgentService
 func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChannel <-chan actions.Action, wg *sync.WaitGroup, logger *zap.Logger) *ExecutorAgentService {
+	// Initializing HTTP Client
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := http.Client{Transport: tr}
+
 	eas := ExecutorAgentService{
 		cfg:            cfg,
 		executors:      make(map[string]cexec.CloudExecutor),
@@ -41,6 +50,7 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 			logger: logger,
 			wg:     wg,
 		},
+		client: client,
 	}
 
 	// Reading credentials file and creating executors per account
@@ -146,6 +156,7 @@ func (e *ExecutorAgentService) GetExecutor(accountName string) *cexec.CloudExecu
 
 func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
+	var actionStatus string
 
 	for action := range e.actionsChannel {
 		e.logger.Debug("New action arrived to ExecutorAgentService",
@@ -160,11 +171,25 @@ func (e *ExecutorAgentService) Start() error {
 		}
 		if err := cexec.ProcessAction(action); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", action.GetID()))
-			continue
-			// TODO generate audit event based on err
-			// TODO remove
+			actionStatus = "Failed"
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", action.GetID()))
+			actionStatus = "Success"
+		}
+
+		// Prepare API request for updating action status
+		request, err := http.NewRequest(http.MethodPatch, e.cfg.APIURL+API_SCHEDULE_ACTIONS_PATH+"/"+action.GetID()+"/status", nil)
+		if err != nil {
+			return err
+		}
+
+		// Adding query parameter for the status
+		q := request.URL.Query()
+		q.Add("status", actionStatus)
+
+		// Performing API request
+		if _, err := e.client.Do(request); err != nil {
+			return err
 		}
 	}
 

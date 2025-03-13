@@ -74,7 +74,7 @@ type DBScheduledAction struct {
 	Timestamp sql.NullTime `db:"time"`
 
 	// CronExpression is the cron string used for re-scheduling the action like a CronTab
-	CronExpression string `db:"cron_exp"`
+	CronExpression sql.NullString `db:"cron_exp"`
 
 	// Action specifies which action will be performed over the target
 	Operation actions.ActionOperation `db:"operation"`
@@ -115,7 +115,7 @@ func FromDBScheduledActionToActions(dbactions []DBScheduledAction) []actions.Act
 
 // FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
 func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.ScheduledAction {
-	// Checking if scanned timestamp is valid. No Scheduled action can be created without its timestamp
+	// Checking if scanned timestamp is valid. No Scheduled Action can be created without its timestamp
 	if !action.Timestamp.Valid {
 		return nil
 	}
@@ -144,6 +144,11 @@ func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.S
 
 // FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
 func FromDBScheduledActionToCronAction(action DBScheduledAction) *actions.CronAction {
+	// Checking if scanned cron_exp is valid. No Cron Action can be created without its cron_exp
+	if len(action.CronExpression.String) == 0 {
+		return nil
+	}
+
 	// Processinb BaseAction fleds
 	ba := *actions.NewBaseAction(
 		action.Operation,
@@ -158,7 +163,7 @@ func FromDBScheduledActionToCronAction(action DBScheduledAction) *actions.CronAc
 	)
 	ba.ID = action.ID
 	return &actions.CronAction{
-		Expression: action.CronExpression,
+		Expression: action.CronExpression.String,
 		Type:       action.Type,
 		BaseAction: ba,
 	}

@@ -61,3 +61,11 @@ func (s ScheduledAction) GetTarget() ActionTarget {
 func (s ScheduledAction) GetID() string {
 	return s.ID
 }
+
+// GetType returns SCHEDULED_ACTION_TYPE
+//
+// Returns:
+// - ActionType
+func (s ScheduledAction) GetType() ActionType {
+	return SCHEDULED_ACTION_TYPE
+}

@@ -5,6 +5,8 @@ import env "github.com/caarlos0/env/v11"
 
 // ExecutorAgentServiceConfig contains the config parameters for the ExecutorAgentService
 type ExecutorAgentServiceConfig struct {
+	// APIURL refers to the ClusterIQ API Endpoint
+	APIURL string `env:"CIQ_AGENT_API_URL,required"`
 	// Credentials for accessing the cloud providers accounts
 	Credentials CloudCredentialsConfig
 }
@@ -22,17 +24,9 @@ type ScheduleAgentServiceConfig struct {
 	PollingInterval int `env:"CIQ_AGENT_POLLING_SECONDS_INTERVAL,required"`
 }
 
-type CronAgentServiceConfig struct {
-	// APIURL refers to the ClusterIQ API Endpoint
-	APIURL string `env:"CIQ_AGENT_API_URL,required"`
-	// PollingInterval defines the amount of time between Schedule refreshes (polling frecuency)
-	PollingInterval int `env:"CIQ_AGENT_POLLING_SECONDS_INTERVAL,required"`
-}
-
 // AgentConfig defines the config parameters for the ClusterIQ Agent
 type AgentConfig struct {
 	ExecutorAgentServiceConfig
-	CronAgentServiceConfig
 	ScheduleAgentServiceConfig
 	InstantAgentServiceConfig
 	LogLevel string `env:"CIQ_LOG_LEVEL,required"`

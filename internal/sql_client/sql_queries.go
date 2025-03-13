@@ -91,14 +91,74 @@ const (
 	// InsertScheduledActionQuery inserts new scheduled actions on the DB
 	InsertScheduledActionsQuery = `
 		INSERT INTO schedule (
+			type,
 			time,
-			action,
-			target
+			operation,
+			target,
+			status,
+			enabled
 		) VALUES (
+			:type,
 			:time,
-			:action,
-			:target.clusterID
+			:operation,
+			:target.cluster_id,
+			:status,
+			:enabled
 		)
+	`
+	// InsertCronActionQuery inserts new Cron actions on the DB
+	InsertCronActionsQuery = `
+		INSERT INTO schedule (
+			type,
+			cron_exp,
+			operation,
+			target,
+			status,
+			enabled
+		) VALUES (
+			:type,
+			:cron_exp,
+			:operation,
+			:target.cluster_id,
+			:status,
+			:enabled
+		)
+	`
+
+	// PatchScheduledActionsQuery
+	PatchScheduledActionsQuery = `
+		UPDATE
+			schedule
+		SET
+			time = :time,
+			operation = :operation,
+			target = :target.cluster_id,
+			enabled = :enabled
+		WHERE
+			id = :id
+	`
+
+	// PatchCronActionsQuery
+	PatchCronActionsQuery = `
+		UPDATE
+			schedule
+		SET
+			cron_exp = :cron_exp
+			operation = :operation,
+			target = :target.cluster_id,
+			enabled = :enabled
+		WHERE
+			id = :id
+	`
+
+	// PatchActionStatusQuery
+	PatchActionStatusQuery = `
+		UPDATE
+			schedule
+		SET
+			status = $2
+		WHERE
+			id = $1
 	`
 
 	// DeleteScheduledActionQuery

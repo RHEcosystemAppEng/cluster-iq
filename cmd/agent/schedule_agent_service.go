@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -21,11 +20,7 @@ import (
 
 const (
 	// API_SCHEDULE_ACTIONS_PATH endpoint for retrieving the list of actions that needs to be rescheduled
-	API_SCHEDULE_ACTIONS_PATH = "/schedule/schedule"
-	// SCHEDULED_ACTION_DB_TYPE db code for labeling ScheduledActions
-	SCHEDULED_ACTION_DB_TYPE = "scheduled_action"
-	// Cron_ACTION_DB_TYPE db code for labeling CronActions
-	CRON_ACTION_DB_TYPE = "cron_action"
+	API_SCHEDULE_ACTIONS_PATH = "/schedule"
 )
 
 // scheduleItem represents the pair of action and CancelFunc for tracking the already running actions
@@ -115,7 +110,6 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 		// Remove action from schedule
 		a.mutex.Lock()
 		delete(a.schedule, actionID)
-		// TODO Update Action status by API call
 		a.logger.Debug("Removing action from schedule since it was completed", zap.String("action_id", actionID))
 		a.mutex.Unlock()
 	}()
@@ -131,7 +125,7 @@ func (a *ScheduleAgentService) rescheduleScheduledAction(newAction actions.Sched
 	actionID := newAction.GetID()
 
 	if !reflect.DeepEqual(a.schedule[actionID].action, newAction) {
-		a.logger.Warn("Scheduled Action was updated on DB, rescheduling Action", zap.String("action_id", actionID))
+		a.logger.Warn("Scheduled Action was updated on DB, re-scheduling Action", zap.String("action_id", actionID))
 		// Canceling previous action instance
 		a.schedule[actionID].cancel()
 
@@ -228,11 +222,9 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 		var cronFunc func(actions.CronAction)
 
 		if _, exists := a.schedule[action.GetID()]; !exists { // Schedule new actions
-			a.logger.Info("Scheduling new action", zap.String("action_id", action.GetID()))
 			scheduledFunc = a.scheduleNewScheduledAction
 			cronFunc = a.scheduleNewCronAction
 		} else { // Reschedule actions
-			a.logger.Info("Re-Scheduling existing action", zap.String("action_id", action.GetID()))
 			scheduledFunc = a.rescheduleScheduledAction
 			cronFunc = a.rescheduleCronAction
 		}
@@ -265,6 +257,12 @@ func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error
 		return nil, err
 	}
 
+	// Adding query parameter for the status. Only "Pending" or enabled actions are retrieved
+	q := request.URL.Query()
+	q.Add("status", "Pending")
+	q.Add("enabled", "true")
+	request.URL.RawQuery = q.Encode()
+
 	// Performing API request
 	response, err := a.client.Do(request)
 	if err != nil {
@@ -290,41 +288,14 @@ func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error
 	}
 
 	// Unmarshalling Actions by type
-	var resultActions []actions.Action
-	for _, action := range result.Actions {
-
-		// Auxiliar struct for getting the action type
-		var r struct {
-			Type string `json:"type"`
-		}
-
-		// Unmarshalling action type
-		if err := json.Unmarshal(action, &r); err != nil {
-			return nil, err
-		}
-
-		// Unmarshalling based ont Action Type
-		switch r.Type {
-		case SCHEDULED_ACTION_DB_TYPE: // Unmarshall as ScheduledAction
-			var a actions.ScheduledAction
-			if err := json.Unmarshal(action, &a); err != nil {
-				return nil, err
-			}
-			resultActions = append(resultActions, a)
-		case CRON_ACTION_DB_TYPE: // Unmarshall as CronAction
-			var a actions.CronAction
-			if err := json.Unmarshal(action, &a); err != nil {
-				return nil, err
-			}
-			resultActions = append(resultActions, a)
-		default:
-			return nil, fmt.Errorf("Unknown Action Type: %s", r.Type)
-		}
+	resultActions, err := actions.DecodeActions(result.Actions)
+	if err != nil {
+		return nil, err
 	}
 
-	a.logger.Debug("Fetched scheduled actions", zap.Int("actions_num", result.Count))
+	a.logger.Debug("Fetched scheduled actions", zap.Int("actions_num", len(*resultActions)))
 
-	return &resultActions, nil
+	return resultActions, nil
 }
 
 // ReScheduleActions maintains an infinite loop for rescheduling the actions
@@ -338,11 +309,11 @@ func (a *ScheduleAgentService) ReScheduleActions() {
 	defer ticker.Stop()
 
 	for {
-		a.logger.Debug("Pooling Schedule from DB")
+		a.logger.Debug("Polling Schedule from DB")
 		if actions, err := a.fetchScheduledActions(); err != nil {
 			a.logger.Error("Error when fetching Schedule", zap.Error(err))
 		} else {
-			a.logger.Debug("Rescheduling...")
+			a.logger.Info("Rescheduling Loop...", zap.Time("timestamp", time.Now()))
 			a.ScheduleNewActions(*actions)
 		}
 		<-ticker.C

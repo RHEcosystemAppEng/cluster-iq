@@ -182,18 +182,111 @@ func (a SQLClient) GetScheduledActionByID(actionID string) ([]actions.Action, er
 //
 // Returns:
 //   - An error if the insert fails
-func (a SQLClient) WriteScheduledActions(actions []actions.ScheduledAction) error {
+func (a SQLClient) WriteScheduledActions(newActions []actions.Action) error {
 	// Begin transaction
 	tx, err := a.db.Beginx()
 	if err != nil {
 		return err
 	}
 
+	schedActions, cronActions := actions.SplitActionsByType(newActions)
+
 	// Writing Scheduled Actions
-	if _, err := tx.NamedExec(InsertScheduledActionsQuery, actions); err != nil {
-		a.logger.Error("Can't prepare Insert Scheduled Actions query", zap.Error(err))
+	if len(schedActions) > 0 {
+		if _, err := tx.NamedExec(InsertScheduledActionsQuery, schedActions); err != nil {
+			a.logger.Error("Can't prepare Insert Scheduled Actions query", zap.Error(err))
+			if rberr := tx.Rollback(); rberr != nil {
+				a.logger.Error("Error Rolling Back Insert Scheduled Actions query", zap.Error(rberr))
+				return fmt.Errorf("%w; %w;", err, rberr)
+			}
+			return err
+		}
+	}
+
+	// Writing Cron Actions
+	if len(cronActions) > 0 {
+		if _, err := tx.NamedExec(InsertCronActionsQuery, cronActions); err != nil {
+			a.logger.Error("Can't prepare Insert Cron Actions query", zap.Error(err))
+			if rberr := tx.Rollback(); rberr != nil {
+				a.logger.Error("Error Rolling Back Insert Scheduled Actions query", zap.Error(rberr))
+				return fmt.Errorf("%w; %w;", err, rberr)
+			}
+			return err
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// PatchScheduledAction updates Action by its ID
+//
+// Parameters:
+//   - Action list
+//
+// Returns:
+//   - An error if the query fails
+func (a SQLClient) PatchScheduledAction(newActions []actions.Action) error {
+	// Begin transaction
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	schedActions, cronActions := actions.SplitActionsByType(newActions)
+
+	// Writing Scheduled Actions
+	if len(schedActions) > 0 {
+		if _, err := tx.NamedExec(PatchScheduledActionsQuery, schedActions); err != nil {
+			a.logger.Error("Can't prepare Patch Scheduled Actions query", zap.Error(err))
+			if rberr := tx.Rollback(); rberr != nil {
+				a.logger.Error("Error Rolling Back Patch Scheduled Actions query", zap.Error(rberr))
+				return fmt.Errorf("%w; %w;", err, rberr)
+			}
+			return err
+		}
+	}
+
+	// Writing Cron Actions
+	if len(cronActions) > 0 {
+		if _, err := tx.NamedExec(PatchCronActionsQuery, cronActions); err != nil {
+			a.logger.Error("Can't prepare Patch Cron Actions query", zap.Error(err))
+			if rberr := tx.Rollback(); rberr != nil {
+				a.logger.Error("Error Rolling Back Patch Scheduled Actions query", zap.Error(rberr))
+				return fmt.Errorf("%w; %w;", err, rberr)
+			}
+			return err
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// PatchScheduledActionStatus updates Action status by its ID
+//
+// Parameters:
+//   - Action list
+//
+// Returns:
+//   - An error if the query fails
+func (a SQLClient) PatchScheduledActionStatus(actionID string, status string) error {
+	// Begin transaction
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(PatchActionStatusQuery, actionID, status); err != nil {
+		a.logger.Error("Can't prepare Patch Action Status query", zap.Error(err))
 		if rberr := tx.Rollback(); rberr != nil {
-			a.logger.Error("Error Rolling Back Insert Scheduled Actions query", zap.Error(rberr))
+			a.logger.Error("Error Rolling Back Patch Action Status query", zap.Error(rberr))
 			return fmt.Errorf("%w; %w;", err, rberr)
 		}
 		return err

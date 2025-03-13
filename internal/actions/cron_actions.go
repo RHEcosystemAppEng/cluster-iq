@@ -4,7 +4,7 @@ package actions
 // It embeds BaseAction to inherit common action properties and includes a timestamp indicating when the action should be executed.
 type CronAction struct {
 	// When specifies the scheduled time for the action execution.
-	Expression string `db:"cron_exp" json:"cron_exp"`
+	Expression string `db:"cron_exp" json:"cronExp"`
 
 	Type string `db:"type" json:"type"`
 
@@ -58,6 +58,14 @@ func (s CronAction) GetTarget() ActionTarget {
 // - A string representing the unique action ID.
 func (s CronAction) GetID() string {
 	return s.ID
+}
+
+// GetType returns CRON_ACTION_TYPE
+//
+// Returns:
+// - ActionType
+func (s CronAction) GetType() ActionType {
+	return CRON_ACTION_TYPE
 }
 
 // GetCronExpression returns the cron expression for running this action

@@ -44,7 +44,8 @@ func (r *Router) setupScheduledActionsRoutes(baseGroup *gin.RouterGroup) {
 	actionsGroup.POST("/:action_id/enable", r.api.HandlerEnableScheduledAction)
 	actionsGroup.POST("/:action_id/disable", r.api.HandlerDisableScheduledAction)
 	actionsGroup.POST("", r.api.HandlerPostScheduledAction)
-	// TODO Add update status handler
+	actionsGroup.PATCH("", r.api.HandlerPatchScheduledActions)
+	actionsGroup.PATCH(":action_id/status", r.api.HandlerPatchStatusScheduledActions)
 	actionsGroup.DELETE("/:action_id", r.api.HandlerDeleteScheduledAction)
 }
 

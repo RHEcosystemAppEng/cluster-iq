@@ -168,6 +168,7 @@ func (a APIServer) HandlerDisableScheduledAction(c *gin.Context) {
 //	@Router			  /schedule [get]
 func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
 	a.logger.Debug("Inserting list of Scheduled Actions")
+
 	// Getting scheduled actions list on request's body
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -176,19 +177,108 @@ func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
 		return
 	}
 
-	var actions []actions.ScheduledAction
-	err = json.Unmarshal(body, &actions)
+	// Var for Unmarshalling results
+	var result []json.RawMessage
+
+	// Unmarshalling response
+	err = json.Unmarshal(body, &result)
 	if err != nil {
-		a.logger.Error("Can't obtain data from body request", zap.Error(err))
-		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Unmarshalling Actions by type
+	actions, err := actions.DecodeActions(result)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
 	// Writing scheduled action
 	a.logger.Debug("Writing a new Scheduled Action", zap.Reflect("actions", actions))
-	err = a.sql.WriteScheduledActions(actions)
+	err = a.sql.WriteScheduledActions(*actions)
 	if err != nil {
 		a.logger.Error("Can't write new Scheduled Actions into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerPatchStatusScheduledActions handles the request to modify a Scheduled Action status
+//
+//	@Summary		  Updates the status of a Scheduled action
+//	@Description	Updates the status field of a specific scheduled action on the DB
+//	@Tags			    actions
+//	@Accept			  json
+//	@Produce		  json
+//	@Success		  200	{object}  nil
+//	@Failure		  500	{object}	GenericErrorResponse
+//	@Router			  /schedule [get]
+func (a APIServer) HandlerPatchStatusScheduledActions(c *gin.Context) {
+	a.logger.Debug("Patching status of Scheduled Action Status")
+
+	actionID := c.Param("action_id")
+	status := c.Query("status")
+	if status == "" {
+		c.PureJSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	// Writing scheduled action
+	err := a.sql.PatchScheduledActionStatus(actionID, status)
+	if err != nil {
+		a.logger.Error("Can't update status Scheduled Actions into DB", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerPatchScheduledActions handles the request to modify a Scheduled Action
+//
+//	@Summary		  Updates of a Scheduled action
+//	@Description	Updates field of a specific scheduled action on the DB
+//	@Tags			    actions
+//	@Accept			  json
+//	@Produce		  json
+//	@Success		  200	{object}  nil
+//	@Failure		  500	{object}	GenericErrorResponse
+//	@Router			  /schedule [get]
+func (a APIServer) HandlerPatchScheduledActions(c *gin.Context) {
+	a.logger.Debug("Patching status of Scheduled Action")
+
+	// Getting scheduled actions list on request's body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Var for Unmarshalling results
+	var result []json.RawMessage
+
+	// Unmarshalling response
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Unmarshalling Actions by type
+	actions, err := actions.DecodeActions(result)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Writing scheduled action
+	a.logger.Debug("Patching Scheduled Actions", zap.Int("action_count", len(*actions)))
+	err = a.sql.PatchScheduledAction(*actions)
+	if err != nil {
+		a.logger.Error("Can't update Scheduled Actions into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
