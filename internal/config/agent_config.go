@@ -7,6 +7,7 @@ import env "github.com/caarlos0/env/v11"
 type ExecutorAgentServiceConfig struct {
 	// APIURL refers to the ClusterIQ API Endpoint
 	APIURL string `env:"CIQ_AGENT_API_URL,required"`
+	DBURL  string `env:"CIQ_DB_URL,required"`
 	// Credentials for accessing the cloud providers accounts
 	Credentials CloudCredentialsConfig
 }

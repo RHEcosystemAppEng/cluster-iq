@@ -11,7 +11,9 @@ import (
 	cexec "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_executors"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
 	"go.uber.org/zap"
 )
 
@@ -21,8 +23,8 @@ type ExecutorAgentService struct {
 	AgentService
 	executors      map[string]cexec.CloudExecutor
 	actionsChannel <-chan actions.Action
-	// HTTP Client for retrieving the schedule from API
-	client http.Client
+	client         http.Client          // HTTP Client for retrieving the schedule from API
+	eventService   *events.EventService // Service for handling audit logs
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
@@ -40,7 +42,18 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
+
+	// Creating HTTP Client
 	client := http.Client{Transport: tr}
+
+	// Creating DB client
+	sqlCli, err := sqlclient.NewSQLClient(cfg.DBURL, logger)
+	if err != nil {
+		return nil
+	}
+
+	// Creating Event Service
+	eventService := events.NewEventService(sqlCli, logger)
 
 	eas := ExecutorAgentService{
 		cfg:            cfg,
@@ -50,7 +63,8 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 			logger: logger,
 			wg:     wg,
 		},
-		client: client,
+		client:       client,
+		eventService: eventService,
 	}
 
 	// Reading credentials file and creating executors per account
@@ -164,6 +178,19 @@ func (e *ExecutorAgentService) Start() error {
 			zap.Any("target", action.GetTarget()),
 		)
 
+		description := "ScheduledAction(" + action.GetID() + ")"
+
+		// Initialize event tracker
+		tracker := e.eventService.StartTracking(&events.EventOptions{
+			Action:       inventory.ClusterPowerOnAction,
+			Description:  &description,
+			ResourceID:   action.GetTarget().ClusterID,
+			ResourceType: inventory.ClusterResourceType,
+			Result:       events.ResultPending,
+			Severity:     events.SeverityInfo,
+			TriggeredBy:  "ClusterIQ Agent",
+		})
+
 		target := action.GetTarget()
 		cexec := *(e.GetExecutor(target.GetAccountName()))
 		if cexec == nil {
@@ -172,9 +199,11 @@ func (e *ExecutorAgentService) Start() error {
 		if err := cexec.ProcessAction(action); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", action.GetID()))
 			actionStatus = "Failed"
+			tracker.Failed()
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", action.GetID()))
 			actionStatus = "Success"
+			tracker.Success()
 		}
 
 		// Prepare API request for updating action status

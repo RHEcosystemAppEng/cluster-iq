@@ -753,6 +753,7 @@ func (a APIServer) handlePowerOn(clusterID, triggeredBy string, description *str
 		Severity:     events.SeverityInfo,
 		TriggeredBy:  triggeredBy,
 	})
+
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
