@@ -1,6 +1,3 @@
-// TODO: Review documentaiton comments
-// TODO: Generic response instead of NIL
-// TODO: REview functions order
 package main
 
 import (
@@ -48,20 +45,20 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 	c.PureJSON(http.StatusOK, HealthCheckResponse{HealthChecks: hc})
 }
 
-// ==================== Sched Actions Handlers ====================
+// ==================== Scheduled Actions Handlers ====================
 
-// HandlerGetScheduledActions handles the request to obtain the entire Scheduled Actions list. Filters can be added using query params
+// HandlerGetScheduledActions retrieves all scheduled actions with optional filtering
 //
-//	@Summary		  Obtain every Scheduled action
-//	@Description	Returns a list of Scheduled actions
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}	ScheduledActionListResponse
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		List all scheduled actions
+//	@Description	Returns a list of scheduled actions
+//	@Tags			Actions
+//	@Param			enabled	query		string	false	"Filter by enabled state (true/false)"
+//	@Param			status	query		string	false	"Filter by action status"
+//	@Success		200		{object}	ScheduledActionListResponse
+//	@Failure		500		{object}	GenericErrorResponse
+//	@Router			/schedule [get]
 func (a APIServer) HandlerGetScheduledActions(c *gin.Context) {
-	a.logger.Debug("Retrieving schedule action list")
+	a.logger.Debug("Retrieving scheduled actions")
 
 	// Capturing query params
 	var conditions []string
@@ -82,94 +79,94 @@ func (a APIServer) HandlerGetScheduledActions(c *gin.Context) {
 	// Running sql client function
 	schedule, err := a.sql.GetScheduledActions(conditions, args)
 	if err != nil {
-		a.logger.Error("Can't retrieve Schedule list", zap.Error(err))
+		a.logger.Error("Failed to retrieve scheduled actions", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
 	}
 
 	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
 }
 
-// HandlerGetScheduledActionsByID handles the request to obtain a specific scheduled action
+// HandlerGetScheduledActionByID retrieves a single scheduled action by its unique identifier
 //
-//	@Summary		  Obtain a specific Scheduled action
-//	@Description	Returns a Scheduled actions
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}	ScheduledActionListResponse
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		Get scheduled action by ID
+//	@Description	Returns details of a specific scheduled action identified by the action_id parameter
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	ScheduledActionListResponse
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id} [get]
 func (a APIServer) HandlerGetScheduledActionByID(c *gin.Context) {
 	actionID := c.Param("action_id")
-	a.logger.Debug("Retrieving complete scheduled actions list")
+	a.logger.Debug("Retrieving scheduled action by ID", zap.String("action_id", actionID))
 
 	schedule, err := a.sql.GetScheduledActionByID(actionID)
 	if err != nil {
-		a.logger.Error("Can't retrieve Schedule Action", zap.String("action_id", actionID), zap.Error(err))
+		a.logger.Error("Failed to retrieve scheduled action", zap.String("action_id", actionID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
 	}
 
 	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
 }
 
-// HandlerEnableScheduledAction handles the request to enable a specific scheduled action
+// HandlerEnableScheduledAction activates a scheduled action so it can be executed according to its schedule
 //
-//	@Summary		  Enables a specific Scheduled action
-//	@Description	Based on the action_id, enables the action to be executed based on its definition
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}	nil
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		Enable scheduled action
+//	@Description	Activates a scheduled action specified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id}/enable [put]
 func (a APIServer) HandlerEnableScheduledAction(c *gin.Context) {
 	actionID := c.Param("action_id")
-	a.logger.Debug("Enabling action", zap.String("action_id", actionID))
+	a.logger.Debug("Enabling scheduled action", zap.String("action_id", actionID))
 
 	err := a.sql.EnableScheduledAction(actionID)
 	if err != nil {
-		a.logger.Error("Can't enable Schedule Action", zap.String("action_id", actionID), zap.Error(err))
+		a.logger.Error("Failed to enable scheduled action", zap.String("action_id", actionID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
 	}
 
 	c.PureJSON(http.StatusOK, nil)
 }
 
-// HandlerDisableScheduledAction handles the request to enable a specific scheduled action
+// HandlerDisableScheduledAction deactivates a scheduled action to prevent its execution
 //
-//	@Summary		  Disables a specific Scheduled action
-//	@Description	Based on the action_id, disables the action to be executed based on its definition
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}	nil
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		Disable scheduled action
+//	@Description	Deactivates a scheduled action specified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id}/disable [put]
 func (a APIServer) HandlerDisableScheduledAction(c *gin.Context) {
 	actionID := c.Param("action_id")
-	a.logger.Debug("Enabling action", zap.String("action_id", actionID))
+	a.logger.Debug("Disabling action", zap.String("action_id", actionID))
 
 	err := a.sql.DisableScheduledAction(actionID)
 	if err != nil {
-		a.logger.Error("Can't disable Schedule Action", zap.String("action_id", actionID), zap.Error(err))
+		a.logger.Error("Failed to disable scheduled action", zap.String("action_id", actionID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
 	}
 
 	c.PureJSON(http.StatusOK, nil)
 }
 
-// HandlerPostScheduledAction handles the request to create a new Scheduled Action
+// HandlerPostScheduledAction processes the creation of new scheduled actions
 //
-//	@Summary		  Creates a new Scheduled action
-//	@Description	Creates and registers a new scheduled action on the DB
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}  nil
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		Create scheduled actions
+//	@Description	Creates and registers new scheduled actions
+//	@Tags			Actions
+//	@Param			actions	body		[]json.RawMessage	true	"Scheduled actions to create"
+//	@Success		200		{object}	nil
+//	@Failure		500		{object}	GenericErrorResponse
+//	@Router			/schedule [post]
 func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
-	a.logger.Debug("Inserting list of Scheduled Actions")
+	a.logger.Debug("Creating scheduled actions")
 
 	// Getting scheduled actions list on request's body
 	body, err := io.ReadAll(c.Request.Body)
@@ -200,38 +197,41 @@ func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
 	a.logger.Debug("Writing a new Scheduled Action", zap.Reflect("actions", decodedActions))
 	err = a.sql.WriteScheduledActions(*decodedActions)
 	if err != nil {
-		a.logger.Error("Can't write new Scheduled Actions into DB", zap.Error(err))
+		a.logger.Error("Failed to create scheduled actions", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
+	// TODO
+	// We should return at least ID, nil is not useful
 	c.PureJSON(http.StatusOK, nil)
 }
 
-// HandlerPatchStatusScheduledActions handles the request to modify a Scheduled Action status
+// HandlerPatchStatusScheduledActions modifies only the status field of a scheduled action
 //
-//	@Summary		  Updates the status of a Scheduled action
-//	@Description	Updates the status field of a specific scheduled action on the DB
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}  nil
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		Update scheduled action status
+//	@Description	Updates only the status field of a specific scheduled action identified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Param			status		query		string	true	"New status value"
+//	@Success		200			{object}	nil
+//	@Failure		400			{object}	GenericErrorResponse	"Invalid input"
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id}/status [patch]
 func (a APIServer) HandlerPatchStatusScheduledActions(c *gin.Context) {
 	a.logger.Debug("Patching status of Scheduled Action Status")
 
 	actionID := c.Param("action_id")
 	status := c.Query("status")
 	if status == "" {
-		c.PureJSON(http.StatusBadRequest, nil)
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("Status parameter is required"))
 		return
 	}
 
 	// Writing scheduled action
 	err := a.sql.PatchScheduledActionStatus(actionID, status)
 	if err != nil {
-		a.logger.Error("Can't update status Scheduled Actions into DB", zap.Error(err))
+		a.logger.Error("Failed to update scheduled action status", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
@@ -239,18 +239,17 @@ func (a APIServer) HandlerPatchStatusScheduledActions(c *gin.Context) {
 	c.PureJSON(http.StatusOK, nil)
 }
 
-// HandlerPatchScheduledActions handles the request to modify a Scheduled Action
+// HandlerPatchScheduledActions processes updates to scheduled actions
 //
-//	@Summary		  Updates of a Scheduled action
-//	@Description	Updates field of a specific scheduled action on the DB
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}  nil
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		Update scheduled actions
+//	@Description	Updates multiple fields of scheduled actions
+//	@Tags			Actions
+//	@Param			actions	body		[]json.RawMessage	true	"Scheduled actions to update"
+//	@Success		200		{object}	nil
+//	@Failure		500		{object}	GenericErrorResponse
+//	@Router			/schedule [patch]
 func (a APIServer) HandlerPatchScheduledActions(c *gin.Context) {
-	a.logger.Debug("Patching status of Scheduled Action")
+	a.logger.Debug("Updating scheduled actions")
 
 	// Getting scheduled actions list on request's body
 	body, err := io.ReadAll(c.Request.Body)
@@ -280,7 +279,7 @@ func (a APIServer) HandlerPatchScheduledActions(c *gin.Context) {
 	a.logger.Debug("Patching Scheduled Actions", zap.Int("action_count", len(*decodedActions)))
 	err = a.sql.PatchScheduledAction(*decodedActions)
 	if err != nil {
-		a.logger.Error("Can't update Scheduled Actions into DB", zap.Error(err))
+		a.logger.Error("Failed to update scheduled actions", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
@@ -288,23 +287,22 @@ func (a APIServer) HandlerPatchScheduledActions(c *gin.Context) {
 	c.PureJSON(http.StatusOK, nil)
 }
 
-// HandlerDeleteScheduledAction handles the request to remove a Scheduled Action
+// HandlerDeleteScheduledAction permanently removes a scheduled action
 //
-//	@Summary		  Deletes a Scheduled action
-//	@Description	Deletes a specified scheduled action from the DB
-//	@Tags			    actions
-//	@Accept			  json
-//	@Produce		  json
-//	@Success		  200	{object}	nil
-//	@Failure		  500	{object}	GenericErrorResponse
-//	@Router			  /schedule [get]
+//	@Summary		Delete scheduled action
+//	@Description	Permanently removes a scheduled action identified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id} [delete]
 func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {
 	actionID := c.Param("action_id")
-	a.logger.Debug("Removing an Scheduled Action", zap.String("action_id", actionID))
+	a.logger.Debug("Removing a Scheduled Action", zap.String("action_id", actionID))
 
 	if err := a.sql.DeleteScheduledAction(actionID); err != nil {
-		a.logger.Error("Can't delete instance from DB", zap.String("action_id", actionID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, nil)
+		a.logger.Error("Failed to delete scheduled action", zap.String("action_id", actionID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
