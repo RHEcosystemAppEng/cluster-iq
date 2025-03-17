@@ -172,6 +172,7 @@ func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
 	var actionStatus string
 
+	// Reading actions from channel to prepare its execution
 	for action := range e.actionsChannel {
 		e.logger.Debug("New action arrived to ExecutorAgentService",
 			zap.Any("action", action.GetActionOperation()),

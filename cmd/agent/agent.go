@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
@@ -114,10 +116,10 @@ func (a *Agent) StartAgentServices() error {
 			errChan <- fmt.Errorf("Instant AgentService (gRPC) failed: %w", err)
 			return
 		}
-		a.logger.Info("Instant Agent Service (gRPC) started")
+		a.logger.Info("Instant Agent Service (gRPC) finished")
 	}()
 
-	// Starting CronAgentService
+	// Starting ScheduledAgentService
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
@@ -125,7 +127,7 @@ func (a *Agent) StartAgentServices() error {
 			errChan <- fmt.Errorf("Scheduled Agent Service failed: %w", err)
 			return
 		}
-		a.logger.Info("Scheduled Agent Service started")
+		a.logger.Info("Scheduled Agent Service finished")
 	}()
 
 	// Starting ExecutorAgentService
@@ -136,10 +138,25 @@ func (a *Agent) StartAgentServices() error {
 			errChan <- fmt.Errorf("Executor Agent Service failed: %w", err)
 			return
 		}
-		a.logger.Info("Executor Agent Service started")
+		a.logger.Info("Executor Agent Service finished")
 	}()
 
 	a.logger.Info("ClusterIQ Agent Started")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	s := <-quit
+	// Re-register to catch force shutdown
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	if err := a.signalHandler(s); err != nil {
+		a.logger.Warn("Signal Captured", zap.Error(err))
+	}
+
+	go func() {
+		<-quit // Second signal
+		os.Exit(1)
+	}()
 
 	// Wait for goroutines to finish
 	a.wg.Wait()
@@ -190,6 +207,41 @@ func LoggingInterceptor(
 	return resp, err
 }
 
+// signalHandler handles OS signals for graceful server shutdown.  It shuts
+// down the server when a SIGTERM signal is received. This function was included
+// for better integration on K8s/OCP
+//
+// Parameters:
+// - signal: The OS signal to handle.
+func (a Agent) signalHandler(signal os.Signal) error {
+	if signal == syscall.SIGTERM {
+		a.logger.Warn("SIGTERM signal received. Stopping ClusterIQ Agent server")
+	} else {
+		a.logger.Warn("Shutting down server...", zap.String("signal", signal.String()))
+	}
+
+	for _, item := range a.cas.schedule {
+		cancel := item.cancel
+		action := item.action
+		a.logger.Warn("Cancelling ScheduledAction", zap.String("action_id", action.GetID()))
+		cancel()
+	}
+	close(a.actionsChannel)
+
+	a.logger.Info("ClusterIQ server stopped")
+	os.Exit(0)
+	return nil
+}
+
+func (a Agent) Start() error {
+	a.logger.Info("==================== Starting ClusterIQ Agent ====================",
+		zap.String("version", version),
+		zap.String("commit", commit),
+	)
+
+	return a.StartAgentServices()
+}
+
 // main is the entry point for the ClusterIQ Agent application.
 // It initializes the Agent, loads configuration, creates cloud executors, and starts the gRPC server.
 func main() {
@@ -211,12 +263,14 @@ func main() {
 		os.Exit(-1)
 	}
 
-	if err := agent.StartAgentServices(); err != nil {
-		agent.logger.Error("Error starting Agent Services", zap.Error(err))
-		os.Exit(-1)
-	}
-
-	// TODO: add signal management
+	// Starting Agent
+	err = agent.Start()
 
 	agent.logger.Info("ClusterIQ Agent Finished")
+	if err != nil {
+		agent.logger.Error("Error starting Agent Services", zap.Error(err))
+		os.Exit(-1)
+	} else {
+		os.Exit(0)
+	}
 }
