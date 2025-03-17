@@ -76,18 +76,6 @@ const (
 			id ASC
 	`
 
-	// SelectScheduledActionByTargetQuery returns scheduled action on the inventory for a specific Target
-	SelectScheduledActionsByTargetQuery = `
-		SELECT
-			id,
-			time,
-			action,
-			target as "target.clusterID"
-		FROM schedule
-		WHERE target = $1
-		ORDER BY id
-	`
-
 	// InsertScheduledActionQuery inserts new scheduled actions on the DB
 	InsertScheduledActionsQuery = `
 		INSERT INTO schedule (

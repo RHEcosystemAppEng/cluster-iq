@@ -66,7 +66,7 @@ func NewScheduleAgentService(cfg *config.ScheduleAgentServiceConfig, actionsChan
 			wg:             wg,
 			actionsChannel: actionsChannel,
 		},
-		schedule: make(map[string]scheduleItem, 0),
+		schedule: make(map[string]scheduleItem),
 		client:   client,
 	}
 }
@@ -310,11 +310,11 @@ func (a *ScheduleAgentService) ReScheduleActions() {
 
 	for {
 		a.logger.Debug("Polling Schedule from DB")
-		if actions, err := a.fetchScheduledActions(); err != nil {
+		if fetchedActions, err := a.fetchScheduledActions(); err != nil {
 			a.logger.Error("Error when fetching Schedule", zap.Error(err))
 		} else {
 			a.logger.Info("Rescheduling Loop...", zap.Int("running_actions", len(a.schedule)), zap.Time("timestamp", time.Now()))
-			a.ScheduleNewActions(*actions)
+			a.ScheduleNewActions(*fetchedActions)
 		}
 		<-ticker.C
 		a.logger.Debug("Current actions after pooling & rescheduling", zap.Int("actions_num", len(a.schedule)))

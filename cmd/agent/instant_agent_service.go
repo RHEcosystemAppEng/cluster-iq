@@ -68,13 +68,13 @@ func NewInstantAgentService(cfg *config.InstantAgentServiceConfig, actionsChanne
 	return ias
 }
 
-func (a *InstantAgentService) Start() error {
-	defer a.wg.Done()
+func (i *InstantAgentService) Start() error {
+	defer i.wg.Done()
 
-	a.logger.Info("Starting AgentService")
+	i.logger.Info("Starting AgentService")
 
 	// Serving gRPC
-	if err := a.grpcServer.Serve(a.listener); err != nil {
+	if err := i.grpcServer.Serve(i.listener); err != nil {
 		logger.Fatal("failed to start server", zap.Error(err))
 		return err
 	}

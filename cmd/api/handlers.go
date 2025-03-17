@@ -190,15 +190,15 @@ func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
 	}
 
 	// Unmarshalling Actions by type
-	actions, err := actions.DecodeActions(result)
+	decodedActions, err := actions.DecodeActions(result)
 	if err != nil {
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
 	// Writing scheduled action
-	a.logger.Debug("Writing a new Scheduled Action", zap.Reflect("actions", actions))
-	err = a.sql.WriteScheduledActions(*actions)
+	a.logger.Debug("Writing a new Scheduled Action", zap.Reflect("actions", decodedActions))
+	err = a.sql.WriteScheduledActions(*decodedActions)
 	if err != nil {
 		a.logger.Error("Can't write new Scheduled Actions into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -270,15 +270,15 @@ func (a APIServer) HandlerPatchScheduledActions(c *gin.Context) {
 	}
 
 	// Unmarshalling Actions by type
-	actions, err := actions.DecodeActions(result)
+	decodedActions, err := actions.DecodeActions(result)
 	if err != nil {
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
 	// Writing scheduled action
-	a.logger.Debug("Patching Scheduled Actions", zap.Int("action_count", len(*actions)))
-	err = a.sql.PatchScheduledAction(*actions)
+	a.logger.Debug("Patching Scheduled Actions", zap.Int("action_count", len(*decodedActions)))
+	err = a.sql.PatchScheduledAction(*decodedActions)
 	if err != nil {
 		a.logger.Error("Can't update Scheduled Actions into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))

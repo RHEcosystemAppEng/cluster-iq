@@ -68,7 +68,7 @@ type AuditLog struct {
 	// Unique identifier for the log entry.
 	ID int64 `db:"id"`
 	// Name of the action performed (e.g., "cluster_stopped").
-	ActionName string `db:"action_name"`
+	ActionName actions.ActionOperation `db:"action_name"`
 	// UTC timestamp of when the action occurred.
 	EventTimestamp time.Time `db:"event_timestamp"`
 	// Optional description for the action; can be nil.
@@ -134,7 +134,7 @@ type DBScheduledAction struct {
 
 // FromDBScheduledActionToActions transforms a slice of DBScheduledAction into a slice of Action respecting their tipe
 func FromDBScheduledActionToActions(dbactions []DBScheduledAction) []actions.Action {
-	var resultActions []actions.Action
+	var resultActions []actions.Action = make([]actions.Action, 0, len(dbactions))
 
 	for _, action := range dbactions {
 		switch action.Type {
@@ -155,26 +155,15 @@ func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.S
 		return nil
 	}
 
-	// Processinb BaseAction fleds
-	ba := *actions.NewBaseAction(
-		action.Operation,
-		*actions.NewActionTarget(
-			action.AccountName,
-			action.Region,
-			action.ClusterID,
-			action.Instances,
-		),
-		action.Status,
-		action.Enable,
+	// Creating action target
+	target := *actions.NewActionTarget(
+		action.AccountName,
+		action.Region,
+		action.ClusterID,
+		action.Instances,
 	)
-	ba.ID = action.ID
 
-	// Creating and returning ScheduledAction
-	return &actions.ScheduledAction{
-		When:       action.Timestamp.Time,
-		Type:       action.Type,
-		BaseAction: ba,
-	}
+	return actions.NewScheduledAction(action.Operation, target, action.Status, action.Enable, action.Timestamp.Time)
 }
 
 // FromDBScheduledActionToScheduledAction translates a DBScheduledAction object into actions.ScheduledAction
@@ -184,22 +173,14 @@ func FromDBScheduledActionToCronAction(action DBScheduledAction) *actions.CronAc
 		return nil
 	}
 
-	// Processinb BaseAction fleds
-	ba := *actions.NewBaseAction(
-		action.Operation,
-		*actions.NewActionTarget(
-			action.AccountName,
-			action.Region,
-			action.ClusterID,
-			action.Instances,
-		),
-		action.Status,
-		action.Enable,
+	// Creating action target
+	target := *actions.NewActionTarget(
+		action.AccountName,
+		action.Region,
+		action.ClusterID,
+		action.Instances,
 	)
-	ba.ID = action.ID
-	return &actions.CronAction{
-		Expression: action.CronExpression.String,
-		Type:       action.Type,
-		BaseAction: ba,
-	}
+
+	return actions.NewCronAction(action.Operation, target, action.Status, action.Enable, action.CronExpression.String)
+
 }

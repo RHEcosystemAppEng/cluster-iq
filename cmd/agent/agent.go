@@ -58,14 +58,14 @@ func init() {
 type Agent struct {
 	cfg            *config.AgentConfig
 	ias            *InstantAgentService
-	cas            *ScheduleAgentService
+	sas            *ScheduleAgentService
 	eas            *ExecutorAgentService
 	actionsChannel chan actions.Action
 	logger         *zap.Logger
 	wg             *sync.WaitGroup
 }
 
-func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) *Agent {
+func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) (*Agent, error) {
 	var ch chan actions.Action
 	var wg sync.WaitGroup
 
@@ -74,36 +74,34 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) *Agent {
 	// Creating InstantAgentService (gRPC)
 	ias := NewInstantAgentService(&cfg.InstantAgentServiceConfig, ch, &wg, logger)
 	if ias == nil {
-		logger.Error("Cannot create InstantAgentService")
-		return nil
+		return nil, fmt.Errorf("Cannot create InstantAgentService")
+
 	}
 
 	// Creating ScheduleAgentService (scheduled actions)
-	cas := NewScheduleAgentService(&cfg.ScheduleAgentServiceConfig, ch, &wg, logger)
-	if ias == nil {
-		logger.Error("Cannot create CronAgentService")
-		return nil
+	sas := NewScheduleAgentService(&cfg.ScheduleAgentServiceConfig, ch, &wg, logger)
+	if sas == nil {
+		return nil, fmt.Errorf("Cannot create CronAgentService")
 	}
 
 	// Creating ExecutorAgentService (executing actions)
 	eas := NewExecutorAgentService(&cfg.ExecutorAgentServiceConfig, ch, &wg, logger)
 	if eas == nil {
-		logger.Error("Cannot create ExecutorAgentService")
-		return nil
+		return nil, fmt.Errorf("Cannot create ExecutorAgentService")
 	}
 
 	return &Agent{
 		cfg:            cfg,
 		ias:            ias,
-		cas:            cas,
+		sas:            sas,
 		eas:            eas,
 		actionsChannel: ch,
 		logger:         logger,
 		wg:             &wg,
-	}
+	}, nil
 }
 
-// TODO DOC
+// StartAgentServices starts every AgentService on a separate thread(go-routine)
 func (a *Agent) StartAgentServices() error {
 	var err error
 	errChan := make(chan error, 3)
@@ -123,7 +121,7 @@ func (a *Agent) StartAgentServices() error {
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		if err = a.cas.Start(); err != nil {
+		if err = a.sas.Start(); err != nil {
 			errChan <- fmt.Errorf("Scheduled Agent Service failed: %w", err)
 			return
 		}
@@ -220,7 +218,7 @@ func (a Agent) signalHandler(signal os.Signal) error {
 		a.logger.Warn("Shutting down server...", zap.String("signal", signal.String()))
 	}
 
-	for _, item := range a.cas.schedule {
+	for _, item := range a.sas.schedule {
 		cancel := item.cancel
 		action := item.action
 		a.logger.Warn("Cancelling ScheduledAction", zap.String("action_id", action.GetID()))
@@ -257,9 +255,9 @@ func main() {
 	}
 
 	// Creating AgentService with the specified configuration
-	agent := NewAgent(cfg, logger)
-	if agent == nil {
-		logger.Error("Error during AgentService setup. Aborting Agent")
+	agent, err := NewAgent(cfg, logger)
+	if err != nil {
+		logger.Error("Error during AgentService setup. Aborting Agent", zap.Error(err))
 		os.Exit(-1)
 	}
 

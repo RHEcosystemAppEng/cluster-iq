@@ -173,42 +173,42 @@ func (e *ExecutorAgentService) Start() error {
 	var actionStatus string
 
 	// Reading actions from channel to prepare its execution
-	for action := range e.actionsChannel {
+	for newAction := range e.actionsChannel {
 		e.logger.Debug("New action arrived to ExecutorAgentService",
-			zap.Any("action", action.GetActionOperation()),
-			zap.Any("target", action.GetTarget()),
+			zap.Any("action", newAction.GetActionOperation()),
+			zap.Any("target", newAction.GetTarget()),
 		)
 
-		description := "ScheduledAction(" + action.GetID() + ")"
+		description := "ScheduledAction(" + newAction.GetID() + ")"
 
 		// Initialize event tracker
 		tracker := e.eventService.StartTracking(&events.EventOptions{
-			Action:       inventory.ClusterPowerOnAction,
+			Action:       newAction.GetActionOperation(),
 			Description:  &description,
-			ResourceID:   action.GetTarget().ClusterID,
+			ResourceID:   newAction.GetTarget().ClusterID,
 			ResourceType: inventory.ClusterResourceType,
 			Result:       events.ResultPending,
 			Severity:     events.SeverityInfo,
 			TriggeredBy:  "ClusterIQ Agent",
 		})
 
-		target := action.GetTarget()
+		target := newAction.GetTarget()
 		cexec := *(e.GetExecutor(target.GetAccountName()))
 		if cexec == nil {
 			return fmt.Errorf("There's no Executor available for the requested account")
 		}
-		if err := cexec.ProcessAction(action); err != nil {
-			e.logger.Error("Error while processing action", zap.String("action_id", action.GetID()))
+		if err := cexec.ProcessAction(newAction); err != nil {
+			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
 			actionStatus = "Failed"
 			tracker.Failed()
 		} else {
-			e.logger.Info("Action execution correct", zap.String("action_id", action.GetID()))
+			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
 			actionStatus = "Success"
 			tracker.Success()
 		}
 
 		// Prepare API request for updating action status
-		request, err := http.NewRequest(http.MethodPatch, e.cfg.APIURL+API_SCHEDULE_ACTIONS_PATH+"/"+action.GetID()+"/status", nil)
+		request, err := http.NewRequest(http.MethodPatch, e.cfg.APIURL+API_SCHEDULE_ACTIONS_PATH+"/"+newAction.GetID()+"/status", nil)
 		if err != nil {
 			return err
 		}
