@@ -118,7 +118,7 @@ func (a APIServer) HandlerGetScheduledActionByID(c *gin.Context) {
 //	@Param			action_id	path		string	true	"Scheduled action identifier"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	GenericErrorResponse
-//	@Router			/schedule/{action_id}/enable [put]
+//	@Router			/schedule/{action_id}/enable [patch]
 func (a APIServer) HandlerEnableScheduledAction(c *gin.Context) {
 	actionID := c.Param("action_id")
 	a.logger.Debug("Enabling scheduled action", zap.String("action_id", actionID))
@@ -141,7 +141,7 @@ func (a APIServer) HandlerEnableScheduledAction(c *gin.Context) {
 //	@Param			action_id	path		string	true	"Scheduled action identifier"
 //	@Success		200			{object}	nil
 //	@Failure		500			{object}	GenericErrorResponse
-//	@Router			/schedule/{action_id}/disable [put]
+//	@Router			/schedule/{action_id}/disable [patch]
 func (a APIServer) HandlerDisableScheduledAction(c *gin.Context) {
 	actionID := c.Param("action_id")
 	a.logger.Debug("Disabling action", zap.String("action_id", actionID))
