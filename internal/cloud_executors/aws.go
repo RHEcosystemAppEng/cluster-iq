@@ -58,8 +58,8 @@ func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 	case actions.PowerOffCluster:
 		return e.PowerOffCluster(target.GetInstances())
 
-	default: // No registed ActionOperation
-		return fmt.Errorf("Cannot identify ActionOperation while processing an Action")
+	default: // No registered ActionOperation
+		return fmt.Errorf("cannot identify ActionOperation while processing an Action")
 	}
 }
 

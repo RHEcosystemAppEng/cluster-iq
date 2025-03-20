@@ -1,5 +1,5 @@
 // sqlclient is the packaged for interacting with the ClusterIQ database. It should be only used by the API to maintain the architecture and the security and integrity of the data.
-// TODO: Review documentaiton comments
+// TODO: Review documentation comments
 package sqlclient
 
 import (
@@ -12,7 +12,6 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/jmoiron/sqlx"
-
 	"go.uber.org/zap"
 )
 
@@ -56,20 +55,24 @@ func (a SQLClient) AddEvent(event models.AuditLog) (int64, error) {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			if err := tx.Rollback(); err != nil {
+				a.logger.Error("Error RollingBack AddEvent Transaction", zap.Error(err))
+			}
 		}
 	}()
 
 	var eventID int64
 	row, err := tx.NamedQuery(InsertEventQuery, event)
+	if err != nil {
+		a.logger.Error("Failed to insert event", zap.Error(err), zap.Reflect("event", event))
+		return 0, err
+	}
+
+	defer row.Close() // Closing rows when finished
 	if err == nil && row.Next() {
 		err = row.Scan(&eventID)
 	} else {
 		err = fmt.Errorf("failed to retrieve inserted event ID")
-	}
-	if err != nil {
-		a.logger.Error("Failed to insert event", zap.Error(err), zap.Reflect("event", event))
-		return 0, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -883,7 +886,7 @@ func (a SQLClient) UpdateClusterStatusByClusterID(status string, clusterID strin
 	if exists, err := a.CheckStatusValue(status); err != nil {
 		return err
 	} else if !exists {
-		return fmt.Errorf("The requested status (%s) doesn't exist on the DB", status)
+		return fmt.Errorf("the requested status (%s) doesn't exist on the DB", status)
 	}
 
 	// Updating cluster status

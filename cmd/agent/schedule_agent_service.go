@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	// API_SCHEDULE_ACTIONS_PATH endpoint for retrieving the list of actions that needs to be rescheduled
-	API_SCHEDULE_ACTIONS_PATH = "/schedule"
+	// APIScheduleActionsPath endpoint for retrieving the list of actions that needs to be rescheduled
+	APIScheduleActionsPath = "/schedule"
 )
 
 // scheduleItem represents the pair of action and CancelFunc for tracking the already running actions
@@ -34,7 +34,7 @@ type scheduleItem struct {
 type ScheduleAgentService struct {
 	cfg *config.ScheduleAgentServiceConfig
 	AgentService
-	//schedule map[string]actions.ScheduledAction
+	// schedule map[string]actions.ScheduledAction
 	schedule map[string]scheduleItem
 	// HTTP Client for retrieving the schedule from API
 	client http.Client
@@ -155,7 +155,7 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronActio
 	go func() {
 		a.logger.Debug("Starting CronAction execution", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
 		c := cron.New()
-		c.AddFunc(newAction.GetCronExpression(), func() {
+		_, err := c.AddFunc(newAction.GetCronExpression(), func() {
 			select {
 			case <-ctx.Done():
 				a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
@@ -165,6 +165,10 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronActio
 				a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 			}
 		})
+
+		if err != nil {
+			a.logger.Error("Failed adding new CronAction execution", zap.Error(err))
+		}
 
 		c.Start() // Cron Start
 	}()
@@ -230,11 +234,11 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 		}
 
 		// managing actions based on type
-		switch action.(type) {
+		switch t := action.(type) {
 		case actions.ScheduledAction:
-			scheduledFunc(action.(actions.ScheduledAction))
+			scheduledFunc(t)
 		case actions.CronAction:
-			cronFunc(action.(actions.CronAction))
+			cronFunc(t)
 		default:
 			a.logger.Error("Unknown action type", zap.String("action_id", action.GetID()))
 		}
@@ -252,7 +256,7 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error) {
 	var b []byte
 	// Prepare API request
-	request, err := http.NewRequest(http.MethodGet, a.cfg.APIURL+API_SCHEDULE_ACTIONS_PATH, bytes.NewBuffer(b))
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, a.cfg.APIURL+APIScheduleActionsPath, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}

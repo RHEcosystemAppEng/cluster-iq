@@ -8,8 +8,8 @@ import "github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 type CloudExecutor interface {
 	// Connect logs in into the cloud provider
 	Connect() error
-	// ProcessAction recieves and action and process it depending on its type
-	ProcessAction(actions.Action) error
+	// ProcessAction receives and action and process it depending on its type
+	ProcessAction(action actions.Action) error
 	// GetAccountName returns accounts name
 	GetAccountName() string
 	// SetRegion configure the cloud provider client for using a specific region

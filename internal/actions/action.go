@@ -41,7 +41,7 @@ type Action interface {
 }
 
 // DecodeActions received a http response body as a []byte for decoding the
-// actions on it and unmarshall them evaulating its specific action type.
+// actions on it and unmarshall them evaluating its specific action type.
 // Every decoded action will be parsed as a specific action type based on its
 // properties
 //
@@ -67,20 +67,20 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 
 		// Unmarshalling based ont Action Type
 		switch r.Type {
-		case SCHEDULED_ACTION_TYPE: // Unmarshall as ScheduledAction
+		case ScheduledActionType: // Unmarshall as ScheduledAction
 			var a ScheduledAction
 			if err := json.Unmarshal(action, &a); err != nil {
 				return nil, err
 			}
 			resultActions = append(resultActions, a)
-		case CRON_ACTION_TYPE: // Unmarshall as CronAction
+		case CronActionType: // Unmarshall as CronAction
 			var a CronAction
 			if err := json.Unmarshal(action, &a); err != nil {
 				return nil, err
 			}
 			resultActions = append(resultActions, a)
 		default:
-			return nil, fmt.Errorf("Unknown Action Type: %s", r.Type)
+			return nil, fmt.Errorf("unknown ActionType: %s", r.Type)
 		}
 	}
 
@@ -101,9 +101,9 @@ func SplitActionsByType(actions []Action) ([]ScheduledAction, []CronAction) {
 
 	for _, action := range actions {
 		switch action.GetType() {
-		case SCHEDULED_ACTION_TYPE: // Unmarshall as ScheduledAction
+		case ScheduledActionType: // Unmarshall as ScheduledAction
 			schedActions = append(schedActions, action.(ScheduledAction))
-		case CRON_ACTION_TYPE: // Unmarshall as CronAction
+		case CronActionType: // Unmarshall as CronAction
 			cronActions = append(cronActions, action.(CronAction))
 		}
 	}

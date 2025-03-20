@@ -52,10 +52,10 @@ func (i InstantAction) GetID() string {
 	return i.ID
 }
 
-// GetType returns INSTANT_ACTION_TYPE
+// GetType returns InstantActionType
 //
 // Returns:
 // - ActionType
 func (i InstantAction) GetType() ActionType {
-	return INSTANT_ACTION_TYPE
+	return InstantActionType
 }

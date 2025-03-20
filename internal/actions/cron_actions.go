@@ -14,17 +14,17 @@ type CronAction struct {
 // NewCronAction creates and initializes a new CronAction.
 //
 // Parameters:
-// - ActionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
+// - actionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
 // - target: The target resource (cluster and instances) affected by the action.
 // - when: The scheduled time for executing the action.
 //
 // Returns:
 // - A pointer to a newly created CronAction instance.
-func NewCronAction(ActionOperation ActionOperation, target ActionTarget, status string, enabled bool, cron_exp string) *CronAction {
+func NewCronAction(actionOperation ActionOperation, target ActionTarget, status string, enabled bool, cronExpression string) *CronAction {
 	return &CronAction{
-		BaseAction: *NewBaseAction(ActionOperation, target, status, enabled),
+		BaseAction: *NewBaseAction(actionOperation, target, status, enabled),
 		Type:       "cron_action",
-		Expression: cron_exp,
+		Expression: cronExpression,
 	}
 }
 
@@ -60,12 +60,12 @@ func (s CronAction) GetID() string {
 	return s.ID
 }
 
-// GetType returns CRON_ACTION_TYPE
+// GetType returns CronActionType
 //
 // Returns:
 // - ActionType
 func (s CronAction) GetType() ActionType {
-	return CRON_ACTION_TYPE
+	return CronActionType
 }
 
 // GetCronExpression returns the cron expression for running this action

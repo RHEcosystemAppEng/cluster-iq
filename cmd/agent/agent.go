@@ -33,6 +33,10 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
+const (
+	AgentServicesCount = 3
+)
+
 var (
 	// logger is a shared logging instance used across the entire Agent application.
 	logger *zap.Logger
@@ -74,20 +78,20 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) (*Agent, error) {
 	// Creating InstantAgentService (gRPC)
 	ias := NewInstantAgentService(&cfg.InstantAgentServiceConfig, ch, &wg, logger)
 	if ias == nil {
-		return nil, fmt.Errorf("Cannot create InstantAgentService")
+		return nil, fmt.Errorf("cannot create InstantAgentService")
 
 	}
 
 	// Creating ScheduleAgentService (scheduled actions)
 	sas := NewScheduleAgentService(&cfg.ScheduleAgentServiceConfig, ch, &wg, logger)
 	if sas == nil {
-		return nil, fmt.Errorf("Cannot create CronAgentService")
+		return nil, fmt.Errorf("cannot create CronAgentService")
 	}
 
 	// Creating ExecutorAgentService (executing actions)
 	eas := NewExecutorAgentService(&cfg.ExecutorAgentServiceConfig, ch, &wg, logger)
 	if eas == nil {
-		return nil, fmt.Errorf("Cannot create ExecutorAgentService")
+		return nil, fmt.Errorf("cannot create ExecutorAgentService")
 	}
 
 	return &Agent{
@@ -104,14 +108,14 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) (*Agent, error) {
 // StartAgentServices starts every AgentService on a separate thread(go-routine)
 func (a *Agent) StartAgentServices() error {
 	var err error
-	errChan := make(chan error, 3)
+	errChan := make(chan error, AgentServicesCount)
 
 	// Starting InstantAgentService
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
 		if err = a.ias.Start(); err != nil {
-			errChan <- fmt.Errorf("Instant AgentService (gRPC) failed: %w", err)
+			errChan <- fmt.Errorf("instant AgentService (gRPC) failed: %w", err)
 			return
 		}
 		a.logger.Info("Instant Agent Service (gRPC) finished")
@@ -122,7 +126,7 @@ func (a *Agent) StartAgentServices() error {
 	go func() {
 		defer a.wg.Done()
 		if err = a.sas.Start(); err != nil {
-			errChan <- fmt.Errorf("Scheduled Agent Service failed: %w", err)
+			errChan <- fmt.Errorf("scheduled Agent Service failed: %w", err)
 			return
 		}
 		a.logger.Info("Scheduled Agent Service finished")
@@ -133,7 +137,7 @@ func (a *Agent) StartAgentServices() error {
 	go func() {
 		defer a.wg.Done()
 		if err = a.eas.Start(); err != nil {
-			errChan <- fmt.Errorf("Executor Agent Service failed: %w", err)
+			errChan <- fmt.Errorf("executor Agent Service failed: %w", err)
 			return
 		}
 		a.logger.Info("Executor Agent Service finished")
@@ -258,7 +262,7 @@ func main() {
 	agent, err := NewAgent(cfg, logger)
 	if err != nil {
 		logger.Error("Error during AgentService setup. Aborting Agent", zap.Error(err))
-		os.Exit(-1)
+		return
 	}
 
 	// Starting Agent
@@ -267,8 +271,7 @@ func main() {
 	agent.logger.Info("ClusterIQ Agent Finished")
 	if err != nil {
 		agent.logger.Error("Error starting Agent Services", zap.Error(err))
-		os.Exit(-1)
-	} else {
-		os.Exit(0)
+		return
 	}
+
 }
