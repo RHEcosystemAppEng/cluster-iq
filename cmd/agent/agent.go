@@ -115,7 +115,7 @@ func (a *Agent) StartAgentServices() error {
 	go func() {
 		defer a.wg.Done()
 		if err = a.ias.Start(); err != nil {
-			errChan <- fmt.Errorf("Instant AgentService (gRPC) failed: %w", err)
+			errChan <- fmt.Errorf("instant AgentService (gRPC) failed: %w", err)
 			return
 		}
 		a.logger.Info("Instant Agent Service (gRPC) finished")

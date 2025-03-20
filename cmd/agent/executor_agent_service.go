@@ -102,7 +102,7 @@ func (e *ExecutorAgentService) readCloudProviderAccounts() ([]credentials.Accoun
 //   - error: An error if the executor is nil; otherwise, nil.
 func (e *ExecutorAgentService) AddExecutor(exec cexec.CloudExecutor) error {
 	if exec == nil {
-		return fmt.Errorf("Cannot add a nil Executor")
+		return fmt.Errorf("cannot add a nil Executor")
 	}
 
 	e.executors[exec.GetAccountName()] = exec
@@ -203,7 +203,7 @@ func (e *ExecutorAgentService) Start() error {
 		target := newAction.GetTarget()
 		cexec := *(e.GetExecutor(target.GetAccountName()))
 		if cexec == nil {
-			return fmt.Errorf("There's no Executor available for the requested account")
+			return fmt.Errorf("there's no Executor available for the requested account")
 		}
 		if err := cexec.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
