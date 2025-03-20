@@ -126,7 +126,7 @@ func (a *Agent) StartAgentServices() error {
 	go func() {
 		defer a.wg.Done()
 		if err = a.sas.Start(); err != nil {
-			errChan <- fmt.Errorf("Scheduled Agent Service failed: %w", err)
+			errChan <- fmt.Errorf("scheduled Agent Service failed: %w", err)
 			return
 		}
 		a.logger.Info("Scheduled Agent Service finished")
@@ -137,7 +137,7 @@ func (a *Agent) StartAgentServices() error {
 	go func() {
 		defer a.wg.Done()
 		if err = a.eas.Start(); err != nil {
-			errChan <- fmt.Errorf("Executor Agent Service failed: %w", err)
+			errChan <- fmt.Errorf("executor Agent Service failed: %w", err)
 			return
 		}
 		a.logger.Info("Executor Agent Service finished")
