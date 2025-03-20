@@ -179,7 +179,13 @@ func (e *ExecutorAgentService) Start() error {
 			zap.Any("target", newAction.GetTarget()),
 		)
 
+		_, isInstantAction := newAction.(*actions.InstantAction)
+
+		// Set description based on action type
 		description := "ScheduledAction(" + newAction.GetID() + ")"
+		if isInstantAction {
+			description = "InstantAction"
+		}
 
 		// Initialize event tracker
 		tracker := e.eventService.StartTracking(&events.EventOptions{
@@ -189,7 +195,8 @@ func (e *ExecutorAgentService) Start() error {
 			ResourceType: inventory.ClusterResourceType,
 			Result:       events.ResultPending,
 			Severity:     events.SeverityInfo,
-			TriggeredBy:  "ClusterIQ Agent",
+			// TODO. Rethink
+			TriggeredBy: "ClusterIQ Agent",
 		})
 
 		target := newAction.GetTarget()
@@ -207,23 +214,35 @@ func (e *ExecutorAgentService) Start() error {
 			tracker.Success()
 		}
 
-		// Prepare API request for updating action status
-		request, err := http.NewRequest(http.MethodPatch, e.cfg.APIURL+API_SCHEDULE_ACTIONS_PATH+"/"+newAction.GetID()+"/status", nil)
-		if err != nil {
-			return err
+		// Skip DB status update for instant actions
+		if !isInstantAction {
+			if err := e.updateActionStatus(newAction.GetID(), actionStatus); err != nil {
+				return err
+			}
 		}
+	}
 
-		// Adding query parameter for the status
-		q := request.URL.Query()
-		q.Add("status", actionStatus)
+	return nil
+}
 
-		// Assign query params to request
-		request.URL.RawQuery = q.Encode()
+func (e *ExecutorAgentService) updateActionStatus(actionID, status string) error {
+	url := fmt.Sprintf("%s%s/%s/status", e.cfg.APIURL, API_SCHEDULE_ACTIONS_PATH, actionID)
+	// Prepare API request for updating action status
+	request, err := http.NewRequest(http.MethodPatch, url, nil)
+	if err != nil {
+		return err
+	}
 
-		// Performing API request
-		if _, err := e.client.Do(request); err != nil {
-			return err
-		}
+	// Adding query parameter for the status
+	q := request.URL.Query()
+	q.Add("status", status)
+
+	// Assign query params to request
+	request.URL.RawQuery = q.Encode()
+
+	// Performing API request
+	if _, err := e.client.Do(request); err != nil {
+		return err
 	}
 
 	return nil
