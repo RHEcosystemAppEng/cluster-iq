@@ -14,15 +14,15 @@ type CronAction struct {
 // NewCronAction creates and initializes a new CronAction.
 //
 // Parameters:
-// - ActionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
+// - actionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
 // - target: The target resource (cluster and instances) affected by the action.
 // - when: The scheduled time for executing the action.
 //
 // Returns:
 // - A pointer to a newly created CronAction instance.
-func NewCronAction(ActionOperation ActionOperation, target ActionTarget, status string, enabled bool, cronExpression string) *CronAction {
+func NewCronAction(actionOperation ActionOperation, target ActionTarget, status string, enabled bool, cronExpression string) *CronAction {
 	return &CronAction{
-		BaseAction: *NewBaseAction(ActionOperation, target, status, enabled),
+		BaseAction: *NewBaseAction(actionOperation, target, status, enabled),
 		Type:       "cron_action",
 		Expression: cronExpression,
 	}

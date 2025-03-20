@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	// API_SCHEDULE_ACTIONS_PATH endpoint for retrieving the list of actions that needs to be rescheduled
-	API_SCHEDULE_ACTIONS_PATH = "/schedule"
+	// APIScheduleActionsPath endpoint for retrieving the list of actions that needs to be rescheduled
+	APIScheduleActionsPath = "/schedule"
 )
 
 // scheduleItem represents the pair of action and CancelFunc for tracking the already running actions
@@ -34,7 +34,7 @@ type scheduleItem struct {
 type ScheduleAgentService struct {
 	cfg *config.ScheduleAgentServiceConfig
 	AgentService
-	//schedule map[string]actions.ScheduledAction
+	// schedule map[string]actions.ScheduledAction
 	schedule map[string]scheduleItem
 	// HTTP Client for retrieving the schedule from API
 	client http.Client
@@ -256,7 +256,7 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error) {
 	var b []byte
 	// Prepare API request
-	request, err := http.NewRequest(http.MethodGet, a.cfg.APIURL+API_SCHEDULE_ACTIONS_PATH, bytes.NewBuffer(b))
+	request, err := http.NewRequest(http.MethodGet, a.cfg.APIURL+APIScheduleActionsPath, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}

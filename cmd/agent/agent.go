@@ -33,6 +33,10 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
+const (
+	AgentServicesCount = 3
+)
+
 var (
 	// logger is a shared logging instance used across the entire Agent application.
 	logger *zap.Logger
@@ -104,7 +108,7 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) (*Agent, error) {
 // StartAgentServices starts every AgentService on a separate thread(go-routine)
 func (a *Agent) StartAgentServices() error {
 	var err error
-	errChan := make(chan error, 3)
+	errChan := make(chan error, AgentServicesCount)
 
 	// Starting InstantAgentService
 	a.wg.Add(1)
@@ -258,7 +262,7 @@ func main() {
 	agent, err := NewAgent(cfg, logger)
 	if err != nil {
 		logger.Error("Error during AgentService setup. Aborting Agent", zap.Error(err))
-		os.Exit(-1)
+		return
 	}
 
 	// Starting Agent
@@ -267,8 +271,7 @@ func main() {
 	agent.logger.Info("ClusterIQ Agent Finished")
 	if err != nil {
 		agent.logger.Error("Error starting Agent Services", zap.Error(err))
-		os.Exit(-1)
+		return
 	}
 
-	os.Exit(0)
 }

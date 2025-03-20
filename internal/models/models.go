@@ -7,9 +7,6 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/lib/pq"
-
-	// Adding pg for implementing PSQL on SQLX
-	_ "github.com/lib/pq"
 )
 
 // InstanceDB is an intermediate struct used to map instances and their tags into inventory.Instance objects.
@@ -136,7 +133,7 @@ type DBScheduledAction struct {
 
 // FromDBScheduledActionToActions transforms a slice of DBScheduledAction into a slice of Action respecting their tipe
 func FromDBScheduledActionToActions(dbactions []DBScheduledAction) []actions.Action {
-	var resultActions []actions.Action = make([]actions.Action, 0, len(dbactions))
+	resultActions := make([]actions.Action, 0, len(dbactions))
 
 	for _, action := range dbactions {
 		switch action.Type {

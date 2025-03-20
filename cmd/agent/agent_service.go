@@ -9,11 +9,11 @@ import (
 
 const (
 	// PowerOffClusterSuccessfully defines the success message format for powering off a cluster.
-	PowerOffClusterSuccessfully = "Power Off for Cluster: %s(Acc: %s; Instances: %d) Successfull"
+	PowerOffClusterSuccessfully = "Power Off for Cluster: %s(Acc: %s; Instances: %d) Successful"
 	// PowerOffClusterError defines the error message format for powering off a cluster.
 	PowerOffClusterError = "Power Off for Cluster: %s(Acc: %s; Instances: %d) Failed"
 	// PowerOnClusterSuccessfully defines the success message format for powering on a cluster.
-	PowerOnClusterSuccessfully = "Power On for Cluster: %s(Acc: %s; Instances: %d) Successfull"
+	PowerOnClusterSuccessfully = "Power On for Cluster: %s(Acc: %s; Instances: %d) Successful"
 	// PowerOnClusterError defines the error message format for powering on a cluster.
 	PowerOnClusterError = "Power On for Cluster: %s(Acc: %s; Instances: %d) Failed"
 )

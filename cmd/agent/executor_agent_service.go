@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -226,9 +227,9 @@ func (e *ExecutorAgentService) Start() error {
 }
 
 func (e *ExecutorAgentService) updateActionStatus(actionID, status string) error {
-	url := fmt.Sprintf("%s%s/%s/status", e.cfg.APIURL, API_SCHEDULE_ACTIONS_PATH, actionID)
+	url := fmt.Sprintf("%s%s/%s/status", e.cfg.APIURL, APIScheduleActionsPath, actionID)
 	// Prepare API request for updating action status
-	request, err := http.NewRequest(http.MethodPatch, url, nil)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, url, nil)
 	if err != nil {
 		return err
 	}
@@ -237,7 +238,7 @@ func (e *ExecutorAgentService) updateActionStatus(actionID, status string) error
 	q := request.URL.Query()
 	q.Add("status", status)
 
-	// Assign query params to request
+	// Assign query parameters to request
 	request.URL.RawQuery = q.Encode()
 
 	// Performing API request

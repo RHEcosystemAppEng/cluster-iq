@@ -14,7 +14,7 @@ type ExecutorAgentServiceConfig struct {
 
 // InstantAgentServiceConfig contains the config parameters for the InstantAgentService (gRPC)
 type InstantAgentServiceConfig struct {
-	// ListenURL is the gRPC server listening adress
+	// ListenURL is the gRPC server listening address
 	ListenURL string `env:"CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL,required"`
 }
 

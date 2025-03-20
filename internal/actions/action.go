@@ -80,7 +80,7 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 			}
 			resultActions = append(resultActions, a)
 		default:
-			return nil, fmt.Errorf("Unknown Action Type: %s", r.Type)
+			return nil, fmt.Errorf("unknown ActionType: %s", r.Type)
 		}
 	}
 
