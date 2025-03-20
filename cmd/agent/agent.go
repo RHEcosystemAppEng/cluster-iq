@@ -78,20 +78,20 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) (*Agent, error) {
 	// Creating InstantAgentService (gRPC)
 	ias := NewInstantAgentService(&cfg.InstantAgentServiceConfig, ch, &wg, logger)
 	if ias == nil {
-		return nil, fmt.Errorf("Cannot create InstantAgentService")
+		return nil, fmt.Errorf("cannot create InstantAgentService")
 
 	}
 
 	// Creating ScheduleAgentService (scheduled actions)
 	sas := NewScheduleAgentService(&cfg.ScheduleAgentServiceConfig, ch, &wg, logger)
 	if sas == nil {
-		return nil, fmt.Errorf("Cannot create CronAgentService")
+		return nil, fmt.Errorf("cannot create CronAgentService")
 	}
 
 	// Creating ExecutorAgentService (executing actions)
 	eas := NewExecutorAgentService(&cfg.ExecutorAgentServiceConfig, ch, &wg, logger)
 	if eas == nil {
-		return nil, fmt.Errorf("Cannot create ExecutorAgentService")
+		return nil, fmt.Errorf("cannot create ExecutorAgentService")
 	}
 
 	return &Agent{

@@ -234,11 +234,11 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 		}
 
 		// managing actions based on type
-		switch action.(type) {
+		switch t := action.(type) {
 		case actions.ScheduledAction:
-			scheduledFunc(action.(actions.ScheduledAction))
+			scheduledFunc(t)
 		case actions.CronAction:
-			cronFunc(action.(actions.CronAction))
+			cronFunc(t)
 		default:
 			a.logger.Error("Unknown action type", zap.String("action_id", action.GetID()))
 		}
@@ -256,7 +256,7 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error) {
 	var b []byte
 	// Prepare API request
-	request, err := http.NewRequest(http.MethodGet, a.cfg.APIURL+APIScheduleActionsPath, bytes.NewBuffer(b))
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, a.cfg.APIURL+APIScheduleActionsPath, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}

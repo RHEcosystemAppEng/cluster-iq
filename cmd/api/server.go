@@ -12,9 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
-
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
 	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"

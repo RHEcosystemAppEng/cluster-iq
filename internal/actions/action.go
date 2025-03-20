@@ -41,7 +41,7 @@ type Action interface {
 }
 
 // DecodeActions received a http response body as a []byte for decoding the
-// actions on it and unmarshall them evaulating its specific action type.
+// actions on it and unmarshall them evaluating its specific action type.
 // Every decoded action will be parsed as a specific action type based on its
 // properties
 //

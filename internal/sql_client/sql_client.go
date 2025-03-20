@@ -63,16 +63,16 @@ func (a SQLClient) AddEvent(event models.AuditLog) (int64, error) {
 
 	var eventID int64
 	row, err := tx.NamedQuery(InsertEventQuery, event)
+	if err != nil {
+		a.logger.Error("Failed to insert event", zap.Error(err), zap.Reflect("event", event))
+		return 0, err
+	}
+
 	defer row.Close() // Closing rows when finished
 	if err == nil && row.Next() {
 		err = row.Scan(&eventID)
 	} else {
 		err = fmt.Errorf("failed to retrieve inserted event ID")
-	}
-
-	if err != nil {
-		a.logger.Error("Failed to insert event", zap.Error(err), zap.Reflect("event", event))
-		return 0, err
 	}
 
 	if err := tx.Commit(); err != nil {

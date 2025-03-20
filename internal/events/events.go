@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-
 	"go.uber.org/zap"
 )
 
