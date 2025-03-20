@@ -56,7 +56,9 @@ func (a SQLClient) AddEvent(event models.AuditLog) (int64, error) {
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			if err := tx.Rollback(); err != nil {
+				a.logger.Error("Error RollingBack AddEvent Transaction", zap.Error(err))
+			}
 		}
 	}()
 

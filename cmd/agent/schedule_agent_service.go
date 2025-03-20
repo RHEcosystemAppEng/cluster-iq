@@ -155,7 +155,7 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronActio
 	go func() {
 		a.logger.Debug("Starting CronAction execution", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
 		c := cron.New()
-		c.AddFunc(newAction.GetCronExpression(), func() {
+		_, err := c.AddFunc(newAction.GetCronExpression(), func() {
 			select {
 			case <-ctx.Done():
 				a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
@@ -165,6 +165,10 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronActio
 				a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 			}
 		})
+
+		if err != nil {
+			a.logger.Error("Failed adding new CronAction execution", zap.Error(err))
+		}
 
 		c.Start() // Cron Start
 	}()

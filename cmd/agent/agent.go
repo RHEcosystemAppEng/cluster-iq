@@ -268,7 +268,7 @@ func main() {
 	if err != nil {
 		agent.logger.Error("Error starting Agent Services", zap.Error(err))
 		os.Exit(-1)
-	} else {
-		os.Exit(0)
 	}
+
+	os.Exit(0)
 }

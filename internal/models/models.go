@@ -7,6 +7,8 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/lib/pq"
+
+	// Adding pg for implementing PSQL on SQLX
 	_ "github.com/lib/pq"
 )
 

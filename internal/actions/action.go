@@ -67,13 +67,13 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 
 		// Unmarshalling based ont Action Type
 		switch r.Type {
-		case SCHEDULED_ACTION_TYPE: // Unmarshall as ScheduledAction
+		case ScheduledActionType: // Unmarshall as ScheduledAction
 			var a ScheduledAction
 			if err := json.Unmarshal(action, &a); err != nil {
 				return nil, err
 			}
 			resultActions = append(resultActions, a)
-		case CRON_ACTION_TYPE: // Unmarshall as CronAction
+		case CronActionType: // Unmarshall as CronAction
 			var a CronAction
 			if err := json.Unmarshal(action, &a); err != nil {
 				return nil, err
@@ -101,9 +101,9 @@ func SplitActionsByType(actions []Action) ([]ScheduledAction, []CronAction) {
 
 	for _, action := range actions {
 		switch action.GetType() {
-		case SCHEDULED_ACTION_TYPE: // Unmarshall as ScheduledAction
+		case ScheduledActionType: // Unmarshall as ScheduledAction
 			schedActions = append(schedActions, action.(ScheduledAction))
-		case CRON_ACTION_TYPE: // Unmarshall as CronAction
+		case CronActionType: // Unmarshall as CronAction
 			cronActions = append(cronActions, action.(CronAction))
 		}
 	}

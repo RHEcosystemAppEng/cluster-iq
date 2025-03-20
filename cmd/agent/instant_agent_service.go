@@ -84,13 +84,13 @@ func (i *InstantAgentService) Start() error {
 // PowerOnCluster handles a gRPC request to power on a cluster.
 //
 // Parameters:
-// - ctx: The context for the gRPC request.
+// - ctx: The context for the gRPC request. (Not used)
 // - req: The request object containing the cluster ID, account name, region, and instances.
 //
 // Returns:
 // - *pb.PowerOnClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
-func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
+func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
 	i.logger.Debug("Received PowerOnCluster gRPC Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
 
 	// PowerOn
@@ -125,13 +125,13 @@ func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerO
 // PowerOffCluster handles a gRPC request to power Off a cluster.
 //
 // Parameters:
-// - ctx: The context for the gRPC request.
+// - ctx: The context for the gRPC request. (Not used)
 // - req: The request object containing the cluster ID, account name, region, and instances.
 //
 // Returns:
 // - *pb.PowerOffClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
-func (i *InstantAgentService) PowerOffCluster(ctx context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
+func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
 	i.logger.Debug("Received PowerOffCluster Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
 
 	// PowerOff
