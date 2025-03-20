@@ -3,9 +3,35 @@ package main
 import (
 	"fmt"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
+
+type ScheduledActionListResponse struct {
+	Count   int              `json:"count,omitempty"` // Number of actions omitted if empty.
+	Actions []actions.Action `json:"actions"`         // List of actions
+}
+
+func NewScheduledActionListResponse(actionList []actions.Action) *ScheduledActionListResponse {
+	numActions := len(actionList)
+
+	// If there is no actions, an empty array is returned instead of null
+	if numActions == 0 {
+		actionList = []actions.Action{}
+	}
+
+	response := ScheduledActionListResponse{
+		Actions: actionList,
+	}
+
+	// If there is more than one action, the response contains a 'count' field
+	if numActions > 1 {
+		response.Count = numActions
+	}
+
+	return &response
+}
 
 // GenericErrorResponse represents a generic error response returned by the API.
 //
