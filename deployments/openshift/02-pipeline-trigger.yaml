@@ -1,0 +1,63 @@
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-release-trigger-binding
+spec:
+  params:
+    - name: git-repo-url
+      value: $(body.repository.clone_url)
+    - name: git-revision
+      value: $(body.ref)
+    - name: commit-id
+      value: $(body.head_commit.id)
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: github-release-trigger-template
+spec:
+  params:
+    - name: git-repo-url
+    - name: git-revision
+    - name: commit-id
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: release-pipeline-run-
+      spec:
+        pipelineRef:
+          name: cluster-iq
+        params:
+          - name: git-url
+            value: $(params.git-repo-url)
+          - name: git-revision
+            value: $(params.git-revision)
+          - name: commit-id
+            value: $(params.commit-id)
+        workspaces:
+          - name: code-ws
+            persistentVolumeClaim:
+              claimName: cluster-iq-code
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: github-release-event-listener
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: github-release-trigger
+      interceptors:
+        - ref:
+            name: "cel"
+          params:
+            - name: "filter"
+              value: "body.ref.startsWith('refs/heads/release-')"
+      bindings:
+        - ref: github-release-trigger-binding
+      template:
+        ref: github-release-trigger-template
