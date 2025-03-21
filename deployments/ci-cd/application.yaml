@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: preproduction-cluster-iq
+  namespace: openshift-gitops
+spec:
+  destination:
+    namespace: cluster-iq-pre
+    server: https://kubernetes.default.svc
+  project: cluster-iq
+  source:
+    path: deployments/helm/cluster-iq
+    repoURL: https://github.com/RHEcosystemAppEng/cluster-iq
+    targetRevision: release-0.3
+    helm:
+      valueFiles:
+        - values.yaml
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - Replace=true

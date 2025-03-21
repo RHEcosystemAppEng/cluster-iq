@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
-
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
+	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -46,7 +46,7 @@ type APIServer struct {
 	router       *gin.Engine             // Gin router for handling HTTP requests
 	server       *http.Server            // HTTP server instance
 	grpc         *APIGRPCClient          // gRPC client for communication with external services
-	sql          *APISQLClient           // SQL client for database operations
+	sql          *sqlclient.SQLClient    // SQL client for database operations
 	eventService *events.EventService    // Service for handling audit logs
 }
 
@@ -70,12 +70,15 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 	}
 
 	// Creating DB client
-	sqlClient, err := NewAPISQLClient(cfg.DBURL, logger)
+	sqlCli, err := sqlclient.NewSQLClient(cfg.DBURL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}
 
-	eventService := events.NewEventService(sqlClient, logger)
+	// Creating Event Service
+	eventService := events.NewEventService(sqlCli, logger)
+
+	// Creating APIServer
 	apiServer := &APIServer{
 		cfg:    cfg,
 		logger: logger,
@@ -85,7 +88,7 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 			Handler: engine,
 		},
 		grpc:         gRPCClient,
-		sql:          sqlClient,
+		sql:          sqlCli,
 		eventService: eventService,
 	}
 

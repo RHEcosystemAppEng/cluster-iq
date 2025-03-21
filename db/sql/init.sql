@@ -15,6 +15,19 @@ VALUES
 ;
 
 
+-- Action Operations
+CREATE TABLE IF NOT EXISTS action_operations (
+  name TEXT PRIMARY KEY
+);
+
+-- Default values for Cloud Providers table
+INSERT INTO
+  action_operations(name)
+VALUES
+  ('PowerOnCluster'),
+  ('PowerOffCluster')
+;
+
 -- Status
 CREATE TABLE IF NOT EXISTS status (
   value TEXT PRIMARY KEY
@@ -95,6 +108,47 @@ CREATE TABLE IF NOT EXISTS expenses (
   amount REAL,
   PRIMARY KEY (instance_id, date)
 );
+
+-- Action types table
+CREATE TABLE IF NOT EXISTS action_types (
+  name TEXT PRIMARY KEY
+);
+
+-- Default values for Action Types
+INSERT INTO
+  action_types(name)
+VALUES
+  ('cron_action'),
+  ('scheduled_action')
+;
+
+-- Action Status table
+CREATE TABLE IF NOT EXISTS action_status (
+  name TEXT PRIMARY KEY
+);
+
+-- Default values for Action Types
+INSERT INTO
+  action_status(name)
+VALUES
+  ('Success'),
+  ('Failed'),
+  ('Pending'),
+  ('Unknown')
+;
+
+-- Scheduled actions
+CREATE TABLE IF NOT EXISTS schedule (
+  id SERIAL PRIMARY KEY,
+  type TEXT REFERENCES action_types(name),
+  time TIMESTAMP WITH TIME ZONE,
+  cron_exp TEXT,
+  operation TEXT REFERENCES action_operations(name),
+  target TEXT REFERENCES clusters(id),
+  status TEXT REFERENCES action_status(name),
+  enabled BOOLEAN
+);
+
 
 -- Audit logs
 CREATE TABLE IF NOT EXISTS audit_logs (

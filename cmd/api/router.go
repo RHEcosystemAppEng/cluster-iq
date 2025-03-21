@@ -20,7 +20,8 @@ func (r *Router) SetupRoutes() {
 	// API Endpoints
 	baseGroup := r.engine.Group("/api/v1")
 	r.setupHealthcheckRoutes(baseGroup)
-	r.setupExpensesGroupRoutes(baseGroup)
+	r.setupScheduledActionsRoutes(baseGroup)
+	r.setupExpensesRoutes(baseGroup)
 	r.setupInstancesRoutes(baseGroup)
 	r.setupClustersRoutes(baseGroup)
 	r.setupAccountsRoutes(baseGroup)
@@ -32,7 +33,19 @@ func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
 	healthcheckGroup.GET("", r.api.HandlerHealthCheck)
 }
 
-func (r *Router) setupExpensesGroupRoutes(baseGroup *gin.RouterGroup) {
+func (r *Router) setupScheduledActionsRoutes(baseGroup *gin.RouterGroup) {
+	actionsGroup := baseGroup.Group("/schedule")
+	actionsGroup.GET("", r.api.HandlerGetScheduledActions)
+	actionsGroup.GET("/:action_id", r.api.HandlerGetScheduledActionByID)
+	actionsGroup.PATCH("/:action_id/enable", r.api.HandlerEnableScheduledAction)
+	actionsGroup.PATCH("/:action_id/disable", r.api.HandlerDisableScheduledAction)
+	actionsGroup.POST("", r.api.HandlerPostScheduledAction)
+	actionsGroup.PATCH("", r.api.HandlerPatchScheduledActions)
+	actionsGroup.PATCH(":action_id/status", r.api.HandlerPatchStatusScheduledActions)
+	actionsGroup.DELETE("/:action_id", r.api.HandlerDeleteScheduledAction)
+}
+
+func (r *Router) setupExpensesRoutes(baseGroup *gin.RouterGroup) {
 	expensesGroup := baseGroup.Group("/expenses")
 	expensesGroup.GET("", r.api.HandlerGetExpenses)
 	expensesGroup.GET("/:instance_id", r.api.HandlerGetExpensesByInstance)

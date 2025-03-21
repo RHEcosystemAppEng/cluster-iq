@@ -3,6 +3,7 @@ package events
 import (
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"go.uber.org/zap"
 )
@@ -38,7 +39,7 @@ type EventTracker struct {
 }
 
 type EventOptions struct {
-	Action       string
+	Action       actions.ActionOperation
 	Description  *string
 	ResourceID   string
 	ResourceType string
@@ -51,7 +52,7 @@ type AuditEvent struct {
 	// Unique identifier for the log entry.
 	ID int64 `json:"id"`
 	// Name of the action performed (e.g., "cluster_stopped").
-	ActionName string `json:"action_name"`
+	ActionName actions.ActionOperation `json:"action_name"`
 	// UTC timestamp of when the action occurred.
 	EventTimestamp time.Time `json:"event_timestamp"`
 	// Optional description for the action; can be nil.
