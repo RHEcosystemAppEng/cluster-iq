@@ -10,4 +10,4 @@ data:
   CIQ_API_URL: api:{{ .Values.api.service.port }}
   CIQ_CREDS_FILE: /credentials/credentials
   CIQ_LOG_LEVEL: {{ .Values.agent.logLevel }}
-  CIQ_AGENT_POLLING_SECONDS_INTERVAL: {{ .Values.agent.pollingInterval }}
+  CIQ_AGENT_POLLING_SECONDS_INTERVAL: "{{ .Values.agent.pollingInterval }}"
