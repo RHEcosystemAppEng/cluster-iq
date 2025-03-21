@@ -1,19 +1,14 @@
 name: Cluster IQ Container image building
 
 on:
-  push:
-    branches:
-      - main
-      - release-.*
-      - release-.*-rc-.*
-  pull_request:
-    branches:
-      - main
-      - release-.*
-      - release-.*-rc-.*
+  workflow_run:
+    workflows: ['Go Lint and Format']
+    types:
+      - completed
 
 jobs:
   setup:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
