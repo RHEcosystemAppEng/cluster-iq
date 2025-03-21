@@ -78,7 +78,7 @@ spec:
         - name: helm_image
           value: 'docker.io/lachlanevenson/k8s-helm@sha256:0a068ae407e21d1836c6a89a1e9e81af1e55fa56890998e33d5caabdbb51e77b'
         - name: upgrade_extra_params
-          value: '--force'
+          value: '--debug --force'
       runAfter:
         - git-clone
       taskRef:
