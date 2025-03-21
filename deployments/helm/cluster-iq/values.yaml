@@ -233,6 +233,9 @@ agent:
   # This controls the log level for the specific component
   logLevel: "DEBUG"
 
+  # This configures the amount of seconds for the polling process to obtain/update scheduled actions from the Database
+  pollingInterval: 30
+
   image:
     repository: quay.io/ecosystem-appeng/cluster-iq-agent
     # This sets the pull policy for images.

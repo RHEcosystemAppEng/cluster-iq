@@ -12,6 +12,10 @@ spec:
       description: Image Tag
       type: string
       default: $(params.revision)
+    - name: console-image-tag
+      description: ClusterIQ Console Image Tag
+      type: string
+      default: latest
   tasks:
     - name: git-clone
       params:
@@ -68,7 +72,7 @@ spec:
         - name: release_namespace
           value: cluster-iq-pre
         - name: overwrite_values
-          value: 'api.image.tag=$(params.image-tag),console.image.tag=$(params.image-tag),scanner.image.tag=$(params.image-tag),agent.image.tag=$(params.image-tag)'
+          value: 'api.image.tag=$(params.image-tag),scanner.image.tag=$(params.image-tag),agent.image.tag=$(params.image-tag),console.image.tag=$(params.console-image-tag)'
         - name: values_file
           value: values.yaml
         - name: helm_image
