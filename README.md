@@ -2,8 +2,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/RHEcosystemAppEng/cluster-iq)](https://goreportcard.com/report/github.com/RHEcosystemAppEng/cluster-iq)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RHEcosystemAppEng/cluster-iq.svg)](https://pkg.go.dev/github.com/RHEcosystemAppEng/cluster-iq)
-[![Cluster IQ Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml)
----
+
 
 Cluster IQ is a tool for making stock of the Openshift Clusters and its
 resources running on the most common cloud providers and collects relevant
@@ -195,3 +194,8 @@ make build-agent
 # Building in local
 make local-build-agent
 ```
+
+---
+[![Cluster IQ Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml)
+[![Go Lint and Format](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/go-lint-and-format.yml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/go-lint-and-format.yml)
+---
