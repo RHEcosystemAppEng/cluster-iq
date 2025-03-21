@@ -7,4 +7,333 @@ metadata:
     {{- include "cluster-iq.componentLabels" "database" | nindent 4 }}
 immutable: false
 data:
-  init.sql: "-- ## Tables definitions ##\n-- Cloud Providers\nCREATE TABLE IF NOT EXISTS providers (\n  name TEXT PRIMARY KEY\n);\n\n-- Default values for Cloud Providers table\nINSERT INTO\n  providers(name)\nVALUES\n  ('AWS'),\n  ('GCP'),\n  ('Azure'),\n  ('UNKNOWN')\n;\n\n\n-- Status\nCREATE TABLE IF NOT EXISTS status (\n  value TEXT PRIMARY KEY\n);\n\n-- Default values for Status table\nINSERT INTO\n  status(value)\nVALUES\n  ('Running'),\n  ('Stopped'),\n  ('Terminated'),\n  ('Unknown')\n;\n\n\n-- Accounts\nCREATE TABLE IF NOT EXISTS accounts (\n  id TEXT,\n  name TEXT PRIMARY KEY,\n  provider TEXT REFERENCES providers(name),\n  total_cost REAL,\n  cluster_count INTEGER,\n  last_scan_timestamp TIMESTAMP WITH TIME ZONE\n);\n\n\n-- Clusters\nCREATE TABLE IF NOT EXISTS clusters (\n  -- id is the result of joining: \"name+infra_id+account\"\n  id TEXT PRIMARY KEY,\n  name TEXT,\n  infra_id TEXT,\n  provider TEXT REFERENCES providers(name),\n  status TEXT REFERENCES status(value),\n  region TEXT,\n  account_name TEXT REFERENCES accounts(name),\n  console_link TEXT,\n  instance_count INTEGER,\n  last_scan_timestamp TIMESTAMP WITH TIME ZONE,\n  creation_timestamp TIMESTAMP WITH TIME ZONE,\n  age INT,\n  owner TEXT,\n  total_cost REAL\n);\n\n\n-- Instances\nCREATE TABLE IF NOT EXISTS instances (\n  id TEXT PRIMARY KEY,\n  name TEXT,\n  provider TEXT REFERENCES providers(name),\n  instance_type TEXT,\n  availability_zone TEXT,\n  status TEXT REFERENCES status(value),\n  cluster_id TEXT REFERENCES clusters(id),\n  last_scan_timestamp TIMESTAMP WITH TIME ZONE,\n  creation_timestamp TIMESTAMP WITH TIME ZONE,\n  age INT,\n  daily_cost REAL,\n  total_cost REAL\n);\n\n\n-- Instances Tags\nCREATE TABLE IF NOT EXISTS tags (\n  key TEXT,\n  value TEXT,\n  instance_id TEXT REFERENCES instances(id),\n  PRIMARY KEY (key, instance_id)\n);\n\n\n-- Instances expenses\nCREATE TABLE IF NOT EXISTS expenses (\n  instance_id TEXT REFERENCES instances(id),\n  date DATE,\n  amount REAL,\n  PRIMARY KEY (instance_id, date)\n);\n\n-- Audit logs\nCREATE TABLE IF NOT EXISTS audit_logs (\n\tid BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,\n\tevent_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,\n\ttriggered_by text NOT NULL,\n\taction_name text NOT NULL,\n\tresource_id text NOT NULL,\n\tresource_type text NOT NULL,\n\tresult text NOT NULL,\n\tdescription text NULL,\n\tseverity text DEFAULT 'info'::text NOT NULL,\n\tCONSTRAINT audit_logs_pkey PRIMARY KEY (id),\n\tCONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))\n);\n\n-- ## Functions ##\n-- Updates the total cost of an instance after a new expense record is inserted\nCREATE OR REPLACE FUNCTION update_instance_total_costs_after_insert()\n  RETURNS TRIGGER\n  LANGUAGE PLPGSQL\n  AS\n$$\nBEGIN\n  UPDATE instances\n  SET total_cost = (SELECT SUM(amount) FROM expenses WHERE instance_id = NEW.instance_id)\n  WHERE id = NEW.instance_id;\n  RETURN NEW;\nEND;\n$$;\n\n-- Updates the total cost of an instance after an expense record is deleted\nCREATE OR REPLACE FUNCTION update_instance_total_costs_after_delete()\n  RETURNS TRIGGER\n  LANGUAGE PLPGSQL\n  AS\n$$\nBEGIN\n  UPDATE instances\n  SET total_cost = (SELECT SUM(amount) FROM expenses WHERE instance_id = OLD.instance_id)\n  WHERE id = OLD.instance_id;\n  RETURN OLD;\nEND;\n$$;\n\n-- Updates the daily cost of an instance after a new expense record is inserted\nCREATE OR REPLACE FUNCTION update_instance_daily_costs_after_insert()\n  RETURNS TRIGGER\n  LANGUAGE PLPGSQL\n  AS\n$$\nBEGIN\n  UPDATE instances\n  SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = NEW.instance_id)\n  WHERE id = NEW.instance_id;\n  RETURN NEW;\nEND;\n$$;\n\n-- Updates the daily cost of an instance after an expense record is deleted\nCREATE OR REPLACE FUNCTION update_instance_daily_costs_after_delete()\n  RETURNS TRIGGER\n  LANGUAGE PLPGSQL\n  AS\n$$\nBEGIN\n  UPDATE instances\n  SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = OLD.instance_id)\n  WHERE id = OLD.instance_id;\n  RETURN OLD;\nEND;\n$$;\n\n-- Updates the total cost of a cluster based on its associated instances\nCREATE OR REPLACE FUNCTION update_cluster_total_costs()\n  RETURNS TRIGGER\n  LANGUAGE PLPGSQL\n  AS\n$$\nBEGIN\n  UPDATE clusters\n  SET total_cost = (SELECT SUM(total_cost) FROM instances WHERE cluster_id = NEW.cluster_id)\n  WHERE id = NEW.cluster_id;\n  RETURN NEW;\nEND;\n$$;\n\n-- Updates the total cost of an account based on its associated clusters\nCREATE OR REPLACE FUNCTION update_account_total_costs()\n  RETURNS TRIGGER\n  LANGUAGE PLPGSQL\n  AS\n$$\nBEGIN\n  UPDATE accounts\n  SET total_cost = (SELECT SUM(total_cost) FROM clusters WHERE account_name = NEW.account_name)\n  WHERE name = NEW.account_name;\n  RETURN NEW;\nEND;\n$$;\n\n-- ## Triggers ##\n-- Trigger to update instance total cost after an expense is inserted\nCREATE TRIGGER update_instance_total_cost_after_insert\nAFTER INSERT\nON expenses\nFOR EACH ROW\n  EXECUTE PROCEDURE update_instance_total_costs_after_insert();\n\n-- Trigger to update instance total cost after an expense is updated\nCREATE TRIGGER update_instance_total_cost_after_update\nAFTER UPDATE\nON expenses\nFOR EACH ROW\n  EXECUTE PROCEDURE update_instance_total_costs_after_insert();\n\n-- Trigger to update instance total cost after an expense is deleted\nCREATE TRIGGER update_instance_total_cost_after_delete\nAFTER DELETE\nON expenses\nFOR EACH ROW\n  EXECUTE PROCEDURE update_instance_total_costs_after_delete();\n\n-- Trigger to update instance daily cost after an expense is inserted\nCREATE TRIGGER update_instance_daily_cost_after_insert\nAFTER INSERT\nON expenses\nFOR EACH ROW\n  EXECUTE PROCEDURE update_instance_daily_costs_after_insert();\n\n-- Trigger to update instance daily cost after an expense is updated\nCREATE TRIGGER update_instance_daily_cost_after_update\nAFTER UPDATE\nON expenses\nFOR EACH ROW\n  EXECUTE PROCEDURE update_instance_daily_costs_after_insert();\n\n-- Trigger to update instance daily cost after an expense is deleted\nCREATE TRIGGER update_instance_daily_cost_after_delete\nAFTER DELETE\nON expenses\nFOR EACH ROW\n  EXECUTE PROCEDURE update_instance_daily_costs_after_delete();\n\n-- Trigger to update cluster total cost after an instance is updated\nCREATE TRIGGER update_cluster_total_cost\nAFTER UPDATE\nON instances\nFOR EACH ROW\n  EXECUTE PROCEDURE update_cluster_total_costs();\n\n-- Trigger to update account total cost after a cluster is updated\nCREATE TRIGGER update_account_total_cost\nAFTER UPDATE\nON clusters\nFOR EACH ROW\n  EXECUTE PROCEDURE update_account_total_costs();\n\n-- ## Maintenance Functions ##\n-- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours\nCREATE OR REPLACE FUNCTION check_terminated_instances()\nRETURNS void AS $$\nBEGIN\n  UPDATE instances\n  SET status = 'Terminated'\n\tWHERE last_scan_timestamp < NOW() - INTERVAL '1 day';\nEND;\n$$ LANGUAGE plpgsql;\n\n-- Marks clusters as 'Terminated' if they haven't been scanned in the last 24 hours\nCREATE OR REPLACE FUNCTION check_terminated_clusters()\nRETURNS void AS $$\nBEGIN\n  UPDATE clusters\n  SET status = 'Terminated'\n\tWHERE last_scan_timestamp < NOW() - INTERVAL '1 day';\nEND;\n$$ LANGUAGE plpgsql;\n"
+  init.sql: |
+    -- ## Tables definitions ##
+    -- Cloud Providers
+    CREATE TABLE IF NOT EXISTS providers (
+      name TEXT PRIMARY KEY
+    );
+
+    -- Default values for Cloud Providers table
+    INSERT INTO
+      providers(name)
+    VALUES
+      ('AWS'),
+      ('GCP'),
+      ('Azure'),
+      ('UNKNOWN')
+    ;
+
+
+    -- Action Operations
+    CREATE TABLE IF NOT EXISTS action_operations (
+      name TEXT PRIMARY KEY
+    );
+
+    -- Default values for Cloud Providers table
+    INSERT INTO
+      action_operations(name)
+    VALUES
+      ('PowerOnCluster'),
+      ('PowerOffCluster')
+    ;
+
+    -- Status
+    CREATE TABLE IF NOT EXISTS status (
+      value TEXT PRIMARY KEY
+    );
+
+    -- Default values for Status table
+    INSERT INTO
+      status(value)
+    VALUES
+      ('Running'),
+      ('Stopped'),
+      ('Terminated'),
+      ('Unknown')
+    ;
+
+
+    -- Accounts
+    CREATE TABLE IF NOT EXISTS accounts (
+      id TEXT,
+      name TEXT PRIMARY KEY,
+      provider TEXT REFERENCES providers(name),
+      total_cost REAL,
+      cluster_count INTEGER,
+      last_scan_timestamp TIMESTAMP WITH TIME ZONE
+    );
+
+
+    -- Clusters
+    CREATE TABLE IF NOT EXISTS clusters (
+      -- id is the result of joining: "name+infra_id+account"
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      infra_id TEXT,
+      provider TEXT REFERENCES providers(name),
+      status TEXT REFERENCES status(value),
+      region TEXT,
+      account_name TEXT REFERENCES accounts(name),
+      console_link TEXT,
+      instance_count INTEGER,
+      last_scan_timestamp TIMESTAMP WITH TIME ZONE,
+      creation_timestamp TIMESTAMP WITH TIME ZONE,
+      age INT,
+      owner TEXT,
+      total_cost REAL
+    );
+
+
+    -- Instances
+    CREATE TABLE IF NOT EXISTS instances (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      provider TEXT REFERENCES providers(name),
+      instance_type TEXT,
+      availability_zone TEXT,
+      status TEXT REFERENCES status(value),
+      cluster_id TEXT REFERENCES clusters(id),
+      last_scan_timestamp TIMESTAMP WITH TIME ZONE,
+      creation_timestamp TIMESTAMP WITH TIME ZONE,
+      age INT,
+      daily_cost REAL,
+      total_cost REAL
+    );
+
+
+    -- Instances Tags
+    CREATE TABLE IF NOT EXISTS tags (
+      key TEXT,
+      value TEXT,
+      instance_id TEXT REFERENCES instances(id),
+      PRIMARY KEY (key, instance_id)
+    );
+
+
+    -- Instances expenses
+    CREATE TABLE IF NOT EXISTS expenses (
+      instance_id TEXT REFERENCES instances(id),
+      date DATE,
+      amount REAL,
+      PRIMARY KEY (instance_id, date)
+    );
+
+    -- Action types table
+    CREATE TABLE IF NOT EXISTS action_types (
+      name TEXT PRIMARY KEY
+    );
+
+    -- Default values for Action Types
+    INSERT INTO
+      action_types(name)
+    VALUES
+      ('cron_action'),
+      ('scheduled_action')
+    ;
+
+    -- Action Status table
+    CREATE TABLE IF NOT EXISTS action_status (
+      name TEXT PRIMARY KEY
+    );
+
+    -- Default values for Action Types
+    INSERT INTO
+      action_status(name)
+    VALUES
+      ('Success'),
+      ('Failed'),
+      ('Pending'),
+      ('Unknown')
+    ;
+
+    -- Scheduled actions
+    CREATE TABLE IF NOT EXISTS schedule (
+      id SERIAL PRIMARY KEY,
+      type TEXT REFERENCES action_types(name),
+      time TIMESTAMP WITH TIME ZONE,
+      cron_exp TEXT,
+      operation TEXT REFERENCES action_operations(name),
+      target TEXT REFERENCES clusters(id),
+      status TEXT REFERENCES action_status(name),
+      enabled BOOLEAN
+    );
+
+
+    -- Audit logs
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+      event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      triggered_by text NOT NULL,
+      action_name text NOT NULL,
+      resource_id text NOT NULL,
+      resource_type text NOT NULL,
+      result text NOT NULL,
+      description text NULL,
+      severity text DEFAULT 'info'::text NOT NULL,
+      CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+      CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+    );
+
+    -- ## Functions ##
+    -- Updates the total cost of an instance after a new expense record is inserted
+    CREATE OR REPLACE FUNCTION update_instance_total_costs_after_insert()
+      RETURNS TRIGGER
+      LANGUAGE PLPGSQL
+      AS
+    $$
+    BEGIN
+      UPDATE instances
+      SET total_cost = (SELECT SUM(amount) FROM expenses WHERE instance_id = NEW.instance_id)
+      WHERE id = NEW.instance_id;
+      RETURN NEW;
+    END;
+    $$;
+
+    -- Updates the total cost of an instance after an expense record is deleted
+    CREATE OR REPLACE FUNCTION update_instance_total_costs_after_delete()
+      RETURNS TRIGGER
+      LANGUAGE PLPGSQL
+      AS
+    $$
+    BEGIN
+      UPDATE instances
+      SET total_cost = (SELECT SUM(amount) FROM expenses WHERE instance_id = OLD.instance_id)
+      WHERE id = OLD.instance_id;
+      RETURN OLD;
+    END;
+    $$;
+
+    -- Updates the daily cost of an instance after a new expense record is inserted
+    CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_insert()
+      RETURNS TRIGGER
+      LANGUAGE PLPGSQL
+      AS
+    $$
+    BEGIN
+      UPDATE instances
+      SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = NEW.instance_id)
+      WHERE id = NEW.instance_id;
+      RETURN NEW;
+    END;
+    $$;
+
+    -- Updates the daily cost of an instance after an expense record is deleted
+    CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_delete()
+      RETURNS TRIGGER
+      LANGUAGE PLPGSQL
+      AS
+    $$
+    BEGIN
+      UPDATE instances
+      SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = OLD.instance_id)
+      WHERE id = OLD.instance_id;
+      RETURN OLD;
+    END;
+    $$;
+
+    -- Updates the total cost of a cluster based on its associated instances
+    CREATE OR REPLACE FUNCTION update_cluster_total_costs()
+      RETURNS TRIGGER
+      LANGUAGE PLPGSQL
+      AS
+    $$
+    BEGIN
+      UPDATE clusters
+      SET total_cost = (SELECT SUM(total_cost) FROM instances WHERE cluster_id = NEW.cluster_id)
+      WHERE id = NEW.cluster_id;
+      RETURN NEW;
+    END;
+    $$;
+
+    -- Updates the total cost of an account based on its associated clusters
+    CREATE OR REPLACE FUNCTION update_account_total_costs()
+      RETURNS TRIGGER
+      LANGUAGE PLPGSQL
+      AS
+    $$
+    BEGIN
+      UPDATE accounts
+      SET total_cost = (SELECT SUM(total_cost) FROM clusters WHERE account_name = NEW.account_name)
+      WHERE name = NEW.account_name;
+      RETURN NEW;
+    END;
+    $$;
+
+    -- ## Triggers ##
+    -- Trigger to update instance total cost after an expense is inserted
+    CREATE TRIGGER update_instance_total_cost_after_insert
+    AFTER INSERT
+    ON expenses
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_instance_total_costs_after_insert();
+
+    -- Trigger to update instance total cost after an expense is updated
+    CREATE TRIGGER update_instance_total_cost_after_update
+    AFTER UPDATE
+    ON expenses
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_instance_total_costs_after_insert();
+
+    -- Trigger to update instance total cost after an expense is deleted
+    CREATE TRIGGER update_instance_total_cost_after_delete
+    AFTER DELETE
+    ON expenses
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_instance_total_costs_after_delete();
+
+    -- Trigger to update instance daily cost after an expense is inserted
+    CREATE TRIGGER update_instance_daily_cost_after_insert
+    AFTER INSERT
+    ON expenses
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
+
+    -- Trigger to update instance daily cost after an expense is updated
+    CREATE TRIGGER update_instance_daily_cost_after_update
+    AFTER UPDATE
+    ON expenses
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
+
+    -- Trigger to update instance daily cost after an expense is deleted
+    CREATE TRIGGER update_instance_daily_cost_after_delete
+    AFTER DELETE
+    ON expenses
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_instance_daily_costs_after_delete();
+
+    -- Trigger to update cluster total cost after an instance is updated
+    CREATE TRIGGER update_cluster_total_cost
+    AFTER UPDATE
+    ON instances
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_cluster_total_costs();
+
+    -- Trigger to update account total cost after a cluster is updated
+    CREATE TRIGGER update_account_total_cost
+    AFTER UPDATE
+    ON clusters
+    FOR EACH ROW
+      EXECUTE PROCEDURE update_account_total_costs();
+
+    -- ## Maintenance Functions ##
+    -- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
+    CREATE OR REPLACE FUNCTION check_terminated_instances()
+    RETURNS void AS $$
+    BEGIN
+      UPDATE instances
+      SET status = 'Terminated'
+      WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+    END;
+    $$ LANGUAGE plpgsql;
+
+    -- Marks clusters as 'Terminated' if they haven't been scanned in the last 24 hours
+    CREATE OR REPLACE FUNCTION check_terminated_clusters()
+    RETURNS void AS $$
+    BEGIN
+      UPDATE clusters
+      SET status = 'Terminated'
+      WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+    END;
+    $$ LANGUAGE plpgsql;
