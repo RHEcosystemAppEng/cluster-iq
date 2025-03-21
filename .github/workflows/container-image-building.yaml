@@ -9,6 +9,7 @@ on:
       - main
       - release-.*
       - release-.*-rc-.*
+
 jobs:
   setup:
     runs-on: ubuntu-latest
