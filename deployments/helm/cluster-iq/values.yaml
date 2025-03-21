@@ -6,6 +6,9 @@ api:
   # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
   replicaCount: 1
 
+  # This controls the log level for the specific component
+  logLevel: "DEBUG"
+
   # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
   image:
     repository: quay.io/ecosystem-appeng/cluster-iq-api
@@ -33,7 +36,7 @@ api:
     name: ""
 
   # This is for setting Kubernetes Annotations to a Pod.
-  # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ 
+  # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   podAnnotations: {}
   # This is for setting Kubernetes Labels to a Pod.
   # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
@@ -134,7 +137,7 @@ console:
     name: ""
 
   # This is for setting Kubernetes Annotations to a Pod.
-  # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ 
+  # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   podAnnotations: {}
   # This is for setting Kubernetes Labels to a Pod.
   # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
@@ -213,6 +216,9 @@ console:
 
 
 scanner:
+  # This controls the log level for the specific component
+  logLevel: "DEBUG"
+
   image:
     repository: quay.io/ecosystem-appeng/cluster-iq-scanner
     # This sets the pull policy for images.
@@ -223,6 +229,9 @@ scanner:
 agent:
   # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
   replicaCount: 1
+
+  # This controls the log level for the specific component
+  logLevel: "DEBUG"
 
   image:
     repository: quay.io/ecosystem-appeng/cluster-iq-agent
