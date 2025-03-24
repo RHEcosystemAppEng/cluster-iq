@@ -1,5 +1,7 @@
-// sqlclient is the packaged for interacting with the ClusterIQ database. It should be only used by the API to maintain the architecture and the security and integrity of the data.
-// TODO: Review documentation comments
+// Package sqlclient provides a structured interface for interacting with the ClusterIQ database.
+// This package is designed exclusively for use by the API layer to enforce architectural boundaries,
+// ensure data integrity, and centralize all database-related operations, including transactions,
+// queries, and audit logging.
 package sqlclient
 
 import (
@@ -27,7 +29,7 @@ type SQLClient struct {
 	logger *zap.Logger
 }
 
-// getSystemEvents retrieves system-wide events.
+// GetSystemEvents retrieves system-wide events.
 func (a SQLClient) GetSystemEvents() ([]models.SystemAuditLogs, error) {
 	var auditLogs []models.SystemAuditLogs
 	if err := a.db.Select(&auditLogs, SelectSystemEventsQuery); err != nil {
@@ -37,7 +39,7 @@ func (a SQLClient) GetSystemEvents() ([]models.SystemAuditLogs, error) {
 	return auditLogs, nil
 }
 
-// getClusterEvents retrieves events associated with the given clusterID.
+// GetClusterEvents retrieves events associated with the given clusterID.
 func (a SQLClient) GetClusterEvents(clusterID string) ([]models.AuditLog, error) {
 	var auditLogs []models.AuditLog
 	if err := a.db.Select(&auditLogs, SelectClusterEventsQuery, clusterID); err != nil {
@@ -55,8 +57,8 @@ func (a SQLClient) AddEvent(event models.AuditLog) (int64, error) {
 	}
 	defer func() {
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				a.logger.Error("Error RollingBack AddEvent Transaction", zap.Error(err))
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback AddEvent transaction", zap.Error(rbErr))
 			}
 		}
 	}()
@@ -68,7 +70,12 @@ func (a SQLClient) AddEvent(event models.AuditLog) (int64, error) {
 		return 0, err
 	}
 
-	defer row.Close() // Closing rows when finished
+	defer func() {
+		if closeErr := row.Close(); closeErr != nil {
+			a.logger.Error("Failed to close rows", zap.Error(closeErr))
+		}
+	}()
+
 	if err == nil && row.Next() {
 		err = row.Scan(&eventID)
 	} else {
@@ -149,7 +156,7 @@ func (a SQLClient) GetScheduledActions(conditions []string, args []interface{}) 
 	// Getting results from DB
 	var dbresult []models.DBScheduledAction
 	if err := a.db.Select(&dbresult, query, args...); err != nil {
-		a.logger.Error("Can't prepare Select Scheduled Actions query", zap.Error(err))
+		a.logger.Error("Failed to prepare SelectScheduledActions query", zap.Error(err))
 		return nil, err
 	}
 
@@ -172,13 +179,17 @@ func (a SQLClient) EnableScheduledAction(actionID string) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback EnableScheduledAction transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	// Writing Scheduled Actions
 	if _, err := tx.Exec(EnableActionQuery, actionID); err != nil {
-		a.logger.Error("Can't prepare Enable Scheduled Actions query", zap.Error(err))
-		if rberr := tx.Rollback(); rberr != nil {
-			a.logger.Error("Error Rolling Back Enable Scheduled Actions query", zap.Error(rberr))
-			return fmt.Errorf("%w; %w;", err, rberr)
-		}
+		a.logger.Error("Failed to prepare EnableScheduledAction query", zap.Error(err))
 		return err
 	}
 
@@ -204,13 +215,17 @@ func (a SQLClient) DisableScheduledAction(actionID string) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback DisableScheduledAction transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	// Writing Scheduled Actions
 	if _, err := tx.Exec(DisableActionQuery, actionID); err != nil {
-		a.logger.Error("Can't prepare Disable Scheduled Actions query", zap.Error(err))
-		if rberr := tx.Rollback(); rberr != nil {
-			a.logger.Error("Error Rolling Back Disable Scheduled Actions query", zap.Error(rberr))
-			return fmt.Errorf("%w; %w;", err, rberr)
-		}
+		a.logger.Error("Failed to prepare DisableScheduledAction query", zap.Error(err))
 		return err
 	}
 
@@ -221,7 +236,7 @@ func (a SQLClient) DisableScheduledAction(actionID string) error {
 	return nil
 }
 
-// GetScheduledActions runs the db select query for retrieving a specific scheduled action by its ID
+// GetScheduledActionByID runs the db select query for retrieving a specific scheduled action by its ID
 //
 // Parameters:
 //
@@ -234,7 +249,7 @@ func (a SQLClient) GetScheduledActionByID(actionID string) ([]actions.Action, er
 	// Getting results from DB
 	var dbresult []models.DBScheduledAction
 	if err := a.db.Select(&dbresult, SelectScheduledActionsByIDQuery, actionID); err != nil {
-		a.logger.Error("Can't prepare Select Scheduled Actions query", zap.Error(err))
+		a.logger.Error("Failed to prepare SelectScheduledActions query", zap.Error(err))
 		return nil, err
 	}
 
@@ -256,16 +271,20 @@ func (a SQLClient) WriteScheduledActions(newActions []actions.Action) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback WriteScheduledActions transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	schedActions, cronActions := actions.SplitActionsByType(newActions)
 
 	// Writing Scheduled Actions
 	if len(schedActions) > 0 {
 		if _, err := tx.NamedExec(InsertScheduledActionsQuery, schedActions); err != nil {
-			a.logger.Error("Can't prepare Insert Scheduled Actions query", zap.Error(err))
-			if rberr := tx.Rollback(); rberr != nil {
-				a.logger.Error("Error Rolling Back Insert Scheduled Actions query", zap.Error(rberr))
-				return fmt.Errorf("%w; %w;", err, rberr)
-			}
+			a.logger.Error("Failed to prepare InsertScheduledActionsQuery query", zap.Error(err))
 			return err
 		}
 	}
@@ -273,11 +292,7 @@ func (a SQLClient) WriteScheduledActions(newActions []actions.Action) error {
 	// Writing Cron Actions
 	if len(cronActions) > 0 {
 		if _, err := tx.NamedExec(InsertCronActionsQuery, cronActions); err != nil {
-			a.logger.Error("Can't prepare Insert Cron Actions query", zap.Error(err))
-			if rberr := tx.Rollback(); rberr != nil {
-				a.logger.Error("Error Rolling Back Insert Scheduled Actions query", zap.Error(rberr))
-				return fmt.Errorf("%w; %w;", err, rberr)
-			}
+			a.logger.Error("Failed to prepare InsertCronActionsQuery query", zap.Error(err))
 			return err
 		}
 	}
@@ -302,17 +317,19 @@ func (a SQLClient) PatchScheduledAction(newActions []actions.Action) error {
 	if err != nil {
 		return err
 	}
-
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback PatchScheduledAction query", zap.Error(rbErr))
+			}
+		}
+	}()
 	schedActions, cronActions := actions.SplitActionsByType(newActions)
 
 	// Writing Scheduled Actions
 	if len(schedActions) > 0 {
 		if _, err := tx.NamedExec(PatchScheduledActionsQuery, schedActions); err != nil {
-			a.logger.Error("Can't prepare Patch Scheduled Actions query", zap.Error(err))
-			if rberr := tx.Rollback(); rberr != nil {
-				a.logger.Error("Error Rolling Back Patch Scheduled Actions query", zap.Error(rberr))
-				return fmt.Errorf("%w; %w;", err, rberr)
-			}
+			a.logger.Error("Failed to prepare PatchScheduledAction query", zap.Error(err))
 			return err
 		}
 	}
@@ -320,11 +337,7 @@ func (a SQLClient) PatchScheduledAction(newActions []actions.Action) error {
 	// Writing Cron Actions
 	if len(cronActions) > 0 {
 		if _, err := tx.NamedExec(PatchCronActionsQuery, cronActions); err != nil {
-			a.logger.Error("Can't prepare Patch Cron Actions query", zap.Error(err))
-			if rberr := tx.Rollback(); rberr != nil {
-				a.logger.Error("Error Rolling Back Patch Scheduled Actions query", zap.Error(rberr))
-				return fmt.Errorf("%w; %w;", err, rberr)
-			}
+			a.logger.Error("Failed to prepare PatchCronActionsQuery query", zap.Error(err))
 			return err
 		}
 	}
@@ -350,14 +363,18 @@ func (a SQLClient) PatchScheduledActionStatus(actionID string, status string) er
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback PatchScheduledActionStatus query", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	enabled := status == "Pending"
 
 	if _, err := tx.Exec(PatchActionStatusQuery, actionID, status, enabled); err != nil {
-		a.logger.Error("Can't prepare Patch Action Status query", zap.Error(err))
-		if rberr := tx.Rollback(); rberr != nil {
-			a.logger.Error("Error Rolling Back Patch Action Status query", zap.Error(rberr))
-			return fmt.Errorf("%w; %w;", err, rberr)
-		}
+		a.logger.Error("Failed to prepare PatchScheduledActionStatus query", zap.Error(err))
 		return err
 	}
 
@@ -379,12 +396,16 @@ func (a SQLClient) DeleteScheduledAction(actionID string) error {
 	// Begin transaction
 	tx, err := a.db.Beginx()
 	if err != nil {
-		if rberr := tx.Rollback(); rberr != nil {
-			a.logger.Error("Error Rolling Back Delete Scheduled Actions query", zap.Error(rberr))
-			return fmt.Errorf("%w; %w;", err, rberr)
-		}
 		return err
 	}
+
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback DeleteScheduledAction query", zap.Error(rbErr))
+			}
+		}
+	}()
 
 	// Deleting
 	tx.MustExec(DeleteScheduledActionsQuery, actionID)
@@ -458,9 +479,18 @@ func (a SQLClient) WriteExpenses(expenses []inventory.Expense) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback WriteExpenses transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	// Writing Expenses
 	if _, err := tx.NamedExec(InsertExpensesQuery, expenses); err != nil {
-		a.logger.Error("Can't prepare Insert Expenses query", zap.Error(err), zap.Reflect("expenses", expenses))
+		a.logger.Error("Failed to prepare InsertExpensesQuery query", zap.Error(err), zap.Reflect("expenses", expenses))
+		return err
 	}
 
 	// Commit
@@ -497,7 +527,7 @@ func (a SQLClient) GetInstancesOverview() (models.InstancesSummary, error) {
 	return instances, nil
 }
 
-// getInstanceByID retrieves an instance by its ID.
+// GetInstanceByID retrieves an instance by its ID.
 //
 // Parameters:
 // - instanceID: The ID of the instance to retrieve.
@@ -516,7 +546,7 @@ func (a SQLClient) GetInstanceByID(instanceID string) ([]inventory.Instance, err
 	return instances, nil
 }
 
-// writeInstances writes a batch of instances and their tags to the database in a transaction.
+// WriteInstances writes a batch of instances and their tags to the database in a transaction.
 //
 // Parameters:
 // - instances: A slice of inventory.Instance objects to insert.
@@ -533,20 +563,22 @@ func (a SQLClient) WriteInstances(instances []inventory.Instance) error {
 	if err != nil {
 		return err
 	}
-
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback WriteInstances query", zap.Error(rbErr))
+			}
+		}
+	}()
 	// Writing Instances
 	if _, err := tx.NamedExec(InsertInstancesQuery, instances); err != nil {
-		a.logger.Error("Can't prepare Insert instances query", zap.Error(err))
-		// TODO: check errors on Rollback
-		tx.Rollback()
+		a.logger.Error("Failed to prepare InsertInstancesQuery query", zap.Error(err))
 		return err
 	}
 
 	// Writing tags
 	if _, err := tx.NamedExec(InsertTagsQuery, tags); err != nil {
-		a.logger.Error("Can't prepare Insert tags query", zap.Error(err))
-		// TODO: check errors on Rollback
-		tx.Rollback()
+		a.logger.Error("Failed to prepare InsertTagsQuery query", zap.Error(err))
 		return err
 	}
 
@@ -557,7 +589,7 @@ func (a SQLClient) WriteInstances(instances []inventory.Instance) error {
 	return nil
 }
 
-// deleteInstance deletes an instance and its associated tags from the database.
+// DeleteInstance deletes an instance and its associated tags from the database.
 //
 // Parameters:
 // - instanceID: The ID of the instance to delete.
@@ -570,6 +602,14 @@ func (a SQLClient) DeleteInstance(instanceID string) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback DeleteInstance transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	tx.MustExec(DeleteTagsQuery, instanceID)
 	tx.MustExec(DeleteInstanceQuery, instanceID)
 	if err := tx.Commit(); err != nil {
@@ -578,7 +618,7 @@ func (a SQLClient) DeleteInstance(instanceID string) error {
 	return nil
 }
 
-// getClusters retrieves all clusters from the database.
+// GetClusters retrieves all clusters from the database.
 //
 // Returns:
 // - A slice of inventory.Cluster objects.
@@ -601,7 +641,7 @@ func (a SQLClient) GetClustersOverview() (models.ClustersSummary, error) {
 	return clustersOverview, nil
 }
 
-// getClusterAccountName retrieves the account name associated with a specific cluster.
+// GetClusterAccountName retrieves the account name associated with a specific cluster.
 //
 // Parameters:
 // - clusterID: The unique identifier of the cluster.
@@ -617,7 +657,7 @@ func (a SQLClient) GetClusterAccountName(clusterID string) (string, error) {
 	return accountName, nil
 }
 
-// getClusterRegion retrieves the region where a specific cluster is located.
+// GetClusterRegion retrieves the region where a specific cluster is located.
 //
 // Parameters:
 // - clusterID: The unique identifier of the cluster.
@@ -633,7 +673,7 @@ func (a SQLClient) GetClusterRegion(clusterID string) (string, error) {
 	return region, nil
 }
 
-// getClusterByID retrieves a cluster's details by its unique identifier.
+// GetClusterByID retrieves a cluster's details by its unique identifier.
 //
 // Parameters:
 // - clusterID: The unique identifier of the cluster.
@@ -649,7 +689,7 @@ func (a SQLClient) GetClusterByID(clusterID string) ([]inventory.Cluster, error)
 	return []inventory.Cluster{cluster}, nil
 }
 
-// getClusterTags retrieves the tags associated with a specific cluster.
+// GetClusterTags retrieves the tags associated with a specific cluster.
 //
 // Parameters:
 // - clusterID: The unique identifier of the cluster.
@@ -665,7 +705,7 @@ func (a SQLClient) GetClusterTags(clusterID string) ([]inventory.Tag, error) {
 	return tags, nil
 }
 
-// getInstancesOnCluster retrieves all instances belonging to a specific cluster.
+// GetInstancesOnCluster retrieves all instances belonging to a specific cluster.
 //
 // Parameters:
 // - clusterID: The unique identifier of the cluster.
@@ -681,7 +721,7 @@ func (a SQLClient) GetInstancesOnCluster(clusterID string) ([]inventory.Instance
 	return instances, nil
 }
 
-// writeClusters inserts a list of clusters into the database in a transaction.
+// WriteClusters inserts a list of clusters into the database in a transaction.
 //
 // Parameters:
 // - clusters: A slice of inventory.Cluster objects to insert.
@@ -694,13 +734,22 @@ func (a SQLClient) WriteClusters(clusters []inventory.Cluster) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback WriteClusters transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	result, err := tx.NamedExec(InsertClustersQuery, clusters)
 	if err != nil {
 		if result != nil {
 			rows, _ := result.RowsAffected()
-			a.logger.Error("Error running NamedQuery", zap.Int64("rows_affected", rows))
+			a.logger.Error("Failed to run InsertClustersQuery query", zap.Int64("rows_affected", rows))
 		}
-		a.logger.Error("Error preparing NamedQUery", zap.Error(err))
+		a.logger.Error("Failed to prepare InsertClustersQuery query", zap.Error(err))
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -709,7 +758,7 @@ func (a SQLClient) WriteClusters(clusters []inventory.Cluster) error {
 	return nil
 }
 
-// deleteCluster deletes a cluster from the database.
+// DeleteCluster deletes a cluster from the database.
 //
 // Parameters:
 // - clusterName: The name of the cluster to delete.
@@ -722,6 +771,14 @@ func (a SQLClient) DeleteCluster(clusterName string) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback DeleteCluster transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	tx.MustExec(DeleteClusterQuery, clusterName)
 	if err := tx.Commit(); err != nil {
 		return err
@@ -729,7 +786,7 @@ func (a SQLClient) DeleteCluster(clusterName string) error {
 	return nil
 }
 
-// getAccounts retrieves all accounts from the database.
+// GetAccounts retrieves all accounts from the database.
 //
 // Returns:
 // - A slice of inventory.Account objects.
@@ -778,7 +835,7 @@ func (a SQLClient) GetProvidersOverview() (models.ProvidersSummary, error) {
 	return summary, nil
 }
 
-// getAccountByName retrieves an account by its name from the database.
+// GetAccountByName retrieves an account by its name from the database.
 //
 // Parameters:
 // - accountName: The name of the account to retrieve.
@@ -794,7 +851,7 @@ func (a SQLClient) GetAccountByName(accountName string) ([]inventory.Account, er
 	return []inventory.Account{account}, nil
 }
 
-// getClustersOnAccount retrieves all clusters associated with a specific account.
+// GetClustersOnAccount retrieves all clusters associated with a specific account.
 //
 // Parameters:
 // - accountName: The name of the account whose clusters will be retrieved.
@@ -810,7 +867,7 @@ func (a SQLClient) GetClustersOnAccount(accountName string) ([]inventory.Cluster
 	return clusters, nil
 }
 
-// writeAccounts inserts multiple accounts into the database in a transaction.
+// WriteAccounts inserts multiple accounts into the database in a transaction.
 //
 // Parameters:
 // - accounts: A slice of inventory.Account objects to insert.
@@ -822,16 +879,24 @@ func (a SQLClient) WriteAccounts(accounts []inventory.Account) error {
 	if err != nil {
 		return err
 	}
-
-	// TODO: check errors on NamedExec
-	tx.NamedExec(InsertAccountsQuery, accounts)
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback WriteAccounts transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+	if _, err = tx.NamedExec(InsertAccountsQuery, accounts); err != nil {
+		a.logger.Error("Failed to prepare InsertAccountsQuery query", zap.Error(err))
+		return err
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// deleteAccount deletes an account from the database by its name.
+// DeleteAccount deletes an account from the database by its name.
 //
 // Parameters:
 // - accountName: The name of the account to delete.
@@ -844,6 +909,14 @@ func (a SQLClient) DeleteAccount(accountName string) error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				a.logger.Error("Failed to rollback DeleteAccount transaction", zap.Error(rbErr))
+			}
+		}
+	}()
+
 	tx.MustExec(DeleteAccountQuery, accountName)
 	if err := tx.Commit(); err != nil {
 		return err
@@ -851,7 +924,7 @@ func (a SQLClient) DeleteAccount(accountName string) error {
 	return nil
 }
 
-// refreshInventory refreshes the database by updating the status of terminated instances and clusters.
+// RefreshInventory refreshes the database by updating the status of terminated instances and clusters.
 //
 // Returns:
 // - An error if any update query fails.
@@ -859,17 +932,17 @@ func (a SQLClient) RefreshInventory() error {
 	var result sql.Result
 
 	if result = a.db.MustExec(UpdateTerminatedInstancesQuery); result == nil {
-		return fmt.Errorf("Cannot refresh terminated instances")
+		return fmt.Errorf("cannot refresh terminated instances")
 	}
 
 	if result = a.db.MustExec(UpdateTerminatedClustersQuery); result == nil {
-		return fmt.Errorf("Cannot refresh terminated clusters")
+		return fmt.Errorf("cannot refresh terminated clusters")
 	}
 
 	return nil
 }
 
-// updateClusterStatusByClusterID updates the status of a cluster and all its instances in the database.
+// UpdateClusterStatusByClusterID updates the status of a cluster and all its instances in the database.
 //
 // This function first verifies if the requested status exists in the database. If the status is valid, it updates:
 // 1. The status of the cluster identified by the given `clusterID`.
@@ -901,7 +974,7 @@ func (a SQLClient) UpdateClusterStatusByClusterID(status string, clusterID strin
 			return err
 		}
 		if rows == 0 {
-			return fmt.Errorf("Any cluster status was updated for ClusterID: %s", clusterID)
+			return fmt.Errorf("any cluster status was updated for ClusterID: %s", clusterID)
 		}
 		a.logger.Debug("Cluster status updated successfully", zap.String("cluster_id", clusterID))
 	}
@@ -918,7 +991,7 @@ func (a SQLClient) UpdateClusterStatusByClusterID(status string, clusterID strin
 			return err
 		}
 		if rows == 0 {
-			return fmt.Errorf("Any instance status was updated for ClusterID: %s", clusterID)
+			return fmt.Errorf("any instance status was updated for ClusterID: %s", clusterID)
 		}
 		a.logger.Debug("Instances status updated successfully", zap.String("cluster_id", clusterID))
 	}
@@ -926,7 +999,7 @@ func (a SQLClient) UpdateClusterStatusByClusterID(status string, clusterID strin
 	return nil
 }
 
-// checkStatusValue checks if a given status value exists in the database.
+// CheckStatusValue checks if a given status value exists in the database.
 //
 // Parameters:
 // - status: The status value to check in the database.
