@@ -94,6 +94,34 @@ type SystemAuditLogs struct {
 	Provider string `db:"provider"`
 }
 
+type OverviewSummary struct {
+	Clusters  ClustersSummary  `json:"clusters"`
+	Instances InstancesSummary `json:"instances"`
+	Providers ProvidersSummary `json:"providers"`
+}
+
+type ClustersSummary struct {
+	Running  int `json:"running"`
+	Stopped  int `json:"stopped"`
+	Unknown  int `json:"unknown"`
+	Archived int `json:"archived"`
+}
+
+type InstancesSummary struct {
+	Count int `json:"count"`
+}
+
+type ProvidersSummary struct {
+	AWS   ProviderDetail `json:"aws"`
+	GCP   ProviderDetail `json:"gcp"`
+	Azure ProviderDetail `json:"azure"`
+}
+
+type ProviderDetail struct {
+	AccountCount int `json:"account_count"`
+	ClusterCount int `json:"cluster_count"`
+}
+
 // DBScheduledAction is an intermediate struct used to map Scheduled Actions and their target's data into actions.ScheduledActions
 // It provides a detailed representation of when, what action, and which target the action has
 type DBScheduledAction struct {

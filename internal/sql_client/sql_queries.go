@@ -223,6 +223,10 @@ const (
 			instances.id = tags.instance_id
 		ORDER BY name
 	`
+	// SelectInstancesOverview returns the total count of all instances
+	SelectInstancesOverview = `
+		SELECT COUNT(*) as count FROM instances
+	`
 
 	// SelectInstancesByIDQuery returns an instance by its ID
 	SelectInstancesByIDQuery = `
@@ -237,6 +241,15 @@ const (
 	SelectClustersQuery = `
 		SELECT * FROM clusters
 		ORDER BY name
+	`
+	// SelectClustersOverview returns the number of clusters grouped by status
+	SelectClustersOverview = `
+		SELECT 
+			COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running,
+			COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped,
+			COUNT(CASE WHEN status = 'Unknown' THEN 1 END) AS unknown,
+			COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived
+		FROM clusters;
 	`
 	// InsertEventQuery insert a new audit event
 	InsertEventQuery = `
@@ -342,6 +355,24 @@ const (
 	SelectAccountsQuery = `
 		SELECT * FROM accounts
 		ORDER BY name
+	`
+	// SelectProvidersOverviewQuery returns data about cloud providers with their account and cluster counts,
+	// excluding those marked as "UNKNOWN" and not counting Terminated clusters
+	SelectProvidersOverviewQuery = `
+		SELECT
+			a.provider,
+			COUNT(DISTINCT a.name) AS account_count,
+			COUNT(DISTINCT CASE WHEN c.status != 'Terminated' THEN c.id END) AS cluster_count
+		FROM
+			accounts a
+		LEFT JOIN
+			clusters c ON c.account_name = a.name
+		WHERE
+			a.provider != 'UNKNOWN'
+		GROUP BY
+			a.provider
+		ORDER BY
+			a.provider;
 	`
 
 	// SelectAccountsByNameQuery returns an instance by its Name
