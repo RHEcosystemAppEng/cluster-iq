@@ -68,7 +68,7 @@ spec:
         - name: release_version
           value: $(params.revision)
         - name: release_name
-          value: cluster-iq-$(params.revision)
+          value: cluster-iq
         - name: release_namespace
           value: cluster-iq-pre
         - name: overwrite_values

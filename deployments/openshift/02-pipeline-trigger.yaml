@@ -2,13 +2,15 @@
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerBinding
 metadata:
-  name: github-release-trigger-binding
+  name: cluster-iq-trigger-binding
 spec:
   params:
     - name: git-repo-url
       value: $(body.repository.clone_url)
     - name: git-revision
       value: $(body.ref)
+    - name: git-branch
+      value: $(extensions.branch)
     - name: commit-id
       value: $(body.head_commit.id)
 
@@ -16,11 +18,12 @@ spec:
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
-  name: github-release-trigger-template
+  name: cluster-iq-trigger-template
 spec:
   params:
     - name: git-repo-url
     - name: git-revision
+    - name: git-branch
     - name: commit-id
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
@@ -31,33 +34,60 @@ spec:
         pipelineRef:
           name: cluster-iq
         params:
-          - name: git-url
-            value: $(params.git-repo-url)
-          - name: git-revision
-            value: $(params.git-revision)
-          - name: commit-id
-            value: $(params.commit-id)
+          - name: revision
+            value: "$(tt.params.git-revision)"
+          - name: image-tag
+            value: "v$(tt.params.git-branch)"
+          - name: console-image-tag
+            value: latest
         workspaces:
           - name: code-ws
-            persistentVolumeClaim:
-              claimName: cluster-iq-code
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 100Mi
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: cluster-iq-trigger
+spec:
+  bindings:
+    - ref: cluster-iq-trigger-binding
+  template:
+    ref: cluster-iq-trigger-template
+  interceptors:
+    - ref:
+        name: "cel"
+      params:
+        - name: "overlays"
+          value:
+            - key: branch
+              expression: "body.ref.split('/')[2].replace('release-', 'v')"
+        - name: "filter"
+          value: "body.ref.matches('refs/heads/release-.*')"
+
+    - ref:
+        name: "github"
+      params:
+        - name: "eventTypes"
+          value: ["push", "pull_request"]
+        - name: "secretRef"
+          value:
+            secretName: pipeline-webhook-secret
+            secretKey: WebHookSecretKey
+
 
 ---
 apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
-  name: github-release-event-listener
+  name: cluster-iq-listener
 spec:
   serviceAccountName: pipeline
   triggers:
-    - name: github-release-trigger
-      interceptors:
-        - ref:
-            name: "cel"
-          params:
-            - name: "filter"
-              value: "body.ref.startsWith('refs/heads/release-')"
-      bindings:
-        - ref: github-release-trigger-binding
-      template:
-        ref: github-release-trigger-template
+    - triggerRef: cluster-iq-trigger
