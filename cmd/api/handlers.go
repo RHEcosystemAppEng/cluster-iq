@@ -9,6 +9,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -1168,4 +1169,55 @@ func (a APIServer) HandlerGetClusterEvents(c *gin.Context) {
 	}
 	appEvents := events.ToAuditEvents(dbEvents)
 	c.PureJSON(http.StatusOK, NewEventsListResponse(appEvents))
+}
+
+// HandlerGetInventoryOverview handles the request to obtain an overview of the inventory
+//
+//	@Summary		Obtain an inventory overview
+//	@Description	Returns an overview of the inventory
+//	@Tags			Overview
+//	@Accept			json
+//	@Produce		json
+//	@Success		200			{object}	models.OverviewSummary
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/overview	[get]
+func (a APIServer) HandlerGetInventoryOverview(c *gin.Context) {
+	a.logger.Debug("Retrieving overview data")
+
+	overview, err := a.getInventoryOverview()
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("failed to retrieve inventory overview"))
+		return
+	}
+	c.PureJSON(http.StatusOK, overview)
+}
+
+// getInventoryOverview retrieves all components of the inventory overview.
+func (a APIServer) getInventoryOverview() (models.OverviewSummary, error) {
+	var overview models.OverviewSummary
+
+	// Get clusters summary
+	clusters, err := a.sql.GetClustersOverview()
+	if err != nil {
+		return models.OverviewSummary{}, fmt.Errorf("failed to get clusters overview: %w", err)
+	}
+
+	overview.Clusters = clusters
+
+	// Get instances summary
+	instances, err := a.sql.GetInstancesOverview()
+	if err != nil {
+		return models.OverviewSummary{}, fmt.Errorf("failed to get instances overview: %w", err)
+	}
+	overview.Instances = instances
+
+	// Get providers summary
+	providers, err := a.sql.GetProvidersOverview()
+	if err != nil {
+		return models.OverviewSummary{}, fmt.Errorf("failed to get providers overview: %w", err)
+	}
+
+	overview.Providers = providers
+
+	return overview, nil
 }
