@@ -57,17 +57,22 @@ jobs:
       - name: Determine Image Tags
         id: vars
         run: |
+          # Checking if the event comes from PR or Branch
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "COMMIT=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+            echo "BRANCH_NAME=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "COMMIT=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+            echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+          fi
+
           # Getting IMAGE_TAG
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             IMAGE_TAG="latest"
           else
-            IMAGE_TAG=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///' | tr '/' '-')
+            IMAGE_TAG=${COMMIT}
           fi
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-
-          # Getting Commit hash
-          COMMIT=$(git rev-parse --short HEAD)
-          echo "COMMIT=${COMMIT}" >> $GITHUB_OUTPUT
 
           # Getting version tag if available
           GIT_TAG=$(git tag --points-at HEAD | head -n 1)
@@ -77,6 +82,7 @@ jobs:
 
           echo "Building Tags:"
           echo "  * COMMIT: ${COMMIT}"
+          echo "  * BRANCH: ${BRANCH_NAME}"
           echo "  * VERSION: ${GIT_TAG}"
           echo "  * IMAGE_TAG: ${IMAGE_TAG}"
 
