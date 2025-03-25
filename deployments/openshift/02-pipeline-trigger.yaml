@@ -1,0 +1,93 @@
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: cluster-iq-trigger-binding
+spec:
+  params:
+    - name: git-repo-url
+      value: $(body.repository.clone_url)
+    - name: git-revision
+      value: $(body.ref)
+    - name: git-release-version
+      value: $(extensions.release-version)
+    - name: commit-id
+      value: $(body.head_commit.id)
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: cluster-iq-trigger-template
+spec:
+  params:
+    - name: git-repo-url
+    - name: git-revision
+    - name: git-release-version
+    - name: commit-id
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: release-pipeline-run-
+      spec:
+        pipelineRef:
+          name: cluster-iq
+        params:
+          - name: revision
+            value: "$(tt.params.git-revision)"
+          - name: image-tag
+            value: "$(tt.params.git-release-version)"
+          - name: console-image-tag
+            value: latest
+        workspaces:
+          - name: code-ws
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 100Mi
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: cluster-iq-trigger
+spec:
+  bindings:
+    - ref: cluster-iq-trigger-binding
+  template:
+    ref: cluster-iq-trigger-template
+  interceptors:
+    - ref:
+        name: "cel"
+      params:
+        - name: "overlays"
+          value:
+            - key: release-version
+              expression: "body.ref.split('/')[2].replace('release-', 'v')" # Replace 'release-' by your branch name
+        - name: "filter"
+          value: "body.ref.matches('refs/heads/release-.*')" # Replace 'release-' by your branch name
+
+    - ref:
+        name: "github"
+      params:
+        - name: "eventTypes"
+          value: ["push", "pull_request"]
+        - name: "secretRef"
+          value:
+            secretName: pipeline-webhook-secret
+            secretKey: WebHookSecretKey
+
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: cluster-iq-listener
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - triggerRef: cluster-iq-trigger
