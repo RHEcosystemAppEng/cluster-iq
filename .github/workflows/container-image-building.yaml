@@ -47,9 +47,10 @@ jobs:
       contents: read
       packages: write
     outputs:
-      IMAGE_TAG: ${{ steps.vars.outputs.IMAGE_TAG }}
       COMMIT: ${{ steps.vars.outputs.COMMIT }}
+      BRANCH_NAME: ${{ steps.vars.outputs.BRANCH_NAME }}
       VERSION: ${{ steps.vars.outputs.VERSION }}
+      IMAGE_TAG: ${{ steps.vars.outputs.IMAGE_TAG }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,20 +60,25 @@ jobs:
         run: |
           # Checking if the event comes from PR or Branch
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "COMMIT=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-            echo "BRANCH_NAME=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+            COMMIT=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-7)
+            BRANCH_NAME=${{ github.event.pull_request.head.ref }}
+            echo "Changes comming from PR: $BRANCH_NAME/$COMMIT"
           else
-            echo "COMMIT=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-            echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+            COMMIT=$(echo ${{ github.sha }} | cut -c1-7)
+            BRANCH_NAME=${GITHUB_REF##*/}
+            echo "Changes comming from Push: $BRANCH_NAME/$COMMIT"
           fi
+
+          echo "COMMIT=$COMMIT" >> $GITHUB_OUTPUT
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
           # Getting IMAGE_TAG
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             IMAGE_TAG="latest"
           else
-            IMAGE_TAG=${COMMIT}
+            IMAGE_TAG="$COMMIT"
           fi
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
           # Getting version tag if available
           GIT_TAG=$(git tag --points-at HEAD | head -n 1)
@@ -82,7 +88,7 @@ jobs:
 
           echo "Building Tags:"
           echo "  * COMMIT: ${COMMIT}"
-          echo "  * BRANCH: ${BRANCH_NAME}"
+          echo "  * BRANCH_NAME: ${BRANCH_NAME}"
           echo "  * VERSION: ${GIT_TAG}"
           echo "  * IMAGE_TAG: ${IMAGE_TAG}"
 
@@ -117,10 +123,19 @@ jobs:
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
 
+          if [[ ! -z "${{ needs.setup.outputs.BRANCH_NAME }}" ]]; then
+            podman tag \
+              quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }} \
+              quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.BRANCH_NAME }}
+          fi
+
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.COMMIT }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.IMAGE_TAG }}
+          if [[ ! -z "${{ needs.setup.outputs.BRANCH_NAME }}" ]]; then
+            podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.BRANCH_NAME }}
+          fi
 
       - name: Generating fixed version image
         if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
@@ -166,10 +181,19 @@ jobs:
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
 
+          if [[ ! -z "${{ needs.setup.outputs.BRANCH_NAME }}" ]]; then
+            podman tag \
+              quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }} \
+              quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.BRANCH_NAME }}
+          fi
+
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.COMMIT }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.IMAGE_TAG }}
+          if [[ ! -z "${{ needs.setup.outputs.BRANCH_NAME }}" ]]; then
+            podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.BRANCH_NAME }}
+          fi
 
       - name: Generating fixed version image
         if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}
@@ -215,10 +239,19 @@ jobs:
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
 
+          if [[ ! -z "${{ needs.setup.outputs.BRANCH_NAME }}" ]]; then
+            podman tag \
+              quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }} \
+              quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.BRANCH_NAME }}
+          fi
+
       - name: Container image pushing
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.COMMIT }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.IMAGE_TAG }}
+          if [[ ! -z "${{ needs.setup.outputs.BRANCH_NAME }}" ]]; then
+            podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.BRANCH_NAME }}
+          fi
 
       - name: Generating fixed version image
         if: ${{ needs.setup.outputs.VERSION != '' && needs.setup.outputs.VERSION != null }}

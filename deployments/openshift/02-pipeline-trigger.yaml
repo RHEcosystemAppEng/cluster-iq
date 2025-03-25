@@ -5,14 +5,12 @@ metadata:
   name: cluster-iq-trigger-binding
 spec:
   params:
-    - name: git-repo-url
-      value: $(body.repository.clone_url)
     - name: git-revision
       value: $(body.ref)
-    - name: git-release-version
-      value: $(extensions.release-version)
-    - name: commit-id
-      value: $(body.head_commit.id)
+    - name: git-branch-name
+      value: $(extensions.branch-name)
+    - name: git-short-commit
+      value: $(extensions.short-commit)
 
 ---
 apiVersion: triggers.tekton.dev/v1beta1
@@ -21,10 +19,9 @@ metadata:
   name: cluster-iq-trigger-template
 spec:
   params:
-    - name: git-repo-url
     - name: git-revision
-    - name: git-release-version
-    - name: commit-id
+    - name: git-branch-name
+    - name: git-short-commit
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
@@ -37,9 +34,9 @@ spec:
           - name: revision
             value: "$(tt.params.git-revision)"
           - name: image-tag
-            value: "$(tt.params.git-release-version)"
+            value: "$(tt.params.git-short-commit)"
           - name: console-image-tag
-            value: latest
+            value: "$(tt.params.git-branch-name)"
         workspaces:
           - name: code-ws
             volumeClaimTemplate:
@@ -66,8 +63,10 @@ spec:
       params:
         - name: "overlays"
           value:
-            - key: release-version
-              expression: "body.ref.split('/')[2].replace('release-', 'v')" # Replace 'release-' by your branch name
+            - key: branch-name
+              expression: "body.ref.split('/')[2]" # Replace 'release-' by your branch name
+            - key: short-commit
+              expression: "body.head_commit.id.truncate(7)" # Getting short-commit
         - name: "filter"
           value: "body.ref.matches('refs/heads/release-.*')" # Replace 'release-' by your branch name
 
