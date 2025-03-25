@@ -9,8 +9,8 @@ spec:
       value: $(body.repository.clone_url)
     - name: git-revision
       value: $(body.ref)
-    - name: git-branch
-      value: $(extensions.branch)
+    - name: git-release-version
+      value: $(extensions.release-version)
     - name: commit-id
       value: $(body.head_commit.id)
 
@@ -23,7 +23,7 @@ spec:
   params:
     - name: git-repo-url
     - name: git-revision
-    - name: git-branch
+    - name: git-release-version
     - name: commit-id
   resourcetemplates:
     - apiVersion: tekton.dev/v1beta1
@@ -37,7 +37,7 @@ spec:
           - name: revision
             value: "$(tt.params.git-revision)"
           - name: image-tag
-            value: "v$(tt.params.git-branch)"
+            value: "$(tt.params.git-release-version)"
           - name: console-image-tag
             value: latest
         workspaces:
@@ -66,10 +66,10 @@ spec:
       params:
         - name: "overlays"
           value:
-            - key: branch
-              expression: "body.ref.split('/')[2].replace('release-', 'v')"
+            - key: release-version
+              expression: "body.ref.split('/')[2].replace('release-', 'v')" # Replace 'release-' by your branch name
         - name: "filter"
-          value: "body.ref.matches('refs/heads/release-.*')"
+          value: "body.ref.matches('refs/heads/release-.*')" # Replace 'release-' by your branch name
 
     - ref:
         name: "github"
