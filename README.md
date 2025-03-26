@@ -21,11 +21,11 @@ providers could be included in the future.
 The following table shows the compatibility matrix and which features are
 available for every cloud provider:
 
-| Cloud Provider | Compute Resources | Billing | Managing |
-|----------------|-------------------|---------|----------|
-| AWS            | Yes               | Yes     | Yes      |
-| Azure          | No                | No      | No       |
-| GCP            | No                | No      | No       |
+| Cloud Provider | Compute Resources | Billing | Actions | Scheduled Actions |
+| -------------- | ----------------- | ------- | ------- | ----------------- |
+| AWS            | Yes               | Yes     | Yes     | Yes               |
+| Azure          | No                | No      | No      | No                |
+| GCP            | No                | No      | No      | No                |
 
 
 ## Architecture
@@ -145,15 +145,19 @@ For deploying ClusterIQ in local for development purposes, check the following
 
 ### Configuration
 Available configuration via Env Vars:
-| Key                  | Value                             | Description                               |
-| -------------------- | --------------------------------- | ----------------------------------------- |
-| CIQ_API_LISTEN_URL   | string (Default: "0.0.0.0:8080")  | ClusterIQ API listen URL                  |
-| CIQ_API_URL          | string (Default: "")              | ClusterIQ API public endpoint             |
-| CIQ_AGENT_LISTEN_URL | string (Default: "0.0.0.0:50051") | ClusterIQ Agent listen URL                |
-| CIQ_AGENT_URL        | string (Default: "")              | ClusterIQ Agent public endpoint           |
-| CIQ_DB_HOST          | string (Default: "0.0.0.0:5432")  | ClusterIQ DB listen URL                   |
-| CIQ_CREDS_FILE       | string (Default: "")              | Cloud providers accounts credentials file |
-| CIQ_LOG_LEVEL        | string (Default: "INFO")          | ClusterIQ Logs verbosity mode             |
+| Key                                  | Value                                                 | Description                               |
+| ------------------------------------ | ----------------------------------------------------- | ----------------------------------------- |
+| CIQ_AGENT_API_URL                    | string (Default: "http://api:8080/api/v1")            | ClusterIQ Agent URL for accessing the API |
+| CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL | string (Default: "0.0.0.0:50051")                     | ClusterIQ Agent gRPC listen URL           |
+| CIQ_AGENT_POLLING_SECONDS_INTERVAL   | integer (Default: 30)                                 | ClusterIQ Agent polling time (seconds)    |
+| CIQ_AGENT_URL                        | string (Default: "agent:50051")                       | ClusterIQ Agent listen URL                |
+| CIQ_API_LISTEN_URL                   | string (Default: "0.0.0.0:8080")                      | ClusterIQ API listen URL                  |
+| CIQ_API_URL                          | string (Default: "")                                  | ClusterIQ API public endpoint             |
+| CIQ_AGENT_LISTEN_URL                 | string (Default: "0.0.0.0:50051")                     | ClusterIQ Agent listen URL                |
+| CIQ_AGENT_URL                        | string (Default: "")                                  | ClusterIQ Agent public endpoint           |
+| CIQ_DB_URL                           | string (Default: "postgresql://pgsql:5432/clusteriq") | ClusterIQ DB URL                          |
+| CIQ_CREDS_FILE                       | string (Default: "")                                  | Cloud providers accounts credentials file |
+| CIQ_LOG_LEVEL                        | string (Default: "INFO")                              | ClusterIQ Logs verbosity mode             |
 
 
 ### Scanner
@@ -185,7 +189,7 @@ make local-build-api
 The Agent performs actions over the selected cloud resources. It only accepts
 incoming requests from the API.
 
-Currently, on release 0.3.*, the agent only supports PowerOn/Off clusters on AWS.
+Currently, on release `v0.4`, the agent only supports Power On/Off clusters on AWS.
 
 ```shell
 # Building in a container
@@ -197,5 +201,4 @@ make local-build-agent
 
 ---
 [![Cluster IQ Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml)
-[![Go Lint and Format](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/go-lint-and-format.yml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/go-lint-and-format.yml)
 ---
