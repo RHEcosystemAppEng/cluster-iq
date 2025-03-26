@@ -1,6 +1,158 @@
-package main
+package sqlclient
 
 const (
+	SelectScheduledActionsQueryConditionsPlaceholder = "<CONDITIONS>"
+
+	// SelectScheduledActionsQuery returns the list of scheduled actions on the inventory with all the parameters needed for action execution
+	// ARRAY_AGG is used for joining every instance on the same row
+	SelectScheduledActionsQuery = `
+		SELECT
+			schedule.id,
+			schedule.type,
+		  schedule.time,
+		  schedule.cron_exp,
+			schedule.operation,
+			schedule.status,
+			schedule.enabled,
+			clusters.id AS cluster_id,
+			clusters.region,
+			clusters.account_name,
+		ARRAY_AGG(instances.id::TEXT) FILTER (WHERE instances IS NOT NULL) AS instances
+		FROM schedule
+		JOIN clusters ON schedule.target = clusters.id
+		JOIN instances ON clusters.id = instances.cluster_id
+		` + SelectScheduledActionsQueryConditionsPlaceholder + `
+		GROUP BY
+			schedule.id,
+			schedule.time,
+			schedule.operation,
+			clusters.id
+		ORDER BY
+			id ASC
+`
+
+	// EnableActionQuery enables the action to be re-scheduled on next agent polling
+	EnableActionQuery = `
+		UPDATE
+			schedule
+		SET
+			enabled = true
+		WHERE id = $1
+`
+
+	// DisableActionQuery disables the action to don't be re-scheduled on next agent polling
+	DisableActionQuery = `
+		UPDATE
+			schedule
+		SET
+			enabled = false
+		WHERE id = $1
+`
+
+	// SelectScheduledActionByIDQuery returns scheduled action on the inventory for a specific ID
+	SelectScheduledActionsByIDQuery = `
+		SELECT
+			schedule.id,
+			schedule.type,
+		  schedule.time,
+		  schedule.cron_exp,
+			schedule.operation,
+			schedule.status,
+			schedule.enabled,
+			clusters.id AS cluster_id,
+			clusters.region,
+			clusters.account_name,
+		ARRAY_AGG(instances.id::TEXT) FILTER (WHERE instances IS NOT NULL) AS instances
+		FROM schedule
+		JOIN clusters ON schedule.target = clusters.id
+		JOIN instances ON clusters.id = instances.cluster_id
+		WHERE schedule.id = $1
+		GROUP BY
+			schedule.id,
+			schedule.time,
+			schedule.operation,
+			clusters.id
+		ORDER BY
+			id ASC
+	`
+
+	// InsertScheduledActionQuery inserts new scheduled actions on the DB
+	InsertScheduledActionsQuery = `
+		INSERT INTO schedule (
+			type,
+			time,
+			operation,
+			target,
+			status,
+			enabled
+		) VALUES (
+			:type,
+			:time,
+			:operation,
+			:target.cluster_id,
+			:status,
+			:enabled
+		)
+	`
+	// InsertCronActionQuery inserts new Cron actions on the DB
+	InsertCronActionsQuery = `
+		INSERT INTO schedule (
+			type,
+			cron_exp,
+			operation,
+			target,
+			status,
+			enabled
+		) VALUES (
+			:type,
+			:cron_exp,
+			:operation,
+			:target.cluster_id,
+			:status,
+			:enabled
+		)
+	`
+
+	// PatchScheduledActionsQuery
+	PatchScheduledActionsQuery = `
+		UPDATE
+			schedule
+		SET
+			time = :time,
+			operation = :operation,
+			target = :target.cluster_id,
+			enabled = :enabled
+		WHERE
+			id = :id
+	`
+
+	// PatchCronActionsQuery
+	PatchCronActionsQuery = `
+		UPDATE
+			schedule
+		SET
+			cron_exp = :cron_exp,
+			operation = :operation,
+			target = :target.cluster_id,
+			enabled = :enabled
+		WHERE
+			id = :id
+	`
+
+	// PatchActionStatusQuery
+	PatchActionStatusQuery = `
+		UPDATE
+			schedule
+		SET
+			status = $2,
+			enabled = $3
+		WHERE
+			id = $1
+	`
+
+	// DeleteScheduledActionQuery
+	DeleteScheduledActionsQuery = `DELETE FROM schedule WHERE id=$1`
+
 	// SelectExpensesQuery returns every expense in the inventory ordered by instanceID
 	SelectExpensesQuery = `
 		SELECT * FROM expenses
@@ -8,7 +160,7 @@ const (
 	`
 
 	// SelectLastExpensesQuery returns the last expense for every instance older
-	// than 1 day. This is used for obtainning the list of instances that need
+	// than 1 day. This is used for obtaining the list of instances that need
 	// Billing information update because all the instances returned by this
 	// query doesn't have expenses for the current day
 	SelectLastExpensesQuery = `
@@ -71,6 +223,10 @@ const (
 			instances.id = tags.instance_id
 		ORDER BY name
 	`
+	// SelectInstancesOverview returns the total count of all instances
+	SelectInstancesOverview = `
+		SELECT COUNT(*) as count FROM instances
+	`
 
 	// SelectInstancesByIDQuery returns an instance by its ID
 	SelectInstancesByIDQuery = `
@@ -86,7 +242,81 @@ const (
 		SELECT * FROM clusters
 		ORDER BY name
 	`
+	// SelectClustersOverview returns the number of clusters grouped by status
+	SelectClustersOverview = `
+		SELECT 
+			COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running,
+			COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped,
+			COUNT(CASE WHEN status = 'Unknown' THEN 1 END) AS unknown,
+			COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived
+		FROM clusters;
+	`
+	// InsertEventQuery insert a new audit event
+	InsertEventQuery = `
+		INSERT INTO audit_logs(
+			event_timestamp,
+			triggered_by,
+			action_name,
+			resource_id,
+			resource_type,
+			result,
+			description,
+			severity
+		) VALUES (
+			CURRENT_TIMESTAMP,
+			:triggered_by,
+			:action_name,
+			:resource_id,
+			:resource_type,
+			:result,
+			:description,
+			:severity
+		) RETURNING id
+	`
 
+	// SelectClusterEventsQuery returns audit log events related to a specific cluster.
+	SelectClusterEventsQuery = `
+		SELECT 
+			al.id, 
+			al.event_timestamp, 
+			al.triggered_by, 
+			al.action_name, 
+			al.resource_id, 
+			al.resource_type, 
+			al.result, 
+			al.description, 
+			al.severity
+		FROM audit_logs al
+		WHERE al.resource_id = $1
+		ORDER BY al.event_timestamp DESC;
+	`
+	// SelectSystemEventsQuery returns system-wide audit logs.
+	SelectSystemEventsQuery = `
+		SELECT 
+			al.id, 
+			al.event_timestamp, 
+			al.triggered_by, 
+			al.action_name, 
+			al.resource_id, 
+			al.resource_type, 
+			al.result, 
+			al.description, 
+			al.severity,
+			acc.id AS account_id,
+			acc.provider
+		FROM audit_logs al
+		LEFT JOIN accounts acc ON acc.name = (
+			CASE 
+				WHEN al.resource_type = 'cluster' 
+				THEN (SELECT c.account_name FROM clusters c WHERE c.id = al.resource_id)
+				WHEN al.resource_type = 'instance' 
+				THEN (SELECT c.account_name FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = al.resource_id))
+			END
+		)
+		ORDER BY al.event_timestamp DESC;
+	`
+	// UpdateEventStatusQuery updates the result status of an audit log entry based on its ID.
+	UpdateEventStatusQuery = `UPDATE audit_logs SET result=$1 WHERE id=$2`
 	// SelectClusterAccountNameQuery returns an cluster by its Name
 	SelectClusterAccountNameQuery = `
 		SELECT account_name FROM clusters
@@ -114,7 +344,7 @@ const (
 		WHERE cluster_id = $1
 	`
 
-	// SelectInstancesOnClusterQuery returns every instance belonging to a acluster
+	// SelectInstancesOnClusterQuery returns every instance belonging to a cluster
 	SelectInstancesOnClusterQuery = `
 		SELECT * FROM instances
 		WHERE cluster_id = $1
@@ -125,6 +355,24 @@ const (
 	SelectAccountsQuery = `
 		SELECT * FROM accounts
 		ORDER BY name
+	`
+	// SelectProvidersOverviewQuery returns data about cloud providers with their account and cluster counts,
+	// excluding those marked as "UNKNOWN" and not counting Terminated clusters
+	SelectProvidersOverviewQuery = `
+		SELECT
+			a.provider,
+			COUNT(DISTINCT a.name) AS account_count,
+			COUNT(DISTINCT CASE WHEN c.status != 'Terminated' THEN c.id END) AS cluster_count
+		FROM
+			accounts a
+		LEFT JOIN
+			clusters c ON c.account_name = a.name
+		WHERE
+			a.provider != 'UNKNOWN'
+		GROUP BY
+			a.provider
+		ORDER BY
+			a.provider;
 	`
 
 	// SelectAccountsByNameQuery returns an instance by its Name

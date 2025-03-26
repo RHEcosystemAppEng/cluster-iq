@@ -29,6 +29,12 @@ spec:
         {{- toYaml .Values.agent.podSecurityContext | nindent 8 }}
       containers:
         - name: agent
+          env:
+          - name: CIQ_DB_URL
+            valueFrom:
+              secretKeyRef:
+                name: postgresql
+                key: POSTGRESQL_CONNECTION_STRING
           envFrom:
           - configMapRef:
               name: agent

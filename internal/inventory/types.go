@@ -23,6 +23,16 @@ const (
 	Unknown InstanceStatus = "Unknown"
 )
 
+const (
+	// Cluster actions
+	ClusterPowerOnAction  = "PowerOn"
+	ClusterPowerOffAction = "PowerOff"
+
+	// Resource types
+	ClusterResourceType  = "cluster"
+	InstanceResourceType = "instance"
+)
+
 // AsInstanceStatus converts the incoming argument into a InstanceStatus type
 func AsInstanceStatus(status string) InstanceStatus {
 	switch strings.ToLower(status) {

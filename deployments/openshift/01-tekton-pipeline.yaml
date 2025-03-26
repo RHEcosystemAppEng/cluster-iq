@@ -1,0 +1,92 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: cluster-iq
+spec:
+  params:
+    - name: revision
+      description: git revision
+      type: string
+      default: main
+    - name: image-tag
+      description: Image Tag
+      type: string
+      default: $(params.revision)
+    - name: console-image-tag
+      description: ClusterIQ Console Image Tag
+      type: string
+      default: latest
+  tasks:
+    - name: git-clone
+      params:
+        - name: CRT_FILENAME
+          value: ca-bundle.crt
+        - name: HTTP_PROXY
+          value: ''
+        - name: HTTPS_PROXY
+          value: ''
+        - name: NO_PROXY
+          value: ''
+        - name: SUBDIRECTORY
+          value: ''
+        - name: USER_HOME
+          value: /home/git
+        - name: DELETE_EXISTING
+          value: 'true'
+        - name: VERBOSE
+          value: 'false'
+        - name: SSL_VERIFY
+          value: 'true'
+        - name: URL
+          value: 'https://github.com/RHEcosystemAppEng/cluster-iq.git'
+        - name: REVISION
+          value: $(params.revision)
+        - name: REFSPEC
+          value: ''
+        - name: SUBMODULES
+          value: 'false'
+        - name: DEPTH
+          value: '1'
+        - name: SPARSE_CHECKOUT_DIRECTORIES
+          value: ''
+      taskRef:
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
+      workspaces:
+        - name: output
+          workspace: code-ws
+    - name: helm-upgrade-from-source
+      params:
+        - name: charts_dir
+          value: ./deployments/helm/cluster-iq
+        - name: release_version
+          value: $(params.revision)
+        - name: release_name
+          value: cluster-iq
+        - name: release_namespace
+          value: cluster-iq-pre
+        - name: overwrite_values
+          value: 'api.image.tag=$(params.image-tag),scanner.image.tag=$(params.image-tag),agent.image.tag=$(params.image-tag),console.image.tag=$(params.console-image-tag)'
+        - name: values_file
+          value: values.yaml
+        - name: helm_image
+          value: 'docker.io/lachlanevenson/k8s-helm@sha256:0a068ae407e21d1836c6a89a1e9e81af1e55fa56890998e33d5caabdbb51e77b'
+        - name: upgrade_extra_params
+          value: '--debug --force'
+      runAfter:
+        - git-clone
+      taskRef:
+        kind: Task
+        name: helm-upgrade-from-source
+      workspaces:
+        - name: source
+          workspace: code-ws
+  workspaces:
+    - name: code-ws
+

@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
+	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -39,12 +41,13 @@ var (
 
 // APIServer represents the API server, including configuration, logger, router, and clients for gRPC and SQL.
 type APIServer struct {
-	cfg    *config.APIServerConfig // Configuration for the API server
-	logger *zap.Logger             // Logger instance
-	router *gin.Engine             // Gin router for handling HTTP requests
-	server *http.Server            // HTTP server instance
-	grpc   *APIGRPCClient          // gRPC client for communication with external services
-	sql    *APISQLClient           // SQL client for database operations
+	cfg          *config.APIServerConfig // Configuration for the API server
+	logger       *zap.Logger             // Logger instance
+	router       *gin.Engine             // Gin router for handling HTTP requests
+	server       *http.Server            // HTTP server instance
+	grpc         *APIGRPCClient          // gRPC client for communication with external services
+	sql          *sqlclient.SQLClient    // SQL client for database operations
+	eventService *events.EventService    // Service for handling audit logs
 }
 
 // NewAPIServer initializes a new instance of the APIServer.
@@ -67,11 +70,15 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 	}
 
 	// Creating DB client
-	sqlClient, err := NewAPISQLClient(cfg.DBURL, logger)
+	sqlCli, err := sqlclient.NewSQLClient(cfg.DBURL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SQL client: %w", err)
 	}
 
+	// Creating Event Service
+	eventService := events.NewEventService(sqlCli, logger)
+
+	// Creating APIServer
 	apiServer := &APIServer{
 		cfg:    cfg,
 		logger: logger,
@@ -80,8 +87,9 @@ func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, 
 			Addr:    cfg.ListenURL,
 			Handler: engine,
 		},
-		grpc: gRPCClient,
-		sql:  sqlClient,
+		grpc:         gRPCClient,
+		sql:          sqlCli,
+		eventService: eventService,
 	}
 
 	// Initialize routes

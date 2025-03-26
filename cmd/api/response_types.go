@@ -3,8 +3,35 @@ package main
 import (
 	"fmt"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
+
+type ScheduledActionListResponse struct {
+	Count   int              `json:"count,omitempty"` // Number of actions omitted if empty.
+	Actions []actions.Action `json:"actions"`         // List of actions
+}
+
+func NewScheduledActionListResponse(actionList []actions.Action) *ScheduledActionListResponse {
+	numActions := len(actionList)
+
+	// If there is no actions, an empty array is returned instead of null
+	if numActions == 0 {
+		actionList = []actions.Action{}
+	}
+
+	response := ScheduledActionListResponse{
+		Actions: actionList,
+	}
+
+	// If there is more than one action, the response contains a 'count' field
+	if numActions > 1 {
+		response.Count = numActions
+	}
+
+	return &response
+}
 
 // GenericErrorResponse represents a generic error response returned by the API.
 //
@@ -46,6 +73,18 @@ type HealthCheckResponse struct {
 type TagListResponse struct {
 	Count int             `json:"count,omitempty"` // Number of tags, omitted if empty.
 	Tags  []inventory.Tag `json:"tags"`            // List of tags.
+}
+
+// EventsListResponse represents the API response containing a list of resource-specific audit events.
+type EventsListResponse struct {
+	Count  int                 `json:"count,omitempty"` // Number of events, omitted if empty.
+	Events []events.AuditEvent `json:"events"`          // List of events.
+}
+
+// SystemEventsListResponse represents the API response containing a list of system-wide audit events.
+type SystemEventsListResponse struct {
+	Count  int                       `json:"count,omitempty"` // Number of events, omitted if empty.
+	Events []events.SystemAuditEvent `json:"events"`          // List of events.
 }
 
 // NewTagListResponse creates a new TagListResponse instance.
@@ -244,4 +283,22 @@ func NewClusterStatusChangeResponse(accountName string, clusterID string, region
 		Instances:   instances,
 		Error:       err.Error(),
 	}
+}
+
+// NewSystemEventsListResponse creates and returns a SystemEventsListResponse instance.
+func NewSystemEventsListResponse(auditEvents []events.SystemAuditEvent) *SystemEventsListResponse {
+	response := SystemEventsListResponse{
+		Events: auditEvents,
+		Count:  len(auditEvents),
+	}
+	return &response
+}
+
+// NewEventsListResponse creates and returns an EventsListResponse instance.
+func NewEventsListResponse(auditEvents []events.AuditEvent) *EventsListResponse {
+	response := EventsListResponse{
+		Events: auditEvents,
+		Count:  len(auditEvents),
+	}
+	return &response
 }

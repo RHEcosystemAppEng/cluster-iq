@@ -1,0 +1,92 @@
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: cluster-iq-trigger-binding
+spec:
+  params:
+    - name: git-revision
+      value: $(body.ref)
+    - name: git-branch-name
+      value: $(extensions.branch-name)
+    - name: git-short-commit
+      value: $(extensions.short-commit)
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: cluster-iq-trigger-template
+spec:
+  params:
+    - name: git-revision
+    - name: git-branch-name
+    - name: git-short-commit
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: release-pipeline-run-
+      spec:
+        pipelineRef:
+          name: cluster-iq
+        params:
+          - name: revision
+            value: "$(tt.params.git-revision)"
+          - name: image-tag
+            value: "$(tt.params.git-short-commit)"
+          - name: console-image-tag
+            value: "$(tt.params.git-branch-name)"
+        workspaces:
+          - name: code-ws
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 100Mi
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: cluster-iq-trigger
+spec:
+  bindings:
+    - ref: cluster-iq-trigger-binding
+  template:
+    ref: cluster-iq-trigger-template
+  interceptors:
+    - ref:
+        name: "cel"
+      params:
+        - name: "overlays"
+          value:
+            - key: branch-name
+              expression: "body.ref.split('/')[2]" # Replace 'release-' by your branch name
+            - key: short-commit
+              expression: "body.head_commit.id.truncate(7)" # Getting short-commit
+        - name: "filter"
+          value: "body.ref.matches('refs/heads/release-.*')" # Replace 'release-' by your branch name
+
+    - ref:
+        name: "github"
+      params:
+        - name: "eventTypes"
+          value: ["push", "pull_request"]
+        - name: "secretRef"
+          value:
+            secretName: pipeline-webhook-secret
+            secretKey: WebHookSecretKey
+
+
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: cluster-iq-listener
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - triggerRef: cluster-iq-trigger

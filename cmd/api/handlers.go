@@ -2,10 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -28,12 +32,10 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 	}
 
 	// Checking DB Connection status
-	if a.sql.db != nil {
-		if err := a.sql.db.Ping(); err == nil {
-			hc.DBHealth = true
-		} else {
-			a.logger.Error("Can't ping DB", zap.Error(err))
-		}
+	if err := a.sql.Ping(); err == nil {
+		hc.DBHealth = true
+	} else {
+		a.logger.Error("Can't ping DB", zap.Error(err))
 	}
 
 	// Checking API's Router status
@@ -42,6 +44,270 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 	}
 
 	c.PureJSON(http.StatusOK, HealthCheckResponse{HealthChecks: hc})
+}
+
+// ==================== Scheduled Actions Handlers ====================
+
+// HandlerGetScheduledActions retrieves all scheduled actions with optional filtering
+//
+//	@Summary		List all scheduled actions
+//	@Description	Returns a list of scheduled actions
+//	@Tags			Actions
+//	@Param			enabled	query		string	false	"Filter by enabled state (true/false)"
+//	@Param			status	query		string	false	"Filter by action status"
+//	@Success		200		{object}	ScheduledActionListResponse
+//	@Failure		500		{object}	GenericErrorResponse
+//	@Router			/schedule [get]
+func (a APIServer) HandlerGetScheduledActions(c *gin.Context) {
+	a.logger.Debug("Retrieving scheduled actions")
+
+	// Capturing query params
+	var conditions []string
+	var args []interface{}
+
+	enabled := c.Query("enabled")
+	if enabled != "" {
+		conditions = append(conditions, "schedule.enabled = ?")
+		args = append(args, enabled)
+	}
+
+	status := c.Query("status")
+	if status != "" {
+		conditions = append(conditions, "schedule.status = ?")
+		args = append(args, status)
+	}
+
+	// Running sql client function
+	schedule, err := a.sql.GetScheduledActions(conditions, args)
+	if err != nil {
+		a.logger.Error("Failed to retrieve scheduled actions", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
+}
+
+// HandlerGetScheduledActionByID retrieves a single scheduled action by its unique identifier
+//
+//	@Summary		Get scheduled action by ID
+//	@Description	Returns details of a specific scheduled action identified by the action_id parameter
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	ScheduledActionListResponse
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id} [get]
+func (a APIServer) HandlerGetScheduledActionByID(c *gin.Context) {
+	actionID := c.Param("action_id")
+	a.logger.Debug("Retrieving scheduled action by ID", zap.String("action_id", actionID))
+
+	schedule, err := a.sql.GetScheduledActionByID(actionID)
+	if err != nil {
+		a.logger.Error("Failed to retrieve scheduled action", zap.String("action_id", actionID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, NewScheduledActionListResponse(schedule))
+}
+
+// HandlerEnableScheduledAction activates a scheduled action so it can be executed according to its schedule
+//
+//	@Summary		Enable scheduled action
+//	@Description	Activates a scheduled action specified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id}/enable [patch]
+func (a APIServer) HandlerEnableScheduledAction(c *gin.Context) {
+	actionID := c.Param("action_id")
+	a.logger.Debug("Enabling scheduled action", zap.String("action_id", actionID))
+
+	err := a.sql.EnableScheduledAction(actionID)
+	if err != nil {
+		a.logger.Error("Failed to enable scheduled action", zap.String("action_id", actionID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerDisableScheduledAction deactivates a scheduled action to prevent its execution
+//
+//	@Summary		Disable scheduled action
+//	@Description	Deactivates a scheduled action specified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id}/disable [patch]
+func (a APIServer) HandlerDisableScheduledAction(c *gin.Context) {
+	actionID := c.Param("action_id")
+	a.logger.Debug("Disabling action", zap.String("action_id", actionID))
+
+	err := a.sql.DisableScheduledAction(actionID)
+	if err != nil {
+		a.logger.Error("Failed to disable scheduled action", zap.String("action_id", actionID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerPostScheduledAction processes the creation of new scheduled actions
+//
+//	@Summary		Create scheduled actions
+//	@Description	Creates and registers new scheduled actions
+//	@Tags			Actions
+//	@Param			actions	body		[]json.RawMessage	true	"Scheduled actions to create"
+//	@Success		200		{object}	nil
+//	@Failure		500		{object}	GenericErrorResponse
+//	@Router			/schedule [post]
+func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
+	a.logger.Debug("Creating scheduled actions")
+
+	// Getting scheduled actions list on request's body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		a.logger.Error("Can't get body from request", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Var for Unmarshalling results
+	var result []json.RawMessage
+
+	// Unmarshalling response
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Unmarshalling Actions by type
+	decodedActions, err := actions.DecodeActions(result)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Writing scheduled action
+	a.logger.Debug("Writing a new Scheduled Action", zap.Reflect("actions", decodedActions))
+	err = a.sql.WriteScheduledActions(*decodedActions)
+	if err != nil {
+		a.logger.Error("Failed to create scheduled actions", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// TODO
+	// We should return at least ID, nil is not useful
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerPatchStatusScheduledActions modifies only the status field of a scheduled action
+//
+//	@Summary		Update scheduled action status
+//	@Description	Updates only the status field of a specific scheduled action identified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Param			status		query		string	true	"New status value"
+//	@Success		200			{object}	nil
+//	@Failure		400			{object}	GenericErrorResponse	"Invalid input"
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id}/status [patch]
+func (a APIServer) HandlerPatchStatusScheduledActions(c *gin.Context) {
+	a.logger.Debug("Patching status of Scheduled Action Status")
+
+	actionID := c.Param("action_id")
+	status := c.Query("status")
+	if status == "" {
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("Status parameter is required"))
+		return
+	}
+
+	// Writing scheduled action
+	err := a.sql.PatchScheduledActionStatus(actionID, status)
+	if err != nil {
+		a.logger.Error("Failed to update scheduled action status", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerPatchScheduledActions processes updates to scheduled actions
+//
+//	@Summary		Update scheduled actions
+//	@Description	Updates multiple fields of scheduled actions
+//	@Tags			Actions
+//	@Param			actions	body		[]json.RawMessage	true	"Scheduled actions to update"
+//	@Success		200		{object}	nil
+//	@Failure		500		{object}	GenericErrorResponse
+//	@Router			/schedule [patch]
+func (a APIServer) HandlerPatchScheduledActions(c *gin.Context) {
+	a.logger.Debug("Updating scheduled actions")
+
+	// Getting scheduled actions list on request's body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Var for Unmarshalling results
+	var result []json.RawMessage
+
+	// Unmarshalling response
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Unmarshalling Actions by type
+	decodedActions, err := actions.DecodeActions(result)
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	// Writing scheduled action
+	a.logger.Debug("Patching Scheduled Actions", zap.Int("action_count", len(*decodedActions)))
+	err = a.sql.PatchScheduledAction(*decodedActions)
+	if err != nil {
+		a.logger.Error("Failed to update scheduled actions", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
+}
+
+// HandlerDeleteScheduledAction permanently removes a scheduled action
+//
+//	@Summary		Delete scheduled action
+//	@Description	Permanently removes a scheduled action identified by action_id
+//	@Tags			Actions
+//	@Param			action_id	path		string	true	"Scheduled action identifier"
+//	@Success		200			{object}	nil
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/schedule/{action_id} [delete]
+func (a APIServer) HandlerDeleteScheduledAction(c *gin.Context) {
+	actionID := c.Param("action_id")
+	a.logger.Debug("Removing a Scheduled Action", zap.String("action_id", actionID))
+
+	if err := a.sql.DeleteScheduledAction(actionID); err != nil {
+		a.logger.Error("Failed to delete scheduled action", zap.String("action_id", actionID), zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // ==================== Expenses      Handlers ====================
@@ -57,9 +323,9 @@ func (a APIServer) HandlerHealthCheck(c *gin.Context) {
 //	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/expenses [get]
 func (a APIServer) HandlerGetExpenses(c *gin.Context) {
-	a.logger.Debug("Retrieving complete expense inventory")
+	a.logger.Debug("Retrieving complete expenses list")
 
-	expenses, err := a.sql.getExpenses()
+	expenses, err := a.sql.GetExpenses()
 	if err != nil {
 		a.logger.Error("Can't retrieve Expenses list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -84,7 +350,7 @@ func (a APIServer) HandlerGetExpensesByInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Retrieving expenses by InstanceID", zap.String("instance_id", instanceID))
 
-	expenses, err := a.sql.getExpensesByInstance(instanceID)
+	expenses, err := a.sql.GetExpensesByInstance(instanceID)
 	if err != nil {
 		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, nil)
@@ -125,7 +391,7 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 
 	// Writing expenses
 	a.logger.Debug("Writing a new Expense", zap.Reflect("expenses", expenses))
-	err = a.sql.writeExpenses(expenses)
+	err = a.sql.WriteExpenses(expenses)
 	if err != nil {
 		a.logger.Error("Can't write new Expenses into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -150,7 +416,7 @@ func (a APIServer) HandlerPostExpense(c *gin.Context) {
 func (a APIServer) HandlerGetInstances(c *gin.Context) {
 	a.logger.Debug("Retrieving complete instance inventory")
 
-	instances, err := a.sql.getInstances()
+	instances, err := a.sql.GetInstances()
 	if err != nil {
 		a.logger.Error("Can't retrieve Instances list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -173,7 +439,7 @@ func (a APIServer) HandlerGetInstances(c *gin.Context) {
 func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 	a.logger.Debug("Retrieving instances with outdated billing information")
 
-	instances, err := a.sql.getInstancesOutdatedBilling()
+	instances, err := a.sql.GetInstancesOutdatedBilling()
 	if err != nil {
 		a.logger.Error("Can't retrieve Last Expenses list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -198,7 +464,7 @@ func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Retrieving instance by ID", zap.String("instance_id", instanceID))
 
-	instances, err := a.sql.getInstanceByID(instanceID)
+	instances, err := a.sql.GetInstanceByID(instanceID)
 	if err != nil {
 		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, nil)
@@ -237,7 +503,7 @@ func (a APIServer) HandlerPostInstance(c *gin.Context) {
 	}
 
 	a.logger.Debug("Writing a new Instance", zap.Reflect("instance", instances))
-	err = a.sql.writeInstances(instances)
+	err = a.sql.WriteInstances(instances)
 	if err != nil {
 		a.logger.Error("Can't write new instances into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -263,7 +529,7 @@ func (a APIServer) HandlerDeleteInstance(c *gin.Context) {
 	instanceID := c.Param("instance_id")
 	a.logger.Debug("Removing an Instance", zap.String("instance_id", instanceID))
 
-	if err := a.sql.deleteInstance(instanceID); err != nil {
+	if err := a.sql.DeleteInstance(instanceID); err != nil {
 		a.logger.Error("Can't delete instance from DB", zap.String("instance_id", instanceID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, nil)
 		return
@@ -307,7 +573,7 @@ func (a APIServer) HandlerPatchInstance(c *gin.Context) {
 func (a APIServer) HandlerGetClusters(c *gin.Context) {
 	a.logger.Debug("Retrieving complete clusters inventory")
 
-	clusters, err := a.sql.getClusters()
+	clusters, err := a.sql.GetClusters()
 	if err != nil {
 		a.logger.Error("Can't retrieve Clusters list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -332,7 +598,7 @@ func (a APIServer) HandlerGetClustersByID(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster Tags by ID", zap.String("cluster_id", clusterID))
 
-	clusters, err := a.sql.getClusterByID(clusterID)
+	clusters, err := a.sql.GetClusterByID(clusterID)
 	if err != nil {
 		a.logger.Error("Cluster not found", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, nil)
@@ -357,7 +623,7 @@ func (a APIServer) HandlerGetInstancesOnCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster's Instances", zap.String("cluster_id", clusterID))
 
-	instances, err := a.sql.getInstancesOnCluster(clusterID)
+	instances, err := a.sql.GetInstancesOnCluster(clusterID)
 	if err != nil {
 		a.logger.Error("Can't retrieve instances on cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -382,7 +648,7 @@ func (a APIServer) HandlerGetClusterTags(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 	a.logger.Debug("Retrieving Cluster's Tags", zap.String("cluster_id", clusterID))
 
-	tags, err := a.sql.getClusterTags(clusterID)
+	tags, err := a.sql.GetClusterTags(clusterID)
 	if err != nil {
 		a.logger.Error("Can't retrieve Tags of cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -421,7 +687,7 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 	}
 
 	a.logger.Debug("Writing new Clusters", zap.Reflect("clusters", clusters))
-	err = a.sql.writeClusters(clusters)
+	err = a.sql.WriteClusters(clusters)
 	if err != nil {
 		a.logger.Error("Can't write new Clusters into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -442,42 +708,92 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 //	@Failure		500			{object}	nil
 //	@Router			/clusters/{cluster_id}/power_on [post]
 func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
+	// TODO. We must add validation logic (middleware, validator, whatever)
 	clusterID := c.Param("cluster_id")
-	a.logger.Debug("Powering On Cluster", zap.String("cluster_id", clusterID))
+
+	var request struct {
+		TriggeredBy string  `json:"triggered_by"`
+		Description *string `json:"description,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("Invalid request body"))
+		return
+	}
+
+	a.logger.Debug("Power On Cluster request received",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", request.TriggeredBy))
+
+	resp, err := a.handlePowerOn(clusterID, request.TriggeredBy, request.Description)
+	if err != nil {
+		a.logger.Error("Failed to power on cluster",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, resp)
+}
+
+func (a APIServer) handlePowerOn(clusterID, triggeredBy string, description *string) (*ClusterStatusChangeResponse, error) {
+	a.logger.Debug("Powering On Cluster",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", triggeredBy))
+
+	// Initialize event tracker
+	tracker := a.eventService.StartTracking(&events.EventOptions{
+		Action:       inventory.ClusterPowerOnAction,
+		Description:  description,
+		ResourceID:   clusterID,
+		ResourceType: inventory.ClusterResourceType,
+		Result:       events.ResultPending,
+		Severity:     events.SeverityInfo,
+		TriggeredBy:  triggeredBy,
+	})
 
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
-		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("cannot get cluster status: %w", err)
 	}
 
 	// RPC call for power on a cluster
 	if err := a.grpc.PowerOnCluster(cscr); err != nil {
-		a.logger.Error("Error processing Cluster Power On request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Error processing Cluster Power On request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("error processing power on request: %w", err)
 	}
+
 	a.logger.Info("Cluster Powered On successfully", zap.String("cluster_id", clusterID))
 
-	// Updating Cluster Status on the DB
-	if err := a.sql.updateClusterStatusByClusterID("Running", clusterID); err != nil {
-		a.logger.Error("Error updating status on DB when powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+	// Update cluster status in DB
+	if err := a.sql.UpdateClusterStatusByClusterID("Running", clusterID); err != nil {
+		a.logger.Error("Error updating status in DB",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("error updating cluster status: %w", err)
 	}
 
-	c.PureJSON(http.StatusOK,
-		NewClusterStatusChangeResponse(
-			cscr.AccountName,
-			cscr.ClusterID,
-			cscr.Region,
-			inventory.Running,
-			cscr.InstancesIdList,
-			nil,
-		),
-	)
+	// Log successful completion
+	tracker.Success()
+
+	return NewClusterStatusChangeResponse(
+		cscr.AccountName,
+		cscr.ClusterID,
+		cscr.Region,
+		inventory.Running,
+		cscr.InstancesIdList,
+		nil,
+	), nil
 }
 
 // HandlerPowerOffCluster handles graceful shutdown of cluster instances
@@ -492,42 +808,91 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 //	@Failure		500			{object}	nil
 //	@Router			/clusters/{cluster_id}/power_off [post]
 func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
+	// TODO. We must add validation logic (middleware, validator, whatever)
 	clusterID := c.Param("cluster_id")
-	a.logger.Debug("Powering Off Cluster", zap.String("cluster_id", clusterID))
 
+	var request struct {
+		TriggeredBy string  `json:"triggered_by"`
+		Description *string `json:"description,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse("Invalid request body"))
+		return
+	}
+
+	a.logger.Debug("Power Off Cluster request received",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", request.TriggeredBy))
+
+	resp, err := a.handlePowerOff(clusterID, request.TriggeredBy, request.Description)
+	if err != nil {
+		a.logger.Error("Failed to power off cluster",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	c.PureJSON(http.StatusOK, resp)
+}
+
+func (a APIServer) handlePowerOff(clusterID, triggeredBy string, description *string) (*ClusterStatusChangeResponse, error) {
+	a.logger.Debug("Powering Off Cluster",
+		zap.String("cluster_id", clusterID),
+		zap.String("triggered_by", triggeredBy))
+
+	// Initialize event tracker
+	tracker := a.eventService.StartTracking(&events.EventOptions{
+		Action:       inventory.ClusterPowerOffAction,
+		Description:  description,
+		ResourceID:   clusterID,
+		ResourceType: inventory.ClusterResourceType,
+		Result:       events.ResultPending,
+		Severity:     events.SeverityWarning,
+		TriggeredBy:  triggeredBy,
+	})
 	// Getting a new ClusterStatusChangeRequest for building the gRPC request
 	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
 	if err != nil {
-		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOff gRPC request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOff gRPC request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("cannot get cluster status: %w", err)
 	}
 
 	// RPC call for power off a cluster
 	if err := a.grpc.PowerOffCluster(cscr); err != nil {
-		a.logger.Error("Error processing Cluster Power Off request", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+		a.logger.Error("Error processing Cluster Power Off request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("error processing power off request: %w", err)
 	}
+
 	a.logger.Info("Cluster Powered Off successfully", zap.String("cluster_id", clusterID))
 
-	// Updating Cluster Status on the DB
-	if err := a.sql.updateClusterStatusByClusterID("Stopped", clusterID); err != nil {
-		a.logger.Error("Error updating status on DB when powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
-		return
+	// Update cluster status in DB
+	if err := a.sql.UpdateClusterStatusByClusterID("Stopped", clusterID); err != nil {
+		a.logger.Error("Error updating status in DB",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		tracker.Failed()
+		return nil, fmt.Errorf("error updating cluster status: %w", err)
 	}
 
-	c.PureJSON(http.StatusOK,
-		NewClusterStatusChangeResponse(
-			cscr.AccountName,
-			cscr.ClusterID,
-			cscr.Region,
-			inventory.Running,
-			cscr.InstancesIdList,
-			nil,
-		),
-	)
+	// Log successful completion
+	tracker.Success()
+
+	return NewClusterStatusChangeResponse(
+		cscr.AccountName,
+		cscr.ClusterID,
+		cscr.Region,
+		inventory.Stopped,
+		cscr.InstancesIdList,
+		nil,
+	), nil
 }
 
 // HandlerDeleteCluster handles the request for removing a Cluster in the inventory
@@ -545,7 +910,7 @@ func (a APIServer) HandlerDeleteCluster(c *gin.Context) {
 	clusterName := c.Param("cluster_id")
 	a.logger.Debug("Removing a Cluster", zap.String("cluster_id", clusterName))
 
-	if err := a.sql.deleteCluster(clusterName); err != nil {
+	if err := a.sql.DeleteCluster(clusterName); err != nil {
 		a.logger.Error("Can't delete Cluster from DB", zap.String("cluster_id", clusterName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
@@ -590,7 +955,7 @@ func (a APIServer) HandlerPatchCluster(c *gin.Context) {
 func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 	a.logger.Debug("Retrieving complete Accounts inventory")
 
-	accounts, err := a.sql.getAccounts()
+	accounts, err := a.sql.GetAccounts()
 	if err != nil {
 		a.logger.Error("Can't retrieve Accounts list", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -615,7 +980,7 @@ func (a APIServer) HandlerGetAccountsByName(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Retrieving Account by Name", zap.String("account_name", accountName))
 
-	accounts, err := a.sql.getAccountByName(accountName)
+	accounts, err := a.sql.GetAccountByName(accountName)
 	if err != nil {
 		a.logger.Error("Account not found", zap.String("account_name", accountName), zap.Error(err))
 		c.PureJSON(http.StatusNotFound, NewGenericErrorResponse(err.Error()))
@@ -640,7 +1005,7 @@ func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Retrieving Account's Clusters", zap.String("account_name", accountName))
 
-	clusters, err := a.sql.getClustersOnAccount(accountName)
+	clusters, err := a.sql.GetClustersOnAccount(accountName)
 	if err != nil {
 		a.logger.Error("Can't retrieve clusters on account", zap.String("account_name", accountName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -679,7 +1044,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 	}
 
 	a.logger.Debug("Writing a new Account", zap.Reflect("accounts", accounts))
-	err = a.sql.writeAccounts(accounts)
+	err = a.sql.WriteAccounts(accounts)
 	if err != nil {
 		a.logger.Error("Can't write new Accounts into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
@@ -700,13 +1065,11 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 //	@Success		200				{object}	nil
 //	@Failure		500				{object}	GenericErrorResponse
 //	@Router			/accounts/{account_name} [delete]
-//
-// TODO: Not Implemented
 func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 	accountName := c.Param("account_name")
 	a.logger.Debug("Removing an Account", zap.String("account", accountName))
 
-	if err := a.sql.deleteAccount(accountName); err != nil {
+	if err := a.sql.DeleteAccount(accountName); err != nil {
 		a.logger.Error("Can't delete Cluster from DB", zap.String("account_name", accountName), zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
@@ -748,10 +1111,113 @@ func (a APIServer) HandlerPatchAccount(c *gin.Context) {
 //	@Failure		500	{object}	nil
 //	@Router			/inventory/refresh [post]
 func (a APIServer) HandlerRefreshInventory(c *gin.Context) {
-	if err := a.sql.refreshInventory(); err != nil {
+	if err := a.sql.RefreshInventory(); err != nil {
 		a.logger.Error("Can't refresh inventory data on DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 	// This function doesn't return any 200OK code for preventing duplicated responses
+}
+
+// HandlerGetSystemEvents handles the request for obtain the list of system events
+//
+//	@Summary		Obtain system events
+//	@Description	Returns a list of events
+//	@Tags			Events
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	EventsListResponse
+//	@Failure		500	{object}	nil
+//	@Router			/events [get]
+func (a APIServer) HandlerGetSystemEvents(c *gin.Context) {
+	a.logger.Debug("Retrieving system-wide events")
+
+	dbEvents, err := a.sql.GetSystemEvents()
+	if err != nil {
+		a.logger.Error("Failed to retrieve system-wide events", zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("failed to retrieve system-wide events"))
+		return
+	}
+
+	appEvents := events.ToSystemAuditEvents(dbEvents)
+	c.PureJSON(http.StatusOK, NewSystemEventsListResponse(appEvents))
+}
+
+// HandlerGetClusterEvents handles the request for obtain the list of events of a Cluster
+//
+//	@Summary		Obtain cluster events
+//	@Description	Returns a list of events belonging to a cluster given by ID
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Param			cluster_id	path		string	true	"Cluster ID"
+//	@Success		200			{object}	EventsListResponse
+//	@Failure		500			{object}	nil
+//	@Router			/clusters/{cluster_id}/events [get]
+func (a APIServer) HandlerGetClusterEvents(c *gin.Context) {
+	clusterID := c.Param("cluster_id")
+	a.logger.Debug("Retrieving cluster events", zap.String("cluster_id", clusterID))
+
+	dbEvents, err := a.sql.GetClusterEvents(clusterID)
+	if err != nil {
+		a.logger.Error("Failed to retrieve cluster events",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError,
+			NewGenericErrorResponse("failed to retrieve cluster events"))
+		return
+	}
+	appEvents := events.ToAuditEvents(dbEvents)
+	c.PureJSON(http.StatusOK, NewEventsListResponse(appEvents))
+}
+
+// HandlerGetInventoryOverview handles the request to obtain an overview of the inventory
+//
+//	@Summary		Obtain an inventory overview
+//	@Description	Returns an overview of the inventory
+//	@Tags			Overview
+//	@Accept			json
+//	@Produce		json
+//	@Success		200			{object}	models.OverviewSummary
+//	@Failure		500			{object}	GenericErrorResponse
+//	@Router			/overview	[get]
+func (a APIServer) HandlerGetInventoryOverview(c *gin.Context) {
+	a.logger.Debug("Retrieving overview data")
+
+	overview, err := a.getInventoryOverview()
+	if err != nil {
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("failed to retrieve inventory overview"))
+		return
+	}
+	c.PureJSON(http.StatusOK, overview)
+}
+
+// getInventoryOverview retrieves all components of the inventory overview.
+func (a APIServer) getInventoryOverview() (models.OverviewSummary, error) {
+	var overview models.OverviewSummary
+
+	// Get clusters summary
+	clusters, err := a.sql.GetClustersOverview()
+	if err != nil {
+		return models.OverviewSummary{}, fmt.Errorf("failed to get clusters overview: %w", err)
+	}
+
+	overview.Clusters = clusters
+
+	// Get instances summary
+	instances, err := a.sql.GetInstancesOverview()
+	if err != nil {
+		return models.OverviewSummary{}, fmt.Errorf("failed to get instances overview: %w", err)
+	}
+	overview.Instances = instances
+
+	// Get providers summary
+	providers, err := a.sql.GetProvidersOverview()
+	if err != nil {
+		return models.OverviewSummary{}, fmt.Errorf("failed to get providers overview: %w", err)
+	}
+
+	overview.Providers = providers
+
+	return overview, nil
 }
