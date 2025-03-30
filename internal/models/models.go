@@ -103,7 +103,6 @@ type OverviewSummary struct {
 type ClustersSummary struct {
 	Running  int `json:"running"`
 	Stopped  int `json:"stopped"`
-	Unknown  int `json:"unknown"`
 	Archived int `json:"archived"`
 }
 

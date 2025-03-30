@@ -185,14 +185,22 @@ const (
 	`
 	SelectLastExpensesQueryVOPT = `
 		WITH ranked_expenses AS (
-				SELECT
-						instance_id,
-						date,
-						amount,
-						ROW_NUMBER() OVER (PARTITION BY instance_id ORDER BY date DESC) AS rn
-				FROM expenses
+			SELECT
+				instance_id,
+				date,
+				amount,
+				ROW_NUMBER() OVER (PARTITION BY instance_id ORDER BY date DESC) AS rn
+			FROM expenses
 		)
-		SELECT instance_id, date, amount FROM ranked_expenses JOIN instances ON instance_id = id WHERE rn = 1 AND (status != 'Terminated' AND status != 'Unknown') AND date < '$1';
+		SELECT
+			re.instance_id,
+			re.date,
+			re.amount
+		FROM ranked_expenses re
+		JOIN instances i ON re.instance_id = i.id
+		WHERE re.rn = 1
+		AND i.status != 'Terminated'
+		AND re.date < '$1';
 	`
 
 	// SelectExpensesByInstanceQuery returns expense in the inventory for a specific InstanceID
@@ -247,7 +255,6 @@ const (
 		SELECT 
 			COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running,
 			COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped,
-			COUNT(CASE WHEN status = 'Unknown' THEN 1 END) AS unknown,
 			COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived
 		FROM clusters;
 	`
