@@ -158,6 +158,7 @@ Available configuration via Env Vars:
 | CIQ_DB_URL                           | string (Default: "postgresql://pgsql:5432/clusteriq") | ClusterIQ DB URL                          |
 | CIQ_CREDS_FILE                       | string (Default: "")                                  | Cloud providers accounts credentials file |
 | CIQ_LOG_LEVEL                        | string (Default: "INFO")                              | ClusterIQ Logs verbosity mode             |
+| CIQ_SKIP_NO_OPENSHIFT_INSTANCES      | boolean (Default: true)                               | Skips scanned instances without cluster   |
 
 
 ### Scanner

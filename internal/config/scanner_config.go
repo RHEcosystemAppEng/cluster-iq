@@ -5,7 +5,8 @@ import env "github.com/caarlos0/env/v11"
 // ScannerConfig defines the config parameters for the ClusterIQ Scanner
 type ScannerConfig struct {
 	CloudCredentialsConfig
-	APIURL string `env:"CIQ_API_URL,required"`
+	APIURL                   string `env:"CIQ_API_URL,required"`
+	SkipNoOpenhisftInstances bool   `env:"CIQ_SKIP_NO_OPENSHIFT_INSTANCES" envDefault:"true"`
 }
 
 // LoadScannerConfig evaluates and return the ScannerConfig object

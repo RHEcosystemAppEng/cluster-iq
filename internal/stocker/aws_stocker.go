@@ -13,13 +13,14 @@ const (
 
 // AWSStocker object to make stock on AWS
 type AWSStocker struct {
-	Account *inventory.Account
-	logger  *zap.Logger
-	conn    *cp.AWSConnection
+	Account                  *inventory.Account // Account to be scanned by the AWSStocker
+	skipNoOpenshiftInstances bool               // Flag for skipping the scanned instances that doesn't belong to any Openshift cluster or Single Node Openshift
+	logger                   *zap.Logger        // Stocker Logger
+	conn                     *cp.AWSConnection  // AWS Connection for the stocker
 }
 
 // NewAWSStocker create and returns a pointer to a new AWSStocker instance
-func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
+func NewAWSStocker(account *inventory.Account, skipNoOpenshiftInstances bool, logger *zap.Logger) *AWSStocker {
 	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
 	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithEC2(), cp.WithRoute53(), cp.WithSTS())
 	if err != nil {
@@ -33,9 +34,10 @@ func NewAWSStocker(account *inventory.Account, logger *zap.Logger) *AWSStocker {
 	}
 
 	return &AWSStocker{
-		Account: account,
-		logger:  logger,
-		conn:    conn,
+		Account:                  account,
+		skipNoOpenshiftInstances: skipNoOpenshiftInstances,
+		logger:                   logger,
+		conn:                     conn,
 	}
 }
 
