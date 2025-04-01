@@ -19,8 +19,6 @@ const (
 	Stopped InstanceStatus = "Stopped"
 	// Terminated Instance status
 	Terminated InstanceStatus = "Terminated"
-	// Unknown Instance status
-	Unknown InstanceStatus = "Unknown"
 )
 
 const (
@@ -44,9 +42,7 @@ func AsInstanceStatus(status string) InstanceStatus {
 		return Stopped
 	case "terminated":
 		return Terminated
-	case "unknown":
-		return Unknown
 	default:
-		return Unknown
+		return Running
 	}
 }

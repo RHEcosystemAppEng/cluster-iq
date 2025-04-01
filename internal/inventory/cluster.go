@@ -6,14 +6,6 @@ import (
 	"time"
 )
 
-const (
-	// minInstances represents the minimum number of instances for evaluating a
-	// cluster and its status.  Openshift it's not supported if the amount of
-	// Master nodes is different than 3, so it's a good guideline for defining
-	// the minimum number of instances
-	minInstances int = 3
-)
-
 // Cluster is the object to store Openshift Clusters and its properties
 type Cluster struct {
 	// ID is the unique key to identify every cluster independently of which account it belongs
@@ -76,7 +68,7 @@ func NewCluster(name string, infraID string, provider CloudProvider, region stri
 		Name:              name,
 		InfraID:           infraID,
 		Provider:          provider,
-		Status:            Unknown,
+		Status:            Running,
 		Region:            region,
 		AccountName:       accountName,
 		ConsoleLink:       consoleLink,
@@ -162,52 +154,38 @@ func (c *Cluster) UpdateCosts() error {
 	return nil
 }
 
-// TODO convert to a map[InstanceStatus]int for counting
 // UpdateStatus evaluate the status of the cluster checking how many of the
-// nodes are in Running or Stopped status. As Openshift needs at lease 3 nodes
-// running to be considered correctly Running (3 master nodes), but we cant'
-// figure out which Instance is a master node, if at least 3 of the Cluster
-// instances are running, Cluster will be considered as Running also.
-// If the instances count is less than minInstances, Cluster would be
-// considered as Unknown status
+// nodes are in Running, Stopped or Terminated status.
+// Logic rules:
+// - Empty cluster (no instances) -> Terminated
+// - Any instance Running -> Running (early return)
+// - All instances Terminated -> Terminated
+// - Otherwise (mix of Stopped/Terminated or all Stopped) -> Stopped
 func (c *Cluster) UpdateStatus() {
 	c.InstanceCount = len(c.Instances)
 
-	// Check minimun instances
-	if c.InstanceCount < minInstances {
-		c.Status = Unknown
-		return
-	}
-
-	counts := map[InstanceStatus]int{
-		Running:    0,
-		Stopped:    0,
-		Terminated: 0,
-	}
-
-	for _, instance := range c.Instances {
-		switch instance.Status {
-		case Running:
-			counts[Running]++
-		case Stopped:
-			counts[Stopped]++
-		case Terminated:
-			counts[Terminated]++
-		}
-	}
-
-	if counts[Running] >= minInstances {
-		c.Status = Running
-		return
-	} else if counts[Stopped] == c.InstanceCount {
-		c.Status = Stopped
-		return
-	} else if counts[Terminated] == c.InstanceCount {
+	// TODO. Possible edge case
+	if c.InstanceCount == 0 {
 		c.Status = Terminated
 		return
 	}
 
-	c.Status = Unknown
+	terminatedCount := 0
+
+	for _, instance := range c.Instances {
+		if instance.Status == Running {
+			c.Status = Running
+			return
+		} else if instance.Status == Terminated {
+			terminatedCount++
+		}
+	}
+
+	if terminatedCount == c.InstanceCount {
+		c.Status = Terminated
+	} else {
+		c.Status = Stopped
+	}
 }
 
 // AddInstance add a new instance to a cluster

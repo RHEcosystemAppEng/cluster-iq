@@ -39,8 +39,7 @@ INSERT INTO
 VALUES
   ('Running'),
   ('Stopped'),
-  ('Terminated'),
-  ('Unknown')
+  ('Terminated')
 ;
 
 

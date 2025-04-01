@@ -632,7 +632,7 @@ func (a SQLClient) GetClusters() ([]inventory.Cluster, error) {
 }
 
 // GetClustersOverview returns a summary of cluster statuses
-// It counts the number of clusters that are running, stopped, unknown, or terminated.
+// It counts the number of clusters that are running, stopped or terminated.
 func (a SQLClient) GetClustersOverview() (models.ClustersSummary, error) {
 	var clustersOverview models.ClustersSummary
 	if err := a.db.Get(&clustersOverview, SelectClustersOverview); err != nil {
