@@ -32,7 +32,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 
 		// Generating ClusterID for this instance based on its properties
 		clusterName := inventory.GetClusterNameFromTags(instance.Tags)
-		if s.skipNoOpenshiftInstances && clusterName == inventory.UnknownClusterNameCode {
+		if s.skipNoOpenShiftInstances && clusterName == inventory.UnknownClusterNameCode {
 			s.logger.Debug("Skipping instance because it's not associated to any cluster",
 				zap.String("account_id", s.Account.ID),
 				zap.String("instance_id", instance.ID),

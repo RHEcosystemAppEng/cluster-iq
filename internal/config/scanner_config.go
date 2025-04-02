@@ -6,7 +6,7 @@ import env "github.com/caarlos0/env/v11"
 type ScannerConfig struct {
 	CloudCredentialsConfig
 	APIURL                   string `env:"CIQ_API_URL,required"`
-	SkipNoOpenhisftInstances bool   `env:"CIQ_SKIP_NO_OPENSHIFT_INSTANCES" envDefault:"true"`
+	SkipNoOpenShiftInstances bool   `env:"CIQ_SKIP_NO_OPENSHIFT_INSTANCES" envDefault:"true"`
 }
 
 // LoadScannerConfig evaluates and return the ScannerConfig object
