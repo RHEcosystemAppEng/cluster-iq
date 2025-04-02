@@ -115,7 +115,7 @@ func (s *Scanner) createStockers() error {
 			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
 
 			// AWS API Stoker
-			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.logger))
+			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
 
 			// AWS Billing API Stoker
 			if account.IsBillingEnabled() {

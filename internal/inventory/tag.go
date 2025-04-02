@@ -13,8 +13,8 @@ const (
 	// Regular expresion for extracting the InfrastructureID configured by `openshift-installer` from AWS Tags
 	clusterIDRegexp = "kubernetes.io/cluster/(.*)$"
 
-	unknownClusterNameCode = "UNKNOWN-CLUSTER"
-	unknownClusterIDCode   = "UNKNOWN-CLUSTER"
+	UnknownClusterNameCode = "UNKNOWN-CLUSTER"
+	UnknownClusterIDCode   = "UNKNOWN-CLUSTER"
 )
 
 // Tag model generic tags as a Key-Value object
@@ -52,7 +52,7 @@ func parseClusterName(key string) string {
 
 	// if there are no results, return empty string, if there are, return first match
 	if len(res) <= 0 {
-		return unknownClusterNameCode
+		return UnknownClusterNameCode
 	}
 	return res[0][1]
 }
@@ -64,7 +64,7 @@ func parseClusterID(key string) string {
 
 	// if there are no results, return empty string, if there are, return first match
 	if len(res) <= 0 {
-		return unknownClusterIDCode
+		return UnknownClusterIDCode
 	}
 	return res[0][1]
 }
@@ -104,7 +104,7 @@ func GetClusterIDFromTags(tags []Tag) string {
 			return parseClusterID(tag.Key)
 		}
 	}
-	return unknownClusterNameCode
+	return UnknownClusterNameCode
 }
 
 func GetClusterNameFromTags(tags []Tag) string {
@@ -113,7 +113,7 @@ func GetClusterNameFromTags(tags []Tag) string {
 			return parseClusterName(tag.Key)
 		}
 	}
-	return unknownClusterNameCode
+	return UnknownClusterNameCode
 }
 
 func GetInfraIDFromTags(tags []Tag) string {
@@ -122,5 +122,5 @@ func GetInfraIDFromTags(tags []Tag) string {
 			return parseInfraID(tag.Key)
 		}
 	}
-	return unknownClusterNameCode
+	return UnknownClusterNameCode
 }
