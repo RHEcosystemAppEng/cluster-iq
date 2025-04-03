@@ -73,25 +73,39 @@ func (e *AWSExecutor) SetRegion(region string) error {
 	return e.conn.SetRegion(region)
 }
 
-// PowerOnCluster takes a list of instancesIDs and powers them on
-func (e *AWSExecutor) PowerOffCluster(instances []string) error {
-	e.logger.Warn("Powering Off Cluster")
-	if err := e.conn.EC2.PowerOffInstancesById(instances); err != nil {
-		e.logger.Error("Error when powering off some instances", zap.Strings("instances", instances), zap.Error(err))
+// PowerOnCluster attempts to start the EC2 instances specified by instanceIDs.
+// It delegates the actual start operation, including state filtering,
+// to the underlying AWSEC2Connection.
+func (e *AWSExecutor) PowerOnCluster(instanceIDs []string) error {
+	if len(instanceIDs) == 0 {
+		e.logger.Info("No instances to start")
+		return nil
+	}
+
+	e.logger.Info("Starting cluster instances", zap.Strings("instances", instanceIDs))
+	if err := e.conn.EC2.StartClusterInstances(instanceIDs); err != nil {
+		e.logger.Error("Failed to start cluster instances", zap.Strings("instances", instanceIDs), zap.Error(err))
 		return err
 	}
-	e.logger.Info("Powered Off Cluster")
+	e.logger.Info("Successfully started cluster instances", zap.Strings("instances", instanceIDs))
 	return nil
 }
 
-// PowerOnCluster takes a list of instancesIDs and powers them off
-func (e *AWSExecutor) PowerOnCluster(instances []string) error {
-	e.logger.Warn("Powering On Cluster")
-	if err := e.conn.EC2.PowerOnInstancesById(instances); err != nil {
-		e.logger.Error("Error when powering on some instances", zap.Strings("instances", instances), zap.Error(err))
+// PowerOffCluster attempts to stop the EC2 instances specified by instanceIDs.
+// It delegates the actual start operation, including state filtering,
+// to the underlying AWSEC2Connection.
+func (e *AWSExecutor) PowerOffCluster(instanceIDs []string) error {
+	if len(instanceIDs) == 0 {
+		e.logger.Info("No instances to stop")
+		return nil
+	}
+
+	e.logger.Info("Stopping cluster instances", zap.Strings("instances", instanceIDs))
+	if err := e.conn.EC2.StopClusterInstances(instanceIDs); err != nil {
+		e.logger.Error("Failed to stop cluster instances", zap.Strings("instances", instanceIDs), zap.Error(err))
 		return err
 	}
-	e.logger.Info("Powered On Cluster")
+	e.logger.Info("Successfully stopped cluster instances", zap.Strings("instances", instanceIDs))
 	return nil
 }
 
