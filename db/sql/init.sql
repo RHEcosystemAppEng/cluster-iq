@@ -70,7 +70,10 @@ CREATE TABLE IF NOT EXISTS clusters (
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
   owner TEXT,
-  total_cost REAL
+  total_cost REAL,
+	last_15_days_cost REAL,
+	last_month_cost REAL,
+	current_month_so_far_cost REAL
 );
 
 
@@ -235,6 +238,34 @@ BEGIN
 END;
 $$;
 
+-- Updates the total cost of a cluster based on its associated instances
+-- SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id='***********' AND expenses.date >= NOW()::date - interval '15 day';
+CREATE OR REPLACE FUNCTION update_cluster_cost_info()
+  RETURNS TRIGGER
+  LANGUAGE PLPGSQL
+  AS
+$$
+BEGIN
+  UPDATE clusters
+  SET
+    last_15_days_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND expenses.date >= NOW()::date - interval '15 day'),
+    last_month_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date))),
+    current_month_so_far_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
+  WHERE id = NEW.cluster_id;
+  RETURN NEW;
+
+  --UPDATE clusters
+  --SET last_month_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date)))
+  --WHERE id = NEW.cluster_id;
+  --RETURN NEW;
+
+  --UPDATE clusters
+  --SET current_month_so_far_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
+  --WHERE id = NEW.cluster_id;
+  --RETURN NEW;
+END;
+$$;
+
 -- Updates the total cost of an account based on its associated clusters
 CREATE OR REPLACE FUNCTION update_account_total_costs()
   RETURNS TRIGGER
@@ -306,6 +337,14 @@ ON clusters
 FOR EACH ROW
   EXECUTE PROCEDURE update_account_total_costs();
 
+-- Trigger to update cluster costs info
+CREATE TRIGGER update_cluster_cost_info
+AFTER UPDATE
+ON instances
+FOR EACH ROW
+  EXECUTE PROCEDURE update_cluster_cost_info();
+
+
 -- ## Maintenance Functions ##
 -- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
 CREATE OR REPLACE FUNCTION check_terminated_instances()
@@ -326,3 +365,4 @@ BEGIN
 	WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
+--
