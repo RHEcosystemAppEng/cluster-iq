@@ -78,8 +78,7 @@ func (e *AWSExecutor) SetRegion(region string) error {
 // to the underlying AWSEC2Connection.
 func (e *AWSExecutor) PowerOnCluster(instanceIDs []string) error {
 	if len(instanceIDs) == 0 {
-		e.logger.Info("No instances to start")
-		return nil
+		return fmt.Errorf("no instances to start")
 	}
 
 	e.logger.Info("Starting cluster instances", zap.Strings("instances", instanceIDs))
@@ -96,8 +95,7 @@ func (e *AWSExecutor) PowerOnCluster(instanceIDs []string) error {
 // to the underlying AWSEC2Connection.
 func (e *AWSExecutor) PowerOffCluster(instanceIDs []string) error {
 	if len(instanceIDs) == 0 {
-		e.logger.Info("No instances to stop")
-		return nil
+		return fmt.Errorf("no instances to stop")
 	}
 
 	e.logger.Info("Stopping cluster instances", zap.Strings("instances", instanceIDs))
