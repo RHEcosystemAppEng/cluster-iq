@@ -71,9 +71,9 @@ CREATE TABLE IF NOT EXISTS clusters (
   age INT,
   owner TEXT,
   total_cost REAL,
-	last_15_days_cost REAL,
-	last_month_cost REAL,
-	current_month_so_far_cost REAL
+  last_15_days_cost REAL,
+  last_month_cost REAL,
+  current_month_so_far_cost REAL
 );
 
 
@@ -154,17 +154,17 @@ CREATE TABLE IF NOT EXISTS schedule (
 
 -- Audit logs
 CREATE TABLE IF NOT EXISTS audit_logs (
-	id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-	event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-	triggered_by text NOT NULL,
-	action_name text NOT NULL,
-	resource_id text NOT NULL,
-	resource_type text NOT NULL,
-	result text NOT NULL,
-	description text NULL,
-	severity text DEFAULT 'info'::text NOT NULL,
-	CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
-	CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+  id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  triggered_by text NOT NULL,
+  action_name text NOT NULL,
+  resource_id text NOT NULL,
+  resource_type text NOT NULL,
+  result text NOT NULL,
+  description text NULL,
+  severity text DEFAULT 'info'::text NOT NULL,
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
 );
 
 -- ## Functions ##
@@ -253,16 +253,6 @@ BEGIN
     current_month_so_far_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
   WHERE id = NEW.cluster_id;
   RETURN NEW;
-
-  --UPDATE clusters
-  --SET last_month_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date)))
-  --WHERE id = NEW.cluster_id;
-  --RETURN NEW;
-
-  --UPDATE clusters
-  --SET current_month_so_far_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
-  --WHERE id = NEW.cluster_id;
-  --RETURN NEW;
 END;
 $$;
 
@@ -352,7 +342,7 @@ RETURNS void AS $$
 BEGIN
   UPDATE instances
   SET status = 'Terminated'
-	WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -362,7 +352,7 @@ RETURNS void AS $$
 BEGIN
   UPDATE clusters
   SET status = 'Terminated'
-	WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
 --
