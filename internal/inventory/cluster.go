@@ -51,6 +51,15 @@ type Cluster struct {
 	// Total cost (US Dollars)
 	TotalCost float64 `db:"total_cost" json:"totalCost"`
 
+	// Cost Last 15d
+	Last15DaysCost float64 `db:"last_15_days_cost" json:"last15DaysCost"`
+
+	// Last month cost
+	LastMonthCost float64 `db:"last_month_cost" json:"lastMonthCost"`
+
+	// Current month so far cost
+	CurrentMonthSoFarCost float64 `db:"current_month_so_far_cost" json:"currentMonthSoFarCost"`
+
 	// Cluster's instance (nodes) lists
 	Instances []Instance
 }
@@ -64,21 +73,24 @@ func NewCluster(name string, infraID string, provider CloudProvider, region stri
 	now := time.Now()
 
 	return &Cluster{
-		ID:                id,
-		Name:              name,
-		InfraID:           infraID,
-		Provider:          provider,
-		Status:            Running,
-		Region:            region,
-		AccountName:       accountName,
-		ConsoleLink:       consoleLink,
-		InstanceCount:     0,
-		LastScanTimestamp: now,
-		CreationTimestamp: now,
-		Age:               calculateAge(now, now),
-		Owner:             owner,
-		TotalCost:         0.0,
-		Instances:         make([]Instance, 0),
+		ID:                    id,
+		Name:                  name,
+		InfraID:               infraID,
+		Provider:              provider,
+		Status:                Running,
+		Region:                region,
+		AccountName:           accountName,
+		ConsoleLink:           consoleLink,
+		InstanceCount:         0,
+		LastScanTimestamp:     now,
+		CreationTimestamp:     now,
+		Age:                   calculateAge(now, now),
+		Owner:                 owner,
+		TotalCost:             0.0,
+		Last15DaysCost:        0.0,
+		LastMonthCost:         0.0,
+		CurrentMonthSoFarCost: 0.0,
+		Instances:             make([]Instance, 0),
 	}
 }
 
