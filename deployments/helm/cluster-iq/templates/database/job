@@ -1,0 +1,73 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  annotations:
+    meta.helm.sh/release-name: cluster-iq
+    meta.helm.sh/release-namespace: cluster-iq
+  name: init-pgsql
+  namespace: cluster-iq
+  labels:
+    app.kubernetes.io/component: database
+    app.kubernetes.io/instance: cluster-iq
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-iq
+    app.kubernetes.io/version: v0.4
+    helm.sh/chart: cluster-iq-0.4.0
+spec:
+  manualSelector: false
+  backoffLimit: 6
+  completions: 1
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/instance: cluster-iq
+        app.kubernetes.io/version: v0.4
+        app.kubernetes.io/component: database
+        batch.kubernetes.io/job-name: init-pgsql
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: cluster-iq-0.4.0
+        app.kubernetes.io/name: cluster-iq
+        job-name: init-pgsql
+    spec:
+      volumes:
+        - name: init
+          configMap:
+            name: postgresql-init
+            defaultMode: 420
+      containers:
+        - resources: {}
+          terminationMessagePath: /dev/termination-log
+          name: init-pgsql
+          command:
+            - /bin/sh
+            - '-c'
+          env:
+            - name: CIQ_DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: POSTGRESQL_CONNECTION_STRING
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: init
+              mountPath: /var/lib/pgsql/init.sql
+              subPath: init.sql
+          terminationMessagePolicy: File
+          image: 'registry.redhat.io/rhel8/postgresql-12:1-181'
+          args:
+            - |
+              while true; do
+              psql "$CIQ_DB_URL" -c "SELECT true" && break || sleep 2;
+              done
+              psql "$CIQ_DB_URL" < /var/lib/pgsql/init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+      restartPolicy: OnFailure
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+  suspend: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  completionMode: NonIndexed
+
