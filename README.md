@@ -147,7 +147,6 @@ For deploying ClusterIQ in local for development purposes, check the following
 Available configuration via Env Vars:
 | Key                                  | Value                                                 | Description                               |
 | ------------------------------------ | ----------------------------------------------------- | ----------------------------------------- |
-| CIQ_AGENT_API_URL                    | string (Default: "http://api:8080/api/v1")            | ClusterIQ Agent URL for accessing the API |
 | CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL | string (Default: "0.0.0.0:50051")                     | ClusterIQ Agent gRPC listen URL           |
 | CIQ_AGENT_POLLING_SECONDS_INTERVAL   | integer (Default: 30)                                 | ClusterIQ Agent polling time (seconds)    |
 | CIQ_AGENT_URL                        | string (Default: "agent:50051")                       | ClusterIQ Agent listen URL                |

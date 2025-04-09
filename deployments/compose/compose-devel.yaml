@@ -43,7 +43,7 @@ services:
     image: quay.io/ecosystem-appeng/cluster-iq-agent:latest
     container_name: agent
     environment:
-      CIQ_AGENT_API_URL: "http://api:8080/api/v1"
+      CIQ_API_URL: "http://api:8080/api/v1"
       CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
       CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL: "0.0.0.0:50051"
       CIQ_CREDS_FILE: "/credentials"
