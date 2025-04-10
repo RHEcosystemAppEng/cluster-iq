@@ -20,9 +20,6 @@ type Account struct {
 	// Infrastructure provider identifier.
 	Provider CloudProvider `db:"provider" json:"provider"`
 
-	// Total cost invested on the account
-	TotalCost float64 `db:"total_cost" json:"totalCost"`
-
 	// ClusterCount
 	ClusterCount int `db:"cluster_count" json:"clusterCount"`
 
@@ -38,6 +35,18 @@ type Account struct {
 	// Account's password
 	password string
 
+	// Total cost (US Dollars)
+	TotalCost float64 `db:"total_cost" json:"totalCost"`
+
+	// Cost Last 15d
+	Last15DaysCost float64 `db:"last_15_days_cost" json:"last15DaysCost"`
+
+	// Last month cost
+	LastMonthCost float64 `db:"last_month_cost" json:"lastMonthCost"`
+
+	// Current month so far cost
+	CurrentMonthSoFarCost float64 `db:"current_month_so_far_cost" json:"currentMonthSoFarCost"`
+
 	// Billing information flag
 	billing_enabled bool
 }
@@ -45,16 +54,19 @@ type Account struct {
 // NewAccount create a new Could Provider account to store its instances
 func NewAccount(id string, name string, provider CloudProvider, user string, password string) *Account {
 	return &Account{
-		ID:                id,
-		Name:              name,
-		Provider:          provider,
-		TotalCost:         0.0,
-		ClusterCount:      0,
-		Clusters:          make(map[string]*Cluster),
-		LastScanTimestamp: time.Now(),
-		user:              user,
-		password:          password,
-		billing_enabled:   false, // Disabled by default
+		ID:                    id,
+		Name:                  name,
+		Provider:              provider,
+		ClusterCount:          0,
+		Clusters:              make(map[string]*Cluster),
+		LastScanTimestamp:     time.Now(),
+		user:                  user,
+		password:              password,
+		TotalCost:             0.0,
+		Last15DaysCost:        0.0,
+		LastMonthCost:         0.0,
+		CurrentMonthSoFarCost: 0.0,
+		billing_enabled:       false, // Disabled by default
 	}
 }
 
