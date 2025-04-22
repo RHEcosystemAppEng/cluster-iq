@@ -236,10 +236,10 @@ $$
 BEGIN
   UPDATE clusters
   SET
-    total_cost = (SELECT SUM(total_cost) FROM instances WHERE cluster_id = NEW.cluster_id),
-    last_15_days_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND expenses.date >= NOW()::date - interval '15 day'),
-    last_month_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date))),
-    current_month_so_far_cost = (SELECT SUM(expenses.amount) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
+    total_cost = (SELECT COALESCE(SUM(total_cost), 0) as sum FROM instances WHERE cluster_id = NEW.cluster_id),
+    last_15_days_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND expenses.date >= NOW()::date - interval '15 day'),
+    last_month_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date))),
+    current_month_so_far_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
   WHERE id = NEW.cluster_id;
   RETURN NEW;
 END;
@@ -254,10 +254,10 @@ $$
 BEGIN
   UPDATE accounts
   SET
-    total_cost = (SELECT SUM(clusters.total_cost) FROM clusters WHERE account_name = NEW.account_name),
-    last_15_days_cost = (SELECT SUM(clusters.last_15_days_cost) FROM clusters WHERE account_name = NEW.account_name),
-    last_month_cost = (SELECT SUM(clusters.last_month_cost) FROM clusters WHERE account_name = NEW.account_name),
-    current_month_so_far_cost = (SELECT SUM(clusters.current_month_so_far_cost) FROM clusters WHERE account_name = NEW.account_name)
+    total_cost = (SELECT COALESCE(SUM(clusters.total_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
+    last_15_days_cost = (SELECT COALESCE(SUM(clusters.last_15_days_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
+    last_month_cost = (SELECT COALESCE(SUM(clusters.last_month_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
+    current_month_so_far_cost = (SELECT COALESCE(SUM(clusters.current_month_so_far_cost), 0) FROM clusters WHERE account_name = NEW.account_name)
   WHERE name = NEW.account_name;
   RETURN NEW;
 END;
