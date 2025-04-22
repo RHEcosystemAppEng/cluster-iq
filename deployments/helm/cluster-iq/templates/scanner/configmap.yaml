@@ -9,4 +9,4 @@ data:
   CIQ_API_URL: 'http://api.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.api.service.port }}/api/v1'
   CIQ_CREDS_FILE: /credentials/credentials
   CIQ_LOG_LEVEL: {{ .Values.scanner.logLevel }}
-  CIQ_SKIP_NO_OPENSHIFT_INSTANCES: {{ .Values.scanner.skipNoOpenshiftInstances }}
+  CIQ_SKIP_NO_OPENSHIFT_INSTANCES: "{{ .Values.scanner.skipNoOpenshiftInstances }}"

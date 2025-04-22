@@ -5,15 +5,13 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 const (
-	// AWS-SDK string values for InstanceState
-	InstanceStateRunning = "running"
-	InstanceStateStopped = "stopped"
 	// Reference https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html#available-ec2-device-names
 	rootDeviceXvda = "/dev/xvda"
 	rootDeviceSda  = "/dev/sda1"
@@ -43,147 +41,132 @@ func (c AWSEC2Connection) GetRegion() string {
 	return *c.client.Config.Region
 }
 
-// GetEC2InstanceById gets an instanceId and returns its corresponding
-// EC2.Instance object if exists. If not, it returns an error with the cause.
-func (c AWSEC2Connection) GetEC2InstanceById(id string) (*ec2.Instance, error) {
-	// Creating Input query
-	input := &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{aws.String(id)},
+func (c *AWSEC2Connection) FilterExistingInstances(instanceIDs []string) ([]string, error) {
+	if len(instanceIDs) == 0 {
+		return nil, nil
 	}
 
-	// Getting query results
+	input := &ec2.DescribeInstancesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("instance-id"),
+				Values: aws.StringSlice(instanceIDs),
+			},
+		},
+	}
+
 	result, err := c.client.DescribeInstances(input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to filter existing instances: %w", err)
 	}
 
-	// Processing reservations->instances. Only one instance is expected.
+	var existingIDs []string
 	for _, reservation := range result.Reservations {
 		for _, instance := range reservation.Instances {
-			return instance, nil
+			existingIDs = append(existingIDs, aws.StringValue(instance.InstanceId))
 		}
 	}
 
-	return nil, fmt.Errorf("AWS EC2 instanceID (%s) not found", id)
+	return existingIDs, nil
 }
 
-// CheckIfInstanceExistsById searches for an EC2 instance by its ID in the
-// pre-configured AWS region. The function returns true if the instance exists,
-// along with any potential errors encountered during the operation. If the
-// instance does not exist, it returns false and the corresponding error, if
-// applicable.
-func (c AWSEC2Connection) CheckIfInstanceExistsById(id string) (bool, error) {
-	if _, err := c.GetEC2InstanceById(id); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// IsInstanceStopped checks whether an EC2 instance with the given ID is in the "running" state.
-func (c AWSEC2Connection) IsInstanceStopped(id string) (bool, error) {
-	instance, err := c.GetEC2InstanceById(id)
+// StopClusterInstances stops EC2 instances from the provided instances list.
+// It first filters the list to find existing instances,
+// then describes those instances to find which ones are running, and finally issues
+// a StopInstances request only for the running ones.
+func (c *AWSEC2Connection) StopClusterInstances(instanceIDs []string) error {
+	existingIDs, err := c.FilterExistingInstances(instanceIDs)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return aws.StringValue(instance.State.Name) == InstanceStateStopped, nil
-}
+	if len(existingIDs) == 0 {
+		return nil
+	}
+	input := &ec2.DescribeInstancesInput{
+		InstanceIds: aws.StringSlice(existingIDs),
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("instance-state-name"),
+				Values: []*string{aws.String(ec2.InstanceStateNameRunning)},
+			},
+		},
+	}
 
-// IsInstanceRunning checks whether an EC2 instance with the given ID is in the "running" state.
-func (c AWSEC2Connection) IsInstanceRunning(id string) (bool, error) {
-	instance, err := c.GetEC2InstanceById(id)
+	result, err := c.client.DescribeInstances(input)
 	if err != nil {
-		return false, err
+		return fmt.Errorf("failed to describe instances: %w", err)
 	}
 
-	return aws.StringValue(instance.State.Name) == InstanceStateRunning, nil
-}
+	if result == nil || len(result.Reservations) == 0 {
+		return nil
+	}
 
-// PowerOffInstancesById powers off a set of instances introduced by an array
-// of strings. This method asumes the developer already configured the desired
-// region for the introduced instances.  The region must be configured on the
-// AWSConnection object
-func (c *AWSEC2Connection) PowerOffInstancesById(ids []string) error {
-	for _, id := range ids {
-		if err := c.PowerOffInstanceById(id); err != nil {
-			return err
+	var runningInstanceIDs []*string
+	for _, reservation := range result.Reservations {
+		for _, instance := range reservation.Instances {
+			runningInstanceIDs = append(runningInstanceIDs, instance.InstanceId)
 		}
 	}
-	return nil
-}
 
-// PowerOffInstanceById powers of a single instance by its ID. As the
-// "PowerOffInstancesById", the region must be configured on the AWSConnection
-// object before using this method
-func (c AWSEC2Connection) PowerOffInstanceById(id string) error {
-	// Check if the instance exists before trying to power it off
-	if exists, err := c.CheckIfInstanceExistsById(id); !exists && err != nil {
-		return err
+	stopInput := &ec2.StopInstancesInput{
+		InstanceIds: runningInstanceIDs,
 	}
 
-	// Check if the instance is running before trying to stop it
-	isRunning, err := c.IsInstanceRunning(id)
+	_, err = c.client.StopInstances(stopInput)
 	if err != nil {
-		return err
-	}
-	if !isRunning {
-		return fmt.Errorf("Cannot power off a stopped instance")
-	}
-
-	// Generating StopInstance request
-	input := &ec2.StopInstancesInput{
-		InstanceIds: []*string{aws.String(id)},
-	}
-
-	// Running StopInstance request
-	_, err = c.client.StopInstances(input)
-	if err != nil {
-		return fmt.Errorf("Error stopping instance: %s on region: %s", id, c.GetRegion())
+		return fmt.Errorf("error stopping instances: %w", err)
 	}
 
 	return nil
 }
 
-// PowerOnInstancesById powers on a set of instances introduced by an array
-// of strings. This method asumes the developer already configured the desired
-// region for the introduced instances.  The region must be configured on the
-// AWSConnection object
-func (c *AWSEC2Connection) PowerOnInstancesById(ids []string) error {
-	for _, id := range ids {
-		if err := c.PowerOnInstanceById(id); err != nil {
-			return err
+// StartClusterInstances starts EC2 instances from the provided instances list.
+// It first filters the list to find existing instances,
+// then describes those instances to find which ones are stopped, and finally issues
+// a StartInstances request only for the stopped ones.
+func (c *AWSEC2Connection) StartClusterInstances(instanceIDs []string) error {
+	existingIDs, err := c.FilterExistingInstances(instanceIDs)
+	if err != nil {
+		return err
+	}
+
+	if len(existingIDs) == 0 {
+		return nil
+	}
+	input := &ec2.DescribeInstancesInput{
+		InstanceIds: aws.StringSlice(existingIDs),
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("instance-state-name"),
+				Values: []*string{aws.String(ec2.InstanceStateNameStopped)},
+			},
+		},
+	}
+
+	result, err := c.client.DescribeInstances(input)
+	if err != nil {
+		return fmt.Errorf("failed to describe instances: %w", err)
+	}
+
+	if result == nil || len(result.Reservations) == 0 {
+		return nil
+	}
+
+	var stoppedInstanceIDs []*string
+	for _, reservation := range result.Reservations {
+		for _, instance := range reservation.Instances {
+			stoppedInstanceIDs = append(stoppedInstanceIDs, instance.InstanceId)
 		}
 	}
-	return nil
-}
 
-// PowerOnInstanceById powers of a single instance by its ID. As the
-// "PowerOnInstancesById", the region must be configured on the AWSConnection
-// object before using this method
-func (c AWSEC2Connection) PowerOnInstanceById(id string) error {
-	// Check if the instance exists before trying to power it off
-	if exists, err := c.CheckIfInstanceExistsById(id); !exists && err != nil {
-		return err
+	startInput := &ec2.StartInstancesInput{
+		InstanceIds: stoppedInstanceIDs,
 	}
 
-	// Check if the instance is running before trying to start it
-	isStopped, err := c.IsInstanceStopped(id)
+	_, err = c.client.StartInstances(startInput)
 	if err != nil {
-		return err
-	}
-	if !isStopped {
-		return fmt.Errorf("Cannot power on a running instance")
-	}
-
-	// Generating StartInstance request
-	input := &ec2.StartInstancesInput{
-		InstanceIds: []*string{aws.String(id)},
-	}
-
-	// Running StartInstance request
-	_, err = c.client.StartInstances(input)
-	if err != nil {
-		return fmt.Errorf("Error starting instance: %s on region: %s", id, c.GetRegion())
+		return fmt.Errorf("error starting instances: %w", err)
 	}
 
 	return nil
