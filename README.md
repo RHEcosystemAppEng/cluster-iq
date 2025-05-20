@@ -153,7 +153,6 @@ Available configuration via Env Vars:
 | CIQ_API_LISTEN_URL                   | string (Default: "0.0.0.0:8080")                      | ClusterIQ API listen URL                  |
 | CIQ_API_URL                          | string (Default: "")                                  | ClusterIQ API public endpoint             |
 | CIQ_AGENT_LISTEN_URL                 | string (Default: "0.0.0.0:50051")                     | ClusterIQ Agent listen URL                |
-| CIQ_AGENT_URL                        | string (Default: "")                                  | ClusterIQ Agent public endpoint           |
 | CIQ_DB_URL                           | string (Default: "postgresql://pgsql:5432/clusteriq") | ClusterIQ DB URL                          |
 | CIQ_CREDS_FILE                       | string (Default: "")                                  | Cloud providers accounts credentials file |
 | CIQ_LOG_LEVEL                        | string (Default: "INFO")                              | ClusterIQ Logs verbosity mode             |
