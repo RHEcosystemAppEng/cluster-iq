@@ -632,7 +632,7 @@ func (a SQLClient) GetClusters() ([]inventory.Cluster, error) {
 }
 
 // GetClustersOverview returns a summary of cluster statuses
-// It counts the number of clusters that are running, stopped, unknown, or terminated.
+// It counts the number of clusters that are running, stopped or terminated.
 func (a SQLClient) GetClustersOverview() (models.ClustersSummary, error) {
 	var clustersOverview models.ClustersSummary
 	if err := a.db.Get(&clustersOverview, SelectClustersOverview); err != nil {
@@ -929,14 +929,30 @@ func (a SQLClient) DeleteAccount(accountName string) error {
 // Returns:
 // - An error if any update query fails.
 func (a SQLClient) RefreshInventory() error {
-	var result sql.Result
+	tx, err := a.db.Beginx()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if tx != nil {
+			if rbErr := tx.Rollback(); rbErr != nil && rbErr != sql.ErrTxDone {
+				a.logger.Error("Error during transaction rollback", zap.Error(rbErr))
+			}
+		}
+	}()
 
-	if result = a.db.MustExec(UpdateTerminatedInstancesQuery); result == nil {
-		return fmt.Errorf("cannot refresh terminated instances")
+	_, err = tx.Exec(UpdateTerminatedInstancesQuery)
+	if err != nil {
+		return fmt.Errorf("failed to refresh terminated instances: %w", err)
 	}
 
-	if result = a.db.MustExec(UpdateTerminatedClustersQuery); result == nil {
-		return fmt.Errorf("cannot refresh terminated clusters")
+	_, err = tx.Exec(UpdateTerminatedClustersQuery)
+	if err != nil {
+		return fmt.Errorf("failed to refresh terminated clusters: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

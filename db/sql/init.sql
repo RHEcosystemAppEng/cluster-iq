@@ -39,8 +39,7 @@ INSERT INTO
 VALUES
   ('Running'),
   ('Stopped'),
-  ('Terminated'),
-  ('Unknown')
+  ('Terminated')
 ;
 
 
@@ -49,9 +48,12 @@ CREATE TABLE IF NOT EXISTS accounts (
   id TEXT,
   name TEXT PRIMARY KEY,
   provider TEXT REFERENCES providers(name),
-  total_cost REAL,
   cluster_count INTEGER,
-  last_scan_timestamp TIMESTAMP WITH TIME ZONE
+  last_scan_timestamp TIMESTAMP WITH TIME ZONE,
+  total_cost REAL,
+  last_15_days_cost REAL,
+  last_month_cost REAL,
+  current_month_so_far_cost REAL
 );
 
 
@@ -71,7 +73,10 @@ CREATE TABLE IF NOT EXISTS clusters (
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
   owner TEXT,
-  total_cost REAL
+  total_cost REAL,
+  last_15_days_cost REAL,
+  last_month_cost REAL,
+  current_month_so_far_cost REAL
 );
 
 
@@ -152,17 +157,17 @@ CREATE TABLE IF NOT EXISTS schedule (
 
 -- Audit logs
 CREATE TABLE IF NOT EXISTS audit_logs (
-	id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-	event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-	triggered_by text NOT NULL,
-	action_name text NOT NULL,
-	resource_id text NOT NULL,
-	resource_type text NOT NULL,
-	result text NOT NULL,
-	description text NULL,
-	severity text DEFAULT 'info'::text NOT NULL,
-	CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
-	CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+  id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  triggered_by text NOT NULL,
+  action_name text NOT NULL,
+  resource_id text NOT NULL,
+  resource_type text NOT NULL,
+  result text NOT NULL,
+  description text NULL,
+  severity text DEFAULT 'info'::text NOT NULL,
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
 );
 
 -- ## Functions ##
@@ -223,28 +228,36 @@ END;
 $$;
 
 -- Updates the total cost of a cluster based on its associated instances
-CREATE OR REPLACE FUNCTION update_cluster_total_costs()
+CREATE OR REPLACE FUNCTION update_cluster_cost_info()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
   AS
 $$
 BEGIN
   UPDATE clusters
-  SET total_cost = (SELECT SUM(total_cost) FROM instances WHERE cluster_id = NEW.cluster_id)
+  SET
+    total_cost = (SELECT COALESCE(SUM(total_cost), 0) as sum FROM instances WHERE cluster_id = NEW.cluster_id),
+    last_15_days_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND expenses.date >= NOW()::date - interval '15 day'),
+    last_month_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date))),
+    current_month_so_far_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
   WHERE id = NEW.cluster_id;
   RETURN NEW;
 END;
 $$;
 
 -- Updates the total cost of an account based on its associated clusters
-CREATE OR REPLACE FUNCTION update_account_total_costs()
+CREATE OR REPLACE FUNCTION update_account_cost_info()
   RETURNS TRIGGER
   LANGUAGE PLPGSQL
   AS
 $$
 BEGIN
   UPDATE accounts
-  SET total_cost = (SELECT SUM(total_cost) FROM clusters WHERE account_name = NEW.account_name)
+  SET
+    total_cost = (SELECT COALESCE(SUM(clusters.total_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
+    last_15_days_cost = (SELECT COALESCE(SUM(clusters.last_15_days_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
+    last_month_cost = (SELECT COALESCE(SUM(clusters.last_month_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
+    current_month_so_far_cost = (SELECT COALESCE(SUM(clusters.current_month_so_far_cost), 0) FROM clusters WHERE account_name = NEW.account_name)
   WHERE name = NEW.account_name;
   RETURN NEW;
 END;
@@ -293,19 +306,19 @@ ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_delete();
 
--- Trigger to update cluster total cost after an instance is updated
-CREATE TRIGGER update_cluster_total_cost
+-- Trigger to update cluster costs info
+CREATE TRIGGER update_cluster_cost_info
 AFTER UPDATE
 ON instances
 FOR EACH ROW
-  EXECUTE PROCEDURE update_cluster_total_costs();
+  EXECUTE PROCEDURE update_cluster_cost_info();
 
 -- Trigger to update account total cost after a cluster is updated
-CREATE TRIGGER update_account_total_cost
+CREATE TRIGGER update_account_cost_info
 AFTER UPDATE
 ON clusters
 FOR EACH ROW
-  EXECUTE PROCEDURE update_account_total_costs();
+  EXECUTE PROCEDURE update_account_cost_info();
 
 -- ## Maintenance Functions ##
 -- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
@@ -314,7 +327,7 @@ RETURNS void AS $$
 BEGIN
   UPDATE instances
   SET status = 'Terminated'
-	WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -324,6 +337,7 @@ RETURNS void AS $$
 BEGIN
   UPDATE clusters
   SET status = 'Terminated'
-	WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
+--
