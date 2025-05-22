@@ -141,9 +141,14 @@ For more information about the
 For deploying ClusterIQ in local for development purposes, check the following
 [document](./doc/development-setup.md)
 
+## DB Backup
+For backing up or restoring the ClusterIQ database, check the following
+[document](./doc/db-backup.md)
+This document also describes how to manage data migration when a new release of
+ClusterIQ changes DB data structure.
 
 
-### Configuration
+## Configuration
 Available configuration via Env Vars:
 | Key                                  | Value                                                 | Description                               |
 | ------------------------------------ | ----------------------------------------------------- | ----------------------------------------- |
