@@ -7,6 +7,7 @@ cmd/api/docs/
 
 # Exclude project folders
 secrets/
+backups/
 test/
 build/
 target/
@@ -24,6 +25,9 @@ target/
 
 # Test binary, built with `go test -c`
 *.test
+
+# Restore log files
+ciq-restore.log
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out

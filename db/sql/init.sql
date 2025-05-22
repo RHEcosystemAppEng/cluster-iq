@@ -50,10 +50,10 @@ CREATE TABLE IF NOT EXISTS accounts (
   provider TEXT REFERENCES providers(name),
   cluster_count INTEGER,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
-  total_cost REAL,
-  last_15_days_cost REAL,
-  last_month_cost REAL,
-  current_month_so_far_cost REAL
+  total_cost REAL DEFAULT 0.0,
+  last_15_days_cost REAL DEFAULT 0.0,
+  last_month_cost REAL DEFAULT 0.0,
+  current_month_so_far_cost REAL DEFAULT 0.0
 );
 
 
@@ -73,10 +73,10 @@ CREATE TABLE IF NOT EXISTS clusters (
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
   owner TEXT,
-  total_cost REAL,
-  last_15_days_cost REAL,
-  last_month_cost REAL,
-  current_month_so_far_cost REAL
+  total_cost REAL DEFAULT 0.0,
+  last_15_days_cost REAL DEFAULT 0.0 ,
+  last_month_cost REAL DEFAULT 0.0,
+  current_month_so_far_cost REAL DEFAULT 0.0
 );
 
 
@@ -92,8 +92,8 @@ CREATE TABLE IF NOT EXISTS instances (
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
-  daily_cost REAL,
-  total_cost REAL
+  daily_cost REAL DEFAULT 0.0,
+  total_cost REAL DEFAULT 0.0
 );
 
 
