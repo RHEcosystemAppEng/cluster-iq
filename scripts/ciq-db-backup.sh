@@ -41,6 +41,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Checking if needed binaries are installed
+if ! command -v pg_dump &> /dev/null || ! command -v psql &> /dev/null; then
+  echo -e "[\033[31m❌\033[0m] Required PGSQL binaries missing. Check if your system has 'psql' and 'pg_dump' binaries available before continuing"
+  exit 1
+fi
+
 # Warn if defaults are used
 [[ "$DB_NAME" == "clusteriq" ]] && { echo -e "[\033[33m⚠️ \033[0m] Using default DB_NAME: clusteriq"; }
 [[ "$DB_USER" == "postgres" ]] && { echo -e "[\033[33m⚠️ \033[0m] Using default DB_USER: postgres"; }
@@ -69,7 +75,7 @@ pg_dump -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" \
   --no-owner \
   --no-privileges \
   "$DB_NAME" > "${FILENAME}"
-[[ $? -eq 0 ]] && { echo -e "[\033[32m✅\033[0m] Data backup successful"; } || { echo -e "[\033[31m❌\033[0m] Data backup error!"; }
+[[ $? -eq 0 ]] && { echo -e "[\033[32m✅\033[0m] Data backup successful"; } || { echo -e "[\033[31m❌\033[0m] Data backup error!"; exit 1; }
 echo -e "[\033[32m✅\033[0m] Backup completed and saved to: $FILENAME"
 
 

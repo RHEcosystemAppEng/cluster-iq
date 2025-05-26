@@ -50,6 +50,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Checking if needed binaries are installed
+if ! command -v pg_dump &> /dev/null || ! command -v psql &> /dev/null; then
+  echo -e "[\033[31m❌\033[0m] Required PGSQL binaries missing. Check if your system has 'psql' and 'pg_dump' binaries available before continuing"
+  exit 1
+fi
+
 # Warn if defaults are used
 [[ "$DB_NAME" == "clusteriq" ]] && { echo -e "[\033[33m⚠️ \033[0m] Using default DB_NAME: clusteriq"; }
 [[ "$DB_USER" == "postgres" ]] && { echo -e "[\033[33m⚠️ \033[0m] Using default DB_USER: postgres"; }
