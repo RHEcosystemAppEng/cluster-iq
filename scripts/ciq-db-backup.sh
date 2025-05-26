@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Default values
 DB_NAME="clusteriq"
