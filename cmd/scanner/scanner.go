@@ -108,45 +108,62 @@ func (s *Scanner) readCloudProviderAccounts() error {
 
 // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
-	for i := range s.inventory.Accounts {
-		account := s.inventory.Accounts[i]
+	var validStockers []stocker.Stocker
+	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
 		case inventory.AWSProvider:
-			s.logger.Info("Adding the AWS account to be inventoried", zap.String("account", account.Name))
+			s.logger.Info("Processing AWS account", zap.String("account", account.Name))
 
 			// AWS API Stoker
-			s.stockers = append(s.stockers, stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
-
+			awsStocker := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
+			if awsStocker == nil {
+				s.logger.Error("Failed to create AWS stocker; skipping this account",
+					zap.String("accountName", account.Name))
+				continue
+			}
+			validStockers = append(validStockers, awsStocker)
 			// AWS Billing API Stoker
 			if account.IsBillingEnabled() {
 				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.Name))
 				instancesToScan, err := s.getInstancesForBillingUpdate()
 				if err != nil {
-					s.logger.Error("Cannot obtain the list of instances for obtainning the billing information on AWS CostExplorer")
+					s.logger.Error("Failed to retrieve the list of instances required for billing information from AWS Cost Explorer.",
+						zap.String("accountName", account.Name))
 				} else {
 					s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
 				}
 			}
 		case inventory.GCPProvider:
-			logger.Warn("Failed to scan GCP account",
+			s.logger.Warn("Failed to scan GCP account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when GCP Stocker is implemented
-			// s.stockers = append(s.stockers, stocker.NewGCPStocker(&account, logger))
+			// gcpStocker = stocker.NewGCPStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
 		case inventory.AzureProvider:
-			logger.Warn("Failed to scan Azure account",
+			s.logger.Warn("Failed to scan Azure account",
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when Azure Stocker is implemented
-			// s.stockers = append(s.stockers, stocker.NewAzureStocker(&account, logger))
+			// azureStocker = stocker.NewAzureStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
+
+		default:
+			s.logger.Warn("Unsupported cloud provider, skipping account",
+				zap.String("accountName", account.Name),
+				zap.String("provider", string(account.Provider)))
+			continue
 		}
 	}
 
+	s.stockers = validStockers
+	s.logger.Info("Account registration complete",
+		zap.Int("registeredAccounts", len(s.stockers)),
+		zap.Int("skippedAccounts", len(s.inventory.Accounts)-len(s.stockers)),
+	)
 	// If there are no stockers, nothing to do
 	if len(s.stockers) == 0 {
-		return fmt.Errorf("Any account has been provided for scanning on credentials file")
+		return fmt.Errorf("No valid accounts found for scanning")
 	}
 
 	// Checking the logLevel before entering on the For loop for optimization
