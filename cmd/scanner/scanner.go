@@ -115,10 +115,11 @@ func (s *Scanner) createStockers() error {
 			s.logger.Info("Processing AWS account", zap.String("account", account.Name))
 
 			// AWS API Stoker
-			awsStocker := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
-			if awsStocker == nil {
+			awsStocker, err := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
+			if err != nil {
 				s.logger.Error("Failed to create AWS stocker; skipping this account",
-					zap.String("accountName", account.Name))
+					zap.String("accountName", account.Name),
+					zap.Error(err))
 				continue
 			}
 			validStockers = append(validStockers, awsStocker)
