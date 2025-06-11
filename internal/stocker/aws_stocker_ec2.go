@@ -7,12 +7,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: doc
+// TODO: processRegion gets from EC2 API the list of the instances running for the specified region, and runs its processing to group them by clusterID
 func (s *AWSStocker) processRegion(region string) error {
 	if err := s.conn.SetRegion(region); err != nil {
 		return err
 	}
-	s.logger.Info("Scraping region", zap.String("region", s.conn.GetRegion()), zap.String("account", s.Account.Name))
+	s.logger.Info("Scraping region", zap.String("account", s.Account.Name), zap.String("region", s.conn.GetRegion()))
 
 	instances, err := s.conn.EC2.GetInstances()
 	if err != nil {
@@ -34,7 +34,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 		clusterName := inventory.GetClusterNameFromTags(instance.Tags)
 		if s.skipNoOpenShiftInstances && clusterName == inventory.UnknownClusterNameCode {
 			s.logger.Debug("Skipping instance because it's not associated to any cluster",
-				zap.String("account_id", s.Account.ID),
+				zap.String("account", s.Account.Name),
 				zap.String("instance_id", instance.ID),
 				zap.String("region", instance.AvailabilityZone))
 			continue
@@ -46,7 +46,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			s.Account.Name,
 		)
 		if err != nil {
-			s.logger.Error("Error obtainning ClusterID for a new instance add", zap.Error(err))
+			s.logger.Error("Error obtaining ClusterID for a new instance add", zap.String("account", s.Account.Name), zap.Error(err))
 		}
 
 		instances[i].ClusterID = clusterID

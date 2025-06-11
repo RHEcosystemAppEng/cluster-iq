@@ -42,7 +42,7 @@ func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instan
 
 // Connect initialices the AWS API and CostExplorer sessions and clients
 func (s *AWSBillingStocker) Connect() error {
-	s.logger.Info("AWS Session created", zap.String("account_id", s.Account.Name))
+	s.logger.Info("AWS Session created", zap.String("account", s.Account.Name))
 	return nil
 }
 
