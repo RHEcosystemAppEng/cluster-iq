@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
@@ -180,11 +181,34 @@ func (s *Scanner) createStockers() error {
 
 // startStockers runs every stocker instance
 func (s *Scanner) startStockers() error {
+	var wg sync.WaitGroup
+	done := make(chan struct{})
+	errChan := make(chan error, len(s.stockers))
+
+	// Running Stockers.MakeStock procedure on parallel
 	for _, stockerInstance := range s.stockers {
-		err := stockerInstance.MakeStock()
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := stockerInstance.MakeStock()
+			if err != nil {
+				errChan <- err
+			}
+		}()
+	}
+
+	// Waiting for every Stock
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	// Processing errors when every stocker has finished
+	select {
+	case <-done:
+		close(errChan)
+	case err := <-errChan:
+		s.logger.Error("Stocker Error", zap.Error(err))
 	}
 	return nil
 }
