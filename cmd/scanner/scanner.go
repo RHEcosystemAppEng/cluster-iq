@@ -186,7 +186,6 @@ func (s *Scanner) createStockers() error {
 // startStockers runs every stocker instance
 func (s *Scanner) startStockers() error {
 	var wg sync.WaitGroup
-	done := make(chan struct{})
 	errChan := make(chan error, len(s.stockers))
 
 	// Running Stockers.MakeStock procedure on parallel
@@ -203,16 +202,24 @@ func (s *Scanner) startStockers() error {
 	// Waiting for every Stock
 	go func() {
 		wg.Wait()
-		close(done)
+		close(errChan)
 	}()
 
-	// Processing errors when every stocker has finished
-	select {
-	case <-done:
-		close(errChan)
-	case err := <-errChan:
-		s.logger.Error("Stocker Error", zap.Error(err))
+	// Collecting stockers errors
+	var errorList []error
+	for err := range errChan {
+		errorList = append(errorList, err)
 	}
+
+	// Processing errors when every stocker has finished
+	if len(errorList) > 0 {
+		for _, err := range errorList {
+			s.logger.Error("Stocker Error", zap.Error(err))
+		}
+		return fmt.Errorf("Error when running Scanner stockers. Failed Stockers: (%d)")
+	}
+
+	s.logger.Info("Stockers executed correctly")
 	return nil
 }
 
@@ -305,8 +312,7 @@ func postExpenses(expenses []inventory.Expense) error {
 // This function parallelizes the post operations creating a thread by account(or stocker)
 func (s *Scanner) postScannerInventory() error {
 	var wg sync.WaitGroup
-	done := make(chan struct{})
-	errChan := make(chan error, len(s.stockers))
+	errChan := make(chan error, len(s.inventory.Accounts))
 
 	for _, account := range s.inventory.Accounts {
 		wg.Add(1)
@@ -318,19 +324,24 @@ func (s *Scanner) postScannerInventory() error {
 		}()
 
 	}
-
 	// Waiting for every Stock
 	go func() {
 		wg.Wait()
-		close(done)
+		close(errChan)
 	}()
 
-	// Processing errors when every stocker has finished
-	select {
-	case <-done:
-		close(errChan)
-	case err := <-errChan:
-		s.logger.Error("Stocker Error", zap.Error(err))
+	// Collecting account posting errors
+	var errorList []error
+	for err := range errChan {
+		errorList = append(errorList, err)
+	}
+
+	// Processing errors when every post account operation has finished
+	if len(errorList) > 0 {
+		for _, err := range errorList {
+			s.logger.Error("Post Account Error", zap.Error(err))
+		}
+		return fmt.Errorf("Error when posting Scanner inventory")
 	}
 
 	s.logger.Info("Inventory posted correctly")
