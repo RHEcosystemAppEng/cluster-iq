@@ -54,7 +54,7 @@ func (s *AWSStocker) MakeStock() error {
 		return err
 	}
 
-	// TODO: Can we paralelize this?
+	// This loop cannot be parallelize because the AWSStocker object has only one "conn" and it depends on the configured region
 	for _, region := range regions {
 		err := s.processRegion(region)
 		if err != nil {
@@ -75,12 +75,12 @@ func (s *AWSStocker) MakeStock() error {
 	return nil
 }
 
-// TODO: Prints the Account Stock
+// PrintStock Prints the Account Stock
 func (s AWSStocker) PrintStock() {
 	s.Account.PrintAccount()
 }
 
-// TODO: Returns the Account was scanned on this stocker
+// GetResults Returns the Account was scanned on this stocker
 func (s AWSStocker) GetResults() inventory.Account {
 	return *s.Account
 }

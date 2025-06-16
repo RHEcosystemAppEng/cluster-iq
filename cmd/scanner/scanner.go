@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
@@ -41,6 +42,9 @@ var (
 
 	// HTTP Client for connecting the scanner to the API
 	client http.Client
+
+	// API URL as global var for postData function
+	APIURL string
 )
 
 // Scanner models the cloud agnostic Scanner for looking up OCP deployments
@@ -61,6 +65,7 @@ func NewScanner(cfg *config.ScannerConfig, logger *zap.Logger) *Scanner {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client = http.Client{Transport: tr}
+	APIURL = cfg.APIURL
 
 	return &Scanner{
 		inventory: *inventory.NewInventory(),
@@ -184,152 +189,185 @@ func (s *Scanner) createStockers() error {
 
 // startStockers runs every stocker instance
 func (s *Scanner) startStockers() error {
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(s.stockers))
+
+	// Running Stockers.MakeStock procedure on parallel
 	for _, stockerInstance := range s.stockers {
-		err := stockerInstance.MakeStock()
-		if err != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := stockerInstance.MakeStock(); err != nil {
+				errChan <- err
+			}
+		}()
+	}
+
+	// Waiting for every Stock
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	// Collecting stockers errors
+	var errorList []error
+	for err := range errChan {
+		errorList = append(errorList, err)
+	}
+
+	// Processing errors when every stocker has finished
+	if len(errorList) > 0 {
+		for _, err := range errorList {
+			s.logger.Error("Stocker Error", zap.Error(err))
+		}
+		return fmt.Errorf("Error when running Scanner stockers. Failed Stockers: (%d)")
+	}
+
+	s.logger.Info("Stockers executed correctly")
+	return nil
+}
+
+// postNewAccount posts into the API an account, its clusters, instances and expenses
+func (s *Scanner) postNewAccount(account inventory.Account) error {
+	s.logger.Debug("Posting new Account", zap.String("account", account.Name))
+
+	// Converting to Array because API handler assumes a list of accounts
+	var accounts []inventory.Account
+	accounts = append(accounts, account)
+	b, err := json.Marshal(accounts)
+	if err != nil {
+		s.logger.Error("Failed to marshal account", zap.String("account", account.Name), zap.Error(err))
+		return err
+	}
+
+	// Posting Account data
+	if err := postData(apiAccountEndpoint, b); err != nil {
+		return err
+	}
+
+	var clusters []inventory.Cluster
+	var instances []inventory.Instance
+	var expenses []inventory.Expense
+	for _, cluster := range account.Clusters {
+		for _, instance := range cluster.Instances {
+			for _, expense := range instance.Expenses {
+				expenses = append(expenses, expense)
+			}
+			instances = append(instances, instance)
+
+		}
+		clusters = append(clusters, *cluster)
+	}
+
+	// Posting Clusters
+	if len(clusters) > 0 {
+		if err := postClusters(clusters); err != nil {
+			return err
+		}
+	}
+
+	// Posting Instances
+	if len(instances) > 0 {
+		if err := postInstances(instances); err != nil {
+			return err
+		}
+	}
+
+	// Posting Expenses
+	if len(expenses) > 0 {
+		if err := postExpenses(expenses); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// postNewInstance posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewInstances(instances []inventory.Instance) error {
-	s.logger.Debug("Posting new Instances")
-	b, err := json.Marshal(instances)
-	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiInstanceEndpoint)
-
-	return postData(requestURL, b, s.logger)
-}
-
-// postNewInstance posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewExpenses(expenses []inventory.Expense) error {
-	s.logger.Debug("Posting new Expenses")
-	b, err := json.Marshal(expenses)
-	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
-		return err
-	}
-
-	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiExpenseEndpoint)
-
-	return postData(requestURL, b, s.logger)
-}
-
-// postNewCluster posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewClusters(clusters []inventory.Cluster) error {
-	s.logger.Debug("Posting new Clusters")
+// postClusters posts into the API, the new instances obtained after scanning
+func postClusters(clusters []inventory.Cluster) error {
 	b, err := json.Marshal(clusters)
 	if err != nil {
-		logger.Error("Failed to marshal inventory data from database", zap.Error(err))
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiClusterEndpoint)
-
-	return postData(requestURL, b, s.logger)
+	return postData(apiClusterEndpoint, b)
 }
 
-// postNewAccount posts into the API, the new instances obtained after scanning
-func (s *Scanner) postNewAccounts(accounts []inventory.Account) error {
-	s.logger.Debug("Posting new Accounts")
-	b, err := json.Marshal(accounts)
+// postInstances posts into the API, the instances obtained after scanning
+func postInstances(instances []inventory.Instance) error {
+	b, err := json.Marshal(instances)
 	if err != nil {
-		s.logger.Error("Failed to marshal inventory data from database", zap.Error(err))
 		return err
 	}
 
-	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiAccountEndpoint)
-
-	return postData(requestURL, b, s.logger)
+	return postData(apiInstanceEndpoint, b)
 }
 
-func postData(url string, b []byte, logger *zap.Logger) error {
+// postExpenses posts into the API, the expenses obtained after scanning
+func postExpenses(expenses []inventory.Expense) error {
+	b, err := json.Marshal(expenses)
+	if err != nil {
+		return err
+	}
+
+	return postData(apiExpenseEndpoint, b)
+}
+
+// postScannerInventory posts to ClusterIQ API the information obtained of the scanning process
+// This function parallelizes the post operations creating a thread by account(or stocker)
+func (s *Scanner) postScannerInventory() error {
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(s.inventory.Accounts))
+
+	for _, account := range s.inventory.Accounts {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := s.postNewAccount(*account); err != nil {
+				errChan <- err
+			}
+		}()
+
+	}
+	// Waiting for every Stock
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	// Collecting account posting errors
+	var errorList []error
+	for err := range errChan {
+		errorList = append(errorList, err)
+	}
+
+	// Processing errors when every post account operation has finished
+	if len(errorList) > 0 {
+		for _, err := range errorList {
+			s.logger.Error("Post Account Error", zap.Error(err))
+		}
+		return fmt.Errorf("Error when posting Scanner inventory")
+	}
+
+	s.logger.Info("Inventory posted correctly")
+	return nil
+}
+
+func postData(path string, b []byte) error {
+	url := fmt.Sprintf("%s%s", APIURL, path)
 	request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(b))
 	if err != nil {
-		logger.Error("Failed to create request", zap.Error(err))
-		return fmt.Errorf("creating request: %w", err)
+		return err
 	}
 
 	response, err := client.Do(request)
 	if response != nil {
 		defer response.Body.Close()
-		if err != nil {
-			logger.Error("Request Failed", zap.String("response", response.Status), zap.Error(err))
-			return err
-		}
-	} else if err != nil {
-		logger.Error("Can't request to API. Response is Null", zap.Error(err))
+	}
+	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (s *Scanner) postScannerResults() error {
-	var accounts []inventory.Account
-	var clusters []inventory.Cluster
-	var instances []inventory.Instance
-	var expenses []inventory.Expense
-	for _, account := range s.inventory.Accounts {
-		for _, cluster := range account.Clusters {
-			for _, instance := range cluster.Instances {
-				for _, expense := range instance.Expenses {
-					expenses = append(expenses, expense)
-				}
-				instances = append(instances, instance)
-
-			}
-			clusters = append(clusters, *cluster)
-		}
-		accounts = append(accounts, *account)
-	}
-
-	var lenAccounts int = len(accounts)
-	var lenClusters int = len(clusters)
-	var lenInstances int = len(instances)
-	var lenExpenses int = len(expenses)
-
-	if lenAccounts > 0 {
-		if err := s.postNewAccounts(accounts); err != nil {
-			return err
-		}
-	}
-
-	if lenClusters > 0 {
-		if err := s.postNewClusters(clusters); err != nil {
-			return err
-		}
-	}
-
-	if lenInstances > 0 {
-		if err := s.postNewInstances(instances); err != nil {
-			return err
-		}
-	}
-
-	if lenExpenses > 0 {
-		if err := s.postNewExpenses(expenses); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// signalHandler for managing incoming OS signals
-func signalHandler(sig os.Signal) {
-	if sig == syscall.SIGTERM {
-		logger.Fatal("SIGTERM signal received. Stopping ClusterIQ Scanner")
-		os.Exit(0)
-	}
-
-	logger.Warn("Ignoring signal: ", zap.String("signal_id", sig.String()))
 }
 
 // getInstances fetches instances from the backend API
@@ -386,6 +424,16 @@ func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 	return instances, nil
 }
 
+// signalHandler for managing incoming OS signals
+func signalHandler(sig os.Signal) {
+	if sig == syscall.SIGTERM {
+		logger.Fatal("SIGTERM signal received. Stopping ClusterIQ Scanner")
+		os.Exit(0)
+	}
+
+	logger.Warn("Ignoring signal: ", zap.String("signal_id", sig.String()))
+}
+
 // Main method
 func main() {
 	// Ignore Logger sync error
@@ -439,7 +487,7 @@ func main() {
 
 	// Writing into DB
 	scan.inventory.PrintInventory()
-	if err := scan.postScannerResults(); err != nil {
+	if err := scan.postScannerInventory(); err != nil {
 		logger.Error("Can't post scanned results", zap.Error(err))
 		return
 	}
