@@ -220,7 +220,7 @@ func (s *Scanner) startStockers() error {
 		for _, err := range errorList {
 			s.logger.Error("Stocker Error", zap.Error(err))
 		}
-		return fmt.Errorf("Error when running Scanner stockers. Failed Stockers: (%d)")
+		return fmt.Errorf("Error when running Scanner stockers. Failed Stockers: (%d)", len(errorList))
 	}
 
 	s.logger.Info("Stockers executed correctly")
