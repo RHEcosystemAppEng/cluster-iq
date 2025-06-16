@@ -113,6 +113,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 
 // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
+	var skippedAccounts int = 0
 	var validStockers []stocker.Stocker
 	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
@@ -123,20 +124,22 @@ func (s *Scanner) createStockers() error {
 			awsStocker, err := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
 			if err != nil {
 				s.logger.Error("Failed to create AWS stocker; skipping this account",
-					zap.String("accountName", account.Name),
+					zap.String("account", account.Name),
 					zap.Error(err))
+				skippedAccounts++
 				continue
 			}
 			validStockers = append(validStockers, awsStocker)
+
 			// AWS Billing API Stoker
 			if account.IsBillingEnabled() {
 				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.Name))
 				instancesToScan, err := s.getInstancesForBillingUpdate()
 				if err != nil {
 					s.logger.Error("Failed to retrieve the list of instances required for billing information from AWS Cost Explorer.",
-						zap.String("accountName", account.Name))
+						zap.String("account", account.Name))
 				} else {
-					s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+					validStockers = append(validStockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
 				}
 			}
 		case inventory.GCPProvider:
@@ -156,7 +159,7 @@ func (s *Scanner) createStockers() error {
 
 		default:
 			s.logger.Warn("Unsupported cloud provider, skipping account",
-				zap.String("accountName", account.Name),
+				zap.String("account", account.Name),
 				zap.String("provider", string(account.Provider)))
 			continue
 		}
@@ -164,9 +167,10 @@ func (s *Scanner) createStockers() error {
 
 	s.stockers = validStockers
 	s.logger.Info("Account registration complete",
-		zap.Int("registeredAccounts", len(s.stockers)),
-		zap.Int("skippedAccounts", len(s.inventory.Accounts)-len(s.stockers)),
-	)
+		zap.Int("registeredAccounts", len(s.inventory.Accounts)),
+		zap.Int("registeredStockers", len(s.stockers)),
+		zap.Int("skippedAccounts", skippedAccounts))
+
 	// If there are no stockers, nothing to do
 	if len(s.stockers) == 0 {
 		return fmt.Errorf("No valid accounts found for scanning")
@@ -216,7 +220,7 @@ func (s *Scanner) startStockers() error {
 		for _, err := range errorList {
 			s.logger.Error("Stocker Error", zap.Error(err))
 		}
-		return fmt.Errorf("Error when running Scanner stockers. Failed Stockers: (%d)")
+		return fmt.Errorf("Error when running Scanner stockers. Failed Stockers: (%d)", len(errorList))
 	}
 
 	s.logger.Info("Stockers executed correctly")

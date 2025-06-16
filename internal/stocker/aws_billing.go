@@ -25,10 +25,16 @@ type AWSBillingStocker struct {
 
 // NewAWSBillingStocker create and returns a pointer to a new AWSBillingStocker instance
 func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instances []inventory.Instance) *AWSBillingStocker {
+	// Check if there are instances to get billing information
+	if len(instances) == 0 {
+		logger.Error("No instances to get billing information")
+		return nil
+	}
+
 	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
 	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithCostExplorer())
 	if err != nil {
-		logger.Error("Error creating a new AWSBillingStocker", zap.Error(err))
+		logger.Error("Error creating a new AWSBillingStocker", zap.String("account", account.Name), zap.Error(err))
 		return nil
 	}
 
@@ -58,6 +64,7 @@ func (s *AWSBillingStocker) MakeStock() error {
 					err := s.getInstanceExpenses(instance)
 					if err != nil {
 						s.logger.Error("Error querying billing info for an instance",
+							zap.String("account", s.Account.Name),
 							zap.String("instance_id", instance.ID),
 							zap.String("reason", err.Error()),
 						)
@@ -76,7 +83,6 @@ func (s *AWSBillingStocker) MakeStock() error {
 }
 
 // getInstanceExpenses gets from the AWS CostExplorer API the expenses of a given Instance.
-// TODO: Calculate date intervals
 func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) error {
 	// Logic for Setting the period to fetch the Expenses within
 	// End date is equivalent to today's date
@@ -85,6 +91,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	endDate := time.Now().Format("2006-01-02")
 
 	s.logger.Debug("Getting expenses for instance",
+		zap.String("account", s.Account.Name),
 		zap.String("instance_id", instance.ID),
 		zap.String("start_date", startDate),
 		zap.String("end_date", endDate),
@@ -109,7 +116,10 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	// Fetch the Costs from AWS API
 	result, err := s.conn.CostExplorer.GetCostAndUsageWithResources(input)
 	if err != nil {
-		s.logger.Error("Error getting cost and usage with resources", zap.String("instance_id", instance.ID), zap.Error(err))
+		s.logger.Error("Error getting cost and usage with resources",
+			zap.String("account", s.Account.Name),
+			zap.String("instance_id", instance.ID),
+			zap.Error(err))
 		return err
 	}
 
@@ -120,14 +130,20 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 				// Getting Expense ammount as float64
 				amount, err := strconv.ParseFloat(*singleCost.Amount, 64)
 				if err != nil {
-					s.logger.Error("Error parsing cost amount", zap.Float64("amount", amount), zap.Error(err))
+					s.logger.Error("Error parsing cost amount",
+						zap.String("account", s.Account.Name),
+						zap.Float64("amount", amount),
+						zap.Error(err))
 					return err
 				}
 
 				// Getting Expense Date as Time
 				expenseDate, err := time.Parse(time.RFC3339, *resultByTime.TimePeriod.Start)
 				if err != nil {
-					s.logger.Error("Error parsing start date", zap.String("start", *resultByTime.TimePeriod.Start), zap.Error(err))
+					s.logger.Error("Error parsing start date",
+						zap.String("account", s.Account.Name),
+						zap.String("start", *resultByTime.TimePeriod.Start),
+						zap.Error(err))
 					return err
 				}
 
