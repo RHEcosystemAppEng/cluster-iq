@@ -50,10 +50,10 @@ CREATE TABLE IF NOT EXISTS accounts (
   provider TEXT REFERENCES providers(name),
   cluster_count INTEGER,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
-  total_cost REAL DEFAULT 0.0,
-  last_15_days_cost REAL DEFAULT 0.0,
-  last_month_cost REAL DEFAULT 0.0,
-  current_month_so_far_cost REAL DEFAULT 0.0
+  total_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_15_days_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_month_cost NUMERIC(12,2) DEFAULT 0.0,
+  current_month_so_far_cost NUMERIC(12,2) DEFAULT 0.0
 );
 
 
@@ -73,10 +73,10 @@ CREATE TABLE IF NOT EXISTS clusters (
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
   owner TEXT,
-  total_cost REAL DEFAULT 0.0,
-  last_15_days_cost REAL DEFAULT 0.0 ,
-  last_month_cost REAL DEFAULT 0.0,
-  current_month_so_far_cost REAL DEFAULT 0.0
+  total_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_15_days_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_month_cost NUMERIC(12,2) DEFAULT 0.0,
+  current_month_so_far_cost NUMERIC(12,2) DEFAULT 0.0
 );
 
 
@@ -92,8 +92,8 @@ CREATE TABLE IF NOT EXISTS instances (
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
-  daily_cost REAL DEFAULT 0.0,
-  total_cost REAL DEFAULT 0.0
+  daily_cost NUMERIC(12,2) DEFAULT 0.0,
+  total_cost NUMERIC(12,2) DEFAULT 0.0
 );
 
 
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS tags (
 CREATE TABLE IF NOT EXISTS expenses (
   instance_id TEXT REFERENCES instances(id),
   date DATE,
-  amount REAL,
+  amount NUMERIC(12,2) DEFAULT 0.0,
   PRIMARY KEY (instance_id, date)
 );
 
@@ -144,7 +144,7 @@ VALUES
 
 -- Scheduled actions
 CREATE TABLE IF NOT EXISTS schedule (
-  id SERIAL PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL,
   type TEXT REFERENCES action_types(name),
   time TIMESTAMP WITH TIME ZONE,
   cron_exp TEXT,
@@ -159,15 +159,15 @@ CREATE TABLE IF NOT EXISTS schedule (
 CREATE TABLE IF NOT EXISTS audit_logs (
   id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  triggered_by text NOT NULL,
-  action_name text NOT NULL,
-  resource_id text NOT NULL,
-  resource_type text NOT NULL,
-  result text NOT NULL,
-  description text NULL,
-  severity text DEFAULT 'info'::text NOT NULL,
+  triggered_by TEXT NOT NULL,
+  action_name TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  result TEXT NOT NULL,
+  description TEXT NULL,
+  severity TEXT DEFAULT 'info'::TEXT NOT NULL,
   CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT])))
 );
 
 -- ## Functions ##
