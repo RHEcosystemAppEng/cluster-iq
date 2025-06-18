@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS clusters (
   provider TEXT REFERENCES providers(name),
   status TEXT REFERENCES status(value),
   region TEXT,
-  account_name TEXT REFERENCES accounts(name),
+  account_name TEXT REFERENCES accounts(name) ON DELETE CASCADE,
   console_link TEXT,
   instance_count INTEGER,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS instances (
   instance_type TEXT,
   availability_zone TEXT,
   status TEXT REFERENCES status(value),
-  cluster_id TEXT REFERENCES clusters(id),
+  cluster_id TEXT REFERENCES clusters(id) ON DELETE CASCADE,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
@@ -101,14 +101,14 @@ CREATE TABLE IF NOT EXISTS instances (
 CREATE TABLE IF NOT EXISTS tags (
   key TEXT,
   value TEXT,
-  instance_id TEXT REFERENCES instances(id),
+  instance_id TEXT REFERENCES instances(id) ON DELETE CASCADE,
   PRIMARY KEY (key, instance_id)
 );
 
 
 -- Instances expenses
 CREATE TABLE IF NOT EXISTS expenses (
-  instance_id TEXT REFERENCES instances(id),
+  instance_id TEXT REFERENCES instances(id) ON DELETE CASCADE,
   date DATE,
   amount NUMERIC(12,2) DEFAULT 0.0,
   PRIMARY KEY (instance_id, date)
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS schedule (
   time TIMESTAMP WITH TIME ZONE,
   cron_exp TEXT,
   operation TEXT REFERENCES action_operations(name),
-  target TEXT REFERENCES clusters(id),
+  target TEXT REFERENCES clusters(id) ON DELETE CASCADE,
   status TEXT REFERENCES action_status(name),
   enabled BOOLEAN
 );
