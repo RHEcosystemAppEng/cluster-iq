@@ -242,11 +242,35 @@ $$
 BEGIN
   UPDATE clusters
   SET
-    total_cost = (SELECT COALESCE(SUM(total_cost), 0) as sum FROM instances WHERE cluster_id = NEW.cluster_id),
-    last_15_days_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND expenses.date >= NOW()::date - interval '15 day'),
-    last_month_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date))),
-    current_month_so_far_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
-  WHERE id = NEW.cluster_id;
+    total_cost = (
+      SELECT COALESCE(SUM(total_cost), 0) as sum
+      FROM instances
+      WHERE cluster_id = NEW.cluster_id
+    ),
+    last_15_days_cost = (
+      SELECT COALESCE(SUM(expenses.amount), 0)
+      FROM instances
+      JOIN expenses ON instances.id = expenses.instance_id
+      WHERE instances.cluster_id = NEW.cluster_id
+        AND expenses.date >= NOW()::date - interval '15 day'
+    ),
+    last_month_cost = (
+      SELECT COALESCE(SUM(expenses.amount), 0)
+      FROM instances
+      JOIN expenses ON instances.id = expenses.instance_id
+      WHERE instances.cluster_id = NEW.cluster_id
+        AND EXTRACT(YEAR FROM NOW()::date - interval '1 month') = EXTRACT(YEAR FROM expenses.date)
+        AND EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date)
+    ),
+    current_month_so_far_cost = (
+      SELECT COALESCE(SUM(expenses.amount), 0)
+      FROM instances
+      JOIN expenses ON instances.id = expenses.instance_id
+      WHERE instances.cluster_id = NEW.cluster_id
+        AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)
+      )
+    )
+    WHERE id = NEW.cluster_id;
   RETURN NEW;
 END;
 $$;
