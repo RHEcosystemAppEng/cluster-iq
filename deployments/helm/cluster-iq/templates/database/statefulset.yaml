@@ -57,12 +57,20 @@ spec:
             - name: {{ .Values.database.service.name }}
               containerPort: {{ .Values.database.service.port }}
               protocol: TCP
-          livenessProbe:
-            {{- toYaml .Values.database.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.database.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.database.resources | nindent 12 }}
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.database.service.port }}
+            {{- toYaml .Values.database.startupProbe | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.database.service.port }}
+            {{- toYaml .Values.database.readinessProbe | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.database.service.port }}
+            {{- toYaml .Values.database.livenessProbe | nindent 12 }}
           {{- with .Values.database.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
