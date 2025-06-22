@@ -6,7 +6,9 @@ metadata:
     {{- include "cluster-iq.labels" . | nindent 4 }}
     {{- include "cluster-iq.componentLabels" "api" | nindent 4 }}
 spec:
-  replicas: {{ .Values.api.replicaCount }}
+  {{- if not .Values.api.autoscaling.enabled }} # If HPA enabled, removing replicas to avoid escalation issues
+  replicas: {{ .Values.api.replicaCount | default 1}}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "cluster-iq.selectorLabels" . | nindent 6 }}
@@ -46,10 +48,21 @@ spec:
             - name: {{ .Values.api.service.name }}
               containerPort: {{ .Values.api.service.port }}
               protocol: TCP
-          livenessProbe:
-            {{- toYaml .Values.api.livenessProbe | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /api/v1/healthcheck
+              port: {{ .Values.api.service.port }}
+            {{- toYaml .Values.api.startupProbe | nindent 12 }}
           readinessProbe:
+            httpGet:
+              path: /api/v1/healthcheck
+              port: {{ .Values.api.service.port }}
             {{- toYaml .Values.api.readinessProbe | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /api/v1/healthcheck
+              port: {{ .Values.api.service.port }}
+            {{- toYaml .Values.api.livenessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
           {{- with .Values.api.volumeMounts }}
