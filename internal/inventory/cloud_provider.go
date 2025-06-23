@@ -25,6 +25,7 @@ func GetCloudProvider(provider string) CloudProvider {
 		return GCPProvider
 	case "AZURE":
 		return AzureProvider
+	default:
+		return UnknownProvider
 	}
-	return UnknownProvider
 }
