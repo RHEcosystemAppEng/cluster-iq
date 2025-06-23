@@ -75,7 +75,7 @@ func TestIsClusterStopped(t *testing.T) {
 		Name:        "testCluster",
 		InfraID:     "XXXX1",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
@@ -115,7 +115,7 @@ func TestIsClusterStopped(t *testing.T) {
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
@@ -140,7 +140,7 @@ func TestIsClusterStopped(t *testing.T) {
 
 	cluster.UpdateStatus()
 	if cluster.isClusterStopped() {
-		t.Errorf("Cluster not suppose to be Stopped. Have: %s, Expected: %s", cluster.Status, Unknown)
+		t.Errorf("Cluster not suppose to be Stopped. Have: %s, Expected: %s", cluster.Status, Stopped)
 	}
 }
 
@@ -151,7 +151,7 @@ func TestIsClusterRunning(t *testing.T) {
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
@@ -190,7 +190,7 @@ func TestIsClusterRunning(t *testing.T) {
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
@@ -214,8 +214,8 @@ func TestIsClusterRunning(t *testing.T) {
 	}
 
 	cluster.UpdateStatus()
-	if cluster.isClusterRunning() {
-		t.Error("Cluster Status not suppose to be Running")
+	if !cluster.isClusterRunning() {
+		t.Error("Cluster Status is supposed to be Running")
 	}
 }
 
@@ -226,52 +226,21 @@ func TestUpdateStatus(t *testing.T) {
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances:   []Instance{},
 	}
 	cluster.UpdateStatus()
-	if cluster.Status != Unknown {
-		t.Error("Cluster is not in Unknown status when it doesn't have any instances")
-	}
-
-	// Not enough instances
-	cluster = Cluster{
-		Name:        "testCluster",
-		Provider:    UnknownProvider,
-		Status:      Unknown,
-		Region:      "eu-west-1",
-		ConsoleLink: "http://url.com",
-		Instances: []Instance{
-			{
-				ID:               "01234",
-				Name:             "testInstance1",
-				AvailabilityZone: "eu-west-1a",
-				InstanceType:     "medium",
-				Status:           Running,
-				Tags:             []Tag{},
-			},
-			{
-				ID:               "12345",
-				Name:             "testInstance2",
-				AvailabilityZone: "eu-west-1a",
-				InstanceType:     "medium",
-				Status:           Running,
-				Tags:             []Tag{},
-			},
-		},
-	}
-	cluster.UpdateStatus()
-	if cluster.Status != Unknown {
-		t.Error("Cluster is not in Unknown status when it doesn't have minimum instances count")
+	if cluster.Status != Terminated {
+		t.Error("Cluster is not in Terminated status when it doesn't have any instances")
 	}
 
 	// Terminated Cluster
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
@@ -310,7 +279,7 @@ func TestUpdateStatus(t *testing.T) {
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
@@ -349,7 +318,7 @@ func TestUpdateStatus(t *testing.T) {
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{
@@ -422,7 +391,7 @@ func TestPrintCluster(t *testing.T) {
 	cluster = Cluster{
 		Name:        "testCluster",
 		Provider:    UnknownProvider,
-		Status:      Unknown,
+		Status:      Stopped,
 		Region:      "eu-west-1",
 		ConsoleLink: "http://url.com",
 		Instances: []Instance{

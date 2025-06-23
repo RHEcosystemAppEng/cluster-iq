@@ -12,7 +12,7 @@ var (
 	provider          CloudProvider  = AWSProvider
 	instanceType      string         = "medium"
 	availabilityZone  string         = "eu-west-1a"
-	status            InstanceStatus = Unknown
+	status            InstanceStatus = "Stopped"
 	clusterID         string         = "cluster-A01"
 	lastScanTimestamp time.Time
 	creationTimestamp time.Time
@@ -149,10 +149,10 @@ func TestUpdateCosts(t *testing.T) {
 
 func TestPrintInstance(t *testing.T) {
 	var tests = []struct {
-		instance *Instance
+		instance Instance
 	}{
 		{
-			&Instance{
+			Instance{
 				ID:                id,
 				Name:              name,
 				Provider:          provider,
@@ -168,7 +168,6 @@ func TestPrintInstance(t *testing.T) {
 				Tags:              tags,
 			},
 		},
-		{nil},
 	}
 
 	for _, test := range tests {
