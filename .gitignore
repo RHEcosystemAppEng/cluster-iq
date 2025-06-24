@@ -8,7 +8,6 @@ cmd/api/docs/
 # Exclude project folders
 secrets/
 backups/
-test/
 build/
 target/
 
