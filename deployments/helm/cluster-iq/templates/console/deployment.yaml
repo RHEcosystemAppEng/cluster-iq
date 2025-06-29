@@ -42,6 +42,21 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.console.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.console.service.port }}
+            {{- toYaml .Values.console.startupProbe | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.console.service.port }}
+            {{- toYaml .Values.console.readinessProbe | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.console.service.port }}
+            {{- toYaml .Values.console.livenessProbe | nindent 12 }}
           volumeMounts:
           - name: nginx-template
             mountPath: /etc/nginx/nginx.conf.template

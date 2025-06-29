@@ -9,6 +9,8 @@ spec:
   schedule: 0 0 * * *
   concurrencyPolicy: Allow
   suspend: false
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 5
   jobTemplate:
     spec:
       template:
@@ -28,6 +30,6 @@ spec:
                   readOnly: true
                   mountPath: /credentials
               imagePullPolicy: IfNotPresent
+              resources:
+                {{- toYaml .Values.scanner.resources | nindent 16 }}
           restartPolicy: OnFailure
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 5

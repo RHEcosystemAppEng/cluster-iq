@@ -48,6 +48,18 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.agent.resources | nindent 12 }}
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.agent.service.port }}
+            {{- toYaml .Values.agent.startupProbe | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.agent.service.port }}
+            {{- toYaml .Values.agent.readinessProbe | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.agent.service.port }}
+            {{- toYaml .Values.agent.livenessProbe | nindent 12 }}
           {{- with .Values.agent.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}

@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 const (
@@ -75,8 +76,11 @@ func NewAWSConnection(user string, password string, region string, opts ...AWSCo
 		opt(conn)
 	}
 
-	// If the STS service was enabled, get the accountID for fulfilling the data
 	if conn.STS != nil {
+		_, err := conn.STS.client.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+		if err != nil {
+			return nil, fmt.Errorf("credential validation failed: %w", err)
+		}
 		conn.accountID = conn.STS.getAWSAccountID()
 	}
 

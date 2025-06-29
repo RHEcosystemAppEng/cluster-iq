@@ -12,12 +12,12 @@ const (
 	AzureProvider = "Azure"
 	// GCPProvider - Google Cloud Platform Cloud Provider
 	GCPProvider = "GCP"
-	// UnknownProvider - Google Cloud Platform Cloud Provider
+	// UnknownProvider - Unknown Platform Cloud Provider
 	UnknownProvider = "UNKNOWN"
 )
 
-// GerProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
-func GetProvider(provider string) CloudProvider {
+// GetCloudProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
+func GetCloudProvider(provider string) CloudProvider {
 	switch strings.ToUpper(provider) {
 	case "AWS":
 		return AWSProvider
@@ -25,6 +25,7 @@ func GetProvider(provider string) CloudProvider {
 		return GCPProvider
 	case "AZURE":
 		return AzureProvider
+	default:
+		return UnknownProvider
 	}
-	return UnknownProvider
 }

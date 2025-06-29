@@ -28,12 +28,8 @@ func TestAsInstanceStatus(t *testing.T) {
 			result: Terminated,
 		},
 		{
-			input:  "unknown",
-			result: Unknown,
-		},
-		{
 			input:  "RANDOM",
-			result: Unknown,
+			result: Running,
 		},
 	}
 

@@ -50,10 +50,10 @@ CREATE TABLE IF NOT EXISTS accounts (
   provider TEXT REFERENCES providers(name),
   cluster_count INTEGER,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
-  total_cost REAL,
-  last_15_days_cost REAL,
-  last_month_cost REAL,
-  current_month_so_far_cost REAL
+  total_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_15_days_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_month_cost NUMERIC(12,2) DEFAULT 0.0,
+  current_month_so_far_cost NUMERIC(12,2) DEFAULT 0.0
 );
 
 
@@ -66,17 +66,17 @@ CREATE TABLE IF NOT EXISTS clusters (
   provider TEXT REFERENCES providers(name),
   status TEXT REFERENCES status(value),
   region TEXT,
-  account_name TEXT REFERENCES accounts(name),
+  account_name TEXT REFERENCES accounts(name) ON DELETE CASCADE,
   console_link TEXT,
   instance_count INTEGER,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
   owner TEXT,
-  total_cost REAL,
-  last_15_days_cost REAL,
-  last_month_cost REAL,
-  current_month_so_far_cost REAL
+  total_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_15_days_cost NUMERIC(12,2) DEFAULT 0.0,
+  last_month_cost NUMERIC(12,2) DEFAULT 0.0,
+  current_month_so_far_cost NUMERIC(12,2) DEFAULT 0.0
 );
 
 
@@ -88,12 +88,12 @@ CREATE TABLE IF NOT EXISTS instances (
   instance_type TEXT,
   availability_zone TEXT,
   status TEXT REFERENCES status(value),
-  cluster_id TEXT REFERENCES clusters(id),
+  cluster_id TEXT REFERENCES clusters(id) ON DELETE CASCADE,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
   creation_timestamp TIMESTAMP WITH TIME ZONE,
   age INT,
-  daily_cost REAL,
-  total_cost REAL
+  daily_cost NUMERIC(12,2) DEFAULT 0.0,
+  total_cost NUMERIC(12,2) DEFAULT 0.0
 );
 
 
@@ -101,16 +101,16 @@ CREATE TABLE IF NOT EXISTS instances (
 CREATE TABLE IF NOT EXISTS tags (
   key TEXT,
   value TEXT,
-  instance_id TEXT REFERENCES instances(id),
+  instance_id TEXT REFERENCES instances(id) ON DELETE CASCADE,
   PRIMARY KEY (key, instance_id)
 );
 
 
 -- Instances expenses
 CREATE TABLE IF NOT EXISTS expenses (
-  instance_id TEXT REFERENCES instances(id),
+  instance_id TEXT REFERENCES instances(id) ON DELETE CASCADE,
   date DATE,
-  amount REAL,
+  amount NUMERIC(12,2) DEFAULT 0.0,
   PRIMARY KEY (instance_id, date)
 );
 
@@ -144,12 +144,12 @@ VALUES
 
 -- Scheduled actions
 CREATE TABLE IF NOT EXISTS schedule (
-  id SERIAL PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   type TEXT REFERENCES action_types(name),
   time TIMESTAMP WITH TIME ZONE,
   cron_exp TEXT,
   operation TEXT REFERENCES action_operations(name),
-  target TEXT REFERENCES clusters(id),
+  target TEXT REFERENCES clusters(id) ON DELETE CASCADE,
   status TEXT REFERENCES action_status(name),
   enabled BOOLEAN
 );
@@ -159,15 +159,15 @@ CREATE TABLE IF NOT EXISTS schedule (
 CREATE TABLE IF NOT EXISTS audit_logs (
   id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  triggered_by text NOT NULL,
-  action_name text NOT NULL,
-  resource_id text NOT NULL,
-  resource_type text NOT NULL,
-  result text NOT NULL,
-  description text NULL,
-  severity text DEFAULT 'info'::text NOT NULL,
+  triggered_by TEXT NOT NULL,
+  action_name TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  result TEXT NOT NULL,
+  description TEXT NULL,
+  severity TEXT DEFAULT 'info'::TEXT NOT NULL,
   CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::text, 'instance'::text])))
+  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT])))
 );
 
 -- ## Functions ##
@@ -179,8 +179,13 @@ CREATE OR REPLACE FUNCTION update_instance_total_costs_after_insert()
 $$
 BEGIN
   UPDATE instances
-  SET total_cost = (SELECT SUM(amount) FROM expenses WHERE instance_id = NEW.instance_id)
-  WHERE id = NEW.instance_id;
+  SET
+    total_cost = (
+      SELECT SUM(amount)
+      FROM expenses
+      WHERE instance_id = NEW.instance_id
+    )
+    WHERE id = NEW.instance_id;
   RETURN NEW;
 END;
 $$;
@@ -193,8 +198,13 @@ CREATE OR REPLACE FUNCTION update_instance_total_costs_after_delete()
 $$
 BEGIN
   UPDATE instances
-  SET total_cost = (SELECT SUM(amount) FROM expenses WHERE instance_id = OLD.instance_id)
-  WHERE id = OLD.instance_id;
+  SET
+    total_cost = (
+      SELECT SUM(amount)
+      FROM expenses
+      WHERE instance_id = OLD.instance_id
+    )
+    WHERE id = OLD.instance_id;
   RETURN OLD;
 END;
 $$;
@@ -207,8 +217,13 @@ CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_insert()
 $$
 BEGIN
   UPDATE instances
-  SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = NEW.instance_id)
-  WHERE id = NEW.instance_id;
+  SET
+    daily_cost = (
+      SELECT COALESCE(SUM(amount)/NULLIF(COUNT(*), 0), 0)
+      FROM expenses
+      WHERE instance_id = NEW.instance_id
+    )
+    WHERE id = NEW.instance_id;
   RETURN NEW;
 END;
 $$;
@@ -221,8 +236,13 @@ CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_delete()
 $$
 BEGIN
   UPDATE instances
-  SET daily_cost = (SELECT SUM(amount)/count(*) FROM expenses WHERE instance_id = OLD.instance_id)
-  WHERE id = OLD.instance_id;
+  SET
+    daily_cost = (
+      SELECT COALESCE(SUM(amount)/NULLIF(COUNT(*), 0), 0)
+      FROM expenses
+      WHERE instance_id = NEW.instance_id
+    )
+    WHERE id = OLD.instance_id;
   RETURN OLD;
 END;
 $$;
@@ -236,11 +256,35 @@ $$
 BEGIN
   UPDATE clusters
   SET
-    total_cost = (SELECT COALESCE(SUM(total_cost), 0) as sum FROM instances WHERE cluster_id = NEW.cluster_id),
-    last_15_days_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND expenses.date >= NOW()::date - interval '15 day'),
-    last_month_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date))),
-    current_month_so_far_cost = (SELECT COALESCE(SUM(expenses.amount), 0) FROM instances JOIN expenses ON instances.id = expenses.instance_id WHERE instances.cluster_id = NEW.cluster_id AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)))
-  WHERE id = NEW.cluster_id;
+    total_cost = (
+      SELECT COALESCE(SUM(total_cost), 0) as sum
+      FROM instances
+      WHERE cluster_id = NEW.cluster_id
+    ),
+    last_15_days_cost = (
+      SELECT COALESCE(SUM(expenses.amount), 0)
+      FROM instances
+      JOIN expenses ON instances.id = expenses.instance_id
+      WHERE instances.cluster_id = NEW.cluster_id
+        AND expenses.date >= NOW()::date - interval '15 day'
+    ),
+    last_month_cost = (
+      SELECT COALESCE(SUM(expenses.amount), 0)
+      FROM instances
+      JOIN expenses ON instances.id = expenses.instance_id
+      WHERE instances.cluster_id = NEW.cluster_id
+        AND EXTRACT(YEAR FROM NOW()::date - interval '1 month') = EXTRACT(YEAR FROM expenses.date)
+        AND EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date)
+    ),
+    current_month_so_far_cost = (
+      SELECT COALESCE(SUM(expenses.amount), 0)
+      FROM instances
+      JOIN expenses ON instances.id = expenses.instance_id
+      WHERE instances.cluster_id = NEW.cluster_id
+        AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)
+      )
+    )
+    WHERE id = NEW.cluster_id;
   RETURN NEW;
 END;
 $$;
@@ -254,14 +298,51 @@ $$
 BEGIN
   UPDATE accounts
   SET
-    total_cost = (SELECT COALESCE(SUM(clusters.total_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
-    last_15_days_cost = (SELECT COALESCE(SUM(clusters.last_15_days_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
-    last_month_cost = (SELECT COALESCE(SUM(clusters.last_month_cost), 0) FROM clusters WHERE account_name = NEW.account_name),
-    current_month_so_far_cost = (SELECT COALESCE(SUM(clusters.current_month_so_far_cost), 0) FROM clusters WHERE account_name = NEW.account_name)
-  WHERE name = NEW.account_name;
+    total_cost = (
+      SELECT COALESCE(SUM(clusters.total_cost), 0)
+      FROM clusters
+      WHERE account_name = NEW.account_name
+    ),
+    last_15_days_cost = (
+      SELECT COALESCE(SUM(clusters.last_15_days_cost), 0)
+      FROM clusters
+      WHERE account_name = NEW.account_name
+    ),
+    last_month_cost = (
+      SELECT COALESCE(SUM(clusters.last_month_cost), 0)
+      FROM clusters
+      WHERE account_name = NEW.account_name
+    ),
+    current_month_so_far_cost = (
+      SELECT COALESCE(SUM(clusters.current_month_so_far_cost), 0)
+      FROM clusters
+      WHERE account_name = NEW.account_name
+    )
+    WHERE name = NEW.account_name;
   RETURN NEW;
 END;
 $$;
+
+-- ## Maintenance Functions ##
+-- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
+CREATE OR REPLACE FUNCTION check_terminated_instances()
+RETURNS void AS $$
+BEGIN
+  UPDATE instances
+  SET status = 'Terminated'
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Marks clusters as 'Terminated' if they haven't been scanned in the last 24 hours
+CREATE OR REPLACE FUNCTION check_terminated_clusters()
+RETURNS void AS $$
+BEGIN
+  UPDATE clusters
+  SET status = 'Terminated'
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+END;
+$$ LANGUAGE plpgsql;
 
 -- ## Triggers ##
 -- Trigger to update instance total cost after an expense is inserted
@@ -319,25 +400,3 @@ AFTER UPDATE
 ON clusters
 FOR EACH ROW
   EXECUTE PROCEDURE update_account_cost_info();
-
--- ## Maintenance Functions ##
--- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
-CREATE OR REPLACE FUNCTION check_terminated_instances()
-RETURNS void AS $$
-BEGIN
-  UPDATE instances
-  SET status = 'Terminated'
-  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
-END;
-$$ LANGUAGE plpgsql;
-
--- Marks clusters as 'Terminated' if they haven't been scanned in the last 24 hours
-CREATE OR REPLACE FUNCTION check_terminated_clusters()
-RETURNS void AS $$
-BEGIN
-  UPDATE clusters
-  SET status = 'Terminated'
-  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
-END;
-$$ LANGUAGE plpgsql;
---

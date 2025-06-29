@@ -128,12 +128,23 @@ restart-dev: stop-dev start-dev
 
 # Tests targets
 .PHONY: test
-test:
+tests_unit_tests: ## Runs the Unit tests for this project internal packages
 	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
-	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out
+	@go test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out
 
-cover: test
-	@go tool cover -func $(TEST_DIR)/cover.out
+tests_integration_tests: ## Runs the Integration tests for this project
+tests_integration_tests: restart-dev
+	@podman stop scanner
+	@echo -e "\n\n### [Running Integration tests] ###"
+	@go test -v -race ./test/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
+
+tests: ## Runs every test
+tests: tests_unit_tests tests_integration_tests
+
+tests_cover: ## Runs every test and reports about the coverage percentage
+tests_cover: tests
+	@go tool cover -func $(TEST_DIR)/cover-unit-tests.out
+	@go tool cover -func $(TEST_DIR)/cover-integration-tests.out
 
 
 # Documentation targets

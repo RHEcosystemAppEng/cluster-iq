@@ -57,7 +57,7 @@ services:
       - cluster_iq
 
   pgsql:
-    image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
+    image: registry.redhat.io/rhel8/postgresql-16:1-44.1749482738
     container_name: pgsql
     restart: always
     ports:
@@ -76,7 +76,7 @@ services:
       - cluster_iq
 
   init-pgsql:
-    image: registry.redhat.io/rhel8/postgresql-12@sha256:a6230cba71eb33e67fffc21161929de4bc618bc5e2f21fbec3c4c227205c2061
+    image: registry.redhat.io/rhel8/postgresql-16:1-44.1749482738
     container_name: init-pgsql
     restart: "no"
     command: |

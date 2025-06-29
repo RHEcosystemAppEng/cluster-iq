@@ -36,10 +36,9 @@ func NewTag(key string, value string, instanceID string) *Tag {
 
 // lookForTagByKey looks for a Tag based on its Key and returns a pointer to it
 func LookForTagByKey(key string, tags []Tag) *Tag {
-	var resultTag Tag
 	for _, tag := range tags {
 		if tag.Key == key {
-			return &resultTag
+			return &tag
 		}
 	}
 	return nil

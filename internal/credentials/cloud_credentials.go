@@ -28,7 +28,7 @@ func ReadCloudAccounts(credsFile string) ([]AccountConfig, error) {
 	for _, section := range cfg.Sections() {
 		account := AccountConfig{
 			Name:           section.Name(),
-			Provider:       inventory.GetProvider(section.Key("provider").String()),
+			Provider:       inventory.GetCloudProvider(section.Key("provider").String()),
 			User:           section.Key("user").String(),
 			Key:            section.Key("key").String(),
 			BillingEnabled: section.Key("billing_enabled").MustBool(),

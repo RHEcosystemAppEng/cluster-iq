@@ -1039,7 +1039,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 	err = json.Unmarshal(body, &accounts)
 	if err != nil {
 		a.logger.Error("Can't obtain data from body request", zap.Error(err))
-		c.PureJSON(http.StatusBadRequest, nil)
+		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
 		return
 	}
 

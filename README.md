@@ -2,7 +2,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/RHEcosystemAppEng/cluster-iq)](https://goreportcard.com/report/github.com/RHEcosystemAppEng/cluster-iq)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RHEcosystemAppEng/cluster-iq.svg)](https://pkg.go.dev/github.com/RHEcosystemAppEng/cluster-iq)
-
+[![Cluster IQ Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml)
 
 Cluster IQ is a tool for making stock of the Openshift Clusters and its
 resources running on the most common cloud providers and collects relevant
@@ -94,10 +94,8 @@ to configure:
     account before enabling it.
 
 ### Openshift Deployment
-Since version 0.3, ClusterIQ includes its own Helm Chart placed on
-`./deployments/helm/cluster-iq`.
-For more information about the
-   supported parameters, check the [Configuration Section](#configuration).
+Since version 0.3, ClusterIQ includes its own Helm Chart placed on `./deployments/helm/cluster-iq`.
+For more information about the supported parameters, check the [Configuration Section](#configuration).
 1. Prepare your cluster and CLI
     ```sh
     oc login ...
@@ -127,7 +125,7 @@ For more information about the
 5. Monitor every resource was created correctly:
     ```sh
     oc get pods -w -n $NAMESPACE
-    helm list
+    helm list -n $NAMESPACE
     ```
 
 6. Once every pod is up and running, trigger the scanner manually for
@@ -136,14 +134,25 @@ For more information about the
    oc create job --from=cronjob/scanner scanner-init -n $NAMESPACE
    ```
 
+### Uninstalling
+To uninstall ClusterIQ Helm chart, use the following commands
+```sh
+helm uninstall cluster-iq -n $NAMESPACE
+helm list -n $NAMESPACE
+```
 
 ## Local Deployment (for development)
 For deploying ClusterIQ in local for development purposes, check the following
 [document](./doc/development-setup.md)
 
+## DB Backup
+For backing up or restoring the ClusterIQ database, check the following
+[document](./doc/db-backup.md)
+This document also describes how to manage data migration when a new release of
+ClusterIQ changes DB data structure.
 
 
-### Configuration
+## Configuration
 Available configuration via Env Vars:
 | Key                                  | Value                                                 | Description                               |
 | ------------------------------------ | ----------------------------------------------------- | ----------------------------------------- |
@@ -197,7 +206,3 @@ make build-agent
 # Building in local
 make local-build-agent
 ```
-
----
-[![Cluster IQ Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml)
----
