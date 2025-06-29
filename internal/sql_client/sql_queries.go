@@ -542,4 +542,6 @@ const (
 
 	// CheckStatusQuery checks if the requested status exists on the DB
 	CheckStatusQuery = `SELECT EXISTS (SELECT 1 FROM status WHERE value=$1)`
+	// SelectScannerLastScanTimestamp returns the latest scan timestamp across all accounts
+	SelectScannerLastScanTimestamp = `SELECT MAX(last_scan_timestamp) as last_scan_timestamp FROM accounts;`
 )
