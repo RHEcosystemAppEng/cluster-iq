@@ -1,8 +1,9 @@
 package dto
 
 import (
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"time"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
 // ClusterDTO is the object to store Openshift Clusters and its properties
@@ -63,4 +64,27 @@ type ClusterDTO struct {
 
 	// ClusterDTO's instance (nodes) lists
 	Instances []Instance
+}
+
+// Cluster represents the data transfer object for a cluster.
+type Cluster struct {
+	ID                    string     `json:"id"`
+	Name                  string     `json:"name"`
+	InfraID               string     `json:"infra_id"`
+	Provider              string     `json:"provider"`
+	Status                string     `json:"status"`
+	Region                string     `json:"region"`
+	AccountName           string     `json:"account_name"`
+	ConsoleLink           string     `json:"console_link"`
+	InstanceCount         int        `json:"instance_count"`
+	LastScanTimestamp     time.Time  `json:"last_scan_timestamp"`
+	CreationTimestamp     time.Time  `json:"creation_timestamp"`
+	Age                   int        `json:"age"`
+	Owner                 string     `json:"owner"`
+	TotalCost             float64    `json:"total_cost"`
+	Last15DaysCost        float64    `json:"last_15_days_cost"`
+	LastMonthCost         float64    `json:"last_month_cost"`
+	CurrentMonthSoFarCost float64    `json:"current_month_so_far_cost"`
+	Instances             []Instance `json:"instances,omitempty"`
+	Tags                  []Tag      `json:"tags,omitempty"`
 }

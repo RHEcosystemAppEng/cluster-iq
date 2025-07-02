@@ -5,16 +5,17 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/router"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/router"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/database"
@@ -164,21 +165,17 @@ func (a APIServer) signalHandler(signal os.Signal) error {
 // @externalDocs.url			https://swagger.io/resources/open-api/
 func main() {
 	// Initialize logging configuration
-
-	// TODO. Looks like we get the loger level twice (from logger and from config)
 	logger := ciqLogger.NewLogger()
-
-	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
 
 	// Loading APIServer config
 	cfg, err := config.LoadAPIServerConfig()
 	if err != nil {
-		logger.Error("Error loading APIServer config", zap.Error(err))
-		return
+		logger.Fatal("Error loading APIServer config", zap.Error(err))
 	}
 	logger.Info("Configuration loaded successfully")
-	// Initializ database connection
+
+	// Initialize database connection
 	db, err := database.Connect(cfg.DBURL, logger)
 	if err != nil {
 		logger.Fatal("Could not establish database connection", zap.Error(err))
@@ -188,21 +185,45 @@ func main() {
 	// Initializing gRPC AgentClient
 	agentClient, err := clients.NewGRPCAgentClient(cfg.AgentURL, logger)
 	if err != nil {
-		//TODO Bad we can comnitune to work or retry
 		logger.Fatal("Failed to create gRPC client", zap.Error(err))
 	}
-	// Initializing repos
+
+	// Initializing repositories
+	accountRepo := repositories.NewAccountRepository(db)
 	clusterRepo := repositories.NewClusterRepository(db)
+	instanceRepo := repositories.NewInstanceRepository(db)
+	expenseRepo := repositories.NewExpenseRepository(db)
+	eventRepo := repositories.NewEventRepository(db)
+	actionRepo := repositories.NewActionRepository(db)
 
 	// Initializing services
+	accountSvc := services.NewAccountService(accountRepo)
+	clusterSvc := services.NewClusterService(clusterRepo, agentClient)
+	instanceSvc := services.NewInstanceService(instanceRepo)
+	expenseSvc := services.NewExpenseService(expenseRepo)
+	eventSvc := services.NewEventService(eventRepo)
+	actionSvc := services.NewActionService(actionRepo)
 
-	clusterService := services.NewClusterService(clusterRepo, agentClient)
-	clusterHandler := handlers.NewClusterHandler(clusterService, clusterRepo)
+	// Initializing handlers
+	accountHandler := handlers.NewAccountHandler(accountSvc)
+	clusterHandler := handlers.NewClusterHandler(clusterSvc)
+	instanceHandler := handlers.NewInstanceHandler(instanceSvc)
+	expenseHandler := handlers.NewExpenseHandler(expenseSvc)
+	eventHandler := handlers.NewEventHandler(eventSvc)
+	actionHandler := handlers.NewActionHandler(actionSvc)
+	healthCheckHandler := handlers.NewHealthCheckHandler(db, logger)
 
-	// Initialize dependencies
+	// Initialize dependencies for router
 	deps := router.Dependencies{
-		ClusterHandler: clusterHandler,
+		AccountHandler:     accountHandler,
+		ClusterHandler:     clusterHandler,
+		InstanceHandler:    instanceHandler,
+		ExpenseHandler:     expenseHandler,
+		EventHandler:       eventHandler,
+		ActionHandler:      actionHandler,
+		HealthCheckHandler: healthCheckHandler,
 	}
+
 	// Setup router
 	engine := setupGin(logger)
 	router.Setup(engine, deps)

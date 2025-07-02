@@ -4,7 +4,7 @@ package events
 import (
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/audit"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +18,7 @@ func NewEventService(sqlClient SQLEventClient, logger *zap.Logger) *EventService
 
 // LogEvent creates a new audit log entry and returns its ID.
 func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
-	event := models.AuditLog{
+	event := audit.AuditLog{
 		TriggeredBy:    opts.TriggeredBy,
 		ActionName:     opts.Action,
 		ResourceID:     opts.ResourceID,

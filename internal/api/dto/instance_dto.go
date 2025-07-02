@@ -1,11 +1,12 @@
 package dto
 
 import (
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"time"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
-// Instance model a cloud provider instance
+// Instance represents the data transfer object for an instance.
 type Instance struct {
 	// Uniq Identifier of the instance
 	ID string `json:"id"`
@@ -18,23 +19,23 @@ type Instance struct {
 	Provider inventory.CloudProvider `json:"provider"`
 
 	// Instance type/size/flavour
-	InstanceType string `json:"instanceType"`
+	InstanceType string `json:"instance_type"`
 
 	// Availability Zone in which the instance is running on
 	AvailabilityZone string `json:"availabilityZone"`
 
 	// Instance Status
 	//TODO
-	Status inventory.InstanceStatus `json:"status"`
+	Status string `json:"status"`
 
 	// ClusterID
-	ClusterID string `json:"clusterID"`
+	ClusterID string `json:"cluster_id"`
 
 	// Last scan timestamp of the instance
 	LastScanTimestamp time.Time `json:"lastScanTimestamp"`
 
 	// Timestamp when the instance was created
-	CreationTimestamp time.Time `json:"creationTimestamp"`
+	CreationTimestamp time.Time `json:"creation_timestamp"`
 
 	// Amount of days since the instance was created
 	Age int `json:"age"`

@@ -67,6 +67,12 @@ type Cluster struct {
 	Instances []Instance `db:"-"`
 }
 
+type ClusterSummary struct {
+	Running  int
+	Stopped  int
+	Archived int
+}
+
 // NewCluster creates a new cluster instance
 func NewCluster(name string, infraID string, provider CloudProvider, region string, accountName string, consoleLink string, owner string) *Cluster {
 	id, err := GenerateClusterID(name, infraID, accountName)

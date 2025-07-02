@@ -1,6 +1,6 @@
 package dto
 
-// Tag model generic tags as a Key-Value object
+// Tag represents the data transfer object for a tag.
 type Tag struct {
 	// Tag's key
 	Key string `json:"key"`
