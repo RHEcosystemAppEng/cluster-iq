@@ -506,7 +506,7 @@ func (a SQLClient) WriteExpenses(expenses []inventory.Expense) error {
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
 func (a SQLClient) GetInstances() ([]inventory.Instance, error) {
-	var dbinstances []models.InstanceDB
+	var dbinstances []models.Instance
 	if err := a.db.Select(&dbinstances, SelectInstancesQuery); err != nil {
 		return nil, err
 	}
@@ -536,7 +536,7 @@ func (a SQLClient) GetInstancesOverview() (models.InstancesSummary, error) {
 // - A slice of inventory.Instance objects (usually one element).
 // - An error if the query fails.
 func (a SQLClient) GetInstanceByID(instanceID string) ([]inventory.Instance, error) {
-	var dbinstances []models.InstanceDB
+	var dbinstances []models.Instance
 	if err := a.db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
 	}
@@ -618,109 +618,6 @@ func (a SQLClient) DeleteInstance(instanceID string) error {
 	return nil
 }
 
-// GetClusters retrieves all clusters from the database.
-//
-// Returns:
-// - A slice of inventory.Cluster objects.
-// - An error if the query fails.
-func (a SQLClient) GetClusters() ([]inventory.Cluster, error) {
-	var clusters []inventory.Cluster
-	if err := a.db.Select(&clusters, SelectClustersQuery); err != nil {
-		return nil, err
-	}
-	return clusters, nil
-}
-
-// GetClustersOverview returns a summary of cluster statuses
-// It counts the number of clusters that are running, stopped or terminated.
-func (a SQLClient) GetClustersOverview() (models.ClustersSummary, error) {
-	var clustersOverview models.ClustersSummary
-	if err := a.db.Get(&clustersOverview, SelectClustersOverview); err != nil {
-		return models.ClustersSummary{}, err
-	}
-	return clustersOverview, nil
-}
-
-// GetClusterAccountName retrieves the account name associated with a specific cluster.
-//
-// Parameters:
-// - clusterID: The unique identifier of the cluster.
-//
-// Returns:
-// - A string representing the account name.
-// - An error if the query fails or the cluster ID does not exist.
-func (a SQLClient) GetClusterAccountName(clusterID string) (string, error) {
-	var accountName string
-	if err := a.db.Get(&accountName, SelectClusterAccountNameQuery, clusterID); err != nil {
-		return "", err
-	}
-	return accountName, nil
-}
-
-// GetClusterRegion retrieves the region where a specific cluster is located.
-//
-// Parameters:
-// - clusterID: The unique identifier of the cluster.
-//
-// Returns:
-// - A string representing the region of the cluster.
-// - An error if the query fails or the cluster ID does not exist.
-func (a SQLClient) GetClusterRegion(clusterID string) (string, error) {
-	var region string
-	if err := a.db.Get(&region, SelectClusterRegionQuery, clusterID); err != nil {
-		return "", err
-	}
-	return region, nil
-}
-
-// GetClusterByID retrieves a cluster's details by its unique identifier.
-//
-// Parameters:
-// - clusterID: The unique identifier of the cluster.
-//
-// Returns:
-// - A slice containing a single inventory.Cluster object.
-// - An error if the query fails or the cluster ID does not exist.
-func (a SQLClient) GetClusterByID(clusterID string) ([]inventory.Cluster, error) {
-	var cluster inventory.Cluster
-	if err := a.db.Get(&cluster, SelectClustersByIDuery, clusterID); err != nil {
-		return nil, err
-	}
-	return []inventory.Cluster{cluster}, nil
-}
-
-// GetClusterTags retrieves the tags associated with a specific cluster.
-//
-// Parameters:
-// - clusterID: The unique identifier of the cluster.
-//
-// Returns:
-// - A slice of inventory.Tag objects representing the cluster's tags.
-// - An error if the query fails.
-func (a SQLClient) GetClusterTags(clusterID string) ([]inventory.Tag, error) {
-	var tags []inventory.Tag
-	if err := a.db.Select(&tags, SelectClusterTags, clusterID); err != nil {
-		return nil, err
-	}
-	return tags, nil
-}
-
-// GetInstancesOnCluster retrieves all instances belonging to a specific cluster.
-//
-// Parameters:
-// - clusterID: The unique identifier of the cluster.
-//
-// Returns:
-// - A slice of inventory.Instance objects representing the instances in the cluster.
-// - An error if the query fails.
-func (a SQLClient) GetInstancesOnCluster(clusterID string) ([]inventory.Instance, error) {
-	var instances []inventory.Instance
-	if err := a.db.Select(&instances, SelectInstancesOnClusterQuery, clusterID); err != nil {
-		return nil, err
-	}
-	return instances, nil
-}
-
 // WriteClusters inserts a list of clusters into the database in a transaction.
 //
 // Parameters:
@@ -752,34 +649,6 @@ func (a SQLClient) WriteClusters(clusters []inventory.Cluster) error {
 		return err
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// DeleteCluster deletes a cluster from the database.
-//
-// Parameters:
-// - clusterName: The name of the cluster to delete.
-//
-// Returns:
-// - An error if the database transaction fails.
-func (a SQLClient) DeleteCluster(clusterName string) error {
-	tx, err := a.db.Beginx()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil {
-				a.logger.Error("Failed to rollback DeleteCluster transaction", zap.Error(rbErr))
-			}
-		}
-	}()
-
-	tx.MustExec(DeleteClusterQuery, clusterName)
 	if err := tx.Commit(); err != nil {
 		return err
 	}
@@ -849,22 +718,6 @@ func (a SQLClient) GetAccountByName(accountName string) ([]inventory.Account, er
 		return nil, err
 	}
 	return []inventory.Account{account}, nil
-}
-
-// GetClustersOnAccount retrieves all clusters associated with a specific account.
-//
-// Parameters:
-// - accountName: The name of the account whose clusters will be retrieved.
-//
-// Returns:
-// - A slice of inventory.Cluster objects.
-// - An error if the query fails.
-func (a SQLClient) GetClustersOnAccount(accountName string) ([]inventory.Cluster, error) {
-	var clusters []inventory.Cluster
-	if err := a.db.Select(&clusters, SelectClustersOnAccountQuery, accountName); err != nil {
-		return nil, err
-	}
-	return clusters, nil
 }
 
 // WriteAccounts inserts multiple accounts into the database in a transaction.
@@ -1031,14 +884,14 @@ func (a SQLClient) CheckStatusValue(status string) (bool, error) {
 	return exists, nil
 }
 
-// joinInstancesTags maps an array of InstanceDB objects into a slice of inventory.Instance objects.
+// joinInstancesTags maps an array of Instance objects into a slice of inventory.Instance objects.
 //
 // Parameters:
-// - dbinstances: A slice of InstanceDB objects.
+// - dbinstances: A slice of Instance objects.
 //
 // Returns:
 // - A slice of inventory.Instance objects.
-func joinInstancesTags(dbinstances []models.InstanceDB) []inventory.Instance {
+func joinInstancesTags(dbinstances []models.Instance) []inventory.Instance {
 	instanceMap := make(map[string]*inventory.Instance)
 	for _, dbinstance := range dbinstances {
 		if _, ok := instanceMap[dbinstance.ID]; ok {

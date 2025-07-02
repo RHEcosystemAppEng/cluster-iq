@@ -10,7 +10,7 @@ import (
 
 type ScheduledActionListResponse struct {
 	Count   int              `json:"count,omitempty"` // Number of actions omitted if empty.
-	Actions []actions.Action `json:"actions"`         // List of actions
+	Actions []actions.Action `json:"actions"`         // ListClusters of actions
 }
 
 func NewScheduledActionListResponse(actionList []actions.Action) *ScheduledActionListResponse {
@@ -33,29 +33,6 @@ func NewScheduledActionListResponse(actionList []actions.Action) *ScheduledActio
 	return &response
 }
 
-// GenericErrorResponse represents a generic error response returned by the API.
-//
-// This structure is used to provide a consistent error message format in the API responses.
-// It includes a single field, `Message`, that contains a descriptive error message.
-type GenericErrorResponse struct {
-	Message string `json:"message"`
-}
-
-// NewGenericErrorResponse creates a new instance of GenericErrorResponse.
-//
-// This function is a utility for initializing a GenericErrorResponse with a specified error message.
-//
-// Parameters:
-// - message: The error message to include in the response.
-//
-// Returns:
-// - A pointer to a new GenericErrorResponse instance containing the provided message.
-func NewGenericErrorResponse(message string) *GenericErrorResponse {
-	return &GenericErrorResponse{
-		Message: message,
-	}
-}
-
 // HealthChecks represents the different health checks performed by the API.
 // It indicates the status of both the API and the database.
 type HealthChecks struct {
@@ -72,19 +49,19 @@ type HealthCheckResponse struct {
 // TagListResponse represents the API response containing a list of tags.
 type TagListResponse struct {
 	Count int             `json:"count,omitempty"` // Number of tags, omitted if empty.
-	Tags  []inventory.Tag `json:"tags"`            // List of tags.
+	Tags  []inventory.Tag `json:"tags"`            // ListClusters of tags.
 }
 
 // EventsListResponse represents the API response containing a list of resource-specific audit events.
 type EventsListResponse struct {
 	Count  int                 `json:"count,omitempty"` // Number of events, omitted if empty.
-	Events []events.AuditEvent `json:"events"`          // List of events.
+	Events []events.AuditEvent `json:"events"`          // ListClusters of events.
 }
 
 // SystemEventsListResponse represents the API response containing a list of system-wide audit events.
 type SystemEventsListResponse struct {
 	Count  int                       `json:"count,omitempty"` // Number of events, omitted if empty.
-	Events []events.SystemAuditEvent `json:"events"`          // List of events.
+	Events []events.SystemAuditEvent `json:"events"`          // ListClusters of events.
 }
 
 // NewTagListResponse creates a new TagListResponse instance.
@@ -117,7 +94,7 @@ func NewTagListResponse(tags []inventory.Tag) *TagListResponse {
 // ExpenseListResponse represents the API response containing a list of expenses
 type ExpenseListResponse struct {
 	Count    int                 `json:"count,omitempty"` // Number of expenses, omitted if empty.
-	Expenses []inventory.Expense `json:"expenses"`        // List of expenses.
+	Expenses []inventory.Expense `json:"expenses"`        // ListClusters of expenses.
 }
 
 // NewExpenseListResponse creates a new ExpenseListResponse instance.
@@ -150,7 +127,7 @@ func NewExpenseListResponse(expenses []inventory.Expense) *ExpenseListResponse {
 // InstanceListResponse represents the API response containing a list of instances.
 type InstanceListResponse struct {
 	Count     int                  `json:"count,omitempty"` // Number of instances, omitted if empty.
-	Instances []inventory.Instance `json:"instances"`       // List of instances.
+	Instances []inventory.Instance `json:"instances"`       // ListClusters of instances.
 }
 
 // NewInstanceListResponse creates a new InstanceListResponse instance.
@@ -183,7 +160,7 @@ func NewInstanceListResponse(instances []inventory.Instance) *InstanceListRespon
 // ClusterListResponse represents the API response containing a list of clusters
 type ClusterListResponse struct {
 	Count    int                 `json:"count,omitempty"` // Number of clusters, omitted if empty.
-	Clusters []inventory.Cluster `json:"clusters"`        // List of clusters.
+	Clusters []inventory.Cluster `json:"clusters"`        // ListClusters of clusters.
 }
 
 // NewClusterListResponse creates a new ClusterListResponse instance.
@@ -216,7 +193,7 @@ func NewClusterListResponse(clusters []inventory.Cluster) *ClusterListResponse {
 // AccountListResponse represents the API response containing a list of accounts.
 type AccountListResponse struct {
 	Count    int                 `json:"count,omitempty"` // Number of accounts, omitted if empty.
-	Accounts []inventory.Account `json:"accounts"`        // List of accounts.
+	Accounts []inventory.Account `json:"accounts"`        // ListClusters of accounts.
 }
 
 // NewAccountListResponse creates a new AccountListResponse instance.
@@ -252,7 +229,7 @@ func NewAccountListResponse(accounts []inventory.Account) *AccountListResponse {
 type ClusterStatusChangeResponse struct {
 	AccountName string                   `json:"account_name"`      // The account associated with the cluster.
 	ClusterID   string                   `json:"cluster_id"`        // The ID of the cluster.
-	Instances   []string                 `json:"instance_id"`       // List of instance IDs within the cluster.
+	Instances   []string                 `json:"instance_id"`       // ListClusters of instance IDs within the cluster.
 	Region      string                   `json:"availability_zone"` // The region where the cluster resides.
 	Status      inventory.InstanceStatus `json:"status"`            // The resulting status of the cluster.
 	Error       string                   `json:"error_msg"`         // Error message if any issue occurred.

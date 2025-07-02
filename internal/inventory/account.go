@@ -11,44 +11,46 @@ type Account struct {
 	// AWS: AccountID
 	// Azure: SubscriptionID
 	// GCP: ProjectID
-	ID string `db:"id" json:"id"`
+	ID string `db:"id"`
 
 	// Account's name. It's considered as an uniq key. Two accounts with same
 	// name can't belong to same Inventory
-	Name string `db:"name" json:"name"`
+	Name string `db:"name"`
 
 	// Infrastructure provider identifier.
-	Provider CloudProvider `db:"provider" json:"provider"`
+	//TODO
+	Provider CloudProvider `db:"provider"`
 
 	// ClusterCount
-	ClusterCount int `db:"cluster_count" json:"clusterCount"`
+	ClusterCount int `db:"cluster_count"`
 
-	// List of clusters deployed on this account indexed by Cluster's name
-	Clusters map[string]*Cluster `json:"-"`
+	// ListClusters of clusters deployed on this account indexed by Cluster's name
+	// TODO
+	Clusters map[string]*Cluster `db:"-"`
 
 	// Last scan timestamp of the account
-	LastScanTimestamp time.Time `db:"last_scan_timestamp" json:"lastScanTimestamp"`
+	LastScanTimestamp time.Time `db:"last_scan_timestamp"`
 
 	// Account's username
-	user string
+	user string `db:"-"`
 
 	// Account's password
-	password string
+	password string `db:"-"`
 
 	// Total cost (US Dollars)
-	TotalCost float64 `db:"total_cost" json:"totalCost"`
+	TotalCost float64 `db:"total_cost"`
 
 	// Cost Last 15d
-	Last15DaysCost float64 `db:"last_15_days_cost" json:"last15DaysCost"`
+	Last15DaysCost float64 `db:"last_15_days_cost"`
 
 	// Last month cost
-	LastMonthCost float64 `db:"last_month_cost" json:"lastMonthCost"`
+	LastMonthCost float64 `db:"last_month_cost"`
 
 	// Current month so far cost
-	CurrentMonthSoFarCost float64 `db:"current_month_so_far_cost" json:"currentMonthSoFarCost"`
+	CurrentMonthSoFarCost float64 `db:"current_month_so_far_cost"`
 
 	// Billing information flag
-	billing_enabled bool
+	billing_enabled bool `db:"-"`
 }
 
 // NewAccount create a new Could Provider account to store its instances

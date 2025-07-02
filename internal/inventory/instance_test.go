@@ -81,7 +81,7 @@ func TestUpdateCosts(t *testing.T) {
 			2,
 			0.0,
 			0.0,
-			ERR_INSTANCE_TOTAL_COST_LESS_ZERO,
+			ErrInstanceTotalCostLessZero,
 			[]Expense{
 				{
 					"01234",
@@ -99,7 +99,7 @@ func TestUpdateCosts(t *testing.T) {
 			0,
 			6.0,
 			0.0,
-			ERR_INSTANCE_AGE_LESS_ZERO,
+			ErrInstanceAgeLessZero,
 			[]Expense{
 				{
 					"01234",

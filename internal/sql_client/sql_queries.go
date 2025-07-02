@@ -245,19 +245,6 @@ const (
 		ORDER BY name
 	`
 
-	// SelectClustersQuery returns every cluster in the inventory ordered by Name
-	SelectClustersQuery = `
-		SELECT * FROM clusters
-		ORDER BY name
-	`
-	// SelectClustersOverview returns the number of clusters grouped by status
-	SelectClustersOverview = `
-		SELECT 
-			COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running,
-			COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped,
-			COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived
-		FROM clusters;
-	`
 	// InsertEventQuery insert a new audit event
 	InsertEventQuery = `
 		INSERT INTO audit_logs(
@@ -324,39 +311,6 @@ const (
 	`
 	// UpdateEventStatusQuery updates the result status of an audit log entry based on its ID.
 	UpdateEventStatusQuery = `UPDATE audit_logs SET result=$1 WHERE id=$2`
-	// SelectClusterAccountNameQuery returns an cluster by its Name
-	SelectClusterAccountNameQuery = `
-		SELECT account_name FROM clusters
-		WHERE id = $1
-	`
-
-	// SelectClusterRegionQuery returns an cluster by its Name
-	SelectClusterRegionQuery = `
-		SELECT region FROM clusters
-		WHERE id = $1
-	`
-
-	// SelectClustersByIDuery returns an cluster by its Name
-	SelectClustersByIDuery = `
-		SELECT * FROM clusters
-		WHERE id = $1
-		ORDER BY name
-	`
-
-	// SelectClusterTags returns the cluster's tags
-	SelectClusterTags = `
-		SELECT DISTINCT ON (key) key,value,instance_id FROM instances
-		JOIN tags ON
-			id=instance_id
-		WHERE cluster_id = $1
-	`
-
-	// SelectInstancesOnClusterQuery returns every instance belonging to a cluster
-	SelectInstancesOnClusterQuery = `
-		SELECT * FROM instances
-		WHERE cluster_id = $1
-		ORDER BY id
-	`
 
 	// SelectAccountsQuery returns every instance in the inventory ordered by Name
 	SelectAccountsQuery = `
@@ -386,13 +340,6 @@ const (
 	SelectAccountsByNameQuery = `
 		SELECT * FROM accounts
 		WHERE name = $1
-		ORDER BY name
-	`
-
-	// SelectClustersOnAccountQuery returns an cluster by its Name
-	SelectClustersOnAccountQuery = `
-		SELECT * FROM clusters
-		WHERE account_name = $1
 		ORDER BY name
 	`
 
@@ -519,9 +466,6 @@ const (
 
 	// DeleteInstanceQuery removes an instance by its ID
 	DeleteInstanceQuery = `DELETE FROM instances WHERE id=$1`
-
-	// DeleteClusterQuery removes an cluster by its name
-	DeleteClusterQuery = `DELETE FROM clusters WHERE id=$1`
 
 	// DeleteAccountQuery removes an account by its name
 	DeleteAccountQuery = `DELETE FROM accounts WHERE name=$1`
