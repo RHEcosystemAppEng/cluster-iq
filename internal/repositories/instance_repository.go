@@ -4,6 +4,8 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -16,7 +18,7 @@ var _ InstanceRepository = (*instanceRepositoryImpl)(nil)
 type InstanceRepository interface {
 	ListInstances(ctx context.Context, opts ListOptions) ([]inventory.Instance, int, error)
 	GetInstancesOverview(ctx context.Context) (inventory.InstancesSummary, error)
-	GetInstanceByID(ctx context.Context, instanceID string) (inventory.Instance, error)
+	GetInstanceByID(ctx context.Context, instanceID string) (*inventory.Instance, error)
 	WriteInstances(ctx context.Context, instances []inventory.Instance) error
 	DeleteInstance(ctx context.Context, instanceID string) error
 	GetInstancesOutdatedBilling(ctx context.Context) ([]inventory.Instance, error)
@@ -47,6 +49,39 @@ func (r *instanceRepositoryImpl) ListInstances(ctx context.Context, opts ListOpt
 		return nil, 0, fmt.Errorf("failed to list instances: %w", err)
 	}
 
+	if len(instances) == 0 {
+		return instances, total, nil
+	}
+
+	// Get Tags for the instances
+	instanceIDs := make([]string, len(instances))
+	for i, inst := range instances {
+		instanceIDs[i] = inst.ID
+	}
+
+	query, args, err := sqlx.In(SelectTagsByInstanceIDsQuery, instanceIDs)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to create IN query for tags: %w", err)
+	}
+
+	query = r.db.Rebind(query)
+	var tags []inventory.Tag
+	if err := r.db.SelectContext(ctx, &tags, query, args...); err != nil {
+		return nil, 0, fmt.Errorf("failed to select tags for instances: %w", err)
+	}
+
+	// Map tags to instances
+	tagMap := make(map[string][]inventory.Tag)
+	for _, tag := range tags {
+		tagMap[tag.InstanceID] = append(tagMap[tag.InstanceID], tag)
+	}
+
+	for i := range instances {
+		if tags, ok := tagMap[instances[i].ID]; ok {
+			instances[i].Tags = tags
+		}
+	}
+
 	return instances, total, nil
 }
 
@@ -69,14 +104,23 @@ func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inve
 // Returns:
 // - An inventory.Instance object.
 // - An error if the query fails.
-func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID string) (inventory.Instance, error) {
+func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID string) (*inventory.Instance, error) {
 	var instance inventory.Instance
-	// Assuming the query joins tags appropriately.
 	if err := r.db.GetContext(ctx, &instance, SelectInstancesByIDQuery, instanceID); err != nil {
-		return inventory.Instance{}, fmt.Errorf("failed to get instance by id %s: %w", instanceID, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get instance by id %s: %w", instanceID, err)
 	}
 
-	return instance, nil
+	var tags []inventory.Tag
+	if err := r.db.SelectContext(ctx, &tags, SelectTagsByInstanceIDQuery, instanceID); err != nil {
+		// Not finding tags is not a critical error, just return the instance without them
+		return &instance, nil
+	}
+	instance.Tags = tags
+
+	return &instance, nil
 }
 
 // WriteInstances writes a batch of instances and their tags to the database in a transaction.
@@ -107,14 +151,12 @@ func (r *instanceRepositoryImpl) WriteInstances(ctx context.Context, instances [
 
 	for _, instance := range instances {
 		if _, err := instanceStmt.ExecContext(ctx, instance); err != nil {
-
 			return fmt.Errorf("failed to insert instance %s: %w", instance.ID, err)
 		}
 
 		// Writing tags
 		for _, tag := range instance.Tags {
 			if _, err := tagStmt.ExecContext(ctx, tag); err != nil {
-
 				return fmt.Errorf("failed to insert tag for instance %s: %w", instance.ID, err)
 			}
 		}

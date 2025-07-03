@@ -6,13 +6,16 @@ import (
 )
 
 // ToClusterDTO converts an inventory.Cluster model to a dto.Cluster.
-func ToClusterDTO(model inventory.Cluster) dto.Cluster {
+func ToClusterDTO(model *inventory.Cluster) dto.Cluster {
+	if model == nil {
+		return dto.Cluster{}
+	}
 	return dto.Cluster{
 		ID:                    model.ID,
 		Name:                  model.Name,
 		InfraID:               model.InfraID,
-		Provider:              string(model.Provider),
-		Status:                string(model.Status),
+		Provider:              model.Provider,
+		Status:                model.Status,
 		Region:                model.Region,
 		AccountName:           model.AccountName,
 		ConsoleLink:           model.ConsoleLink,
@@ -34,7 +37,7 @@ func ToClusterDTO(model inventory.Cluster) dto.Cluster {
 func ToClusterDTOs(models []inventory.Cluster) []dto.Cluster {
 	dtos := make([]dto.Cluster, len(models))
 	for i, model := range models {
-		dtos[i] = ToClusterDTO(model)
+		dtos[i] = ToClusterDTO(&model)
 	}
 	return dtos
 }
@@ -47,8 +50,8 @@ func ToClusterModel(dto dto.Cluster) inventory.Cluster {
 		ID:          dto.ID,
 		Name:        dto.Name,
 		InfraID:     dto.InfraID,
-		Provider:    inventory.GetProvider(dto.Provider),
-		Status:      inventory.AsInstanceStatus(dto.Status),
+		Provider:    dto.Provider,
+		Status:      dto.Status,
 		Region:      dto.Region,
 		AccountName: dto.AccountName,
 		ConsoleLink: dto.ConsoleLink,

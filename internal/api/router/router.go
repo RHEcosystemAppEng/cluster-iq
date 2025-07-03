@@ -48,7 +48,7 @@ func setupClusterRoutes(group *gin.RouterGroup, clusterHandler *handlers.Cluster
 	clusters := group.Group("/clusters")
 	{
 		clusters.GET("", clusterHandler.List)
-		clusters.GET("/summary", clusterHandler.GetSummary)
+		// clusters.GET("/summary", clusterHandler.GetSummary)
 		clusters.POST("", clusterHandler.Create)
 		clusters.GET("/:id", clusterHandler.Get)
 		clusters.DELETE("/:id", clusterHandler.Delete)
@@ -56,8 +56,6 @@ func setupClusterRoutes(group *gin.RouterGroup, clusterHandler *handlers.Cluster
 		clusters.POST("/:id/power_on", clusterHandler.PowerOn)
 		clusters.POST("/:id/power_off", clusterHandler.PowerOff)
 		clusters.GET("/:id/tags", clusterHandler.GetTags)
-
-		// Nested routes
 		clusters.GET("/:id/instances", instanceHandler.ListByCluster)
 		clusters.GET("/:id/events", eventHandler.ListByCluster)
 	}
@@ -67,7 +65,7 @@ func setupInstanceRoutes(group *gin.RouterGroup, handler *handlers.InstanceHandl
 	instances := group.Group("/instances")
 	{
 		instances.GET("", handler.List)
-		instances.GET("/summary", handler.GetSummary)
+		// instances.GET("/summary", handler.GetSummary)
 		instances.GET("/:id", handler.Get)
 	}
 }
@@ -89,8 +87,8 @@ func setupEventRoutes(group *gin.RouterGroup, handler *handlers.EventHandler) {
 func setupActionRoutes(group *gin.RouterGroup, handler *handlers.ActionHandler) {
 	actions := group.Group("/actions/scheduled")
 	{
-		actions.GET("", handler.ListScheduled)
-		actions.GET("/:id", handler.GetScheduled)
+		// actions.GET("", handler.ListScheduled)
+		// actions.GET("/:id", handler.GetScheduled)
 		actions.PATCH("/:id/enable", handler.EnableScheduled)
 		actions.PATCH("/:id/disable", handler.DisableScheduled)
 	}

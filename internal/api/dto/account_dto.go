@@ -16,30 +16,30 @@ type Account struct {
 	// name can't belong to same Inventory
 	Name string `json:"name"`
 
-	//TODO
+	// TODO
 	Provider string `json:"provider"`
 
 	// ClusterCount
-	ClusterCount int `json:"cluster_count"`
+	ClusterCount int `json:"clusterCount"`
 
 	// ListClusters of clusters deployed on this account indexed by Cluster's name
-	//TODO
-	Clusters map[string]*ClusterDTO `json:"-"`
+	// TODO
+	Clusters map[string]*Cluster `json:"-"`
 
 	// Last scan timestamp of the account
-	LastScanTimestamp time.Time `json:"last_scan_timestamp"`
+	LastScanTimestamp time.Time `json:"lastScanTimestamp"`
 
 	// Total cost (US Dollars)
-	TotalCost float64 `json:"total_cost"`
+	TotalCost float64 `json:"totalCost"`
 
 	// Cost Last 15d
-	Last15DaysCost float64 `json:"last_15_days_cost"`
+	Last15DaysCost float64 `json:"last15DaysCost"`
 
 	// Last month cost
-	LastMonthCost float64 `json:"last_month_cost"`
+	LastMonthCost float64 `json:"lastMonthCost"`
 
 	// Current month so far cost
-	CurrentMonthSoFarCost float64 `json:"current_month_so_far_cost"`
+	CurrentMonthSoFarCost float64 `json:"currentMonthSoFarCost"`
 
 	// Billing information flag
 	// TODO SHould be unexported??
@@ -51,6 +51,4 @@ type NewAccount struct {
 	ID       string `json:"id" binding:"required"`
 	Name     string `json:"name" binding:"required"`
 	Provider string `json:"provider" binding:"required"`
-	User     string `json:"user"`
-	Password string `json:"password"`
 }

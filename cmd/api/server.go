@@ -47,7 +47,7 @@ var (
 type APIServer struct {
 	logger *zap.Logger  // Logger instance
 	server *http.Server // HTTP server instance
-	//eventService *events.EventService    // Service for handling audit logs
+	// eventService *events.EventService    // Service for handling audit logs
 }
 
 // NewAPIServer initializes a new instance of the APIServer.
@@ -88,7 +88,6 @@ func setupGin(logger *zap.Logger) *gin.Engine {
 
 // Start starts the HTTP server in a goroutine
 func (a *APIServer) Start() error {
-	a.logger.Info("Starting HTTP server...")
 	// Start API
 	go func() {
 		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -96,7 +95,6 @@ func (a *APIServer) Start() error {
 			os.Exit(1)
 		}
 	}()
-	a.logger.Info("API Ready to serve", zap.String("url", a.server.Addr))
 	return nil
 }
 
@@ -228,10 +226,13 @@ func main() {
 	engine := setupGin(logger)
 	router.Setup(engine, deps)
 
-	logger.Info("==================== Starting ClusterIQ API ====================",
-		zap.String("api_listen_url", cfg.ListenURL),
-		zap.String("db_url", cfg.DBURL),
-		zap.String("agent_url", cfg.AgentURL),
+	logger.Info("ClusterIQ API server started",
+		zap.String("version", version),
+		zap.String("commit", commit),
+		zap.String("listenURL", cfg.ListenURL),
+		// TODO remove or mask dbURL
+		zap.String("dbURL", cfg.DBURL),
+		zap.String("agentURL", cfg.AgentURL),
 	)
 
 	// Initializing APIServer instance

@@ -7,7 +7,7 @@ type APIServerConfig struct {
 	ListenURL string `env:"CIQ_API_LISTEN_URL,required"`
 	AgentURL  string `env:"CIQ_AGENT_URL,required"`
 	DBURL     string `env:"CIQ_DB_URL,required"`
-	LogLevel  string `env:"CIQ_LOG_LEVEL,required"`
+	LogLevel  string `env:"CIQ_LOG_LEVEL" envDefault:"INFO"`
 }
 
 // LoadAPIServerConfig evaluates and return the APIServerConfig Object

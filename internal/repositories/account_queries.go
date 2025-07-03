@@ -1,11 +1,10 @@
 package repositories
 
 const (
-	// SelectAccountsByNameQuery returns an instance by its Name
-	SelectAccountsByNameQuery = `
+	// SelectAccountByNameQuery returns an instance by its Name
+	SelectAccountByNameQuery = `
 		SELECT * FROM accounts
 		WHERE name = $1
-		ORDER BY name
 	`
 	// InsertAccountsQuery inserts into a new instance in its table
 	InsertAccountsQuery = `

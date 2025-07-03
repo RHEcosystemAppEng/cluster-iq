@@ -18,7 +18,7 @@ type Account struct {
 	Name string `db:"name"`
 
 	// Infrastructure provider identifier.
-	//TODO
+	// TODO
 	Provider CloudProvider `db:"provider"`
 
 	// ClusterCount

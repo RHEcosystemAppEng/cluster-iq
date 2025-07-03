@@ -15,7 +15,7 @@ func Connect(dbURL string, logger *zap.Logger) (*sqlx.DB, error) {
 
 	if err := db.Ping(); err != nil {
 		logger.Error("Database ping failed after connection", zap.Error(err))
-		db.Close() // Закрываем соединение, если пинг не прошел
+		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

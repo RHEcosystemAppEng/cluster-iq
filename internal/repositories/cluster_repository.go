@@ -10,12 +10,10 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var ErrNotFound = errors.New("requested resource not found") // TODO move to common error
-
 var _ ClusterRepository = (*clusterRepositoryImpl)(nil)
 
 type ClusterRepository interface {
-	GetClusterByID(ctx context.Context, clusterID string) (inventory.Cluster, error)
+	GetClusterByID(ctx context.Context, clusterID string) (*inventory.Cluster, error)
 	ListClusters(ctx context.Context, opts ListOptions) ([]inventory.Cluster, int, error)
 	GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error)
 	GetClusterAccountName(ctx context.Context, clusterID string) (string, error)
@@ -46,16 +44,16 @@ func NewClusterRepository(db *sqlx.DB) ClusterRepository {
 // Returns:
 // - A slice containing a single inventory.Cluster object.
 // - An error if the query fails or the cluster ID does not exist.
-func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID string) (inventory.Cluster, error) {
+func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID string) (*inventory.Cluster, error) {
 	var cluster inventory.Cluster
 	err := r.db.GetContext(ctx, &cluster, SelectClustersByIDQuery, clusterID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return inventory.Cluster{}, ErrNotFound
+			return nil, ErrNotFound
 		}
-		return inventory.Cluster{}, err
+		return nil, err
 	}
-	return cluster, nil
+	return &cluster, nil
 }
 
 // ListClusters retrieves all clusters from the database.

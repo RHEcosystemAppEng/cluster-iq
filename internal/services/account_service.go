@@ -4,8 +4,6 @@ package services
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
@@ -14,7 +12,7 @@ import (
 // AccountService defines the interface for account-related business logic.
 type AccountService interface {
 	List(ctx context.Context, options repositories.ListOptions) ([]inventory.Account, int, error)
-	GetByName(ctx context.Context, accountName string) (inventory.Account, error)
+	GetByName(ctx context.Context, accountName string) (*inventory.Account, error)
 	Create(ctx context.Context, accounts []inventory.Account) error
 	Delete(ctx context.Context, accountName string) error
 }
@@ -40,18 +38,8 @@ func (s *accountServiceImpl) List(ctx context.Context, options repositories.List
 
 // GetByName retrieves a single account by its name.
 // It returns an error if no account or more than one account is found.
-func (s *accountServiceImpl) GetByName(ctx context.Context, accountName string) (inventory.Account, error) {
-	accounts, err := s.repo.GetAccountByName(ctx, accountName)
-	if err != nil {
-		return inventory.Account{}, fmt.Errorf("repository error when getting account by name %s: %w", accountName, err)
-	}
-	if len(accounts) == 0 {
-		return inventory.Account{}, errors.New("account not found")
-	}
-	if len(accounts) > 1 {
-		return inventory.Account{}, errors.New("multiple accounts found with the same name")
-	}
-	return accounts[0], nil
+func (s *accountServiceImpl) GetByName(ctx context.Context, name string) (*inventory.Account, error) {
+	return s.repo.GetAccountByName(ctx, name)
 }
 
 // Create creates one or more new accounts.

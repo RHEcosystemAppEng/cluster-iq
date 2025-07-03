@@ -14,9 +14,6 @@ const (
 	// SelectInstancesQuery returns every instance in the inventory ordered by ID
 	SelectInstancesQuery = `
 		SELECT * FROM instances
-		JOIN tags ON
-			instances.id = tags.instance_id
-		ORDER BY name
 	`
 	// SelectInstancesOverview returns the total count of all instances
 	SelectInstancesOverview = `
@@ -26,10 +23,15 @@ const (
 	// SelectInstancesByIDQuery returns an instance by its ID
 	SelectInstancesByIDQuery = `
 		SELECT * FROM instances
-		JOIN tags ON
-			instances.id = tags.instance_id
 		WHERE id = $1
-		ORDER BY name
+	`
+	// SelectTagsByInstanceIDQuery returns all tags for a single instance
+	SelectTagsByInstanceIDQuery = `
+		SELECT * FROM tags WHERE instance_id = $1
+	`
+	// SelectTagsByInstanceIDsQuery returns all tags for a list of instance IDs
+	SelectTagsByInstanceIDsQuery = `
+		SELECT * FROM tags WHERE instance_id IN (?)
 	`
 	// InsertInstancesQuery inserts into a new instance in its table
 	InsertInstancesQuery = `

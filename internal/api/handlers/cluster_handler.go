@@ -57,15 +57,15 @@ type listClustersRequest struct {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Param			page		query	int		false	"Page number for pagination"			default(1)
-//	@Param			pageSize	query	int		false	"Number of items per page"				default(10)
-//	@Param			status		query	string	false	"Filter by cluster status"				example(Running)
-//	@Param			provider	query	string	false	"Filter by cloud provider"				example(aws)
-//	@Param			region		query	string	false	"Filter by cloud provider region"		example(us-east-1)
-//	@Param			account		query	string	false	"Filter by account name"
+//	@Param			page		query		int		false	"Page number for pagination"		default(1)
+//	@Param			page_size	query		int		false	"Number of items per page"			default(10)
+//	@Param			status		query		string	false	"Filter by cluster status"			example(Running)
+//	@Param			provider	query		string	false	"Filter by cloud provider"			example(aws)
+//	@Param			region		query		string	false	"Filter by cloud provider region"	example(us-east-1)
+//	@Param			account		query		string	false	"Filter by account name"
 //	@Success		200			{object}	dto.ListResponse[dto.Cluster]
-//	@Failure		400			{object}	dto.ErrorResponse
-//	@Failure		500			{object}	dto.ErrorResponse
+//	@Failure		400			{object}	dto.GenericErrorResponse
+//	@Failure		500			{object}	dto.GenericErrorResponse
 //	@Router			/clusters [get]
 func (h *ClusterHandler) List(c *gin.Context) {
 	var req listClustersRequest
@@ -102,8 +102,8 @@ func (h *ClusterHandler) List(c *gin.Context) {
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
 //	@Success		200	{object}	dto.Cluster
-//	@Failure		404	{object}	dto.ErrorResponse
-//	@Failure		500	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.GenericErrorResponse
+//	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/clusters/{id} [get]
 func (h *ClusterHandler) Get(c *gin.Context) {
 	clusterID := c.Param("id")
@@ -122,26 +122,6 @@ func (h *ClusterHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, clusterDTO)
 }
 
-// GetSummary handles the request for obtaining a summary of cluster statuses.
-//
-//	@Summary		Get cluster summary
-//	@Description	Returns a summary of cluster counts by status.
-//	@Tags			Clusters
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{object}	inventory.ClustersSummary
-//	@Failure		500	{object}	dto.ErrorResponse
-//	@Router			/clusters/summary [get]
-func (h *ClusterHandler) GetSummary(c *gin.Context) {
-	summary, err := h.service.GetSummary(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve cluster summary"))
-		return
-	}
-
-	c.JSON(http.StatusOK, summary)
-}
-
 // Create handles the creation of a new cluster.
 //
 //	@Summary		Create a cluster
@@ -151,8 +131,8 @@ func (h *ClusterHandler) GetSummary(c *gin.Context) {
 //	@Produce		json
 //	@Param			cluster	body		dto.Cluster	true	"Cluster to create"
 //	@Success		201		{object}	dto.Cluster
-//	@Failure		400		{object}	dto.ErrorResponse
-//	@Failure		500		{object}	dto.ErrorResponse
+//	@Failure		400		{object}	dto.GenericErrorResponse
+//	@Failure		500		{object}	dto.GenericErrorResponse
 //	@Router			/clusters [post]
 func (h *ClusterHandler) Create(c *gin.Context) {
 	var newClusterDTO dto.Cluster
@@ -168,7 +148,7 @@ func (h *ClusterHandler) Create(c *gin.Context) {
 		return
 	}
 
-	createdClusterDTO := mappers.ToClusterDTO(cluster)
+	createdClusterDTO := mappers.ToClusterDTO(&cluster)
 	c.JSON(http.StatusCreated, createdClusterDTO)
 }
 
@@ -178,15 +158,19 @@ func (h *ClusterHandler) Create(c *gin.Context) {
 //	@Description	Deletes a cluster by its ID.
 //	@Tags			Clusters
 //	@Accept			json
-//	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
 //	@Success		204	{object}	nil
-//	@Failure		500	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.GenericErrorResponse
+//	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/clusters/{id} [delete]
 func (h *ClusterHandler) Delete(c *gin.Context) {
 	clusterID := c.Param("id")
 
 	if err := h.service.Delete(c.Request.Context(), clusterID); err != nil {
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to delete cluster: "+err.Error()))
 		return
 	}
@@ -203,13 +187,12 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
 //	@Success		202	{object}	dto.GenericResponse
-//	@Failure		404	{object}	dto.ErrorResponse
-//	@Failure		500	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.GenericErrorResponse
+//	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/clusters/{id}/power_on [post]
 func (h *ClusterHandler) PowerOn(c *gin.Context) {
 	clusterID := c.Param("id")
 	err := h.service.PowerOn(c.Request.Context(), clusterID)
-
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
@@ -231,13 +214,12 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
 //	@Success		202	{object}	dto.GenericResponse
-//	@Failure		404	{object}	dto.ErrorResponse
-//	@Failure		500	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.GenericErrorResponse
+//	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/clusters/{id}/power_off [post]
 func (h *ClusterHandler) PowerOff(c *gin.Context) {
 	clusterID := c.Param("id")
 	err := h.service.PowerOff(c.Request.Context(), clusterID)
-
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
@@ -259,13 +241,12 @@ func (h *ClusterHandler) PowerOff(c *gin.Context) {
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
 //	@Success		200	{object}	[]dto.Tag
-//	@Failure		404	{object}	dto.ErrorResponse
-//	@Failure		500	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.GenericErrorResponse
+//	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/clusters/{id}/tags [get]
 func (h *ClusterHandler) GetTags(c *gin.Context) {
 	clusterID := c.Param("id")
 	tags, err := h.service.GetTags(c.Request.Context(), clusterID)
-
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
@@ -285,54 +266,11 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path	string		true	"Cluster ID"
-//	@Param			cluster	body	dto.Cluster	true	"Cluster data to update"
-//	@Success		200		{object}	dto.Cluster
-//	@Failure		400		{object}	dto.ErrorResponse
-//	@Failure		404		{object}	dto.ErrorResponse
-//	@Failure		500		{object}	dto.ErrorResponse
+//	@Param			id		path		string		true	"Cluster ID"
+//	@Param			cluster	body		dto.Cluster	true	"Cluster data to update"
+//	@Success		200		{object}	nil
+//	@Failure		501		{object}	nil	"Not Implemented"
 //	@Router			/clusters/{id} [patch]
 func (h *ClusterHandler) Update(c *gin.Context) {
-	clusterID := c.Param("id")
-
-	var clusterDTO dto.Cluster
-	if err := c.ShouldBindJSON(&clusterDTO); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
-		return
-	}
-
-	// Ensure the ID from the path is used, not from the body
-	clusterDTO.ID = clusterID
-
-	// Fetch the existing cluster to ensure it exists
-	existingCluster, err := h.service.Get(c.Request.Context(), clusterID)
-	if err != nil {
-		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
-			return
-		}
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve cluster for update: "+err.Error()))
-		return
-	}
-
-	// Update only the mutable fields from the DTO
-	// Here we assume ToClusterModel handles partial updates gracefully or we do it manually
-	updatedClusterModel := mappers.ToClusterModel(clusterDTO)
-	// Preserve non-mutable fields from the existing model
-	updatedClusterModel.Provider = existingCluster.Provider
-	updatedClusterModel.Status = existingCluster.Status
-
-	if err := h.service.Update(c.Request.Context(), updatedClusterModel); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to update cluster: "+err.Error()))
-		return
-	}
-
-	// Return the fully updated object
-	finalCluster, err := h.service.Get(c.Request.Context(), clusterID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve updated cluster: "+err.Error()))
-		return
-	}
-
-	c.JSON(http.StatusOK, mappers.ToClusterDTO(finalCluster))
+	c.PureJSON(http.StatusNotImplemented, nil)
 }

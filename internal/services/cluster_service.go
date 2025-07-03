@@ -11,7 +11,7 @@ import (
 // ClusterService defines the interface for cluster-related business logic.
 type ClusterService interface {
 	List(ctx context.Context, options repositories.ListOptions) ([]inventory.Cluster, int, error)
-	Get(ctx context.Context, id string) (inventory.Cluster, error)
+	Get(ctx context.Context, id string) (*inventory.Cluster, error)
 	GetSummary(ctx context.Context) (inventory.ClustersSummary, error)
 	PowerOn(ctx context.Context, clusterID string) error
 	PowerOff(ctx context.Context, clusterID string) error
@@ -42,7 +42,7 @@ func (s *clusterServiceImpl) List(ctx context.Context, options repositories.List
 }
 
 // Get retrieves a single cluster by its ID.
-func (s *clusterServiceImpl) Get(ctx context.Context, id string) (inventory.Cluster, error) {
+func (s *clusterServiceImpl) Get(ctx context.Context, id string) (*inventory.Cluster, error) {
 	return s.repo.GetClusterByID(ctx, id)
 }
 

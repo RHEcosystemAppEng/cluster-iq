@@ -2,13 +2,53 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 var _ ActionRepository = (*actionRepositoryImpl)(nil)
+
+// dbAction is a helper struct to scan the result from the database
+// before converting it to a specific action type.
+type dbAction struct {
+	ID          string         `db:"id"`
+	Type        string         `db:"type"`
+	Time        sql.NullTime   `db:"time"`
+	CronExp     sql.NullString `db:"cron_exp"`
+	Operation   string         `db:"operation"`
+	Status      string         `db:"status"`
+	Enabled     bool           `db:"enabled"`
+	ClusterID   string         `db:"cluster_id"`
+	Region      string         `db:"region"`
+	AccountName string         `db:"account_name"`
+	Instances   pq.StringArray `db:"instances"`
+}
+
+// toAction converts a dbAction to a concrete actions.Action implementation.
+func (da *dbAction) toAction() (actions.Action, error) {
+	actionOp := actions.ActionOperation(da.Operation)
+	target := actions.NewActionTarget(da.ClusterID, da.Region, da.AccountName, da.Instances)
+
+	switch da.Type {
+	case string(actions.ScheduledActionType):
+		if !da.Time.Valid {
+			return nil, fmt.Errorf("scheduled action %s has invalid time", da.ID)
+		}
+		return actions.NewScheduledAction(actionOp, *target, da.Status, da.Enabled, da.Time.Time), nil
+	case string(actions.CronActionType):
+		if !da.CronExp.Valid {
+			return nil, fmt.Errorf("cron action %s has invalid cron expression", da.ID)
+		}
+		return actions.NewCronAction(actionOp, *target, da.Status, da.Enabled, da.CronExp.String), nil
+	default:
+		return nil, fmt.Errorf("unknown action type: %s", da.Type)
+	}
+}
 
 // ActionRepository defines the interface for data access operations for actions.
 type ActionRepository interface {
@@ -38,19 +78,28 @@ func NewActionRepository(db *sqlx.DB) ActionRepository {
 //   - An array of actions.Action with the scheduled actions declared on the DB
 //   - An error if the query fails
 func (r *actionRepositoryImpl) ListScheduledActions(ctx context.Context, opts ListOptions) ([]actions.Action, int, error) {
-	var scheduledActions []actions.Action
-	// Assuming a generic query and a count query exist for actions
+	var dbActions []dbAction
 	baseQuery := SelectScheduledActionsQuery
 	countQuery := "SELECT COUNT(*) FROM schedule"
 
 	whereClauses, namedArgs := buildActionWhereClauses(opts.Filters)
 
-	total, err := listQueryHelper(ctx, r.db, &scheduledActions, baseQuery, countQuery, opts, whereClauses, namedArgs)
+	total, err := listQueryHelper(ctx, r.db, &dbActions, baseQuery, countQuery, opts, whereClauses, namedArgs)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list scheduled actions: %w", err)
 	}
 
-	return scheduledActions, total, nil
+	resultActions := make([]actions.Action, len(dbActions))
+	for i, da := range dbActions {
+		action, err := (&da).toAction()
+		if err != nil {
+			// Potentially log the error and continue, or fail fast
+			return nil, 0, fmt.Errorf("failed to convert db action to action: %w", err)
+		}
+		resultActions[i] = action
+	}
+
+	return resultActions, total, nil
 }
 
 // EnableScheduledAction enables an Action by its ID
@@ -95,7 +144,7 @@ func (r *actionRepositoryImpl) DisableScheduledAction(ctx context.Context, actio
 
 	// Writing Scheduled Actions
 	if _, err := tx.ExecContext(ctx, DisableActionQuery, actionID); err != nil {
-		//a.logger.Error("Failed to prepare DisableScheduledAction query", zap.Error(err))
+		// a.logger.Error("Failed to prepare DisableScheduledAction query", zap.Error(err))
 		return fmt.Errorf("failed to disable action %s: %w", actionID, err)
 	}
 
@@ -111,14 +160,15 @@ func (r *actionRepositoryImpl) DisableScheduledAction(ctx context.Context, actio
 //   - An actions.Action object
 //   - An error if the query fails
 func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actionID string) (actions.Action, error) {
-	// Getting results from DB
-	var action actions.Action
-	if err := r.db.GetContext(ctx, &action, SelectScheduledActionsByIDQuery, actionID); err != nil {
-		//a.logger.Error("Failed to prepare SelectScheduledActions query", zap.Error(err))
+	var dbAct dbAction
+	if err := r.db.GetContext(ctx, &dbAct, SelectScheduledActionsByIDQuery, actionID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, fmt.Errorf("failed to get scheduled action by id %s: %w", actionID, err)
 	}
 
-	return action, nil
+	return (&dbAct).toAction()
 }
 
 // WriteScheduledActions receives an array of actions.Action and writes them on the DB
@@ -141,7 +191,7 @@ func (r *actionRepositoryImpl) WriteScheduledActions(ctx context.Context, newAct
 	// Writing Scheduled Actions
 	if len(schedActions) > 0 {
 		if _, err := tx.NamedExecContext(ctx, InsertScheduledActionsQuery, schedActions); err != nil {
-			//a.logger.Error("Failed to prepare InsertScheduledActionsQuery query", zap.Error(err))
+			// a.logger.Error("Failed to prepare InsertScheduledActionsQuery query", zap.Error(err))
 			return fmt.Errorf("failed to insert scheduled actions: %w", err)
 		}
 	}
@@ -149,7 +199,7 @@ func (r *actionRepositoryImpl) WriteScheduledActions(ctx context.Context, newAct
 	// Writing Cron Actions
 	if len(cronActions) > 0 {
 		if _, err := tx.NamedExecContext(ctx, InsertCronActionsQuery, cronActions); err != nil {
-			//a.logger.Error("Failed to prepare InsertCronActionsQuery query", zap.Error(err))
+			// a.logger.Error("Failed to prepare InsertCronActionsQuery query", zap.Error(err))
 			return fmt.Errorf("failed to insert cron actions: %w", err)
 		}
 	}
@@ -177,7 +227,7 @@ func (r *actionRepositoryImpl) PatchScheduledAction(ctx context.Context, newActi
 	// Writing Scheduled Actions
 	if len(schedActions) > 0 {
 		if _, err := tx.NamedExecContext(ctx, PatchScheduledActionsQuery, schedActions); err != nil {
-			//a.logger.Error("Failed to prepare PatchScheduledAction query", zap.Error(err))
+			// a.logger.Error("Failed to prepare PatchScheduledAction query", zap.Error(err))
 			return fmt.Errorf("failed to patch scheduled actions: %w", err)
 		}
 	}
@@ -185,7 +235,7 @@ func (r *actionRepositoryImpl) PatchScheduledAction(ctx context.Context, newActi
 	// Writing Cron Actions
 	if len(cronActions) > 0 {
 		if _, err := tx.NamedExecContext(ctx, PatchCronActionsQuery, cronActions); err != nil {
-			//a.logger.Error("Failed to prepare PatchCronActionsQuery query", zap.Error(err))
+			// a.logger.Error("Failed to prepare PatchCronActionsQuery query", zap.Error(err))
 			return fmt.Errorf("failed to patch cron actions: %w", err)
 		}
 	}
@@ -212,7 +262,7 @@ func (r *actionRepositoryImpl) PatchScheduledActionStatus(ctx context.Context, a
 	enabled := status == "Pending"
 
 	if _, err := tx.ExecContext(ctx, PatchActionStatusQuery, actionID, status, enabled); err != nil {
-		//a.logger.Error("Failed to prepare PatchScheduledActionStatus query", zap.Error(err))
+		// a.logger.Error("Failed to prepare PatchScheduledActionStatus query", zap.Error(err))
 		return fmt.Errorf("failed to patch action status for %s: %w", actionID, err)
 	}
 

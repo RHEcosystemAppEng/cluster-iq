@@ -6,10 +6,14 @@ import (
 )
 
 // ToInstanceDTO converts an inventory.Instance model to a dto.Instance.
-func ToInstanceDTO(model inventory.Instance) dto.Instance {
+func ToInstanceDTO(model *inventory.Instance) dto.Instance {
+	if model == nil {
+		return dto.Instance{}
+	}
 	return dto.Instance{
 		ID:                model.ID,
 		Name:              model.Name,
+		Provider:          model.Provider,
 		InstanceType:      model.InstanceType,
 		ClusterID:         model.ClusterID,
 		Status:            string(model.Status),
@@ -22,7 +26,7 @@ func ToInstanceDTO(model inventory.Instance) dto.Instance {
 func ToInstanceDTOs(models []inventory.Instance) []dto.Instance {
 	dtos := make([]dto.Instance, len(models))
 	for i, model := range models {
-		dtos[i] = ToInstanceDTO(model)
+		dtos[i] = ToInstanceDTO(&model)
 	}
 	return dtos
 }

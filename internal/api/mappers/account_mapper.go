@@ -6,7 +6,10 @@ import (
 )
 
 // ToAccountDTO converts an inventory.Account model to a dto.Account.
-func ToAccountDTO(model inventory.Account) dto.Account {
+func ToAccountDTO(model *inventory.Account) dto.Account {
+	if model == nil {
+		return dto.Account{}
+	}
 	return dto.Account{
 		ID:                    model.ID,
 		Name:                  model.Name,
@@ -24,7 +27,7 @@ func ToAccountDTO(model inventory.Account) dto.Account {
 func ToAccountDTOs(models []inventory.Account) []dto.Account {
 	dtos := make([]dto.Account, len(models))
 	for i, model := range models {
-		dtos[i] = ToAccountDTO(model)
+		dtos[i] = ToAccountDTO(&model)
 	}
 	return dtos
 }
@@ -34,7 +37,7 @@ func ToAccountModels(dtos []dto.NewAccount) []inventory.Account {
 	models := make([]inventory.Account, len(dtos))
 	for i, newAccountDTO := range dtos {
 		provider := inventory.GetProvider(newAccountDTO.Provider)
-		model := inventory.NewAccount(newAccountDTO.ID, newAccountDTO.Name, provider, newAccountDTO.User, newAccountDTO.Password)
+		model := inventory.NewAccount(newAccountDTO.ID, newAccountDTO.Name, provider, "", "")
 		models[i] = *model
 	}
 	return models

@@ -7,7 +7,4 @@ type Tag struct {
 
 	// Tag's Value
 	Value string `json:"value"`
-
-	// InstanceName reference
-	InstanceID string `json:"instance_id"`
 }

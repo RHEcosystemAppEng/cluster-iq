@@ -32,7 +32,7 @@ func listQueryHelper(ctx context.Context, db *sqlx.DB, dest interface{}, baseQue
 	}
 
 	// Pagination
-	baseQuery += " ORDER BY id LIMIT :pagesize OFFSET :offset"
+	baseQuery += " ORDER BY id ASC LIMIT :pagesize OFFSET :offset"
 	namedArgs["pagesize"] = opts.PageSize
 	namedArgs["offset"] = opts.Offset
 

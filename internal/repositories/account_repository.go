@@ -4,6 +4,8 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -15,7 +17,7 @@ var _ AccountRepository = (*accountRepositoryImpl)(nil)
 // AccountRepository defines the interface for data access operations for accounts.
 type AccountRepository interface {
 	DeleteAccount(ctx context.Context, accountName string) error
-	GetAccountByName(ctx context.Context, accountName string) ([]inventory.Account, error)
+	GetAccountByName(ctx context.Context, accountName string) (*inventory.Account, error)
 	ListAccounts(ctx context.Context, opts ListOptions) ([]inventory.Account, int, error)
 	WriteAccounts(ctx context.Context, accounts []inventory.Account) error
 }
@@ -55,10 +57,16 @@ func (r *accountRepositoryImpl) ListAccounts(ctx context.Context, opts ListOptio
 // Returns:
 // - A slice of inventory.Account objects (usually containing one element).
 // - An error if the query fails.
-func (r *accountRepositoryImpl) GetAccountByName(ctx context.Context, accountName string) ([]inventory.Account, error) {
-	var accounts []inventory.Account
-	err := r.db.SelectContext(ctx, &accounts, SelectAccountsByNameQuery, accountName)
-	return accounts, err
+func (r *accountRepositoryImpl) GetAccountByName(ctx context.Context, accountName string) (*inventory.Account, error) {
+	var account inventory.Account
+	err := r.db.GetContext(ctx, &account, SelectAccountByNameQuery, accountName)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &account, nil
 }
 
 // WriteAccounts inserts multiple accounts into the database in a transaction.
@@ -76,7 +84,7 @@ func (r *accountRepositoryImpl) WriteAccounts(ctx context.Context, accounts []in
 	defer tx.Rollback()
 
 	if _, err = tx.NamedExecContext(ctx, InsertAccountsQuery, accounts); err != nil {
-		//r.logger.Error("Failed to prepare InsertAccountsQuery query", zap.Error(err))
+		// r.logger.Error("Failed to prepare InsertAccountsQuery query", zap.Error(err))
 		return fmt.Errorf("failed to execute insert accounts query: %w", err)
 	}
 	return tx.Commit()

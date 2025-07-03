@@ -15,7 +15,7 @@ type Instance struct {
 	Name string `json:"name"`
 
 	// Instance provider (public/private cloud provider)
-	//TODO
+	// TODO
 	Provider inventory.CloudProvider `json:"provider"`
 
 	// Instance type/size/flavour
@@ -25,7 +25,7 @@ type Instance struct {
 	AvailabilityZone string `json:"availabilityZone"`
 
 	// Instance Status
-	//TODO
+	// TODO
 	Status string `json:"status"`
 
 	// ClusterID
@@ -35,7 +35,7 @@ type Instance struct {
 	LastScanTimestamp time.Time `json:"lastScanTimestamp"`
 
 	// Timestamp when the instance was created
-	CreationTimestamp time.Time `json:"creation_timestamp"`
+	CreationTimestamp time.Time `json:"creationTimestamp"`
 
 	// Amount of days since the instance was created
 	Age int `json:"age"`
@@ -46,10 +46,19 @@ type Instance struct {
 	// Total cost (US Dollars) accumulated since ClusterIQ is scanning
 	TotalCost float64 `json:"totalCost"`
 
+	// Cost Last 15d
+	Last15DaysCost float64 `json:"last15DaysCost"`
+
+	// Last month cost
+	LastMonthCost float64 `json:"lastMonthCost"`
+
+	// Current month so far cost
+	CurrentMonthSoFarCost float64 `json:"currentMonthSoFarCost"`
+
 	// Instance Tags as key-value array
-	Tags []Tag `json:"tags"`
+	Tags []Tag `json:"tags,omitempty"`
 
 	// Expenses list associated to the instance
-	// TODO, remove?????
-	Expenses []inventory.Expense `json:"expenses"`
+	// TODO, remove???? hide temporarily
+	Expenses []inventory.Expense `json:"-"`
 }
