@@ -89,70 +89,62 @@ func TestNewCluster_InvalidParams(t *testing.T) {
 // TestIsClusterRunning tests Cluster.IsClusterRunning with both running and non-running status
 func TestIsClusterRunning(t *testing.T) {
 	// Should return true
-	c := Cluster{Status: Running}
-	if !c.IsClusterRunning() {
-		t.Error("expected IsClusterRunning to return true")
-	}
+	cluster := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
+	assert.True(t, cluster.IsClusterRunning())
 
 	// Should return false
-	c.Status = Stopped
-	if c.IsClusterRunning() {
-		t.Error("expected IsClusterRunning to return false")
-	}
+	cluster.Status = Stopped
+	assert.False(t, cluster.IsClusterRunning())
 }
 
 // TestIsClusterStopped tests Cluster.IsClusterStopped with both stopped and non-stopped status
 func TestIsClusterStopped(t *testing.T) {
 	// Should return true
-	c := Cluster{Status: Stopped}
-	if !c.IsClusterStopped() {
-		t.Error("expected IsClusterStopped to return true")
-	}
+	cluster := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
+	assert.False(t, cluster.IsClusterStopped())
 
 	// Should return false
-	c.Status = Running
-	if c.IsClusterStopped() {
-		t.Error("expected IsClusterStopped to return false")
-	}
+	cluster.Status = Stopped
+	assert.True(t, cluster.IsClusterStopped())
 }
 
 // TestUpdateStatus tests the Cluster.UpdateStatus logic under different scenarios
 func TestUpdateStatus(t *testing.T) {
 	// Case 1: No instances -> Terminated
-	c := Cluster{Instances: []Instance{}}
-	c.UpdateStatus()
-	if c.Status != Terminated {
-		t.Errorf("expected status Terminated, got %v", c.Status)
+	cluster := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
+	cluster.UpdateStatus()
+	if cluster.Status != Terminated {
+		t.Errorf("expected status Terminated, got %v", cluster.Status)
 	}
 
 	// Case 2: At least one Running -> Running
-	c.Instances = []Instance{
+	cluster.Instances = []Instance{
 		{Status: Running},
 		{Status: Stopped},
 	}
-	c.UpdateStatus()
-	if c.Status != Running {
-		t.Errorf("expected status Running, got %v", c.Status)
+	cluster.UpdateStatus()
+	if cluster.Status != Running {
+		t.Errorf("expected status Running, got %v", cluster.Status)
 	}
 
 	// Case 3: All Terminated -> Terminated
-	c.Instances = []Instance{
+	cluster.Instances = []Instance{
 		{Status: Terminated},
 		{Status: Terminated},
 	}
-	c.UpdateStatus()
-	if c.Status != Terminated {
-		t.Errorf("expected status Terminated, got %v", c.Status)
+	cluster.UpdateStatus()
+	if cluster.Status != Terminated {
+		t.Errorf("expected status Terminated, got %v", cluster.Status)
 	}
 
 	// Case 4: Mix of Stopped and Terminated -> Stopped
-	c.Instances = []Instance{
+	cluster.Instances = []Instance{
 		{Status: Stopped},
 		{Status: Terminated},
 	}
-	c.UpdateStatus()
-	if c.Status != Stopped {
-		t.Errorf("expected status Stopped, got %v", c.Status)
+	cluster.UpdateStatus()
+	if cluster.Status != Stopped {
+		t.Errorf("expected status Stopped, got %v", cluster.Status)
 	}
 }
 

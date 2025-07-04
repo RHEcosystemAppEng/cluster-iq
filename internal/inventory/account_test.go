@@ -42,50 +42,34 @@ func TestNewAccount(t *testing.T) {
 func TestGetUser(t *testing.T) {
 	user := "user01"
 
-	account := Account{
-		user: user,
-	}
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, user, "password")
 
-	accUser := account.GetUser()
-	if accUser != user {
-		t.Errorf("Account's User do not match. Have: %s ; Expected: %s", accUser, user)
-	}
+	assert.Equal(t, account.user, user)
 }
 
 // TestGetPassword verifies that GetPassword method returns the correct password
 func TestGetPassword(t *testing.T) {
 	password := "secretPassword"
 
-	account := Account{
-		ID:       "0000-11A",
-		Name:     "testAccount",
-		password: password,
-	}
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", password)
 
-	accPassword := account.GetPassword()
-	if accPassword != password {
-		t.Errorf("Account's Password do not match. Have: %s ; Expected: %s", accPassword, password)
-	}
+	assert.Equal(t, account.password, password)
 }
 
 // TestEnableBilling verifies that EnableBilling sets billingEnabled to true.
 func TestEnableBilling(t *testing.T) {
-	account := &Account{}
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", "password")
 	account.EnableBilling()
 
-	if !account.billingEnabled {
-		t.Errorf("expected billingEnabled to be true, got false")
-	}
+	assert.True(t, account.billingEnabled)
 }
 
 // TestDisableBilling verifies that DisableBilling sets billingEnabled to false.
 func TestDisableBilling(t *testing.T) {
-	account := &Account{billingEnabled: true}
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", "password")
 	account.DisableBilling()
 
-	if account.billingEnabled {
-		t.Errorf("expected billingEnabled to be false, got true")
-	}
+	assert.False(t, account.billingEnabled)
 }
 
 // TestIsBillingEnabled verifies that IsBillingEnabled returns the correct boolean value.
