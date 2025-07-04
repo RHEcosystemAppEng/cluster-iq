@@ -2,14 +2,26 @@ package inventory
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewTag verifies NewTag constructor assigns values correctly
 func TestNewTag(t *testing.T) {
-	tag := NewTag("env", "prod", "i-123")
-	if tag.Key != "env" || tag.Value != "prod" || tag.InstanceID != "i-123" {
-		t.Errorf("unexpected tag values: %+v", tag)
+	key := "environment"
+	value := "production"
+	instanceID := "testInstance"
+
+	expectedTag := &Tag{
+		Key:        key,
+		Value:      value,
+		InstanceID: instanceID,
 	}
+
+	actualTag := NewTag(key, value, instanceID)
+
+	assert.NotNil(t, actualTag)
+	assert.Equal(t, actualTag, expectedTag)
 }
 
 // TestLookForTagByKey_Found verifies tag retrieval by key

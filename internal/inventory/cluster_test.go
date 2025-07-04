@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestGenerateClusterID tests GenerateClusterID with valid and invalid inputs
@@ -32,19 +34,43 @@ func TestGenerateClusterID(t *testing.T) {
 
 // TestNewCluster tests creation of a new Cluster using NewCluster
 func TestNewCluster(t *testing.T) {
-	cluster := NewCluster("c1", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
-	if cluster == nil {
-		t.Fatal("expected non-nil cluster")
+	name := "testCluster"
+	infraID := "ABCDEF0123"
+	provider := AWSProvider
+	region := "us-east-1"
+	accountName := "testAccount"
+	consoleLink := "http://console.testCluster.domain"
+	owner := "clusteriq"
+
+	expectedCluster := &Cluster{
+		Name:                  name,
+		InfraID:               infraID,
+		Provider:              provider,
+		Status:                Running,
+		Region:                region,
+		AccountName:           accountName,
+		ConsoleLink:           consoleLink,
+		InstanceCount:         0,
+		Owner:                 owner,
+		TotalCost:             0.0,
+		Last15DaysCost:        0.0,
+		LastMonthCost:         0.0,
+		CurrentMonthSoFarCost: 0.0,
+		Instances:             make([]Instance, 0),
 	}
-	if cluster.ID != "c1-i1-acc1" {
-		t.Errorf("unexpected ID: %s", cluster.ID)
-	}
-	if cluster.Status != Running {
-		t.Errorf("expected status Running, got %v", cluster.Status)
-	}
-	if cluster.InstanceCount != 0 {
-		t.Errorf("expected instance count 0, got %d", cluster.InstanceCount)
-	}
+
+	actualCluster := NewCluster(name, infraID, provider, region, accountName, consoleLink, owner)
+
+	assert.NotNil(t, actualCluster)
+
+	assert.NotZero(t, actualCluster.LastScanTimestamp)
+	assert.Zero(t, actualCluster.InstanceCount)
+
+	expectedCluster.ID = actualCluster.ID
+	expectedCluster.Age = actualCluster.Age
+	expectedCluster.LastScanTimestamp = actualCluster.LastScanTimestamp
+	expectedCluster.CreationTimestamp = actualCluster.CreationTimestamp
+	assert.Equal(t, expectedCluster, actualCluster)
 }
 
 // TestNewCluster_InvalidParams tests creation of a new Cluster using invalid parameters for the InfraID generation

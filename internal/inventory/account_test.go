@@ -2,6 +2,8 @@ package inventory
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewAccount for inventory.Account.NewAccount
@@ -12,10 +14,28 @@ func TestNewAccount(t *testing.T) {
 	user := "user"
 	password := "password"
 
-	account := NewAccount(id, name, provider, user, password)
-	if account == nil {
-		t.Errorf("Account was not created correctly. Nil was returned")
+	expectedAccount := &Account{
+		ID:                    id,
+		Name:                  name,
+		Provider:              provider,
+		user:                  user,
+		password:              password,
+		Clusters:              make(map[string]*Cluster),
+		billingEnabled:        false,
+		ClusterCount:          0,
+		TotalCost:             0.0,
+		Last15DaysCost:        0.0,
+		LastMonthCost:         0.0,
+		CurrentMonthSoFarCost: 0.0,
 	}
+
+	actualAccount := NewAccount(id, name, provider, user, password)
+
+	assert.NotNil(t, actualAccount)
+	assert.NotZero(t, actualAccount.LastScanTimestamp)
+
+	expectedAccount.LastScanTimestamp = actualAccount.LastScanTimestamp
+	assert.Equal(t, expectedAccount, actualAccount)
 }
 
 // TestGetUser verifies that GetUser returns the correct user name
@@ -48,23 +68,23 @@ func TestGetPassword(t *testing.T) {
 	}
 }
 
-// TestEnableBilling verifies that EnableBilling sets billing_enabled to true.
+// TestEnableBilling verifies that EnableBilling sets billingEnabled to true.
 func TestEnableBilling(t *testing.T) {
 	account := &Account{}
 	account.EnableBilling()
 
-	if !account.billing_enabled {
-		t.Errorf("expected billing_enabled to be true, got false")
+	if !account.billingEnabled {
+		t.Errorf("expected billingEnabled to be true, got false")
 	}
 }
 
-// TestDisableBilling verifies that DisableBilling sets billing_enabled to false.
+// TestDisableBilling verifies that DisableBilling sets billingEnabled to false.
 func TestDisableBilling(t *testing.T) {
-	account := &Account{billing_enabled: true}
+	account := &Account{billingEnabled: true}
 	account.DisableBilling()
 
-	if account.billing_enabled {
-		t.Errorf("expected billing_enabled to be false, got true")
+	if account.billingEnabled {
+		t.Errorf("expected billingEnabled to be false, got true")
 	}
 }
 
@@ -81,7 +101,7 @@ func TestIsBillingEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			account := Account{billing_enabled: tt.initial}
+			account := Account{billingEnabled: tt.initial}
 			result := account.IsBillingEnabled()
 
 			if result != tt.expected {
