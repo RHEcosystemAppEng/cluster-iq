@@ -82,17 +82,17 @@ func parseInfraID(key string) string {
 
 // GetOwnerFromTags looks for a tag with the key "Owner" and returns its value
 func GetOwnerFromTags(tags []Tag) string {
-	result := (LookForTagByKey("Owner", tags))
+	result := LookForTagByKey("Owner", tags)
 	if result != nil {
-		return result.Key
+		return result.Value
 	}
 	return ""
 }
 
 func GetInstanceNameFromTags(tags []Tag) string {
-	result := (LookForTagByKey("Name", tags))
+	result := LookForTagByKey("Name", tags)
 	if result != nil {
-		return result.Key
+		return result.Value
 	}
 	return ""
 }

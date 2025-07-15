@@ -30,9 +30,10 @@ func TestLookForTagByKey_Found(t *testing.T) {
 		{Key: "Name", Value: "test"},
 		{Key: "Owner", Value: "devops"},
 	}
+
 	tag := LookForTagByKey("Owner", tags)
 	if tag == nil || tag.Key != "Owner" {
-		t.Errorf("expected tag with key Owner, got %v", tag)
+		t.Errorf("Expected tag with key Owner, got %v", tag)
 	}
 }
 
@@ -40,7 +41,7 @@ func TestLookForTagByKey_Found(t *testing.T) {
 func TestLookForTagByKey_NotFound(t *testing.T) {
 	tags := []Tag{{Key: "Name", Value: "test"}}
 	if tag := LookForTagByKey("Zone", tags); tag != nil {
-		t.Errorf("expected nil, got %v", tag)
+		t.Errorf("Expected nil, got %v", tag)
 	}
 }
 
@@ -49,7 +50,7 @@ func TestParseClusterName_Valid(t *testing.T) {
 	key := "kubernetes.io/cluster/ci-ln-abcde"
 	name := parseClusterName(key)
 	if name != "ci-ln" {
-		t.Errorf("expected ci-ln, got %s", name)
+		t.Errorf("Expected ci-ln, got %s", name)
 	}
 }
 
@@ -58,7 +59,7 @@ func TestParseClusterName_Invalid(t *testing.T) {
 	key := "kubernetes.io/cluster/invalid"
 	name := parseClusterName(key)
 	if name != UnknownClusterNameCode {
-		t.Errorf("expected UNKNOWN, got %s", name)
+		t.Errorf("Expected UNKNOWN, got %s", name)
 	}
 }
 
@@ -67,7 +68,7 @@ func TestParseClusterID_Valid(t *testing.T) {
 	key := "kubernetes.io/cluster/test-name-abcde"
 	id := parseClusterID(key)
 	if id != "test-name" {
-		t.Errorf("expected test-name, got %s", id)
+		t.Errorf("Expected test-name, got %s", id)
 	}
 }
 
@@ -76,7 +77,7 @@ func TestParseClusterID_Invalid(t *testing.T) {
 	key := "garbage"
 	id := parseClusterID(key)
 	if id != UnknownClusterIDCode {
-		t.Errorf("expected UNKNOWN, got %s", id)
+		t.Errorf("Expected UNKNOWN, got %s", id)
 	}
 }
 
@@ -85,7 +86,7 @@ func TestParseInfraID_Valid(t *testing.T) {
 	key := "kubernetes.io/cluster/test-abcde"
 	infra := parseInfraID(key)
 	if infra != "abcde" {
-		t.Errorf("expected abcde, got %s", infra)
+		t.Errorf("Expected abcde, got %s", infra)
 	}
 }
 
@@ -94,16 +95,18 @@ func TestParseInfraID_Invalid(t *testing.T) {
 	key := "something-else"
 	infra := parseInfraID(key)
 	if infra != "" {
-		t.Errorf("expected empty string, got %s", infra)
+		t.Errorf("Expected empty string, got %s", infra)
 	}
 }
 
 // TestGetOwnerFromTags returns Owner tag value if present
 func TestGetOwnerFromTags(t *testing.T) {
-	tags := []Tag{{Key: "Owner", Value: "alice"}}
-	val := GetOwnerFromTags(tags)
-	if val != "Owner" {
-		t.Errorf("expected Owner, got %s", val)
+	expectedValue := "Alice"
+	tags := []Tag{{Key: "Owner", Value: expectedValue}}
+	actualValue := GetOwnerFromTags(tags)
+
+	if actualValue != expectedValue {
+		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
 	}
 }
 
@@ -111,17 +114,20 @@ func TestGetOwnerFromTags(t *testing.T) {
 func TestGetOwnerFromTags_Empty(t *testing.T) {
 	tags := []Tag{{Key: "Name", Value: "node"}}
 	val := GetOwnerFromTags(tags)
+
 	if val != "" {
-		t.Errorf("expected empty string, got %s", val)
+		t.Errorf("Expected empty string, got %s", val)
 	}
 }
 
 // TestGetInstanceNameFromTags returns Name tag if present
 func TestGetInstanceNameFromTags(t *testing.T) {
-	tags := []Tag{{Key: "Name", Value: "node-1"}}
-	val := GetInstanceNameFromTags(tags)
-	if val != "Name" {
-		t.Errorf("expected Name, got %s", val)
+	expectedValue := "instance-001"
+	tags := []Tag{{Key: "Name", Value: expectedValue}}
+	actualValue := GetInstanceNameFromTags(tags)
+
+	if actualValue != expectedValue {
+		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
 	}
 }
 
@@ -130,7 +136,7 @@ func TestGetInstanceNameFromTags_Empty(t *testing.T) {
 	tags := []Tag{{Key: "Owner", Value: "ops"}}
 	val := GetInstanceNameFromTags(tags)
 	if val != "" {
-		t.Errorf("expected empty string, got %s", val)
+		t.Errorf("Expected empty string, got %s", val)
 	}
 }
 
@@ -139,7 +145,7 @@ func TestGetClusterIDFromTags(t *testing.T) {
 	tags := []Tag{{Key: "kubernetes.io/cluster/test-name-abcde"}}
 	id := GetClusterIDFromTags(tags)
 	if id != "test-name" {
-		t.Errorf("expected test-name, got %s", id)
+		t.Errorf("Expected test-name, got %s", id)
 	}
 }
 
@@ -147,7 +153,7 @@ func TestGetClusterIDFromTags(t *testing.T) {
 func TestGetClusterIDFromTags_Unknown(t *testing.T) {
 	id := GetClusterIDFromTags([]Tag{})
 	if id != UnknownClusterNameCode {
-		t.Errorf("expected UNKNOWN, got %s", id)
+		t.Errorf("Expected UNKNOWN, got %s", id)
 	}
 }
 
@@ -156,7 +162,7 @@ func TestGetClusterNameFromTags(t *testing.T) {
 	tags := []Tag{{Key: "kubernetes.io/cluster/test-name-abcde"}}
 	name := GetClusterNameFromTags(tags)
 	if name != "test-name" {
-		t.Errorf("expected test-name, got %s", name)
+		t.Errorf("Expected test-name, got %s", name)
 	}
 }
 
@@ -164,7 +170,7 @@ func TestGetClusterNameFromTags(t *testing.T) {
 func TestGetClusterNameFromTags_Unknown(t *testing.T) {
 	name := GetClusterNameFromTags([]Tag{})
 	if name != UnknownClusterNameCode {
-		t.Errorf("expected UNKNOWN, got %s", name)
+		t.Errorf("Expected UNKNOWN, got %s", name)
 	}
 }
 
@@ -173,7 +179,7 @@ func TestGetInfraIDFromTags(t *testing.T) {
 	tags := []Tag{{Key: "kubernetes.io/cluster/test-name-abcde"}}
 	infra := GetInfraIDFromTags(tags)
 	if infra != "abcde" {
-		t.Errorf("expected abcde, got %s", infra)
+		t.Errorf("Expected abcde, got %s", infra)
 	}
 }
 
@@ -181,6 +187,6 @@ func TestGetInfraIDFromTags(t *testing.T) {
 func TestGetInfraIDFromTags_Unknown(t *testing.T) {
 	infra := GetInfraIDFromTags([]Tag{})
 	if infra != UnknownClusterNameCode {
-		t.Errorf("expected UNKNOWN, got %s", infra)
+		t.Errorf("Expected UNKNOWN, got %s", infra)
 	}
 }
