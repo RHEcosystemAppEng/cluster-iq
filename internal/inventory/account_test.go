@@ -41,19 +41,17 @@ func TestNewAccount(t *testing.T) {
 // TestGetUser verifies that GetUser returns the correct user name
 func TestGetUser(t *testing.T) {
 	user := "user01"
-
 	account := NewAccount("0000-11A", "testAccount", UnknownProvider, user, "password")
 
-	assert.Equal(t, account.user, user)
+	assert.Equal(t, account.GetUser(), user)
 }
 
 // TestGetPassword verifies that GetPassword method returns the correct password
 func TestGetPassword(t *testing.T) {
 	password := "secretPassword"
-
 	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", password)
 
-	assert.Equal(t, account.password, password)
+	assert.Equal(t, account.GetPassword(), password)
 }
 
 // TestEnableBilling verifies that EnableBilling sets billingEnabled to true.
