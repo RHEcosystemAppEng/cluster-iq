@@ -65,10 +65,11 @@ func TestParseClusterName_Invalid(t *testing.T) {
 
 // TestParseClusterID_Valid tests clusterID regex logic with valid input
 func TestParseClusterID_Valid(t *testing.T) {
-	key := "kubernetes.io/cluster/test-name-abcde"
-	id := parseClusterID(key)
-	if id != "test-name" {
-		t.Errorf("Expected test-name, got %s", id)
+	expectedValue := "test-cluster-abcde"
+	key := "kubernetes.io/cluster/" + expectedValue
+	actualValue := parseClusterID(key)
+	if actualValue != expectedValue {
+		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
 	}
 }
 
@@ -142,10 +143,12 @@ func TestGetInstanceNameFromTags_Empty(t *testing.T) {
 
 // TestGetClusterIDFromTags parses valid cluster tag key
 func TestGetClusterIDFromTags(t *testing.T) {
-	tags := []Tag{{Key: "kubernetes.io/cluster/test-name-abcde"}}
-	id := GetClusterIDFromTags(tags)
-	if id != "test-name" {
-		t.Errorf("Expected test-name, got %s", id)
+	expectedValue := "test-cluster-abcde"
+	tags := []Tag{{Key: "kubernetes.io/cluster/" + expectedValue}}
+	actualValue := GetClusterIDFromTags(tags)
+
+	if actualValue != expectedValue {
+		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
 	}
 }
 
@@ -159,10 +162,12 @@ func TestGetClusterIDFromTags_Unknown(t *testing.T) {
 
 // TestGetClusterNameFromTags works with proper tag key
 func TestGetClusterNameFromTags(t *testing.T) {
-	tags := []Tag{{Key: "kubernetes.io/cluster/test-name-abcde"}}
-	name := GetClusterNameFromTags(tags)
-	if name != "test-name" {
-		t.Errorf("Expected test-name, got %s", name)
+	expectedValue := "test-cluster"
+	tags := []Tag{{Key: "kubernetes.io/cluster/" + expectedValue + "-abcde"}}
+	actualValue := GetClusterNameFromTags(tags)
+
+	if actualValue != expectedValue {
+		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
 	}
 }
 
