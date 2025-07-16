@@ -47,8 +47,8 @@ func TestLookForTagByKey_NotFound(t *testing.T) {
 
 // TestParseClusterName_Valid extracts name from valid tag key
 func TestParseClusterName_Valid(t *testing.T) {
-	expectedValue := "test-cluster-abcde"
-	key := "kubernetes.io/cluster/" + expectedValue
+	expectedValue := "test-cluster"
+	key := "kubernetes.io/cluster/" + expectedValue + "-abcde"
 	actualValue := parseClusterName(key)
 	if expectedValue != actualValue {
 		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
@@ -85,8 +85,8 @@ func TestParseClusterID_Invalid(t *testing.T) {
 
 // TestParseInfraID_Valid verifies infra ID parsing for valid keys
 func TestParseInfraID_Valid(t *testing.T) {
-	expectedValue := "test-cluster-abcde"
-	key := "kubernetes.io/cluster/" + expectedValue
+	expectedValue := "abcde"
+	key := "kubernetes.io/cluster/test-cluster-" + expectedValue
 	actualValue := parseInfraID(key)
 	if expectedValue != actualValue {
 		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
