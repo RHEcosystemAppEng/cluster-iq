@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
@@ -113,7 +114,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 
 // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
-	var skippedAccounts int = 0
+	var skippedAccounts int
 	var validStockers []stocker.Stocker
 	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
@@ -250,9 +251,7 @@ func (s *Scanner) postNewAccount(account inventory.Account) error {
 	var expenses []inventory.Expense
 	for _, cluster := range account.Clusters {
 		for _, instance := range cluster.Instances {
-			for _, expense := range instance.Expenses {
-				expenses = append(expenses, expense)
-			}
+			expenses = append(expenses, instance.Expenses...)
 			instances = append(instances, instance)
 
 		}
@@ -345,7 +344,7 @@ func (s *Scanner) postScannerInventory() error {
 		for _, err := range errorList {
 			s.logger.Error("Post Account Error", zap.Error(err))
 		}
-		return fmt.Errorf("Error when posting Scanner inventory")
+		return fmt.Errorf("error when posting Scanner inventory")
 	}
 
 	s.logger.Info("Inventory posted correctly")
@@ -354,7 +353,7 @@ func (s *Scanner) postScannerInventory() error {
 
 func postData(path string, b []byte) error {
 	url := fmt.Sprintf("%s%s", APIURL, path)
-	request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(b))
+	request, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, url, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}

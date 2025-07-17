@@ -26,7 +26,7 @@ func NewAWSStocker(account *inventory.Account, skipNoOpenShiftInstances bool, lo
 	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
 	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithEC2(), cp.WithRoute53(), cp.WithSTS())
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create AWS connection: %w", err)
+		return nil, fmt.Errorf("failed to create AWS connection: %w", err)
 	}
 
 	// Getting AWS AccountID if it's empty
