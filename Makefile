@@ -132,7 +132,7 @@ go-test: ## Runs go tests
 
 go-cover: ## Runs the tests and calculates the coverage %
 go-cover: test
-	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out
+	@go test -race ./internal/... -coverprofile $(TEST_DIR)/cover.out
 
 go-linter: ## Runs go linter tools
 	@golangci-lint run
