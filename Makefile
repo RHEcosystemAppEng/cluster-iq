@@ -127,14 +127,26 @@ restart-dev: stop-dev start-dev
 
 
 # Tests targets
-.PHONY: test
-test:
+go-test: ## Runs go tests
 	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
-	@go test -race ./... -coverprofile $(TEST_DIR)/cover.out
 
-cover: test
-	@go tool cover -func $(TEST_DIR)/cover.out
+go-cover: ## Runs the tests and calculates the coverage %
+go-cover: test
+	@go test -race ./internal/... -coverprofile $(TEST_DIR)/cover.out
 
+go-linter: ## Runs go linter tools
+	@golangci-lint run
+
+go-fmt: ## Runs go formatting tools
+	@WRONG_LINES="$$(gofmt -l . | wc -l)"; \
+	if [[ $$WRONG_LINES -gt 0 ]]; then \
+		echo "The following files are not properly formatted: $$WRONG_LINES"; \
+		gofmt -d -e . ; \
+		exit 1; \
+	fi
+
+tests: ## Runs every test, linter and formatter
+tests: go-test go-cover go-linter go-fmt
 
 # Documentation targets
 swagger-editor: ## Open web editor for modifying Swagger docs

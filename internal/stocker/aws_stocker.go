@@ -1,6 +1,8 @@
 package stocker
 
 import (
+	"fmt"
+
 	cp "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_providers/aws"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"go.uber.org/zap"
@@ -20,12 +22,11 @@ type AWSStocker struct {
 }
 
 // NewAWSStocker create and returns a pointer to a new AWSStocker instance
-func NewAWSStocker(account *inventory.Account, skipNoOpenShiftInstances bool, logger *zap.Logger) *AWSStocker {
+func NewAWSStocker(account *inventory.Account, skipNoOpenShiftInstances bool, logger *zap.Logger) (*AWSStocker, error) {
 	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
 	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithEC2(), cp.WithRoute53(), cp.WithSTS())
 	if err != nil {
-		logger.Error("Error creating a new AWSStocker", zap.Error(err))
-		return nil
+		return nil, fmt.Errorf("failed to create AWS connection: %w", err)
 	}
 
 	// Getting AWS AccountID if it's empty
@@ -38,7 +39,7 @@ func NewAWSStocker(account *inventory.Account, skipNoOpenShiftInstances bool, lo
 		skipNoOpenShiftInstances: skipNoOpenShiftInstances,
 		logger:                   logger,
 		conn:                     conn,
-	}
+	}, nil
 }
 
 // Connect Initialices the AWS API and CostExplorer sessions and clients
@@ -53,7 +54,7 @@ func (s *AWSStocker) MakeStock() error {
 		return err
 	}
 
-	// TODO: Can we paralelize this?
+	// This loop cannot be parallelize because the AWSStocker object has only one "conn" and it depends on the configured region
 	for _, region := range regions {
 		err := s.processRegion(region)
 		if err != nil {
@@ -74,12 +75,12 @@ func (s *AWSStocker) MakeStock() error {
 	return nil
 }
 
-// TODO: Prints the Account Stock
+// PrintStock Prints the Account Stock
 func (s AWSStocker) PrintStock() {
 	s.Account.PrintAccount()
 }
 
-// TODO: Returns the Account was scanned on this stocker
+// GetResults Returns the Account was scanned on this stocker
 func (s AWSStocker) GetResults() inventory.Account {
 	return *s.Account
 }

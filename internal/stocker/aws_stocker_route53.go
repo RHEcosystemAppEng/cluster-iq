@@ -60,7 +60,7 @@ func (s *AWSStocker) FindOpenshiftConsoleURLs() error {
 		for _, hostedZone := range hostedZones {
 			// Checking if the current hosted zone belongs to the current cluster
 			if s.conn.Route53.ZoneBelongsToCluster(cluster, hostedZone) {
-				s.logger.Debug("Found Hosted Zone for Cluster", zap.String("hosted_zone_id", *hostedZone.Zone.Name), zap.String("cluster_id", cluster.ID))
+				s.logger.Debug("Found Hosted Zone for Cluster", zap.String("account", s.Account.Name), zap.String("hosted_zone_id", *hostedZone.Zone.Name), zap.String("cluster_id", cluster.ID))
 
 				s.Account.Clusters[i].ConsoleLink = s.getConsoleLinkOfCluster(cluster, hostedZone.Zone)
 			}
