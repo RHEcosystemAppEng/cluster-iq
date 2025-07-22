@@ -71,7 +71,7 @@ jobs:
 
       - name: Run Go Unit Tests
         run: |
-          make go-tests
+          make go-unit-tests
 
       - name: Run Go Integration Tests
         run: |
