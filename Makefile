@@ -133,7 +133,7 @@ go-unit-tests: ## Runs go unit tests
 
 go-integration-tests: ## Runs the Integration tests for this project
 go-integration-tests: restart-dev
-	@podman stop scanner
+	@$(CONTAINER_ENGINE) stop scanner
 	@echo -e "\n\n### [Running Integration tests] ###"
 	@go test -v -race ./test/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
 

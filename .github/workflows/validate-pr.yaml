@@ -58,5 +58,4 @@ jobs:
 
       - name: Run Go Test Coverage
         run: |
-          make go-cover
-
+          make go-tests
