@@ -56,6 +56,18 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Run Go Test Coverage
+      - name: Check Dependencies
+        run: |
+          make check-dependencies
+
+      - name: Run Go Unit Tests
         run: |
           make go-tests
+
+      - name: Run Go Integration Tests
+        run: |
+          make go-integration-tests 
+
+      - name: Run Go Coverage
+        run: |
+          make go-cover 
