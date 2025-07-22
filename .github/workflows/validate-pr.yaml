@@ -56,6 +56,13 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
+      - name: Install podman and podman-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman python3-pip
+          pip3 install --user podman-compose
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Check Dependencies
         run: |
           make check-dependencies
