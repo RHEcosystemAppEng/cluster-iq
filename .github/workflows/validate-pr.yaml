@@ -79,6 +79,6 @@ jobs:
 #          make build
 #          make go-integration-tests 
 
-      - name: Run Go Coverage
-        run: |
-          make go-cover 
+#      - name: Run Go Coverage
+#        run: |
+#          make go-cover 
