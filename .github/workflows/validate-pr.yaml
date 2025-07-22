@@ -73,6 +73,10 @@ jobs:
         run: |
           make go-unit-tests
 
+      - name: Login to Registry RedHat
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login registry.redhat.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
 # TODO: Solve pgsql image download issue from registry.redhat.com
 #      - name: Run Go Integration Tests
 #        run: |
