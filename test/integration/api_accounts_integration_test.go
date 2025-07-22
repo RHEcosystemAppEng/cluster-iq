@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	apiAccountsURL = "http://localhost:8081/api/v1/accounts"
+	APIBaseURL        = "http://localhost:8081/api/v1"
+	APIHealthcheckURL = APIBaseURL + "/healthcheck"
+	APIAccountsURL    = APIBaseURL + "/accounts"
 )
 
 type ClusterListResponse struct {
@@ -38,8 +40,9 @@ func loadTestData(filename string) []byte {
 	return data
 }
 
-// waitForAPI tries to reach the API endpoint until it responds or times out
-func waitForAPI(t *testing.T, url string) {
+// waitForAPIReady tries to reach the API endpoint until it responds or times out
+func waitForAPIReady(t *testing.T) {
+	url := APIHealthcheckURL
 	t.Helper()
 	maxAttempts := 10
 	for i := 0; i < maxAttempts; i++ {
@@ -53,7 +56,7 @@ func waitForAPI(t *testing.T, url string) {
 }
 
 func TestPostAccount(t *testing.T) {
-	waitForAPI(t, "http://localhost:8081/api/v1/healthcheck")
+	waitForAPIReady(t)
 
 	// Loading test data
 	filename := "test_accounts_01.json"
@@ -63,7 +66,7 @@ func TestPostAccount(t *testing.T) {
 	}
 
 	// Posting test data
-	resp, err := http.Post(apiAccountsURL, "application/json", bytes.NewBuffer(payload))
+	resp, err := http.Post(APIAccountsURL, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		t.Fatalf("Failed to make POST request: %v", err)
 	}
@@ -76,10 +79,10 @@ func TestPostAccount(t *testing.T) {
 }
 
 func TestGetAccount(t *testing.T) {
-	waitForAPI(t, "http://localhost:8081/api/v1/healthcheck")
+	waitForAPIReady(t)
 
 	// Getting accounts data
-	resp, err := http.Get(apiAccountsURL)
+	resp, err := http.Get(APIAccountsURL)
 	if err != nil {
 		t.Fatalf("Failed to make POST request: %v", err)
 	}
@@ -113,10 +116,10 @@ func TestGetAccount(t *testing.T) {
 }
 
 func TestGetAccountByID(t *testing.T) {
-	waitForAPI(t, "http://localhost:8081/api/v1/healthcheck")
+	waitForAPIReady(t)
 
 	// Getting accounts data
-	resp, err := http.Get(apiAccountsURL+"/test-account-001")
+	resp, err := http.Get(APIAccountsURL + "/test-account-001")
 	if err != nil {
 		t.Fatalf("Failed to make POST request: %v", err)
 	}
@@ -140,10 +143,10 @@ func TestGetAccountByID(t *testing.T) {
 }
 
 func TestDeleteAccount(t *testing.T) {
-	waitForAPI(t, "http://localhost:8081/api/v1/healthcheck")
+	waitForAPIReady(t)
 
 	// Preparing DELETE request
-	req, err := http.NewRequest(http.MethodDelete, apiAccountsURL+"/ACC-002", nil)
+	req, err := http.NewRequest(http.MethodDelete, APIAccountsURL+"/ACC-002", nil)
 	if err != nil {
 		t.Fatalf("Failed to create DELETE request: %v", err)
 	}
@@ -163,15 +166,15 @@ func TestDeleteAccount(t *testing.T) {
 }
 
 func TestPatchAccount(t *testing.T) {
-	waitForAPI(t, "http://localhost:8081/api/v1/healthcheck")
+	waitForAPIReady(t)
 
 	patchAccount := inventory.Account{
-    ID: "ACC-003",
-    Name: "test-account-003",
-    Provider: "AWS",
-    ClusterCount: 4,
-    TotalCost: 50.67,
-}
+		ID:           "ACC-003",
+		Name:         "test-account-003",
+		Provider:     "AWS",
+		ClusterCount: 4,
+		TotalCost:    50.67,
+	}
 
 	patchBody, err := json.Marshal(patchAccount)
 	if err != nil {
@@ -179,7 +182,7 @@ func TestPatchAccount(t *testing.T) {
 	}
 
 	// Preparing PATCH request
-	req, err := http.NewRequest(http.MethodPatch, apiAccountsURL+"/ACC-003", bytes.NewBuffer(patchBody))
+	req, err := http.NewRequest(http.MethodPatch, APIAccountsURL+"/ACC-003", bytes.NewBuffer(patchBody))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request: %v", err)
 	}
@@ -199,10 +202,10 @@ func TestPatchAccount(t *testing.T) {
 }
 
 func TestGetAccountClusters(t *testing.T) {
-	waitForAPI(t, "http://localhost:8081/api/v1/healthcheck")
+	waitForAPIReady(t)
 
 	// Getting accounts data
-	resp, err := http.Get(apiAccountsURL+"/test-account-001/clusters")
+	resp, err := http.Get(APIAccountsURL + "/test-account-001/clusters")
 	if err != nil {
 		t.Fatalf("Failed to make POST request: %v", err)
 	}
