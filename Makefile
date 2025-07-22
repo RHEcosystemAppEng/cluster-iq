@@ -127,25 +127,34 @@ restart-dev: stop-dev start-dev
 
 
 # Tests targets
-.PHONY: test
-tests_unit_tests: ## Runs the Unit tests for this project internal packages
+go-unit-tests: ## Runs go unit tests
 	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
 	@go test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out
 
-tests_integration_tests: ## Runs the Integration tests for this project
-tests_integration_tests: restart-dev
+go-integration-tests: ## Runs the Integration tests for this project
+go-integration-tests: restart-dev
 	@podman stop scanner
 	@echo -e "\n\n### [Running Integration tests] ###"
 	@go test -v -race ./test/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
 
-tests: ## Runs every test
-tests: tests_unit_tests tests_integration_tests
-
-tests_cover: ## Runs every test and reports about the coverage percentage
-tests_cover: tests
+go-cover: ## Runs the tests and calculates the coverage %
+go-cover: test
 	@go tool cover -func $(TEST_DIR)/cover-unit-tests.out
 	@go tool cover -func $(TEST_DIR)/cover-integration-tests.out
 
+go-tests: ## Runs every test
+go-tests: go-unit-tests go-integration-tests go-cover
+
+go-linter: ## Runs go linter tools
+	@golangci-lint run
+
+go-fmt: ## Runs go formatting tools
+	@WRONG_LINES="$$(gofmt -l . | wc -l)"; \
+	if [[ $$WRONG_LINES -gt 0 ]]; then \
+		echo "The following files are not properly formatted: $$WRONG_LINES"; \
+		gofmt -d -e . ; \
+		exit 1; \
+	fi
 
 # Documentation targets
 swagger-editor: ## Open web editor for modifying Swagger docs

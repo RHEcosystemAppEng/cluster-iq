@@ -98,6 +98,11 @@ type OverviewSummary struct {
 	Clusters  ClustersSummary  `json:"clusters"`
 	Instances InstancesSummary `json:"instances"`
 	Providers ProvidersSummary `json:"providers"`
+	Scanner   Scanner          `json:"scanner"`
+}
+
+type Scanner struct {
+	LastScanTimestamp *time.Time `json:"last_scan_timestamp"`
 }
 
 type ClustersSummary struct {

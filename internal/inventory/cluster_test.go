@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestGenerateClusterID tests GenerateClusterID with valid and invalid inputs
@@ -32,19 +34,43 @@ func TestGenerateClusterID(t *testing.T) {
 
 // TestNewCluster tests creation of a new Cluster using NewCluster
 func TestNewCluster(t *testing.T) {
-	cluster := NewCluster("c1", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
-	if cluster == nil {
-		t.Fatal("expected non-nil cluster")
+	name := "testCluster"
+	infraID := "ABCDEF0123"
+	provider := AWSProvider
+	region := "us-east-1"
+	accountName := "testAccount"
+	consoleLink := "http://console.testCluster.domain"
+	owner := "clusteriq"
+
+	expectedCluster := &Cluster{
+		Name:                  name,
+		InfraID:               infraID,
+		Provider:              provider,
+		Status:                Running,
+		Region:                region,
+		AccountName:           accountName,
+		ConsoleLink:           consoleLink,
+		InstanceCount:         0,
+		Owner:                 owner,
+		TotalCost:             0.0,
+		Last15DaysCost:        0.0,
+		LastMonthCost:         0.0,
+		CurrentMonthSoFarCost: 0.0,
+		Instances:             make([]Instance, 0),
 	}
-	if cluster.ID != "c1-i1-acc1" {
-		t.Errorf("unexpected ID: %s", cluster.ID)
-	}
-	if cluster.Status != Running {
-		t.Errorf("expected status Running, got %v", cluster.Status)
-	}
-	if cluster.InstanceCount != 0 {
-		t.Errorf("expected instance count 0, got %d", cluster.InstanceCount)
-	}
+
+	actualCluster := NewCluster(name, infraID, provider, region, accountName, consoleLink, owner)
+
+	assert.NotNil(t, actualCluster)
+
+	assert.NotZero(t, actualCluster.LastScanTimestamp)
+	assert.Zero(t, actualCluster.InstanceCount)
+
+	expectedCluster.ID = actualCluster.ID
+	expectedCluster.Age = actualCluster.Age
+	expectedCluster.LastScanTimestamp = actualCluster.LastScanTimestamp
+	expectedCluster.CreationTimestamp = actualCluster.CreationTimestamp
+	assert.Equal(t, expectedCluster, actualCluster)
 }
 
 // TestNewCluster_InvalidParams tests creation of a new Cluster using invalid parameters for the InfraID generation
@@ -63,70 +89,62 @@ func TestNewCluster_InvalidParams(t *testing.T) {
 // TestIsClusterRunning tests Cluster.IsClusterRunning with both running and non-running status
 func TestIsClusterRunning(t *testing.T) {
 	// Should return true
-	c := Cluster{Status: Running}
-	if !c.IsClusterRunning() {
-		t.Error("expected IsClusterRunning to return true")
-	}
+	cluster := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
+	assert.True(t, cluster.IsClusterRunning())
 
 	// Should return false
-	c.Status = Stopped
-	if c.IsClusterRunning() {
-		t.Error("expected IsClusterRunning to return false")
-	}
+	cluster.Status = Stopped
+	assert.False(t, cluster.IsClusterRunning())
 }
 
 // TestIsClusterStopped tests Cluster.IsClusterStopped with both stopped and non-stopped status
 func TestIsClusterStopped(t *testing.T) {
 	// Should return true
-	c := Cluster{Status: Stopped}
-	if !c.IsClusterStopped() {
-		t.Error("expected IsClusterStopped to return true")
-	}
+	cluster := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
+	assert.False(t, cluster.IsClusterStopped())
 
 	// Should return false
-	c.Status = Running
-	if c.IsClusterStopped() {
-		t.Error("expected IsClusterStopped to return false")
-	}
+	cluster.Status = Stopped
+	assert.True(t, cluster.IsClusterStopped())
 }
 
 // TestUpdateStatus tests the Cluster.UpdateStatus logic under different scenarios
 func TestUpdateStatus(t *testing.T) {
 	// Case 1: No instances -> Terminated
-	c := Cluster{Instances: []Instance{}}
-	c.UpdateStatus()
-	if c.Status != Terminated {
-		t.Errorf("expected status Terminated, got %v", c.Status)
+	cluster := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "acc1", "https://console", "user")
+	cluster.UpdateStatus()
+	if cluster.Status != Terminated {
+		t.Errorf("expected status Terminated, got %v", cluster.Status)
 	}
 
 	// Case 2: At least one Running -> Running
-	c.Instances = []Instance{
+	cluster.Instances = []Instance{
 		{Status: Running},
 		{Status: Stopped},
 	}
-	c.UpdateStatus()
-	if c.Status != Running {
-		t.Errorf("expected status Running, got %v", c.Status)
+	cluster.UpdateStatus()
+	if cluster.Status != Running {
+		t.Errorf("expected status Running, got %v", cluster.Status)
 	}
 
 	// Case 3: All Terminated -> Terminated
-	c.Instances = []Instance{
+	cluster.Instances = []Instance{
 		{Status: Terminated},
 		{Status: Terminated},
 	}
-	c.UpdateStatus()
-	if c.Status != Terminated {
-		t.Errorf("expected status Terminated, got %v", c.Status)
+	cluster.UpdateStatus()
+	if cluster.Status != Terminated {
+		t.Errorf("expected status Terminated, got %v", cluster.Status)
 	}
 
 	// Case 4: Mix of Stopped and Terminated -> Stopped
-	c.Instances = []Instance{
+	cluster.Instances = []Instance{
 		{Status: Stopped},
 		{Status: Terminated},
 	}
-	c.UpdateStatus()
-	if c.Status != Stopped {
-		t.Errorf("expected status Stopped, got %v", c.Status)
+	cluster.UpdateStatus()
+	if cluster.Status != Stopped {
+		t.Errorf("expected status Stopped, got %v", cluster.Status)
 	}
 }
 

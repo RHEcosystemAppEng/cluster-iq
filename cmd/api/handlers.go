@@ -1201,7 +1201,6 @@ func (a APIServer) getInventoryOverview() (models.OverviewSummary, error) {
 	if err != nil {
 		return models.OverviewSummary{}, fmt.Errorf("failed to get clusters overview: %w", err)
 	}
-
 	overview.Clusters = clusters
 
 	// Get instances summary
@@ -1216,8 +1215,14 @@ func (a APIServer) getInventoryOverview() (models.OverviewSummary, error) {
 	if err != nil {
 		return models.OverviewSummary{}, fmt.Errorf("failed to get providers overview: %w", err)
 	}
-
 	overview.Providers = providers
+
+	// Get scanner last scan timestamp
+	scannerLastScan, err := a.sql.GetScannerLastScanTimestamp()
+	if err != nil {
+		return models.OverviewSummary{}, fmt.Errorf("failed to get scanner last scan timestamp: %w", err)
+	}
+	overview.Scanner = models.Scanner{LastScanTimestamp: scannerLastScan}
 
 	return overview, nil
 }

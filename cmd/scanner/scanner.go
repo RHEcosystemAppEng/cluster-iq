@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
@@ -113,7 +114,7 @@ func (s *Scanner) readCloudProviderAccounts() error {
 
 // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
-	var skippedAccounts int = 0
+	var skippedAccounts int
 	var validStockers []stocker.Stocker
 	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
@@ -173,7 +174,7 @@ func (s *Scanner) createStockers() error {
 
 	// If there are no stockers, nothing to do
 	if len(s.stockers) == 0 {
-		return fmt.Errorf("No valid accounts found for scanning")
+		return fmt.Errorf("no valid accounts found for scanning")
 	}
 
 	// Checking the logLevel before entering on the For loop for optimization
@@ -220,7 +221,7 @@ func (s *Scanner) startStockers() error {
 		for _, err := range errorList {
 			s.logger.Error("Stocker Error", zap.Error(err))
 		}
-		return fmt.Errorf("Error when running Scanner stockers. Failed Stockers: (%d)", len(errorList))
+		return fmt.Errorf("error when running Scanner stockers. Failed Stockers: (%d)", len(errorList))
 	}
 
 	s.logger.Info("Stockers executed correctly")
@@ -245,19 +246,8 @@ func (s *Scanner) postNewAccount(account inventory.Account) error {
 		return err
 	}
 
-	var clusters []inventory.Cluster
-	var instances []inventory.Instance
-	var expenses []inventory.Expense
-	for _, cluster := range account.Clusters {
-		for _, instance := range cluster.Instances {
-			for _, expense := range instance.Expenses {
-				expenses = append(expenses, expense)
-			}
-			instances = append(instances, instance)
-
-		}
-		clusters = append(clusters, *cluster)
-	}
+	// Flattering account for posting its elements
+	clusters, instances, expenses := flatternAccount(account)
 
 	// Posting Clusters
 	if len(clusters) > 0 {
@@ -280,6 +270,23 @@ func (s *Scanner) postNewAccount(account inventory.Account) error {
 		}
 	}
 	return nil
+}
+
+// flatternAccount extracts every Cluster, Instance and Expense from an Account for posting
+func flatternAccount(account inventory.Account) ([]inventory.Cluster, []inventory.Instance, []inventory.Expense) {
+	var clusters []inventory.Cluster
+	var instances []inventory.Instance
+	var expenses []inventory.Expense
+	for _, cluster := range account.Clusters {
+		for _, instance := range cluster.Instances {
+			expenses = append(expenses, instance.Expenses...)
+			instances = append(instances, instance)
+
+		}
+		clusters = append(clusters, *cluster)
+	}
+
+	return clusters, instances, expenses
 }
 
 // postClusters posts into the API, the new instances obtained after scanning
@@ -345,7 +352,7 @@ func (s *Scanner) postScannerInventory() error {
 		for _, err := range errorList {
 			s.logger.Error("Post Account Error", zap.Error(err))
 		}
-		return fmt.Errorf("Error when posting Scanner inventory")
+		return fmt.Errorf("error when posting Scanner inventory")
 	}
 
 	s.logger.Info("Inventory posted correctly")
@@ -354,7 +361,7 @@ func (s *Scanner) postScannerInventory() error {
 
 func postData(path string, b []byte) error {
 	url := fmt.Sprintf("%s%s", APIURL, path)
-	request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(b))
+	request, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, url, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}

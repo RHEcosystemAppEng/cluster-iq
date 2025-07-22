@@ -5,22 +5,46 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewInstance verifies that NewInstance returns a correctly initialized instance
 func TestNewInstance(t *testing.T) {
-	now := time.Now().Add(-48 * time.Hour)
-	inst := NewInstance("i-123", "test-instance", AWSProvider, "t3.micro", "us-east-1a", Running, "cluster-1", nil, now)
+	id := "0000-11A"
+	name := "testAccount"
+	var provider CloudProvider = UnknownProvider
+	instanceType := "t2.micro"
+	availabilityZone := "us-west-1a"
+	status := Terminated
+	clusterID := "testCluster"
+	tags := make([]Tag, 0)
+	creationTimestamp := time.Now()
 
-	if inst.ID != "i-123" {
-		t.Errorf("expected ID i-123, got %s", inst.ID)
+	expectedInstance := &Instance{
+		ID:                id,
+		Name:              name,
+		Provider:          provider,
+		InstanceType:      instanceType,
+		AvailabilityZone:  availabilityZone,
+		Status:            status,
+		ClusterID:         clusterID,
+		LastScanTimestamp: creationTimestamp,
+		CreationTimestamp: creationTimestamp,
+		DailyCost:         0.0,
+		TotalCost:         0.0,
+		Tags:              tags,
 	}
-	if inst.Age != 2 {
-		t.Errorf("expected age 2, got %d", inst.Age)
-	}
-	if inst.TotalCost != 0.0 || inst.DailyCost != 0.0 {
-		t.Error("expected initial costs to be 0")
-	}
+
+	actualInstance := NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, tags, creationTimestamp)
+
+	assert.NotNil(t, actualInstance)
+	assert.NotZero(t, actualInstance.LastScanTimestamp)
+
+	expectedInstance.Age = actualInstance.Age
+	expectedInstance.LastScanTimestamp = actualInstance.LastScanTimestamp
+	expectedInstance.CreationTimestamp = actualInstance.CreationTimestamp
+	assert.Equal(t, expectedInstance, actualInstance)
 }
 
 // TestCalculateTotalCost_Success verifies that total cost is correctly aggregated

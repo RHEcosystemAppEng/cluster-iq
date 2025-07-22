@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
@@ -1029,6 +1030,18 @@ func (a SQLClient) CheckStatusValue(status string) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+// GetScannerLastScanTimestamp returns the latest scan timestamp across all accounts
+func (a SQLClient) GetScannerLastScanTimestamp() (*time.Time, error) {
+	var lastScanTimestamp sql.NullTime
+	if err := a.db.Get(&lastScanTimestamp, SelectScannerLastScanTimestamp); err != nil {
+		return nil, err
+	}
+	if lastScanTimestamp.Valid {
+		return &lastScanTimestamp.Time, nil
+	}
+	return nil, nil
 }
 
 // joinInstancesTags maps an array of InstanceDB objects into a slice of inventory.Instance objects.

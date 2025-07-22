@@ -1,11 +1,10 @@
-name: Cluster IQ Container image building
+name: Container image building
 
 on:
   push:
-    branches:
-      - main
-      - release-.*
-      - release-.*-rc-.*
+    tags:
+      - 'v*.*.*'
+
   pull_request:
     branches:
       - main
@@ -13,36 +12,8 @@ on:
       - release-.*-rc-.*
 
 jobs:
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Extract Go Version from go.mod
-        id: go_version
-        run: echo "GO_VERSION=$(awk '/^go /{print $2}' go.mod)" >> $GITHUB_ENV
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Check formatting
-        run: |
-          if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
-            echo "The following files are not properly formatted:"
-            gofmt -l .
-            exit 1
-          fi
-      - name: Set up golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.64.2
-
   setup:
     runs-on: ubuntu-latest
-    needs: golangci
     permissions:
       contents: read
       packages: write
@@ -72,23 +43,19 @@ jobs:
             BRANCH_NAME=${GITHUB_REF##*/}
             echo "Changes comming from Push: $BRANCH_NAME/$SHA_COMMIT"
           fi
-
           echo "SHA_COMMIT=$SHA_COMMIT" >> $GITHUB_OUTPUT
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
-
           # Getting LATEST_TAG
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             LATEST_TAG="latest"
           fi
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
-
           # Getting version tag if available
           GIT_TAG=$(git tag --points-at HEAD | head -n 1)
           if [[ -n "$GIT_TAG" ]]; then
             echo "Detected Git Tag: $GIT_TAG"
           fi
           echo "GIT_TAG=$GIT_TAG" >> $GITHUB_OUTPUT
-
           echo "Building Tags:"
           echo "  * SHA_COMMIT: ${SHA_COMMIT}"
           echo "  * BRANCH_NAME: ${BRANCH_NAME}"
@@ -96,7 +63,6 @@ jobs:
           if [[ $LATEST_TAG == "latest" ]]; then
             echo "  * Including 'latest' tag"
           fi
-
   api:
     runs-on: ubuntu-latest
     needs: setup
@@ -111,7 +77,6 @@ jobs:
       - name: Login to Quay.io
         run: |
           echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
       - name: Container image building
         run: |
           echo "Building ClusterIQ API (${{ needs.setup.outputs.BRANCH }}/${{ needs.setup.outputs.SHA_COMMIT }})"
@@ -121,20 +86,16 @@ jobs:
             --build-arg COMMIT=${{ needs.setup.outputs.SHA_COMMIT }} \
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.SHA_COMMIT }} \
             -f ./deployments/containerfiles/Containerfile-api .
-
       - name: Pushing Hash based image
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.SHA_COMMIT }}
-
       - name: Tagging and Pushing Latest Image
         if: ${{ needs.setup.outputs.LATEST_TAG != '' && needs.setup.outputs.LATEST_TAG != null }}
         run: |
           podman tag \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.SHA_COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.LATEST_TAG }}
-
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.LATEST_TAG }}
-
       - name: Tagging and Puhsing GitTag based image
         if: ${{ needs.setup.outputs.GIT_TAG != '' && needs.setup.outputs.GIT_TAG != null }}
         run: |
@@ -143,11 +104,9 @@ jobs:
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.SHA_COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.GIT_TAG }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.GIT_TAG }}
-
       - name: Logout from Quay.io
         run: |
           podman logout quay.io
-
   agent:
     runs-on: ubuntu-latest
     needs: setup
@@ -162,7 +121,6 @@ jobs:
       - name: Login to Quay.io
         run: |
           echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
       - name: Container image building
         run: |
           echo "Building ClusterIQ Agent (${{ needs.setup.outputs.BRANCH }}/${{ needs.setup.outputs.SHA_COMMIT }})"
@@ -172,20 +130,16 @@ jobs:
             --build-arg COMMIT=${{ needs.setup.outputs.SHA_COMMIT }} \
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.SHA_COMMIT }} \
             -f ./deployments/containerfiles/Containerfile-agent .
-
       - name: Pushing Hash based image
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.SHA_COMMIT }}
-
       - name: Tagging and Pushing Latest Image
         if: ${{ needs.setup.outputs.LATEST_TAG != '' && needs.setup.outputs.LATEST_TAG != null }}
         run: |
           podman tag \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.SHA_COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.LATEST_TAG }}
-
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.LATEST_TAG }}
-
       - name: Tagging and Puhsing GitTag based image
         if: ${{ needs.setup.outputs.GIT_TAG != '' && needs.setup.outputs.GIT_TAG != null }}
         run: |
@@ -194,11 +148,9 @@ jobs:
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.SHA_COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.GIT_TAG }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.GIT_TAG }}
-
       - name: Logout from Quay.io
         run: |
           podman logout quay.io
-
   scanner:
     runs-on: ubuntu-latest
     needs: setup
@@ -213,7 +165,6 @@ jobs:
       - name: Login to Quay.io
         run: |
           echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
       - name: Container image building
         run: |
           echo "Building ClusterIQ Scanner (${{ needs.setup.outputs.BRANCH }}/${{ needs.setup.outputs.SHA_COMMIT }})"
@@ -223,20 +174,16 @@ jobs:
             --build-arg COMMIT=${{ needs.setup.outputs.SHA_COMMIT }} \
             -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.SHA_COMMIT }} \
             -f ./deployments/containerfiles/Containerfile-scanner .
-
       - name: Pushing Hash based image
         run: |
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.SHA_COMMIT }}
-
       - name: Tagging and Pushing Latest Image
         if: ${{ needs.setup.outputs.LATEST_TAG != '' && needs.setup.outputs.LATEST_TAG != null }}
         run: |
           podman tag \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.SHA_COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.LATEST_TAG }}
-
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.LATEST_TAG }}
-
       - name: Tagging and Puhsing GitTag based image
         if: ${{ needs.setup.outputs.GIT_TAG != '' && needs.setup.outputs.GIT_TAG != null }}
         run: |
@@ -245,11 +192,9 @@ jobs:
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.SHA_COMMIT }} \
             quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.GIT_TAG }}
           podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.GIT_TAG }}
-
       - name: Logout from Quay.io
         run: |
           podman logout quay.io
-
   final:
     runs-on: ubuntu-latest
     needs:

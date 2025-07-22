@@ -2,6 +2,8 @@ package inventory
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestNewAccount for inventory.Account.NewAccount
@@ -12,60 +14,60 @@ func TestNewAccount(t *testing.T) {
 	user := "user"
 	password := "password"
 
-	account := NewAccount(id, name, provider, user, password)
-	if account == nil {
-		t.Errorf("Account was not created correctly. Nil was returned")
+	expectedAccount := &Account{
+		ID:                    id,
+		Name:                  name,
+		Provider:              provider,
+		user:                  user,
+		password:              password,
+		Clusters:              make(map[string]*Cluster),
+		billingEnabled:        false,
+		ClusterCount:          0,
+		TotalCost:             0.0,
+		Last15DaysCost:        0.0,
+		LastMonthCost:         0.0,
+		CurrentMonthSoFarCost: 0.0,
 	}
+
+	actualAccount := NewAccount(id, name, provider, user, password)
+
+	assert.NotNil(t, actualAccount)
+	assert.NotZero(t, actualAccount.LastScanTimestamp)
+
+	expectedAccount.LastScanTimestamp = actualAccount.LastScanTimestamp
+	assert.Equal(t, expectedAccount, actualAccount)
 }
 
 // TestGetUser verifies that GetUser returns the correct user name
 func TestGetUser(t *testing.T) {
 	user := "user01"
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, user, "password")
 
-	account := Account{
-		user: user,
-	}
-
-	accUser := account.GetUser()
-	if accUser != user {
-		t.Errorf("Account's User do not match. Have: %s ; Expected: %s", accUser, user)
-	}
+	assert.Equal(t, account.GetUser(), user)
 }
 
 // TestGetPassword verifies that GetPassword method returns the correct password
 func TestGetPassword(t *testing.T) {
 	password := "secretPassword"
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", password)
 
-	account := Account{
-		ID:       "0000-11A",
-		Name:     "testAccount",
-		password: password,
-	}
-
-	accPassword := account.GetPassword()
-	if accPassword != password {
-		t.Errorf("Account's Password do not match. Have: %s ; Expected: %s", accPassword, password)
-	}
+	assert.Equal(t, account.GetPassword(), password)
 }
 
-// TestEnableBilling verifies that EnableBilling sets billing_enabled to true.
+// TestEnableBilling verifies that EnableBilling sets billingEnabled to true.
 func TestEnableBilling(t *testing.T) {
-	account := &Account{}
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", "password")
 	account.EnableBilling()
 
-	if !account.billing_enabled {
-		t.Errorf("expected billing_enabled to be true, got false")
-	}
+	assert.True(t, account.billingEnabled)
 }
 
-// TestDisableBilling verifies that DisableBilling sets billing_enabled to false.
+// TestDisableBilling verifies that DisableBilling sets billingEnabled to false.
 func TestDisableBilling(t *testing.T) {
-	account := &Account{billing_enabled: true}
+	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", "password")
 	account.DisableBilling()
 
-	if account.billing_enabled {
-		t.Errorf("expected billing_enabled to be false, got true")
-	}
+	assert.False(t, account.billingEnabled)
 }
 
 // TestIsBillingEnabled verifies that IsBillingEnabled returns the correct boolean value.
@@ -81,7 +83,7 @@ func TestIsBillingEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			account := Account{billing_enabled: tt.initial}
+			account := Account{billingEnabled: tt.initial}
 			result := account.IsBillingEnabled()
 
 			if result != tt.expected {
