@@ -76,6 +76,7 @@ jobs:
       - name: Login to Quay.io
         run: |
           echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
       - name: Container image building
         run: |
           echo "Building ClusterIQ API (${{ needs.setup.outputs.BRANCH }}/${{ needs.setup.outputs.SHA_COMMIT }})"

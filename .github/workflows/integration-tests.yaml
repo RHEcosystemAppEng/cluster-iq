@@ -2,6 +2,11 @@ name: Integration Tests
 
 on:
   workflow_call:
+    secrets:
+      QUAY_USERNAME:
+        required: true
+      QUAY_PASSWORD:
+        required: true
     inputs:
       compose_file:
         required: false
