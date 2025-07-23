@@ -1,4 +1,3 @@
-#
 # ClusterIQ Makefile
 ################################################################################
 
@@ -132,23 +131,22 @@ restart-dev: stop-dev start-dev
 
 
 # Tests targets
-go-unit-tests: ## Runs go unit tests
+go-setup-tests:
 	@[ -d $(TEST_DIR) ] || mkdir $(TEST_DIR)
+
+go-unit-tests: ## Runs go unit tests
+go-unit-tests: go-setup-tests
 	@$(GO) test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out
+	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
 
 go-integration-tests: ## Runs the Integration tests for this project
-go-integration-tests: restart-dev
-	@$(CONTAINER_ENGINE) stop scanner
-	@echo -e "\n\n### [Running Integration tests] ###"
-	@$(GO) test -v -race ./test/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
-
-go-cover: ## Runs the tests and calculates the coverage %
-go-cover:
-	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
+go-integration-tests: go-setup-tests
+	@echo -e "### [Running Integration tests] ###"
+	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
 	@$(GO) tool cover -func $(TEST_DIR)/cover-integration-tests.out
 
 go-tests: ## Runs every test
-go-tests: go-unit-tests go-integration-tests go-cover
+go-tests: go-unit-tests go-integration-tests
 
 go-linter: ## Runs go linter tools
 	@$(GO_LINTER) run
