@@ -8,8 +8,6 @@ on:
   pull_request:
     branches:
       - main
-      - release-.*
-      - release-.*-rc-.*
 
 jobs:
   setup:
