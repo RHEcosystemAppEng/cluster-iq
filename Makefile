@@ -141,7 +141,7 @@ go-unit-tests: go-setup-tests
 
 go-integration-tests: ## Runs the Integration tests for this project
 go-integration-tests: go-setup-tests
-	@echo -e "\n\n### [Running Integration tests] ###"
+	@echo -e "### [Running Integration tests] ###"
 	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
 	@$(GO) tool cover -func $(TEST_DIR)/cover-integration-tests.out
 
