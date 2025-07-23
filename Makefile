@@ -1,4 +1,3 @@
-#
 # ClusterIQ Makefile
 ################################################################################
 
@@ -8,9 +7,14 @@ SHORT_COMMIT_HASH := $(shell git rev-parse --short=7 HEAD)
 # Binary vars
 CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
 K8S_CLI ?= $(shell which oc >/dev/null 2>&1 && echo oc || echo kubectl)
+GO ?= go
+GO_LINTER ?= golangci-lint
+GO_FMT ?= gofmt
+SWAGGER ?= swag
+PROTOC ?= protoc
 
 # Required binaries
-REQUIRED_BINS := $(CONTAINER_ENGINE) $(CONTAINER_ENGINE)-compose $(K8S_CLI) swag protoc
+REQUIRED_BINS := $(CONTAINER_ENGINE) $(CONTAINER_ENGINE)-compose $(K8S_CLI) $(GO) $(GO_LINTER) $(GO_FMT) $(SWAGGER) $(PROTOC)
 
 # Container image registry vars
 REGISTRY ?= quay.io
@@ -44,7 +48,7 @@ AGENT_PROTO_PATH ?= ./cmd/agent/proto/agent.proto
 
 # Standard targets
 all: ## Stop, build and start the development environment based on containers
-all: stop-dev build start-dev
+all: check-dependencies stop-dev build start-dev
 
 .PHONY: check-dependencies
 check-dependencies:
@@ -62,17 +66,17 @@ local-build: local-build-scanner local-build-api local-build-agent ## Build all 
 
 local-build-api: swagger-doc ## Build the API binary
 	@echo "### [Building API] ###"
-	@go build -o $(BIN_DIR)/api/api $(LDFLAGS) ./cmd/api/
+	@$(GO) build -o $(BIN_DIR)/api/api $(LDFLAGS) ./cmd/api/
 
 local-build-scanner: ## Build the scanner binary
 	@echo "### [Building Scanner] ###"
-	@go build -o $(BIN_DIR)/scanners/scanner $(LDFLAGS) ./cmd/scanner
+	@$(GO) build -o $(BIN_DIR)/scanners/scanner $(LDFLAGS) ./cmd/scanner
 
 local-build-agent: ## Build the agent binary
 	@echo "### [Building Agent] ###"
 	@[ ! -d $(GENERATED_DIR) ] && { mkdir $(GENERATED_DIR); } || { exit 0; }
 	@protoc --go_out=$(GENERATED_DIR) --go-grpc_out=$(GENERATED_DIR) $(AGENT_PROTO_PATH)
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/agent/agent $(LDFLAGS) ./cmd/agent
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -o $(BIN_DIR)/agent/agent $(LDFLAGS) ./cmd/agent
 
 
 # Container based working targets
@@ -127,26 +131,33 @@ restart-dev: stop-dev start-dev
 
 
 # Tests targets
-go-test: ## Runs go tests
-	@[[ -d $(TEST_DIR) ]] || mkdir $(TEST_DIR)
+go-setup-tests:
+	@[ -d $(TEST_DIR) ] || mkdir $(TEST_DIR)
 
-go-cover: ## Runs the tests and calculates the coverage %
-go-cover: test
-	@go test -race ./internal/... -coverprofile $(TEST_DIR)/cover.out
+go-unit-tests: ## Runs go unit tests
+go-unit-tests: go-setup-tests
+	@$(GO) test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out
+	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
+
+go-integration-tests: ## Runs the Integration tests for this project
+go-integration-tests: go-setup-tests
+	@echo -e "### [Running Integration tests] ###"
+	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
+	@$(GO) tool cover -func $(TEST_DIR)/cover-integration-tests.out
+
+go-tests: ## Runs every test
+go-tests: go-unit-tests go-integration-tests
 
 go-linter: ## Runs go linter tools
-	@golangci-lint run
+	@$(GO_LINTER) run
 
 go-fmt: ## Runs go formatting tools
-	@WRONG_LINES="$$(gofmt -l . | wc -l)"; \
+	@WRONG_LINES="$$($(GO_FMT) -l . | wc -l)"; \
 	if [[ $$WRONG_LINES -gt 0 ]]; then \
 		echo "The following files are not properly formatted: $$WRONG_LINES"; \
-		gofmt -d -e . ; \
+		$(GO_FMT) -d -e . ; \
 		exit 1; \
 	fi
-
-tests: ## Runs every test, linter and formatter
-tests: go-test go-cover go-linter go-fmt
 
 # Documentation targets
 swagger-editor: ## Open web editor for modifying Swagger docs
@@ -159,8 +170,8 @@ swagger-editor: ## Open web editor for modifying Swagger docs
 
 swagger-doc: ## Generate Swagger documentation for ClusterIQ API
 	@echo "### [Generating Swagger Docs] ###"
-	@swag fmt
-	@swag init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
+	@$(SWAGGER) fmt
+	@$(SWAGGER) init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
 
 
 # Set the default target to "help"
