@@ -56,7 +56,32 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Run Go Test Coverage
+      - name: Install podman and podman-compose + protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman python3-pip
+          pip3 install --user podman-compose
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+          VERSION=21.12
+          ARCH=linux-x86_64
+          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${VERSION}/protoc-${VERSION}-${ARCH}.zip
+          unzip -o protoc-${VERSION}-${ARCH}.zip -d $HOME/.protoc
+          echo "$HOME/.protoc/bin" >> $GITHUB_PATH
+
+      - name: Run Go Unit Tests
+        run: |
+          make go-unit-tests
+
+      - name: Login to Registry RedHat
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login registry.redhat.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
+      - name: Run Go Integration Tests
+        run: |
+          make build
+          make go-integration-tests
+
+      - name: Run Go Coverage
         run: |
           make go-cover
-
