@@ -140,7 +140,7 @@ go-unit-tests: go-setup-tests
 	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
 
 go-integration-tests: ## Runs the Integration tests for this project
-go-integration-tests: go-setup-tests restart-dev
+go-integration-tests: go-setup-tests
 	@$(CONTAINER_ENGINE) stop scanner
 	@echo -e "\n\n### [Running Integration tests] ###"
 	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
