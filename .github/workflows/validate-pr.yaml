@@ -1,7 +1,12 @@
 name: Pull Request Validation
 
 on:
-  pull_request:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
 jobs:
   golangci:
@@ -80,12 +85,11 @@ jobs:
         run: |
           echo "${{ secrets.QUAY_PASSWORD }}" | podman login registry.redhat.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
 
-# TODO: Solve pgsql image download issue from registry.redhat.com
-#      - name: Run Go Integration Tests
-#        run: |
-#          make build
-#          make go-integration-tests 
+      - name: Run Go Integration Tests
+        run: |
+          make build
+          make go-integration-tests
 
-#      - name: Run Go Coverage
-#        run: |
-#          make go-cover 
+      - name: Run Go Coverage
+        run: |
+          make go-cover
