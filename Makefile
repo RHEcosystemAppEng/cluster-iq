@@ -1,4 +1,4 @@
-lusterIQ Makefile
+# ClusterIQ Makefile
 ################################################################################
 
 # Global Vars
@@ -147,7 +147,7 @@ go-integration-tests: go-setup-tests restart-dev
 	@$(GO) tool cover -func $(TEST_DIR)/cover-integration-tests.out
 
 go-tests: ## Runs every test
-go-tests: go-unit-tests go-integration-tests
+go-tests: go-unit-tests go-integration-tests go-cover
 
 go-linter: ## Runs go linter tools
 	@$(GO_LINTER) run
