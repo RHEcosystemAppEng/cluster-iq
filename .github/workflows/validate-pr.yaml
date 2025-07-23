@@ -35,53 +35,16 @@ jobs:
         with:
           version: v1.64.5
 
-  tests:
-    runs-on: ubuntu-latest
-    needs: golangci
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  call-unit-tests:
+    name: Go Unit tests
+    needs:
+      - golangci
+    uses:
+      - "./.github/workflows/unit-tests.yaml"
 
-      - name: Extract Go Version from go.mod
-        id: go_version
-        run: echo "GO_VERSION=$(awk '/^go /{print $2}' go.mod)" >> $GITHUB_ENV
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Install podman and podman-compose + protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y podman python3-pip
-          pip3 install --user podman-compose
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-          VERSION=21.12
-          ARCH=linux-x86_64
-          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${VERSION}/protoc-${VERSION}-${ARCH}.zip
-          unzip -o protoc-${VERSION}-${ARCH}.zip -d $HOME/.protoc
-          echo "$HOME/.protoc/bin" >> $GITHUB_PATH
-
-      - name: Run Go Unit Tests
-        run: |
-          make go-unit-tests
-
-      - name: Login to Registry RedHat
-        run: |
-          echo "${{ secrets.QUAY_PASSWORD }}" | podman login registry.redhat.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
-      - name: Run Go Integration Tests
-        run: |
-          make build
-          make go-integration-tests
-
-      - name: Run Go Coverage
-        run: |
-          make go-cover
+  call-integration-tests:
+    name: Integration tests
+    needs:
+      - call-unit-tests
+    uses:
+      - "./.github/workflows/integration-tests.yaml"
