@@ -3,11 +3,6 @@ name: Integration Tests
 on:
   workflow_call:
     inputs:
-      protoc_version:
-        required: false
-        type: string
-        default: "21.12"
-
       compose_file:
         required: false
         type: string
@@ -16,11 +11,12 @@ on:
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Extract Go Version from go.mod
         id: go_version
@@ -37,12 +33,6 @@ jobs:
           sudo apt-get install -y podman python3-pip
           pip3 install --user podman-compose
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-          VERSION=${{ inputs.protoc_version }}
-          ARCH=linux-x86_64
-          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${VERSION}/protoc-${VERSION}-${ARCH}.zip
-          unzip -o protoc-${VERSION}-${ARCH}.zip -d $HOME/.protoc
-          echo "$HOME/.protoc/bin" >> $GITHUB_PATH
 
       - name: Login to Registry RedHat
         run: |
