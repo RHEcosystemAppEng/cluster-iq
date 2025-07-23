@@ -37,5 +37,5 @@ jobs:
       - name: Run Go Integration Tests
         run: |
           make build
-          podman-compose -f ./deployments/compose/${{ inputs.compose-file }} up -d
+          podman-compose -f ./deployments/compose/${{ inputs.compose_file }} up -d
           make go-integration-tests
