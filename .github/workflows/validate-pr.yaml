@@ -46,6 +46,3 @@ jobs:
     needs:
       - call-unit-tests
     uses: "./.github/workflows/integration-tests.yaml"
-    secrets:
-      QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-      QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}

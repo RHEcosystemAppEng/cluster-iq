@@ -2,16 +2,11 @@ name: Integration Tests
 
 on:
   workflow_call:
-    secrets:
-      QUAY_USERNAME:
-        required: true
-      QUAY_PASSWORD:
-        required: true
     inputs:
       compose_file:
         required: false
         type: string
-        default: "./deployments/compose/compose-devel.yaml"
+        default: "./deployments/compose/compose-gh.yaml"
 
 jobs:
   integration-tests:
@@ -39,15 +34,7 @@ jobs:
           pip3 install --user podman-compose
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Login to Registry RedHat
-        run: |
-          echo "${{ secrets.QUAY_PASSWORD }}" | podman login registry.redhat.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
-
       - name: Run Go Integration Tests
         run: |
           make build
           make go-integration-tests
-
-      - name: Logout from Registry RedHat
-        run: |
-          podman logout registry.redhat.io
