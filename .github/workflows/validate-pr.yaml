@@ -37,6 +37,7 @@ jobs:
 
   call-unit-tests:
     name: Go Unit tests
+    runs-on: ubuntu-latest
     needs:
       - golangci
     steps:
@@ -45,6 +46,7 @@ jobs:
 
   call-integration-tests:
     name: Integration tests
+    runs-on: ubuntu-latest
     needs:
       - call-unit-tests
     steps:
