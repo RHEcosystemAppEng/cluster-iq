@@ -17,6 +17,9 @@ Metrics and monitoring is not part of the scope of this project, the main
 purpose is to maintain and updated inventory of the clusters and offer a easier
 way to identify, manage, and estimate costs.
 
+ClusterIQ has a Web UI called [ClusterIQ Console](https://github.com/RHEcosystemAppEng/cluster-iq-console).
+Follow this [link](https://github.com/RHEcosystemAppEng/cluster-iq-console?tab=readme-ov-file#development-scripts) for installation instructions.
+
 ## Supported cloud providers
 
 The scope of the project is to cover make stock on the most common public cloud
