@@ -112,7 +112,9 @@ type ClustersSummary struct {
 }
 
 type InstancesSummary struct {
-	Count int `json:"count"`
+	Running  int `json:"running"`
+	Stopped  int `json:"stopped"`
+	Archived int `json:"archived"`
 }
 
 type ProvidersSummary struct {
