@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
@@ -23,10 +24,18 @@ import (
 )
 
 const (
-	apiAccountEndpoint  = "/accounts"
-	apiClusterEndpoint  = "/clusters"
-	apiInstanceEndpoint = "/instances"
-	apiExpenseEndpoint  = "/expenses"
+	APIAccountEndpoint          = "/accounts"
+	APIClusterEndpoint          = "/clusters"
+	APIInstanceEndpoint         = "/instances"
+	APIExpenseEndpoint          = "/expenses"
+	APIRefreshInventoryEndpoint = "/inventory/refresh"
+
+	ScannerExitOK                                = 0
+	ScannerExitErrorReadingCloudProviderAccounts = 101
+	ScannerExitErrorCreatingStockers             = 201
+	ScannerExitErrorStartingStockers             = 202
+	ScannerExitErrorPrintingInventory            = 301
+	ScannerExitErrorRefreshingInventory          = 302
 )
 
 var (
@@ -37,27 +46,22 @@ var (
 
 	// logger variable across the entire scanner code
 	logger *zap.Logger
-
-	// MD5 Checksum of credsFile
-	credsFileHash []byte
-
-	// HTTP Client for connecting the scanner to the API
-	client http.Client
-
-	// API URL as global var for postData function
-	APIURL string
 )
 
 // Scanner models the cloud agnostic Scanner for looking up OCP deployments
 type Scanner struct {
-	inventory inventory.Inventory
-	stockers  []stocker.Stocker
-	cfg       *config.ScannerConfig
-	logger    *zap.Logger
+	inventory     inventory.Inventory
+	stockers      []stocker.Stocker
+	cfg           *config.ScannerConfig
+	client        http.Client
+	APIURL        string
+	logger        *zap.Logger
+	credsFileHash []byte
 }
 
 // NewScanner creates and returns a new Scanner instance
 func NewScanner(cfg *config.ScannerConfig, logger *zap.Logger) *Scanner {
+	var credsFileHash []byte
 	// Calculate Credentials file MD5 checksum for checking on runtime
 	hash := md5.Sum([]byte(cfg.CredentialsFile))
 	copy(hash[:], credsFileHash)
@@ -65,14 +69,15 @@ func NewScanner(cfg *config.ScannerConfig, logger *zap.Logger) *Scanner {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	client = http.Client{Transport: tr}
-	APIURL = cfg.APIURL
 
 	return &Scanner{
-		inventory: *inventory.NewInventory(),
-		stockers:  make([]stocker.Stocker, 0),
-		cfg:       cfg,
-		logger:    logger,
+		inventory:     *inventory.NewInventory(),
+		stockers:      make([]stocker.Stocker, 0),
+		cfg:           cfg,
+		client:        http.Client{Transport: tr},
+		APIURL:        cfg.APIURL,
+		logger:        logger,
+		credsFileHash: credsFileHash,
 	}
 }
 
@@ -242,7 +247,7 @@ func (s *Scanner) postNewAccount(account inventory.Account) error {
 	}
 
 	// Posting Account data
-	if err := postData(apiAccountEndpoint, b); err != nil {
+	if err := postData(s.client, fmt.Sprintf("%s%s", s.cfg.APIURL, APIAccountEndpoint), b); err != nil {
 		return err
 	}
 
@@ -251,21 +256,21 @@ func (s *Scanner) postNewAccount(account inventory.Account) error {
 
 	// Posting Clusters
 	if len(clusters) > 0 {
-		if err := postClusters(clusters); err != nil {
+		if err := s.postClusters(clusters); err != nil {
 			return err
 		}
 	}
 
 	// Posting Instances
 	if len(instances) > 0 {
-		if err := postInstances(instances); err != nil {
+		if err := s.postInstances(instances); err != nil {
 			return err
 		}
 	}
 
 	// Posting Expenses
 	if len(expenses) > 0 {
-		if err := postExpenses(expenses); err != nil {
+		if err := s.postExpenses(expenses); err != nil {
 			return err
 		}
 	}
@@ -290,33 +295,33 @@ func flatternAccount(account inventory.Account) ([]inventory.Cluster, []inventor
 }
 
 // postClusters posts into the API, the new instances obtained after scanning
-func postClusters(clusters []inventory.Cluster) error {
+func (s *Scanner) postClusters(clusters []inventory.Cluster) error {
 	b, err := json.Marshal(clusters)
 	if err != nil {
 		return err
 	}
 
-	return postData(apiClusterEndpoint, b)
+	return postData(s.client, fmt.Sprintf("%s%s", s.cfg.APIURL, APIClusterEndpoint), b)
 }
 
 // postInstances posts into the API, the instances obtained after scanning
-func postInstances(instances []inventory.Instance) error {
+func (s *Scanner) postInstances(instances []inventory.Instance) error {
 	b, err := json.Marshal(instances)
 	if err != nil {
 		return err
 	}
 
-	return postData(apiInstanceEndpoint, b)
+	return postData(s.client, fmt.Sprintf("%s%s", s.cfg.APIURL, APIInstanceEndpoint), b)
 }
 
 // postExpenses posts into the API, the expenses obtained after scanning
-func postExpenses(expenses []inventory.Expense) error {
+func (s *Scanner) postExpenses(expenses []inventory.Expense) error {
 	b, err := json.Marshal(expenses)
 	if err != nil {
 		return err
 	}
 
-	return postData(apiExpenseEndpoint, b)
+	return postData(s.client, fmt.Sprintf("%s%s", s.cfg.APIURL, APIExpenseEndpoint), b)
 }
 
 // postScannerInventory posts to ClusterIQ API the information obtained of the scanning process
@@ -359,8 +364,7 @@ func (s *Scanner) postScannerInventory() error {
 	return nil
 }
 
-func postData(path string, b []byte) error {
-	url := fmt.Sprintf("%s%s", APIURL, path)
+func postData(client http.Client, url string, b []byte) error {
 	request, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, url, bytes.NewBuffer(b))
 	if err != nil {
 		return err
@@ -369,7 +373,11 @@ func postData(path string, b []byte) error {
 	response, err := client.Do(request)
 	if response != nil {
 		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			return fmt.Errorf("received HTTP error code (%d) during PostData", response.StatusCode)
+		}
 	}
+
 	if err != nil {
 		return err
 	}
@@ -377,11 +385,19 @@ func postData(path string, b []byte) error {
 	return nil
 }
 
+// refreshInventory runs the inventory refresh operation by calling the API
+// '/refresh' for re-evaluating the clusters and instances that are considered
+// as Terminated
+func (s *Scanner) refreshInventory() error {
+	s.logger.Info("Refreshing Inventory")
+	return postData(s.client, fmt.Sprintf("%s%s", s.cfg.APIURL, APIRefreshInventoryEndpoint), nil)
+}
+
 // getInstances fetches instances from the backend API
 func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 	s.logger.Debug("Fetching instances for update billing from backend")
 
-	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiInstanceEndpoint+"/expense_update")
+	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, APIInstanceEndpoint+"/expense_update")
 
 	resp, err := http.Get(requestURL)
 	if err != nil {
@@ -435,7 +451,7 @@ func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 func signalHandler(sig os.Signal) {
 	if sig == syscall.SIGTERM {
 		logger.Fatal("SIGTERM signal received. Stopping ClusterIQ Scanner")
-		os.Exit(0)
+		os.Exit(ScannerExitOK)
 	}
 
 	logger.Warn("Ignoring signal: ", zap.String("signal_id", sig.String()))
@@ -444,13 +460,13 @@ func signalHandler(sig os.Signal) {
 // Main method
 func main() {
 	// Ignore Logger sync error
-	defer func() { _ = logger.Sync() }()
+	_ = logger.Sync()
 
 	var err error
 
 	cfg, err := config.LoadScannerConfig()
 	if err != nil {
-		logger.Fatal("Failed to load config", zap.Error(err))
+		logger.Fatal("Failed to load scanner configuration", zap.Error(err))
 	}
 
 	scan := NewScanner(cfg, logger)
@@ -458,8 +474,8 @@ func main() {
 	scan.logger.Info("==================== Starting ClusterIQ Scanner ====================",
 		zap.String("version", version),
 		zap.String("commit", commit),
-		zap.String("credentials_file_path", cfg.CredentialsFile),
-		zap.ByteString("credentials_file_hash", credsFileHash),
+		zap.String("credentials_file_path", scan.cfg.CredentialsFile),
+		zap.ByteString("credentials_file_hash", scan.credsFileHash),
 	)
 
 	// Listen Signals block for receive OS signals. This is used by K8s/OCP for
@@ -473,31 +489,40 @@ func main() {
 	}()
 
 	// Get Cloud Accounts from credentials file
-	err = scan.readCloudProviderAccounts()
-	if err != nil {
+	if err := scan.readCloudProviderAccounts(); err != nil {
 		logger.Error("Failed to get cloud provider accounts", zap.Error(err))
-		return
+		os.Exit(ScannerExitErrorReadingCloudProviderAccounts)
 	}
 
-	// Run Stockers
-	err = scan.createStockers()
-	if err != nil {
+	// Creating Stockers
+	if err := scan.createStockers(); err != nil {
 		logger.Error("Failed to create stockers", zap.Error(err))
-		return
+		os.Exit(ScannerExitErrorCreatingStockers)
 	}
 
-	err = scan.startStockers()
-	if err != nil {
+	t0 := time.Now()
+	// Running Stockers
+	if err := scan.startStockers(); err != nil {
 		logger.Error("Failed to start up stocker instances", zap.Error(err))
-		return
+		os.Exit(ScannerExitErrorStartingStockers)
 	}
 
 	// Writing into DB
 	scan.inventory.PrintInventory()
 	if err := scan.postScannerInventory(); err != nil {
 		logger.Error("Can't post scanned results", zap.Error(err))
-		return
+		os.Exit(ScannerExitErrorPrintingInventory)
+	}
+
+	// Refresh Inventory in DB
+	if err := scan.refreshInventory(); err != nil {
+		logger.Error("Can't refresh inventory after scanning update", zap.Error(err))
+		os.Exit(ScannerExitErrorRefreshingInventory)
 	}
 
 	logger.Info("Scanner finished successfully")
+	scan.logger.Info("==================== Finished ClusterIQ Scanner ====================",
+		zap.Duration("scan_duration_seconds", time.Since(t0)),
+	)
+	os.Exit(ScannerExitOK)
 }

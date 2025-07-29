@@ -59,7 +59,7 @@ func (r *Router) setupInstancesRoutes(baseGroup *gin.RouterGroup) {
 	instancesGroup.GET("", r.api.HandlerGetInstances)
 	instancesGroup.GET("/expense_update", r.api.HandlerGetInstancesForBillingUpdate)
 	instancesGroup.GET("/:instance_id", r.api.HandlerGetInstanceByID)
-	instancesGroup.POST("", r.api.HandlerPostInstance, r.api.HandlerRefreshInventory)
+	instancesGroup.POST("", r.api.HandlerPostInstance)
 	instancesGroup.DELETE("/:instance_id", r.api.HandlerDeleteInstance)
 	instancesGroup.PATCH("/:instance_id", r.api.HandlerPatchInstance)
 }
@@ -71,7 +71,7 @@ func (r *Router) setupClustersRoutes(baseGroup *gin.RouterGroup) {
 	clustersGroup.GET("/:cluster_id/instances", r.api.HandlerGetInstancesOnCluster)
 	clustersGroup.GET("/:cluster_id/tags", r.api.HandlerGetClusterTags)
 	clustersGroup.GET("/:cluster_id/events", r.api.HandlerGetClusterEvents)
-	clustersGroup.POST("", r.api.HandlerPostCluster, r.api.HandlerRefreshInventory)
+	clustersGroup.POST("", r.api.HandlerPostCluster)
 	clustersGroup.POST("/:cluster_id/power_on", r.api.HandlerPowerOnCluster)
 	clustersGroup.POST("/:cluster_id/power_off", r.api.HandlerPowerOffCluster)
 	clustersGroup.DELETE("/:cluster_id", r.api.HandlerDeleteCluster)
