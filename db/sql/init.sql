@@ -330,7 +330,8 @@ RETURNS void AS $$
 BEGIN
   UPDATE instances
   SET status = 'Terminated'
-  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day'
+    AND status IS DISTINCT FROM 'Terminated';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -340,7 +341,8 @@ RETURNS void AS $$
 BEGIN
   UPDATE clusters
   SET status = 'Terminated'
-  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day'
+    AND status IS DISTINCT FROM 'Terminated';
 END;
 $$ LANGUAGE plpgsql;
 
