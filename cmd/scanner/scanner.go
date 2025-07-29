@@ -374,7 +374,7 @@ func postData(client http.Client, url string, b []byte) error {
 	if response != nil {
 		defer response.Body.Close()
 		if response.StatusCode != http.StatusOK {
-			return fmt.Errorf("Received HTTP error code (%d) during PostData", response.StatusCode)
+			return fmt.Errorf("received HTTP error code (%d) during PostData", response.StatusCode)
 		}
 	}
 
@@ -460,7 +460,7 @@ func signalHandler(sig os.Signal) {
 // Main method
 func main() {
 	// Ignore Logger sync error
-	defer func() { _ = logger.Sync() }()
+	_ = logger.Sync()
 
 	var err error
 
@@ -522,7 +522,7 @@ func main() {
 
 	logger.Info("Scanner finished successfully")
 	scan.logger.Info("==================== Finished ClusterIQ Scanner ====================",
-		zap.Duration("scan_duration_seconds", time.Now().Sub(t0)),
+		zap.Duration("scan_duration_seconds", time.Since(t0)),
 	)
 	os.Exit(ScannerExitOK)
 }
