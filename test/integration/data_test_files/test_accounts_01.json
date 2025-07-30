@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ACC-001",
+    "name": "test-account-001",
+    "provider": "AWS",
+    "cluster_count": 3,
+    "last_scan_timestamp": "1993-10-12T00:00:00Z",
+    "total_cost": 12.34
+  },
+  {
+    "id": "ACC-002",
+    "name": "test-account-002",
+    "provider": "GCP",
+    "cluster_count": 3,
+    "last_scan_timestamp": "1993-10-12T00:00:00Z",
+    "total_cost": 12.34
+  },
+  {
+    "id": "ACC-003",
+    "name": "test-account-003",
+    "provider": "Azure",
+    "cluster_count": 3,
+    "last_scan_timestamp": "1993-10-12T00:00:00Z",
+    "total_cost": 12.34
+  }
+]
