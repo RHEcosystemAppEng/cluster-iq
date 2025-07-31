@@ -11,6 +11,7 @@ on:
 
 jobs:
   setup:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false # Prevents running if the PR is a draft
     runs-on: ubuntu-latest
     permissions:
       contents: read
