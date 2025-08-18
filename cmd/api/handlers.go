@@ -738,7 +738,7 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 		return
 	}
 
-	if a.grpc.ProcessInstantAction(action); err != nil {
+	if err := a.grpc.ProcessInstantAction(action); err != nil {
 		a.logger.Error("Failed to power on cluster",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
@@ -796,7 +796,7 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 		return
 	}
 
-	if a.grpc.ProcessInstantAction(action); err != nil {
+	if err := a.grpc.ProcessInstantAction(action); err != nil {
 		a.logger.Error("Failed to power on cluster",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
