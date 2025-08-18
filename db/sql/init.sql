@@ -1,53 +1,27 @@
--- ## Tables definitions ##
--- Cloud Providers
-CREATE TABLE IF NOT EXISTS providers (
-  name TEXT PRIMARY KEY
+-- ## Inventory definition ##
+-- Supported values for Cloud Providers
+CREATE TYPE CLOUD_PROVIDER AS ENUM (
+  'AWS',
+  'GCP',
+  'Azure',
+  'UNKNOWN'
 );
 
--- Default values for Cloud Providers table
-INSERT INTO
-  providers(name)
-VALUES
-  ('AWS'),
-  ('GCP'),
-  ('Azure'),
-  ('UNKNOWN')
-;
 
-
--- Action Operations
-CREATE TABLE IF NOT EXISTS action_operations (
-  name TEXT PRIMARY KEY
+-- Supported values of Status (Valid for Clusters and and Instances)
+CREATE TYPE STATUS AS ENUM (
+  'Running',
+  'Stopped',
+  'Terminated',
+  'Unknown'
 );
-
--- Default values for Cloud Providers table
-INSERT INTO
-  action_operations(name)
-VALUES
-  ('PowerOnCluster'),
-  ('PowerOffCluster')
-;
-
--- Status
-CREATE TABLE IF NOT EXISTS status (
-  value TEXT PRIMARY KEY
-);
-
--- Default values for Status table
-INSERT INTO
-  status(value)
-VALUES
-  ('Running'),
-  ('Stopped'),
-  ('Terminated')
-;
 
 
 -- Accounts
 CREATE TABLE IF NOT EXISTS accounts (
   id TEXT,
   name TEXT PRIMARY KEY,
-  provider TEXT REFERENCES providers(name),
+  provider CLOUD_PROVIDER,
   cluster_count INTEGER,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
   total_cost NUMERIC(12,2) DEFAULT 0.0,
@@ -63,8 +37,8 @@ CREATE TABLE IF NOT EXISTS clusters (
   id TEXT PRIMARY KEY,
   name TEXT,
   infra_id TEXT,
-  provider TEXT REFERENCES providers(name),
-  status TEXT REFERENCES status(value),
+  provider CLOUD_PROVIDER,
+  status STATUS,
   region TEXT,
   account_name TEXT REFERENCES accounts(name) ON DELETE CASCADE,
   console_link TEXT,
@@ -84,10 +58,10 @@ CREATE TABLE IF NOT EXISTS clusters (
 CREATE TABLE IF NOT EXISTS instances (
   id TEXT PRIMARY KEY,
   name TEXT,
-  provider TEXT REFERENCES providers(name),
+  provider CLOUD_PROVIDER,
   instance_type TEXT,
   availability_zone TEXT,
-  status TEXT REFERENCES status(value),
+  status STATUS,
   cluster_id TEXT REFERENCES clusters(id) ON DELETE CASCADE,
   last_scan_timestamp TIMESTAMP WITH TIME ZONE,
   creation_timestamp TIMESTAMP WITH TIME ZONE,
@@ -114,44 +88,43 @@ CREATE TABLE IF NOT EXISTS expenses (
   PRIMARY KEY (instance_id, date)
 );
 
--- Action types table
-CREATE TABLE IF NOT EXISTS action_types (
-  name TEXT PRIMARY KEY
+
+-- ## Actions Definitions ##
+-- Supported values of Action Operations
+CREATE TYPE ACTION_OPERATION AS ENUM (
+  'PowerOnCluster',
+  'PowerOffCluster'
 );
 
--- Default values for Action Types
-INSERT INTO
-  action_types(name)
-VALUES
-  ('cron_action'),
-  ('scheduled_action')
-;
 
--- Action Status table
-CREATE TABLE IF NOT EXISTS action_status (
-  name TEXT PRIMARY KEY
+-- Supported values of action types
+CREATE TYPE ACTION_TYPE AS ENUM (
+  'instant_action',
+  'cron_action',
+  'scheduled_action'
 );
 
--- Default values for Action Types
-INSERT INTO
-  action_status(name)
-VALUES
-  ('Success'),
-  ('Failed'),
-  ('Pending'),
-  ('Unknown')
-;
+
+-- Supported values of action status
+CREATE TYPE ACTION_STATUS AS ENUM (
+  'Pending',
+  'Running',
+  'Success',
+  'Failed',
+  'Unknown'
+);
+
 
 -- Scheduled actions
 CREATE TABLE IF NOT EXISTS schedule (
   id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-  type TEXT REFERENCES action_types(name),
+  type ACTION_TYPE NOT NULL DEFAULT 'scheduled_action',
   time TIMESTAMP WITH TIME ZONE,
   cron_exp TEXT,
-  operation TEXT REFERENCES action_operations(name),
+  operation ACTION_OPERATION NOT NULL,
   target TEXT REFERENCES clusters(id) ON DELETE CASCADE,
-  status TEXT REFERENCES action_status(name),
-  enabled BOOLEAN
+  status ACTION_STATUS NOT NULL DEFAULT 'Unknown',
+  enabled BOOLEAN DEFAULT false
 );
 
 
