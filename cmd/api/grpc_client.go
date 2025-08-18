@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	pb "github.com/RHEcosystemAppEng/cluster-iq/generated/agent"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -13,6 +15,10 @@ import (
 const (
 	// grpcTimeoutSeconds defines the timeout in seconds for gRPC operations.
 	grpcTimeoutSeconds = 10
+)
+
+var (
+	DefaultInstantActionDescription = "InstantAction"
 )
 
 // APIGRPCClient manages the gRPC client connection and operations for the API server.
@@ -54,6 +60,20 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 	}, nil
 }
 
+func (a APIGRPCClient) ProcessInstantAction(action *actions.InstantAction) error {
+	if action.GetDescription() == nil {
+		action.Description = &DefaultInstantActionDescription
+	}
+	switch action.Operation {
+	case actions.PowerOffCluster:
+		return a.PowerOffCluster(action)
+	case actions.PowerOnCluster:
+		return a.PowerOnCluster(action)
+	default:
+		return fmt.Errorf("received InstantAction with unknown Operation")
+	}
+}
+
 // PowerOffCluster sends a gRPC request to power off a cluster by the given ClusterID.
 // It logs the details of the request and the response received.
 //
@@ -62,13 +82,15 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 //
 // Returns:
 // - An error if the gRPC call fails or the request cannot be completed.
-func (a APIGRPCClient) PowerOffCluster(request *ClusterStatusChangeRequest) error {
+func (a APIGRPCClient) PowerOffCluster(action *actions.InstantAction) error {
 	// Creating PowerOffClusterRequest
 	rpcRequest := &pb.PowerOffClusterRequest{
-		AccountName:     request.AccountName,
-		Region:          request.Region,
-		ClusterId:       request.ClusterID,
-		InstancesIdList: request.InstancesIdList,
+		AccountName:     action.GetTarget().AccountName,
+		Region:          action.GetTarget().Region,
+		ClusterId:       action.GetTarget().ClusterID,
+		InstancesIdList: action.GetTarget().Instances,
+		Requester:       action.GetRequester(),
+		Description:     *action.GetDescription(),
 	}
 
 	// Logging the request details
@@ -97,13 +119,15 @@ func (a APIGRPCClient) PowerOffCluster(request *ClusterStatusChangeRequest) erro
 //
 // Returns:
 // - An error if the gRPC call fails or the request cannot be completed.
-func (a APIGRPCClient) PowerOnCluster(request *ClusterStatusChangeRequest) error {
+func (a APIGRPCClient) PowerOnCluster(action *actions.InstantAction) error {
 	// Creating PowerOnClusterRequest
 	rpcRequest := &pb.PowerOnClusterRequest{
-		AccountName:     request.AccountName,
-		Region:          request.Region,
-		ClusterId:       request.ClusterID,
-		InstancesIdList: request.InstancesIdList,
+		AccountName:     action.GetTarget().AccountName,
+		Region:          action.GetTarget().Region,
+		ClusterId:       action.GetTarget().ClusterID,
+		InstancesIdList: action.GetTarget().Instances,
+		Requester:       action.GetRequester(),
+		Description:     *action.GetDescription(),
 	}
 
 	// Logging the request details

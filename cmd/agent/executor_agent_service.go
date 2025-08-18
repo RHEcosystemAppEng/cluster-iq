@@ -172,32 +172,32 @@ func (e *ExecutorAgentService) GetExecutor(accountName string) *cexec.CloudExecu
 func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
 	var actionStatus string
+	var triggeredBy string
 
 	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
-		e.logger.Debug("New action arrived to ExecutorAgentService",
+		e.logger.Debug("New action received by ExecutorAgentService",
 			zap.Any("action", newAction.GetActionOperation()),
 			zap.Any("target", newAction.GetTarget()),
+			zap.Any("requester", newAction.GetRequester()),
 		)
 
 		_, isInstantAction := newAction.(*actions.InstantAction)
-
-		// Set description based on action type
-		description := "ScheduledAction(" + newAction.GetID() + ")"
 		if isInstantAction {
-			description = "InstantAction"
+			triggeredBy = newAction.GetRequester()
+		} else {
+			triggeredBy = "ClusterIQ ScheduleAgentService"
 		}
 
 		// Initialize event tracker
 		tracker := e.eventService.StartTracking(&events.EventOptions{
 			Action:       newAction.GetActionOperation(),
-			Description:  &description,
+			Description:  newAction.GetDescription(),
 			ResourceID:   newAction.GetTarget().ClusterID,
 			ResourceType: inventory.ClusterResourceType,
 			Result:       events.ResultPending,
 			Severity:     events.SeverityInfo,
-			// TODO. Rethink
-			TriggeredBy: "ClusterIQ Agent",
+			TriggeredBy:  triggeredBy,
 		})
 
 		target := newAction.GetTarget()

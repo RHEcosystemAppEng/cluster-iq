@@ -302,6 +302,7 @@ func (a SQLClient) WriteScheduledActions(newActions []actions.Action) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
