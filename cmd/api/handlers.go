@@ -1186,6 +1186,7 @@ func (a APIServer) HandlerGetInventoryOverview(c *gin.Context) {
 
 	overview, err := a.getInventoryOverview()
 	if err != nil {
+		a.logger.Error("Error when generating Inventory Overview data", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse("failed to retrieve inventory overview"))
 		return
 	}
