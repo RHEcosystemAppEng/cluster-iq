@@ -65,6 +65,8 @@ type AuditEvent struct {
 	Result string `json:"result"`
 	// Log severity level (e.g., "info", "warning", "error").
 	Severity string `json:"severity"`
+	// Requester name
+	Requester string `json:"requester"`
 	// User or system entity responsible for the action.
 	TriggeredBy string `json:"triggered_by"`
 }

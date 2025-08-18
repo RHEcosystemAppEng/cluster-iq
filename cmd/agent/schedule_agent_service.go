@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -271,6 +272,12 @@ func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error
 	response, err := a.client.Do(request)
 	if err != nil {
 		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Error fetching ScheduleActions list from API")
 	}
 
 	// Reading response body

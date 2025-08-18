@@ -14,9 +14,9 @@ type InstantAction struct {
 //
 // Returns:
 // - A pointer to a newly created InstantAction instance.
-func NewInstantAction(ao ActionOperation, target ActionTarget, status string, enabled bool) *InstantAction {
+func NewInstantAction(ao ActionOperation, target ActionTarget, status string, requester string, description *string, enabled bool) *InstantAction {
 	return &InstantAction{
-		BaseAction: *NewBaseAction(ao, target, status, enabled),
+		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
 	}
 }
 
@@ -51,6 +51,18 @@ func (i InstantAction) GetTarget() ActionTarget {
 func (i InstantAction) GetID() string {
 	return i.ID
 }
+
+// GetRequester returns the action requester
+//
+// Returns:
+// - A string representing action requester
+func (i InstantAction) GetRequester() string { return i.Requester }
+
+// GetDescription returns the action description
+//
+// Returns:
+// - A string representing action description
+func (i InstantAction) GetDescription() *string { return i.Description }
 
 // GetType returns InstantActionType
 //

@@ -20,9 +20,9 @@ type CronAction struct {
 //
 // Returns:
 // - A pointer to a newly created CronAction instance.
-func NewCronAction(actionOperation ActionOperation, target ActionTarget, status string, enabled bool, cronExpression string) *CronAction {
+func NewCronAction(actionOperation ActionOperation, target ActionTarget, status string, requester string, description *string, enabled bool, cronExpression string) *CronAction {
 	return &CronAction{
-		BaseAction: *NewBaseAction(actionOperation, target, status, enabled),
+		BaseAction: *NewBaseAction(actionOperation, target, status, requester, description, enabled),
 		Type:       "cron_action",
 		Expression: cronExpression,
 	}
@@ -60,8 +60,17 @@ func (s CronAction) GetID() string {
 	return s.ID
 }
 
-// GetType returns CronActionType
+// GetRequester returns the action requester
 //
+// Returns:
+// - A string representing action requester
+func (c CronAction) GetRequester() string { return c.Requester }
+
+// GetDescription returns the action description
+//
+// Returns:
+// - A string representing action description
+func (c CronAction) GetDescription() *string { return c.Description } // GetType returns CronActionType
 // Returns:
 // - ActionType
 func (s CronAction) GetType() ActionType {

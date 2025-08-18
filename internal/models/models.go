@@ -80,7 +80,9 @@ type AuditLog struct {
 	Result string `db:"result"`
 	// Log severity level (e.g., "info", "warning", "error").
 	Severity string `db:"severity"`
-	// User or system entity responsible for the action.
+	// User who created the action
+	Requester string `db:"requester"`
+	// User or system entity responsible for executing the action.
 	TriggeredBy string `db:"triggered_by"`
 }
 
@@ -158,6 +160,12 @@ type DBScheduledAction struct {
 	// Instances is the list of instances of the cluster that will be impacted by the aciton
 	Instances pq.StringArray `db:"instances"`
 
+	// Requester represents the name of who created the action
+	Requester string `db:"requester"`
+
+	// Description represents the description of the action
+	Description *string `db:"description"`
+
 	// Status represents the status of the current action. Check action_status table for more info
 	Status string `db:"status"`
 
@@ -188,15 +196,21 @@ func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.S
 		return nil
 	}
 
-	// Creating action target
-	target := *actions.NewActionTarget(
-		action.AccountName,
-		action.Region,
-		action.ClusterID,
-		action.Instances,
+	scheduledAction := actions.NewScheduledAction(
+		action.Operation,
+		*actions.NewActionTarget(
+			action.AccountName,
+			action.Region,
+			action.ClusterID,
+			action.Instances,
+		),
+		action.Status,
+		action.Requester,
+		action.Description,
+		action.Enable,
+		action.Timestamp.Time,
 	)
 
-	scheduledAction := actions.NewScheduledAction(action.Operation, target, action.Status, action.Enable, action.Timestamp.Time)
 	scheduledAction.ID = action.ID
 	return scheduledAction
 }
@@ -208,15 +222,21 @@ func FromDBScheduledActionToCronAction(action DBScheduledAction) *actions.CronAc
 		return nil
 	}
 
-	// Creating action target
-	target := *actions.NewActionTarget(
-		action.AccountName,
-		action.Region,
-		action.ClusterID,
-		action.Instances,
+	cronAction := actions.NewCronAction(
+		action.Operation,
+		*actions.NewActionTarget(
+			action.AccountName,
+			action.Region,
+			action.ClusterID,
+			action.Instances,
+		),
+		action.Status,
+		action.Requester,
+		action.Description,
+		action.Enable,
+		action.CronExpression.String,
 	)
 
-	cronAction := actions.NewCronAction(action.Operation, target, action.Status, action.Enable, action.CronExpression.String)
 	cronAction.ID = action.ID
 	return cronAction
 }

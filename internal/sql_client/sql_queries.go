@@ -12,8 +12,6 @@ const (
 		  schedule.time,
 		  schedule.cron_exp,
 			schedule.operation,
-			schedule.status,
-			schedule.enabled,
 			clusters.id AS cluster_id,
 			clusters.region,
 			clusters.account_name,
@@ -23,10 +21,13 @@ const (
 		JOIN instances ON clusters.id = instances.cluster_id
 		` + SelectScheduledActionsQueryConditionsPlaceholder + `
 		GROUP BY
-			schedule.id,
-			schedule.time,
-			schedule.operation,
-			clusters.id
+      schedule.id,
+      schedule.type,
+      schedule.time,
+      schedule.cron_exp,
+      schedule.operation,
+      schedule.requester,
+      clusters.id
 		ORDER BY
 			id ASC
 `
@@ -83,6 +84,8 @@ const (
 			time,
 			operation,
 			target,
+			requester,
+			description,
 			status,
 			enabled
 		) VALUES (
@@ -90,6 +93,8 @@ const (
 			:time,
 			:operation,
 			:target.cluster_id,
+			:requester,
+			:description,
 			:status,
 			:enabled
 		)
@@ -101,6 +106,8 @@ const (
 			cron_exp,
 			operation,
 			target,
+			requester,
+			description,
 			status,
 			enabled
 		) VALUES (
@@ -108,6 +115,8 @@ const (
 			:cron_exp,
 			:operation,
 			:target.cluster_id,
+			:requester,
+			:description,
 			:status,
 			:enabled
 		)
@@ -289,14 +298,15 @@ const (
 	SelectClusterEventsQuery = `
 		SELECT 
 			al.id, 
-			al.event_timestamp, 
-			al.triggered_by, 
 			al.action_name, 
+			al.event_timestamp, 
+			al.description, 
 			al.resource_id, 
 			al.resource_type, 
 			al.result, 
-			al.description, 
-			al.severity
+			al.severity,
+			al.requester, 
+			al.triggered_by
 		FROM audit_logs al
 		WHERE al.resource_id = $1
 		ORDER BY al.event_timestamp DESC;
@@ -305,14 +315,15 @@ const (
 	SelectSystemEventsQuery = `
 		SELECT 
 			al.id, 
-			al.event_timestamp, 
-			al.triggered_by, 
 			al.action_name, 
+			al.event_timestamp, 
+			al.description, 
 			al.resource_id, 
 			al.resource_type, 
 			al.result, 
-			al.description, 
 			al.severity,
+			al.requester, 
+			al.triggered_by,
 			acc.id AS account_id,
 			acc.provider
 		FROM audit_logs al

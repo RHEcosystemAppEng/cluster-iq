@@ -22,9 +22,9 @@ type ScheduledAction struct {
 //
 // Returns:
 // - A pointer to a newly created ScheduledAction instance.
-func NewScheduledAction(ao ActionOperation, target ActionTarget, status string, enabled bool, when time.Time) *ScheduledAction {
+func NewScheduledAction(ao ActionOperation, target ActionTarget, status string, requester string, description *string, enabled bool, when time.Time) *ScheduledAction {
 	return &ScheduledAction{
-		BaseAction: *NewBaseAction(ao, target, status, enabled),
+		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
 		Type:       "scheduled_action",
 		When:       when,
 	}
@@ -61,6 +61,18 @@ func (s ScheduledAction) GetTarget() ActionTarget {
 func (s ScheduledAction) GetID() string {
 	return s.ID
 }
+
+// GetRequester returns the action requester
+//
+// Returns:
+// - A string representing action requester
+func (s ScheduledAction) GetRequester() string { return s.Requester }
+
+// GetDescription returns the action description
+//
+// Returns:
+// - A string representing action description
+func (s ScheduledAction) GetDescription() *string { return s.Description }
 
 // GetType returns ScheduledActionType
 //

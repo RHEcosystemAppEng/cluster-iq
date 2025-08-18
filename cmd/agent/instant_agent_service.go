@@ -91,14 +91,12 @@ func (i *InstantAgentService) Start() error {
 // - *pb.PowerOnClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
-	i.logger.Debug("Received PowerOnCluster gRPC Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
-
-	// PowerOn
 	i.logger.Warn("Powering On Cluster",
 		zap.String("account_name", req.AccountName),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
+		zap.String("requester", req.Requester),
 		zap.Int("instances_num", len(req.InstancesIdList)),
 	)
 
@@ -111,6 +109,8 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 			req.InstancesIdList,
 		),
 		"Pending",
+		req.Requester,
+		&req.Description,
 		true,
 	)
 
@@ -132,14 +132,12 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 // - *pb.PowerOffClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
-	i.logger.Debug("Received PowerOffCluster Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
-
-	// PowerOff
 	i.logger.Warn("Powering Off Cluster",
 		zap.String("account_name", req.AccountName),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
+		zap.String("requester", req.Requester),
 		zap.Int("instances_num", len(req.InstancesIdList)))
 
 	action := actions.NewInstantAction(
@@ -151,6 +149,8 @@ func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOf
 			req.InstancesIdList,
 		),
 		"Pending",
+		req.Requester,
+		&req.Description,
 		true,
 	)
 

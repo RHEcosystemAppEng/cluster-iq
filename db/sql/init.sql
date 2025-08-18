@@ -150,6 +150,8 @@ CREATE TABLE IF NOT EXISTS schedule (
   cron_exp TEXT,
   operation TEXT REFERENCES action_operations(name),
   target TEXT REFERENCES clusters(id) ON DELETE CASCADE,
+  requester TEXT NOT NULL DEFAULT 'Unknown',
+  description TEXT,
   status TEXT REFERENCES action_status(name),
   enabled BOOLEAN
 );
@@ -159,12 +161,13 @@ CREATE TABLE IF NOT EXISTS schedule (
 CREATE TABLE IF NOT EXISTS audit_logs (
   id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  triggered_by TEXT NOT NULL,
+  triggered_by TEXT NOT NULL DEFAULT 'Unknown', -- who run the action
+  requester TEXT NOT NULL DEFAULT 'Unknown', -- Who requested the action
   action_name TEXT NOT NULL,
   resource_id TEXT NOT NULL,
   resource_type TEXT NOT NULL,
   result TEXT NOT NULL,
-  description TEXT NULL,
+  description TEXT,
   severity TEXT DEFAULT 'info'::TEXT NOT NULL,
   CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
   CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT])))

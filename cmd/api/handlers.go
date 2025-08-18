@@ -203,9 +203,12 @@ func (a APIServer) HandlerPostScheduledAction(c *gin.Context) {
 		return
 	}
 
-	// TODO
-	// We should return at least ID, nil is not useful
-	c.PureJSON(http.StatusOK, nil)
+	// Returns OK=true and the amount of Scheduled actions were created
+	c.PureJSON(http.StatusOK, struct {
+		OK                  bool `json:"ok"`
+		ActionsCreatedCount int  `json:"actionsCreatedCount"`
+	}{true, len(*decodedActions)})
+
 }
 
 // HandlerPatchStatusScheduledActions modifies only the status field of a scheduled action
@@ -712,7 +715,7 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 
 	var request struct {
-		TriggeredBy string  `json:"triggered_by"`
+		Requester   string  `json:"triggered_by"`
 		Description *string `json:"description,omitempty"`
 	}
 
@@ -723,10 +726,19 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 
 	a.logger.Debug("Power On Cluster request received",
 		zap.String("cluster_id", clusterID),
-		zap.String("triggered_by", request.TriggeredBy))
+		zap.String("triggered_by", request.Requester))
 
-	resp, err := a.handlePowerOn(clusterID, request.TriggeredBy, request.Description)
+	// Creating and filling the InstantAction for building the gRPC request
+	action, err := a.fillInstantActionInfo(actions.PowerOnCluster, clusterID, request.Requester, request.Description)
 	if err != nil {
+		a.logger.Error("Cannot get InstantAction info for the PowerOn gRPC request",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
+	}
+
+	if a.grpc.ProcessInstantAction(action); err != nil {
 		a.logger.Error("Failed to power on cluster",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
@@ -734,66 +746,15 @@ func (a APIServer) HandlerPowerOnCluster(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, resp)
-}
-
-func (a APIServer) handlePowerOn(clusterID, triggeredBy string, description *string) (*ClusterStatusChangeResponse, error) {
-	a.logger.Debug("Powering On Cluster",
-		zap.String("cluster_id", clusterID),
-		zap.String("triggered_by", triggeredBy))
-
-	// Initialize event tracker
-	tracker := a.eventService.StartTracking(&events.EventOptions{
-		Action:       inventory.ClusterPowerOnAction,
-		Description:  description,
-		ResourceID:   clusterID,
-		ResourceType: inventory.ClusterResourceType,
-		Result:       events.ResultPending,
-		Severity:     events.SeverityInfo,
-		TriggeredBy:  triggeredBy,
-	})
-
-	// Getting a new ClusterStatusChangeRequest for building the gRPC request
-	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
-	if err != nil {
-		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOn gRPC request",
-			zap.String("cluster_id", clusterID),
-			zap.Error(err))
-		tracker.Failed()
-		return nil, fmt.Errorf("cannot get cluster status: %w", err)
-	}
-
-	// RPC call for power on a cluster
-	if err := a.grpc.PowerOnCluster(cscr); err != nil {
-		a.logger.Error("Error processing Cluster Power On request",
-			zap.String("cluster_id", clusterID),
-			zap.Error(err))
-		tracker.Failed()
-		return nil, fmt.Errorf("error processing power on request: %w", err)
-	}
-
-	a.logger.Info("Cluster Powered On successfully", zap.String("cluster_id", clusterID))
-
 	// Update cluster status in DB
 	if err := a.sql.UpdateClusterStatusByClusterID("Running", clusterID); err != nil {
 		a.logger.Error("Error updating status in DB",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
-		tracker.Failed()
-		return nil, fmt.Errorf("error updating cluster status: %w", err)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 	}
 
-	// Log successful completion
-	tracker.Success()
-
-	return NewClusterStatusChangeResponse(
-		cscr.AccountName,
-		cscr.ClusterID,
-		cscr.Region,
-		inventory.Running,
-		cscr.InstancesIdList,
-		nil,
-	), nil
+	c.PureJSON(http.StatusOK, nil)
 }
 
 // HandlerPowerOffCluster handles graceful shutdown of cluster instances
@@ -812,7 +773,7 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 	clusterID := c.Param("cluster_id")
 
 	var request struct {
-		TriggeredBy string  `json:"triggered_by"`
+		Requester   string  `json:"triggered_by"`
 		Description *string `json:"description,omitempty"`
 	}
 
@@ -823,75 +784,79 @@ func (a APIServer) HandlerPowerOffCluster(c *gin.Context) {
 
 	a.logger.Debug("Power Off Cluster request received",
 		zap.String("cluster_id", clusterID),
-		zap.String("triggered_by", request.TriggeredBy))
+		zap.String("triggered_by", request.Requester))
 
-	resp, err := a.handlePowerOff(clusterID, request.TriggeredBy, request.Description)
+	// Creating and filling the InstantAction for building the gRPC request
+	action, err := a.fillInstantActionInfo(actions.PowerOffCluster, clusterID, request.Requester, request.Description)
 	if err != nil {
-		a.logger.Error("Failed to power off cluster",
+		a.logger.Error("Cannot get InstantAction info for the PowerOn gRPC request",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	c.PureJSON(http.StatusOK, resp)
-}
-
-func (a APIServer) handlePowerOff(clusterID, triggeredBy string, description *string) (*ClusterStatusChangeResponse, error) {
-	a.logger.Debug("Powering Off Cluster",
-		zap.String("cluster_id", clusterID),
-		zap.String("triggered_by", triggeredBy))
-
-	// Initialize event tracker
-	tracker := a.eventService.StartTracking(&events.EventOptions{
-		Action:       inventory.ClusterPowerOffAction,
-		Description:  description,
-		ResourceID:   clusterID,
-		ResourceType: inventory.ClusterResourceType,
-		Result:       events.ResultPending,
-		Severity:     events.SeverityWarning,
-		TriggeredBy:  triggeredBy,
-	})
-	// Getting a new ClusterStatusChangeRequest for building the gRPC request
-	cscr, err := NewClusterStatusChangeRequest(a.sql, clusterID)
-	if err != nil {
-		a.logger.Error("Cannot get ClusterStatusChangeRequest for the PowerOff gRPC request",
+	if a.grpc.ProcessInstantAction(action); err != nil {
+		a.logger.Error("Failed to power on cluster",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
-		tracker.Failed()
-		return nil, fmt.Errorf("cannot get cluster status: %w", err)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
+		return
 	}
-
-	// RPC call for power off a cluster
-	if err := a.grpc.PowerOffCluster(cscr); err != nil {
-		a.logger.Error("Error processing Cluster Power Off request",
-			zap.String("cluster_id", clusterID),
-			zap.Error(err))
-		tracker.Failed()
-		return nil, fmt.Errorf("error processing power off request: %w", err)
-	}
-
-	a.logger.Info("Cluster Powered Off successfully", zap.String("cluster_id", clusterID))
 
 	// Update cluster status in DB
 	if err := a.sql.UpdateClusterStatusByClusterID("Stopped", clusterID); err != nil {
 		a.logger.Error("Error updating status in DB",
 			zap.String("cluster_id", clusterID),
 			zap.Error(err))
-		tracker.Failed()
-		return nil, fmt.Errorf("error updating cluster status: %w", err)
+		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 	}
 
-	// Log successful completion
-	tracker.Success()
+	c.PureJSON(http.StatusOK, nil)
+}
 
-	return NewClusterStatusChangeResponse(
-		cscr.AccountName,
-		cscr.ClusterID,
-		cscr.Region,
-		inventory.Stopped,
-		cscr.InstancesIdList,
-		nil,
+func (a APIServer) fillInstantActionInfo(ao actions.ActionOperation, clusterID string, requester string, description *string) (*actions.InstantAction, error) {
+	// Get AccountName
+	accountName, err := a.sql.GetClusterAccountName(clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get Cluster Region
+	region, err := a.sql.GetClusterRegion(clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get Cluster's instances
+	instances, err := a.sql.GetInstancesOnCluster(clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	// If there are no instances for the cluster_id
+	if len(instances) == 0 {
+		return nil, fmt.Errorf("ClusterID (%s) has no instances", clusterID)
+	}
+
+	// Creating an array of InstancesIDs
+	var instancesIDs []string
+	for _, instance := range instances {
+		instancesIDs = append(instancesIDs, instance.ID)
+	}
+
+	return actions.NewInstantAction(
+		ao,
+		*actions.NewActionTarget(
+			accountName,
+			region,
+			clusterID,
+			instancesIDs,
+		),
+		"Pending",
+		requester,
+		description,
+		true,
 	), nil
 }
 
