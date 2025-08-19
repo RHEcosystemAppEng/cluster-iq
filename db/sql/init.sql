@@ -17,6 +17,14 @@ CREATE TYPE STATUS AS ENUM (
 );
 
 
+-- Supported values of resources_types
+CREATE TYPE RESOURCE_TYPE AS ENUM (
+  'Account',
+  'Cluster',
+  'Instance'
+);
+
+
 -- Accounts
 CREATE TABLE IF NOT EXISTS accounts (
   id TEXT,
@@ -143,6 +151,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT])))
 );
 
+
 -- ## Functions ##
 -- Updates the total cost of an instance after a new expense record is inserted
 CREATE OR REPLACE FUNCTION update_instance_total_costs_after_insert()
@@ -163,6 +172,7 @@ BEGIN
 END;
 $$;
 
+
 -- Updates the total cost of an instance after an expense record is deleted
 CREATE OR REPLACE FUNCTION update_instance_total_costs_after_delete()
   RETURNS TRIGGER
@@ -181,6 +191,7 @@ BEGIN
   RETURN OLD;
 END;
 $$;
+
 
 -- Updates the daily cost of an instance after a new expense record is inserted
 CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_insert()
@@ -201,6 +212,7 @@ BEGIN
 END;
 $$;
 
+
 -- Updates the daily cost of an instance after an expense record is deleted
 CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_delete()
   RETURNS TRIGGER
@@ -219,6 +231,7 @@ BEGIN
   RETURN OLD;
 END;
 $$;
+
 
 -- Updates the total cost of a cluster based on its associated instances
 CREATE OR REPLACE FUNCTION update_cluster_cost_info()
@@ -262,6 +275,7 @@ BEGIN
 END;
 $$;
 
+
 -- Updates the total cost of an account based on its associated clusters
 CREATE OR REPLACE FUNCTION update_account_cost_info()
   RETURNS TRIGGER
@@ -296,6 +310,7 @@ BEGIN
 END;
 $$;
 
+
 -- ## Maintenance Functions ##
 -- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
 CREATE OR REPLACE FUNCTION check_terminated_instances()
@@ -307,6 +322,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 -- Marks clusters as 'Terminated' if they haven't been scanned in the last 24 hours
 CREATE OR REPLACE FUNCTION check_terminated_clusters()
 RETURNS void AS $$
@@ -317,6 +333,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 -- ## Triggers ##
 -- Trigger to update instance total cost after an expense is inserted
 CREATE TRIGGER update_instance_total_cost_after_insert
@@ -325,12 +342,14 @@ ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_total_costs_after_insert();
 
+
 -- Trigger to update instance total cost after an expense is updated
 CREATE TRIGGER update_instance_total_cost_after_update
 AFTER UPDATE
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_total_costs_after_insert();
+
 
 -- Trigger to update instance total cost after an expense is deleted
 CREATE TRIGGER update_instance_total_cost_after_delete
@@ -339,12 +358,14 @@ ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_total_costs_after_delete();
 
+
 -- Trigger to update instance daily cost after an expense is inserted
 CREATE TRIGGER update_instance_daily_cost_after_insert
 AFTER INSERT
 ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
+
 
 -- Trigger to update instance daily cost after an expense is updated
 CREATE TRIGGER update_instance_daily_cost_after_update
@@ -353,6 +374,7 @@ ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
 
+
 -- Trigger to update instance daily cost after an expense is deleted
 CREATE TRIGGER update_instance_daily_cost_after_delete
 AFTER DELETE
@@ -360,12 +382,14 @@ ON expenses
 FOR EACH ROW
   EXECUTE PROCEDURE update_instance_daily_costs_after_delete();
 
+
 -- Trigger to update cluster costs info
 CREATE TRIGGER update_cluster_cost_info
 AFTER UPDATE
 ON instances
 FOR EACH ROW
   EXECUTE PROCEDURE update_cluster_cost_info();
+
 
 -- Trigger to update account total cost after a cluster is updated
 CREATE TRIGGER update_account_cost_info
