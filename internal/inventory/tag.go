@@ -6,12 +6,9 @@ import (
 )
 
 const (
-	// Regular expresion for extracting the Cluster Name configured by `openshift-installer` from AWS Tags
-	clusterNameRegexp = "kubernetes.io/cluster/(.*?)-.{5}$"
-	// Regular expresion for extracting the InfrastructureID configured by `openshift-installer` from AWS Tags
-	infraIDRegexp = "kubernetes.io/cluster/.*-(.{5}?)$"
-	// Regular expresion for extracting the ClusterID (ClusterName + InfraID) configured by `openshift-installer` from AWS Tags
-	clusterIDRegexp = "kubernetes.io/cluster/(.*)$"
+	clusterNameRegexp = "kubernetes.io/cluster/(.*?)-.{5}$" // RegExp to get the Cluster Name configured by `openshift-installer` from Tags
+	infraIDRegexp     = "kubernetes.io/cluster/.*-(.{5}?)$" // RegExp to get the InfrastructureID configured by `openshift-installer` from Tags
+	clusterIDRegexp   = "kubernetes.io/cluster/(.*)$"       // RegExp to get the ClusterID (ClusterName + InfraID) configured by `openshift-installer` from Tags
 
 	UnknownClusterNameCode = "UNKNOWN-CLUSTER"
 	UnknownClusterIDCode   = "UNKNOWN-CLUSTER"
@@ -19,14 +16,9 @@ const (
 
 // Tag model generic tags as a Key-Value object
 type Tag struct {
-	// Tag's key
-	Key string `db:"key" json:"key"`
-
-	// Tag's Value
-	Value string `db:"value" json:"value"`
-
-	// InstanceID reference
-	InstanceID string `db:"instance_id" json:"instance_id"`
+	Key        string `db:"key"`         // Tag's key
+	Value      string `db:"value"`       // Tag's Value
+	InstanceID string `db:"instance_id"` // InstanceID reference
 }
 
 // NewTag returns a new generic tag struct

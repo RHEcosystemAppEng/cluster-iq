@@ -29,7 +29,7 @@ type InstanceDB struct {
 	AvailabilityZone string `db:"availability_zone"`
 
 	// Status is the current operational status of the instance (e.g., running, stopped).
-	Status inventory.InstanceStatus `db:"status"`
+	Status inventory.ResourceStatus `db:"status"`
 
 	// ClusterID is the identifier of the cluster to which the instance belongs.
 	ClusterID string `db:"cluster_id"`

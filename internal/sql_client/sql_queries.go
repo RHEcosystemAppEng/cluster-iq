@@ -224,13 +224,6 @@ const (
 			amount = EXCLUDED.amount
 	`
 
-	// SelectInstancesQuery returns every instance in the inventory ordered by ID
-	SelectInstancesQuery = `
-		SELECT * FROM instances
-		JOIN tags ON
-			instances.id = tags.instance_id
-		ORDER BY name
-	`
 	// SelectInstancesOverview returns the total count of all instances
 	SelectInstancesOverview = `
 		SELECT 
@@ -240,20 +233,6 @@ const (
 		FROM instances;
 	`
 
-	// SelectInstancesByIDQuery returns an instance by its ID
-	SelectInstancesByIDQuery = `
-		SELECT * FROM instances
-		JOIN tags ON
-			instances.id = tags.instance_id
-		WHERE id = $1
-		ORDER BY name
-	`
-
-	// SelectClustersQuery returns every cluster in the inventory ordered by Name
-	SelectClustersQuery = `
-		SELECT * FROM clusters
-		ORDER BY name
-	`
 	// SelectClustersOverview returns the number of clusters grouped by status
 	SelectClustersOverview = `
 		SELECT 
@@ -340,13 +319,6 @@ const (
 		WHERE id = $1
 	`
 
-	// SelectClustersByIDuery returns an cluster by its Name
-	SelectClustersByIDuery = `
-		SELECT * FROM clusters
-		WHERE id = $1
-		ORDER BY name
-	`
-
 	// SelectClusterTags returns the cluster's tags
 	SelectClusterTags = `
 		SELECT DISTINCT ON (key) key,value,instance_id FROM instances
@@ -355,18 +327,6 @@ const (
 		WHERE cluster_id = $1
 	`
 
-	// SelectInstancesOnClusterQuery returns every instance belonging to a cluster
-	SelectInstancesOnClusterQuery = `
-		SELECT * FROM instances
-		WHERE cluster_id = $1
-		ORDER BY id
-	`
-
-	// SelectAccountsQuery returns every instance in the inventory ordered by Name
-	SelectAccountsQuery = `
-		SELECT * FROM accounts
-		ORDER BY name
-	`
 	// SelectProvidersOverviewQuery returns data about cloud providers with their account and cluster counts,
 	// excluding those marked as "UNKNOWN" and not counting Terminated clusters
 	SelectProvidersOverviewQuery = `
@@ -386,127 +346,6 @@ const (
 			a.provider;
 	`
 
-	// SelectAccountsByNameQuery returns an instance by its Name
-	SelectAccountsByNameQuery = `
-		SELECT * FROM accounts
-		WHERE name = $1
-		ORDER BY name
-	`
-
-	// SelectClustersOnAccountQuery returns an cluster by its Name
-	SelectClustersOnAccountQuery = `
-		SELECT * FROM clusters
-		WHERE account_name = $1
-		ORDER BY name
-	`
-
-	// InsertInstancesQuery inserts into a new instance in its table
-	InsertInstancesQuery = `
-		INSERT INTO instances (
-			id,
-			name,
-			provider,
-			instance_type,
-			availability_zone,
-			status,
-			cluster_id,
-			last_scan_timestamp,
-			creation_timestamp,
-			age,
-			daily_cost,
-			total_cost
-		) VALUES (
-			:id,
-			:name,
-			:provider,
-			:instance_type,
-			:availability_zone,
-			:status,
-			:cluster_id,
-			:last_scan_timestamp,
-			:creation_timestamp,
-			:age,
-			:daily_cost,
-			:total_cost
-		) ON CONFLICT (id) DO UPDATE SET
-			name = EXCLUDED.name,
-			provider = EXCLUDED.provider,
-			instance_type = EXCLUDED.instance_type,
-			availability_zone = EXCLUDED.availability_zone,
-			status = EXCLUDED.status,
-			cluster_id = EXCLUDED.cluster_id,
-			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
-			creation_timestamp = EXCLUDED.creation_timestamp,
-			age = EXCLUDED.age
-	`
-
-	// InsertClustersQuery inserts into a new instance in its table
-	InsertClustersQuery = `
-		INSERT INTO clusters (
-			id,
-			name,
-			infra_id,
-			provider,
-			status,
-			region,
-			account_name,
-			console_link,
-			instance_count,
-			last_scan_timestamp,
-			creation_timestamp,
-			age,
-			owner,
-			total_cost
-		) VALUES (
-			:id,
-			:name,
-			:infra_id,
-			:provider,
-			:status,
-			:region,
-			:account_name,
-			:console_link,
-			:instance_count,
-			:last_scan_timestamp,
-			:creation_timestamp,
-			:age,
-			:owner,
-			:total_cost
-		) ON CONFLICT (id) DO UPDATE SET
-			provider = EXCLUDED.provider,
-			status = EXCLUDED.status,
-			region = EXCLUDED.region,
-			console_link = EXCLUDED.console_link,
-			instance_count = EXCLUDED.instance_count,
-			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
-			creation_timestamp = EXCLUDED.creation_timestamp,
-			age = EXCLUDED.age,
-			owner = EXCLUDED.owner
-	`
-
-	// InsertAccountsQuery inserts into a new instance in its table
-	InsertAccountsQuery = `
-		INSERT INTO accounts (
-			id,
-			name,
-			provider,
-			total_cost,
-			cluster_count,
-			last_scan_timestamp
-		) VALUES (
-			:id,
-			:name,
-			:provider,
-			:total_cost,
-			:cluster_count,
-			:last_scan_timestamp
-		) ON CONFLICT (name) DO UPDATE SET
-			id = EXCLUDED.id,
-			provider = EXCLUDED.provider,
-			cluster_count = EXCLUDED.cluster_count,
-			last_scan_timestamp = EXCLUDED.last_scan_timestamp
-	`
-
 	// InsertTagsQuery inserts into a new tag for an instance
 	InsertTagsQuery = `
 		INSERT INTO tags (
@@ -520,15 +359,6 @@ const (
 		) ON CONFLICT (key, instance_id) DO UPDATE SET
 			value = EXCLUDED.value
 	`
-
-	// DeleteInstanceQuery removes an instance by its ID
-	DeleteInstanceQuery = `DELETE FROM instances WHERE id=$1`
-
-	// DeleteClusterQuery removes an cluster by its name
-	DeleteClusterQuery = `DELETE FROM clusters WHERE id=$1`
-
-	// DeleteAccountQuery removes an account by its name
-	DeleteAccountQuery = `DELETE FROM accounts WHERE name=$1`
 
 	// DeleteTagsQuery removes a Tag by its key and instance reference
 	DeleteTagsQuery = `DELETE FROM tags WHERE instance_id=$1`

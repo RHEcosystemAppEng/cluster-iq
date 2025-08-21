@@ -1,4 +1,5 @@
--- ## Inventory definition ##
+-- ## Basic Inventory definition (Types, Tables and partitions) ##
+-- #################################################################################################
 -- Supported values for Cloud Providers
 CREATE TYPE CLOUD_PROVIDER AS ENUM (
   'AWS',
@@ -25,79 +26,380 @@ CREATE TYPE RESOURCE_TYPE AS ENUM (
 );
 
 
--- Accounts
+-- Accounts Table
 CREATE TABLE IF NOT EXISTS accounts (
-  id TEXT,
-  name TEXT PRIMARY KEY,
-  provider CLOUD_PROVIDER,
-  cluster_count INTEGER,
-  last_scan_timestamp TIMESTAMP WITH TIME ZONE,
-  total_cost NUMERIC(12,2) DEFAULT 0.0,
-  last_15_days_cost NUMERIC(12,2) DEFAULT 0.0,
-  last_month_cost NUMERIC(12,2) DEFAULT 0.0,
-  current_month_so_far_cost NUMERIC(12,2) DEFAULT 0.0
+  id                      SERIAL,                                          -- Internal account ID
+  account_id              TEXT NOT NULL,                                   -- Account ID assigned by the Cloud Provider
+  account_name            TEXT NOT NULL,                                   -- Account Name assigned by the Cloud Provider OR as an alias
+  provider                CLOUD_PROVIDER NOT NULL,                         -- Cloud Provider
+  last_scan_ts            TIMESTAMP WITH TIME ZONE,                        -- Timestamp of the last time the account was scanned
+  created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), -- Timestamp when the account was created
+  PRIMARY KEY (id),
+  UNIQUE (account_id)
 );
 
 
--- Clusters
+-- Clusters Table
 CREATE TABLE IF NOT EXISTS clusters (
-  -- id is the result of joining: "name+infra_id+account"
-  id TEXT PRIMARY KEY,
-  name TEXT,
-  infra_id TEXT,
-  provider CLOUD_PROVIDER,
-  status STATUS,
-  region TEXT,
-  account_name TEXT REFERENCES accounts(name) ON DELETE CASCADE,
-  console_link TEXT,
-  instance_count INTEGER,
-  last_scan_timestamp TIMESTAMP WITH TIME ZONE,
-  creation_timestamp TIMESTAMP WITH TIME ZONE,
-  age INT,
-  owner TEXT,
-  total_cost NUMERIC(12,2) DEFAULT 0.0,
-  last_15_days_cost NUMERIC(12,2) DEFAULT 0.0,
-  last_month_cost NUMERIC(12,2) DEFAULT 0.0,
-  current_month_so_far_cost NUMERIC(12,2) DEFAULT 0.0
-);
+  id                      BIGSERIAL,
+  cluster_id              TEXT NOT NULL, -- cluster_id is the result of joining: "name+infra_id+account"
+  cluster_name            TEXT NOT NULL,
+  infra_id                TEXT NOT NULL,
+  provider                CLOUD_PROVIDER NOT NULL,                         -- Cloud Provider
+  status                  STATUS,
+  region                  TEXT,
+  account_id              INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+  console_link            TEXT,
+  last_scan_ts            TIMESTAMP WITH TIME ZONE,
+  created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  age                     INTEGER DEFAULT 0,
+  owner                   TEXT,
+  PRIMARY KEY (id),
+  UNIQUE (id, cluster_name, account_id)
+) PARTITION BY HASH (id);
+
+CREATE TABLE clusters_p0 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 0);
+CREATE TABLE clusters_p1 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 1);
+CREATE TABLE clusters_p2 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 2);
+CREATE TABLE clusters_p3 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 3);
+CREATE TABLE clusters_p4 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 4);
+CREATE TABLE clusters_p5 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 5);
+CREATE TABLE clusters_p6 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 6);
+CREATE TABLE clusters_p7 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 7);
 
 
 -- Instances
 CREATE TABLE IF NOT EXISTS instances (
-  id TEXT PRIMARY KEY,
-  name TEXT,
-  provider CLOUD_PROVIDER,
-  instance_type TEXT,
-  availability_zone TEXT,
-  status STATUS,
-  cluster_id TEXT REFERENCES clusters(id) ON DELETE CASCADE,
-  last_scan_timestamp TIMESTAMP WITH TIME ZONE,
-  creation_timestamp TIMESTAMP WITH TIME ZONE,
-  age INT,
-  daily_cost NUMERIC(12,2) DEFAULT 0.0,
-  total_cost NUMERIC(12,2) DEFAULT 0.0
-);
+  id                       BIGSERIAL,
+  instance_id           TEXT NOT NULL,
+  instance_name           TEXT,
+  instance_type            TEXT,
+  provider                CLOUD_PROVIDER NOT NULL,                         -- Cloud Provider
+  availability_zone       TEXT,
+  status                   STATUS,
+  cluster_id               INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
+  last_scan_ts            TIMESTAMP WITH TIME ZONE,
+  created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  age                     INTEGER DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE (id, instance_name, cluster_id)
+) PARTITION BY HASH(id);
+
+CREATE TABLE instances_p00 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 00);
+CREATE TABLE instances_p01 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 01);
+CREATE TABLE instances_p02 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 02);
+CREATE TABLE instances_p03 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 03);
+CREATE TABLE instances_p04 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 04);
+CREATE TABLE instances_p05 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 05);
+CREATE TABLE instances_p06 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 06);
+CREATE TABLE instances_p07 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 07);
+CREATE TABLE instances_p08 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 08);
+CREATE TABLE instances_p09 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 09);
+CREATE TABLE instances_p10 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 10);
+CREATE TABLE instances_p11 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 11);
+CREATE TABLE instances_p12 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 12);
+CREATE TABLE instances_p13 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 13);
+CREATE TABLE instances_p14 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 14);
+CREATE TABLE instances_p15 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 15);
 
 
 -- Instances Tags
 CREATE TABLE IF NOT EXISTS tags (
-  key TEXT,
-  value TEXT,
-  instance_id TEXT REFERENCES instances(id) ON DELETE CASCADE,
+  key                     TEXT,
+  value                   TEXT,
+  instance_id             INTEGER REFERENCES instances(id) ON DELETE CASCADE,
   PRIMARY KEY (key, instance_id)
-);
+) PARTITION BY HASH(instance_id);
+
+CREATE TABLE tags_p00 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 00);
+CREATE TABLE tags_p01 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 01);
+CREATE TABLE tags_p02 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 02);
+CREATE TABLE tags_p03 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 03);
+CREATE TABLE tags_p04 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 04);
+CREATE TABLE tags_p05 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 05);
+CREATE TABLE tags_p06 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 06);
+CREATE TABLE tags_p07 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 07);
+CREATE TABLE tags_p08 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 08);
+CREATE TABLE tags_p09 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 09);
+CREATE TABLE tags_p10 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 10);
+CREATE TABLE tags_p11 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 11);
+CREATE TABLE tags_p12 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 12);
+CREATE TABLE tags_p13 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 13);
+CREATE TABLE tags_p14 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 14);
+CREATE TABLE tags_p15 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 15);
 
 
 -- Instances expenses
 CREATE TABLE IF NOT EXISTS expenses (
-  instance_id TEXT REFERENCES instances(id) ON DELETE CASCADE,
-  date DATE,
-  amount NUMERIC(12,2) DEFAULT 0.0,
+  instance_id             BIGSERIAL REFERENCES instances(id) ON DELETE CASCADE,
+  date                     DATE,
+  amount                   NUMERIC(12,2) DEFAULT 0.0,
   PRIMARY KEY (instance_id, date)
-);
+) PARTITION BY RANGE (date);
 
 
--- ## Actions Definitions ##
+
+
+
+-- ## Advanced Inventory definition (Views, Indexes...) ##
+-- #################################################################################################
+
+-- ## Accounts
+-- #############################################################################
+-- Accounts Cluster Count view
+CREATE VIEW account_cluster_count AS
+SELECT c.account_id, COUNT(*)::bigint AS cluster_count
+FROM clusters c
+GROUP BY c.account_id;
+
+
+-- Accounts Costs view
+CREATE VIEW account_costs AS
+WITH base AS (
+  SELECT a.id, e.date, e.amount
+  FROM accounts a
+  JOIN clusters c ON c.account_id = a.id
+  JOIN instances i ON i.cluster_id = c.id
+  JOIN expenses e ON e.instance_id = i.id
+)
+SELECT
+  a.id,
+  COALESCE(SUM(b.amount), 0.0)                                          AS total_cost,
+  COALESCE(SUM(b.amount) FILTER (WHERE b.date >= current_date - 14), 0) AS last_15_days_cost,
+  COALESCE(SUM(b.amount) FILTER (
+            WHERE b.date >= (date_trunc('month', current_date)::date - INTERVAL '1 month')
+              AND b.date <  date_trunc('month', current_date)::date), 0) AS last_month_cost,
+  COALESCE(SUM(b.amount) FILTER (
+            WHERE b.date >= date_trunc('month', current_date)::date
+              AND b.date <= current_date), 0)                            AS current_month_so_far_cost
+FROM accounts a
+LEFT JOIN base b ON b.id = a.id
+GROUP BY a.id;
+
+
+-- Accounts Full view 
+CREATE VIEW accounts_full_view AS
+SELECT
+  a.account_id,
+  a.account_name,
+  a.provider,
+  a.last_scan_ts,
+  a.created_at,
+  COALESCE(cc.cluster_count, 0)                                        AS cluster_count,
+  COALESCE(ac.total_cost, 0)                                           AS total_cost,
+  COALESCE(ac.last_15_days_cost, 0)                                    AS last_15_days_cost,
+  COALESCE(ac.last_month_cost, 0)                                      AS last_month_cost,
+  COALESCE(ac.current_month_so_far_cost, 0)                            AS current_month_so_far_cost
+FROM accounts a
+LEFT JOIN account_cluster_count cc ON cc.account_id = a.id
+LEFT JOIN account_costs         ac ON ac.id = a.id;
+
+
+-- ## Accounts Indexes
+CREATE INDEX ix_accounts_provider
+  ON accounts (provider);
+
+CREATE INDEX ix_accounts_id
+  ON accounts (account_id);
+
+CREATE INDEX ix_accounts_last_scan_ts_desc
+  ON accounts (last_scan_ts DESC);
+
+CREATE INDEX ix_accounts_name
+  ON accounts (lower(account_name));
+
+
+
+
+
+-- ## Clusters
+-- #############################################################################
+
+-- Cluster Instances Count view
+CREATE VIEW cluster_cluster_count AS
+SELECT i.cluster_id, COUNT(*)::bigint AS instance_count
+FROM instances i
+GROUP BY i.cluster_id;
+
+
+-- clusters Costs view
+CREATE VIEW cluster_costs AS
+WITH base AS (
+  SELECT c.id, e.date, e.amount
+  FROM clusters c
+  JOIN instances i ON i.cluster_id = c.id
+  JOIN expenses e ON e.instance_id = i.id
+)
+SELECT
+  c.id,
+  COALESCE(SUM(b.amount), 0.0)                                          AS total_cost,
+  COALESCE(SUM(b.amount) FILTER (WHERE b.date >= current_date - 14), 0) AS last_15_days_cost,
+  COALESCE(SUM(b.amount) FILTER (
+            WHERE b.date >= (date_trunc('month', current_date)::date - INTERVAL '1 month')
+              AND b.date <  date_trunc('month', current_date)::date), 0) AS last_month_cost,
+  COALESCE(SUM(b.amount) FILTER (
+            WHERE b.date >= date_trunc('month', current_date)::date
+              AND b.date <= current_date), 0)                            AS current_month_so_far_cost
+FROM clusters c
+LEFT JOIN base b ON b.id = c.id
+GROUP BY c.id;
+
+
+-- clusters Full view
+CREATE VIEW clusters_full_view AS
+SELECT
+  c.cluster_id,
+  c.cluster_name,
+  c.infra_id,
+  c.provider,
+  c.status,
+  c.region,
+  a.account_id,
+  a.account_name,
+  c.last_scan_ts,
+  c.created_at,
+  c.age,
+  c.owner,
+  COALESCE(cc.instance_count, 0)                                       AS instance_count,
+  COALESCE(ac.total_cost, 0)                                           AS total_cost,
+  COALESCE(ac.last_15_days_cost, 0)                                    AS last_15_days_cost,
+  COALESCE(ac.last_month_cost, 0)                                      AS last_month_cost,
+  COALESCE(ac.current_month_so_far_cost, 0)                            AS current_month_so_far_cost
+FROM clusters c
+LEFT JOIN accounts a ON c.account_id = a.id
+LEFT JOIN cluster_cluster_count cc ON cc.cluster_id = c.id
+LEFT JOIN cluster_costs         ac ON ac.id = c.id;
+
+
+
+-- ## Clusters Indexes
+CREATE INDEX ix_clusters_account
+  ON clusters (account_id);
+
+CREATE INDEX ix_clusters_acct_status
+  ON clusters (account_id, status);
+
+CREATE INDEX ix_clusters_acct_region_status
+  ON clusters (account_id, region, status);
+
+CREATE INDEX ix_clusters_last_scan_ts_desc
+  ON clusters (last_scan_ts DESC);
+
+CREATE INDEX ix_clusters_acct_name
+  ON clusters (account_id, lower(cluster_name));
+
+CREATE INDEX ix_clusters_last_scan_active
+  ON clusters (last_scan_ts)
+  WHERE status <> 'Terminated';
+
+
+
+
+
+-- ## Instances
+-- #############################################################################
+
+-- Instances Costs view
+CREATE VIEW instance_costs AS
+WITH base AS (
+  SELECT i.id, e.date, e.amount
+  FROM instances i
+  JOIN expenses e ON e.instance_id = i.id
+)
+SELECT
+  i.id,
+  COALESCE(SUM(b.amount), 0.0)                                          AS total_cost,
+  COALESCE(SUM(b.amount) FILTER (WHERE b.date >= current_date - 14), 0) AS last_15_days_cost,
+  COALESCE(SUM(b.amount) FILTER (
+            WHERE b.date >= (date_trunc('month', current_date)::date - INTERVAL '1 month')
+              AND b.date <  date_trunc('month', current_date)::date), 0) AS last_month_cost,
+  COALESCE(SUM(b.amount) FILTER (
+            WHERE b.date >= date_trunc('month', current_date)::date
+              AND b.date <= current_date), 0)                            AS current_month_so_far_cost
+FROM instances i
+LEFT JOIN base b ON b.id = i.id
+GROUP BY i.id;
+
+
+-- Instances Full view
+CREATE VIEW instances_full_view AS
+SELECT
+  i.instance_id,
+  i.instance_name,
+  i.instance_type,
+  i.provider,
+  i.availability_zone,
+  i.status,
+  c.cluster_id,
+  c.cluster_name,
+  i.last_scan_ts,
+  i.created_at,
+  i.age,
+  COALESCE(ic.total_cost, 0)                                           AS total_cost,
+  COALESCE(ic.last_15_days_cost, 0)                                    AS last_15_days_cost,
+  COALESCE(ic.last_month_cost, 0)                                      AS last_month_cost,
+  COALESCE(ic.current_month_so_far_cost, 0)                            AS current_month_so_far_cost
+FROM instances i
+LEFT JOIN clusters        c ON c.id = i.cluster_id
+LEFT JOIN instance_costs ic ON ic.id = i.id;
+
+
+
+-- ## Instances Indexes
+CREATE INDEX ix_instances_cluster
+  ON instances (cluster_id);
+
+CREATE INDEX ix_instances_cluster_status
+  ON instances (cluster_id, status);
+
+CREATE INDEX ix_instances_cluster_lastscan_desc
+  ON instances (cluster_id, last_scan_ts DESC);
+
+CREATE INDEX ix_instances_cluster_name
+  ON instances (cluster_id, lower(instance_name));
+
+CREATE INDEX ix_instances_last_scan_active
+  ON instances (last_scan_ts)
+  WHERE status <> 'Terminated';
+
+
+
+
+
+-- ## Tags
+-- #############################################################################
+
+-- ## Tags Indexes
+CREATE INDEX ix_itags_instance
+  ON tags (instance_id);
+
+CREATE INDEX ix_itags_key_val
+  ON tags (key, value);
+
+CREATE INDEX ix_itags_key
+  ON tags (key);
+
+CREATE INDEX ix_itags_key_lower_val
+  ON tags (key, lower(value));
+
+
+
+
+
+-- ## Expenses
+-- #############################################################################
+
+-- ## Expenses Indexes
+CREATE INDEX ix_expenses_instance
+  ON expenses (instance_id);
+
+
+
+
+
+-- ## Actions and Scheduling definition ##
+-- #############################################################################
+
 -- Supported values of Action Operations
 CREATE TYPE ACTION_OPERATION AS ENUM (
   'PowerOnCluster',
@@ -130,11 +432,19 @@ CREATE TABLE IF NOT EXISTS schedule (
   time TIMESTAMP WITH TIME ZONE,
   cron_exp TEXT,
   operation ACTION_OPERATION NOT NULL,
-  target TEXT REFERENCES clusters(id) ON DELETE CASCADE,
+  target INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
   status ACTION_STATUS NOT NULL DEFAULT 'Unknown',
   enabled BOOLEAN DEFAULT false
 );
 
+
+
+
+
+
+
+-- ## Audit logs
+-- #############################################################################
 
 -- Audit logs
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -147,171 +457,19 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   result TEXT NOT NULL,
   description TEXT NULL,
   severity TEXT DEFAULT 'info'::TEXT NOT NULL,
-  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT])))
-);
+  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
+  PRIMARY KEY (id, event_timestamp)
+) PARTITION BY RANGE (event_timestamp);
 
 
--- ## Functions ##
--- Updates the total cost of an instance after a new expense record is inserted
-CREATE OR REPLACE FUNCTION update_instance_total_costs_after_insert()
-  RETURNS TRIGGER
-  LANGUAGE PLPGSQL
-  AS
-$$
-BEGIN
-  UPDATE instances
-  SET
-    total_cost = (
-      SELECT SUM(amount)
-      FROM expenses
-      WHERE instance_id = NEW.instance_id
-    )
-    WHERE id = NEW.instance_id;
-  RETURN NEW;
-END;
-$$;
 
 
--- Updates the total cost of an instance after an expense record is deleted
-CREATE OR REPLACE FUNCTION update_instance_total_costs_after_delete()
-  RETURNS TRIGGER
-  LANGUAGE PLPGSQL
-  AS
-$$
-BEGIN
-  UPDATE instances
-  SET
-    total_cost = (
-      SELECT SUM(amount)
-      FROM expenses
-      WHERE instance_id = OLD.instance_id
-    )
-    WHERE id = OLD.instance_id;
-  RETURN OLD;
-END;
-$$;
 
-
--- Updates the daily cost of an instance after a new expense record is inserted
-CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_insert()
-  RETURNS TRIGGER
-  LANGUAGE PLPGSQL
-  AS
-$$
-BEGIN
-  UPDATE instances
-  SET
-    daily_cost = (
-      SELECT COALESCE(SUM(amount)/NULLIF(COUNT(*), 0), 0)
-      FROM expenses
-      WHERE instance_id = NEW.instance_id
-    )
-    WHERE id = NEW.instance_id;
-  RETURN NEW;
-END;
-$$;
-
-
--- Updates the daily cost of an instance after an expense record is deleted
-CREATE OR REPLACE FUNCTION update_instance_daily_costs_after_delete()
-  RETURNS TRIGGER
-  LANGUAGE PLPGSQL
-  AS
-$$
-BEGIN
-  UPDATE instances
-  SET
-    daily_cost = (
-      SELECT COALESCE(SUM(amount)/NULLIF(COUNT(*), 0), 0)
-      FROM expenses
-      WHERE instance_id = NEW.instance_id
-    )
-    WHERE id = OLD.instance_id;
-  RETURN OLD;
-END;
-$$;
-
-
--- Updates the total cost of a cluster based on its associated instances
-CREATE OR REPLACE FUNCTION update_cluster_cost_info()
-  RETURNS TRIGGER
-  LANGUAGE PLPGSQL
-  AS
-$$
-BEGIN
-  UPDATE clusters
-  SET
-    total_cost = (
-      SELECT COALESCE(SUM(total_cost), 0) as sum
-      FROM instances
-      WHERE cluster_id = NEW.cluster_id
-    ),
-    last_15_days_cost = (
-      SELECT COALESCE(SUM(expenses.amount), 0)
-      FROM instances
-      JOIN expenses ON instances.id = expenses.instance_id
-      WHERE instances.cluster_id = NEW.cluster_id
-        AND expenses.date >= NOW()::date - interval '15 day'
-    ),
-    last_month_cost = (
-      SELECT COALESCE(SUM(expenses.amount), 0)
-      FROM instances
-      JOIN expenses ON instances.id = expenses.instance_id
-      WHERE instances.cluster_id = NEW.cluster_id
-        AND EXTRACT(YEAR FROM NOW()::date - interval '1 month') = EXTRACT(YEAR FROM expenses.date)
-        AND EXTRACT(MONTH FROM NOW()::date - interval '1 month') = EXTRACT(MONTH FROM expenses.date)
-    ),
-    current_month_so_far_cost = (
-      SELECT COALESCE(SUM(expenses.amount), 0)
-      FROM instances
-      JOIN expenses ON instances.id = expenses.instance_id
-      WHERE instances.cluster_id = NEW.cluster_id
-        AND (EXTRACT(MONTH FROM NOW()::date) = EXTRACT(MONTH FROM expenses.date)
-      )
-    )
-    WHERE id = NEW.cluster_id;
-  RETURN NEW;
-END;
-$$;
-
-
--- Updates the total cost of an account based on its associated clusters
-CREATE OR REPLACE FUNCTION update_account_cost_info()
-  RETURNS TRIGGER
-  LANGUAGE PLPGSQL
-  AS
-$$
-BEGIN
-  UPDATE accounts
-  SET
-    total_cost = (
-      SELECT COALESCE(SUM(clusters.total_cost), 0)
-      FROM clusters
-      WHERE account_name = NEW.account_name
-    ),
-    last_15_days_cost = (
-      SELECT COALESCE(SUM(clusters.last_15_days_cost), 0)
-      FROM clusters
-      WHERE account_name = NEW.account_name
-    ),
-    last_month_cost = (
-      SELECT COALESCE(SUM(clusters.last_month_cost), 0)
-      FROM clusters
-      WHERE account_name = NEW.account_name
-    ),
-    current_month_so_far_cost = (
-      SELECT COALESCE(SUM(clusters.current_month_so_far_cost), 0)
-      FROM clusters
-      WHERE account_name = NEW.account_name
-    )
-    WHERE name = NEW.account_name;
-  RETURN NEW;
-END;
-$$;
 
 
 -- ## Maintenance Functions ##
+-- #############################################################################
+
 -- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
 CREATE OR REPLACE FUNCTION check_terminated_instances()
 RETURNS void AS $$
@@ -332,68 +490,3 @@ BEGIN
   WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
-
-
--- ## Triggers ##
--- Trigger to update instance total cost after an expense is inserted
-CREATE TRIGGER update_instance_total_cost_after_insert
-AFTER INSERT
-ON expenses
-FOR EACH ROW
-  EXECUTE PROCEDURE update_instance_total_costs_after_insert();
-
-
--- Trigger to update instance total cost after an expense is updated
-CREATE TRIGGER update_instance_total_cost_after_update
-AFTER UPDATE
-ON expenses
-FOR EACH ROW
-  EXECUTE PROCEDURE update_instance_total_costs_after_insert();
-
-
--- Trigger to update instance total cost after an expense is deleted
-CREATE TRIGGER update_instance_total_cost_after_delete
-AFTER DELETE
-ON expenses
-FOR EACH ROW
-  EXECUTE PROCEDURE update_instance_total_costs_after_delete();
-
-
--- Trigger to update instance daily cost after an expense is inserted
-CREATE TRIGGER update_instance_daily_cost_after_insert
-AFTER INSERT
-ON expenses
-FOR EACH ROW
-  EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
-
-
--- Trigger to update instance daily cost after an expense is updated
-CREATE TRIGGER update_instance_daily_cost_after_update
-AFTER UPDATE
-ON expenses
-FOR EACH ROW
-  EXECUTE PROCEDURE update_instance_daily_costs_after_insert();
-
-
--- Trigger to update instance daily cost after an expense is deleted
-CREATE TRIGGER update_instance_daily_cost_after_delete
-AFTER DELETE
-ON expenses
-FOR EACH ROW
-  EXECUTE PROCEDURE update_instance_daily_costs_after_delete();
-
-
--- Trigger to update cluster costs info
-CREATE TRIGGER update_cluster_cost_info
-AFTER UPDATE
-ON instances
-FOR EACH ROW
-  EXECUTE PROCEDURE update_cluster_cost_info();
-
-
--- Trigger to update account total cost after a cluster is updated
-CREATE TRIGGER update_account_cost_info
-AFTER UPDATE
-ON clusters
-FOR EACH ROW
-  EXECUTE PROCEDURE update_account_cost_info();

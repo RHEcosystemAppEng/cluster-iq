@@ -84,22 +84,22 @@ func init() {
 // readCloudProviderAccounts reads and loads cloud provider accounts from a credentials file.
 func (s *Scanner) readCloudProviderAccounts() error {
 	// Load cloud accounts credentials file.
-	accounts, err := credentials.ReadCloudAccounts(s.cfg.CredentialsFile)
+	accountConfigs, err := credentials.ReadCloudAccounts(s.cfg.CredentialsFile)
 	if err != nil {
 		return err
 	}
 
 	// Read INI file content.
-	for _, account := range accounts {
+	for _, accountConfig := range accountConfigs {
 		newAccount := inventory.NewAccount(
-			"",
-			account.Name,
-			account.Provider,
-			account.User,
-			account.Key,
+			accountConfig.ID,
+			accountConfig.Name,
+			accountConfig.Provider,
+			accountConfig.User,
+			accountConfig.Key,
 		)
 		// Getting billing enabled flag from config
-		if account.BillingEnabled {
+		if accountConfig.BillingEnabled {
 			newAccount.EnableBilling()
 		}
 
@@ -119,13 +119,13 @@ func (s *Scanner) createStockers() error {
 	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
 		case inventory.AWSProvider:
-			s.logger.Info("Processing AWS account", zap.String("account", account.Name))
+			s.logger.Info("Processing AWS account", zap.String("account", account.AccountName))
 
 			// AWS API Stoker
 			awsStocker, err := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
 			if err != nil {
 				s.logger.Error("Failed to create AWS stocker; skipping this account",
-					zap.String("account", account.Name),
+					zap.String("account", account.AccountName),
 					zap.Error(err))
 				skippedAccounts++
 				continue
@@ -134,25 +134,25 @@ func (s *Scanner) createStockers() error {
 
 			// AWS Billing API Stoker
 			if account.IsBillingEnabled() {
-				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.Name))
+				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.AccountName))
 				instancesToScan, err := s.getInstancesForBillingUpdate()
 				if err != nil {
 					s.logger.Error("Failed to retrieve the list of instances required for billing information from AWS Cost Explorer.",
-						zap.String("account", account.Name))
+						zap.String("account", account.AccountName))
 				} else {
 					validStockers = append(validStockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
 				}
 			}
 		case inventory.GCPProvider:
 			s.logger.Warn("Failed to scan GCP account",
-				zap.String("account", account.Name),
+				zap.String("account", account.AccountName),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when GCP Stocker is implemented
 			// gcpStocker = stocker.NewGCPStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
 		case inventory.AzureProvider:
 			s.logger.Warn("Failed to scan Azure account",
-				zap.String("account", account.Name),
+				zap.String("account", account.AccountName),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when Azure Stocker is implemented
@@ -160,7 +160,7 @@ func (s *Scanner) createStockers() error {
 
 		default:
 			s.logger.Warn("Unsupported cloud provider, skipping account",
-				zap.String("account", account.Name),
+				zap.String("account", account.AccountName),
 				zap.String("provider", string(account.Provider)))
 			continue
 		}
@@ -181,7 +181,7 @@ func (s *Scanner) createStockers() error {
 	if s.logger.Core().Enabled(zap.DebugLevel) {
 		s.logger.Debug("Total Stockers created", zap.Int("count", len(s.stockers)))
 		for i, stocker := range s.stockers {
-			s.logger.Debug("Stocker", zap.Int("id", i), zap.String("name", stocker.GetResults().Name))
+			s.logger.Debug("Stocker", zap.Int("id", i), zap.String("name", stocker.GetAccount().AccountName))
 		}
 	}
 
@@ -230,14 +230,14 @@ func (s *Scanner) startStockers() error {
 
 // postNewAccount posts into the API an account, its clusters, instances and expenses
 func (s *Scanner) postNewAccount(account inventory.Account) error {
-	s.logger.Debug("Posting new Account", zap.String("account", account.Name))
+	s.logger.Debug("Posting new Account", zap.String("account", account.AccountName))
 
 	// Converting to Array because API handler assumes a list of accounts
 	var accounts []inventory.Account
 	accounts = append(accounts, account)
 	b, err := json.Marshal(accounts)
 	if err != nil {
-		s.logger.Error("Failed to marshal account", zap.String("account", account.Name), zap.Error(err))
+		s.logger.Error("Failed to marshal account", zap.String("account", account.AccountName), zap.Error(err))
 		return err
 	}
 

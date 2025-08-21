@@ -15,6 +15,7 @@ type ClusterStatusChangeRequest struct {
 	InstancesIdList []string // A list of instance IDs belonging to the cluster.
 }
 
+// TODO: REVIEW!!!!
 // NewClusterStatusChangeRequest creates a new ClusterStatusChangeRequest instance.
 // It retrieves the account name, region, and instance IDs for the given cluster ID from the SQL client.
 //
@@ -26,14 +27,8 @@ type ClusterStatusChangeRequest struct {
 // - Pointer to the newly created ClusterStatusChangeRequest.
 // - An error if there is an issue retrieving any of the required data.
 func NewClusterStatusChangeRequest(sql *sqlclient.SQLClient, clusterID string) (*ClusterStatusChangeRequest, error) {
-	// Get AccountName
-	accountName, err := sql.GetClusterAccountName(clusterID)
-	if err != nil {
-		return nil, err
-	}
 
-	// Get Cluster Region
-	region, err := sql.GetClusterRegion(clusterID)
+	cluster, err := sql.GetClusterByID(clusterID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,12 +47,12 @@ func NewClusterStatusChangeRequest(sql *sqlclient.SQLClient, clusterID string) (
 	// Creating an array of InstancesIDs
 	var instancesIDs []string
 	for _, instance := range instances {
-		instancesIDs = append(instancesIDs, instance.ID)
+		instancesIDs = append(instancesIDs, instance.InstanceID)
 	}
 
 	return &ClusterStatusChangeRequest{
-		AccountName:     accountName,
-		Region:          region,
+		AccountName:     cluster.AccountName,
+		Region:          cluster.Region,
 		ClusterID:       clusterID,
 		InstancesIdList: instancesIDs,
 	}, nil

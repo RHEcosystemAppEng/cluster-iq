@@ -32,9 +32,9 @@ func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instan
 	}
 
 	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
-	conn, err := cp.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cp.WithCostExplorer())
+	conn, err := cp.NewAWSConnection(account.User(), account.Password(), "", cp.WithCostExplorer())
 	if err != nil {
-		logger.Error("Error creating a new AWSBillingStocker", zap.String("account", account.Name), zap.Error(err))
+		logger.Error("Error creating a new AWSBillingStocker", zap.String("account", account.AccountName), zap.Error(err))
 		return nil
 	}
 
@@ -48,7 +48,7 @@ func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instan
 
 // Connect initialices the AWS API and CostExplorer sessions and clients
 func (s *AWSBillingStocker) Connect() error {
-	s.logger.Info("AWS Session created", zap.String("account", s.Account.Name))
+	s.logger.Info("AWS Session created", zap.String("account", s.Account.AccountName))
 	return nil
 }
 
@@ -64,9 +64,9 @@ func (s *AWSBillingStocker) MakeStock() error {
 					err := s.getInstanceExpenses(instance)
 					if err != nil {
 						s.logger.Error("Error querying billing info for an instance",
-							zap.String("account", s.Account.Name),
-							zap.String("instance_id", instance.ID),
-							zap.String("reason", err.Error()),
+							zap.String("account", s.Account.AccountID),
+							zap.String("instance_name", instance.InstanceName),
+							zap.String("error", err.Error()),
 						)
 						// Continue to the next region even if an error occurs
 						continue
@@ -91,8 +91,8 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	endDate := time.Now().Format("2006-01-02")
 
 	s.logger.Debug("Getting expenses for instance",
-		zap.String("account", s.Account.Name),
-		zap.String("instance_id", instance.ID),
+		zap.String("account", s.Account.AccountName),
+		zap.String("instance_name", instance.InstanceName),
 		zap.String("start_date", startDate),
 		zap.String("end_date", endDate),
 	)
@@ -107,7 +107,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 		Filter: &costexplorer.Expression{
 			Dimensions: &costexplorer.DimensionValues{
 				Key:    aws.String("RESOURCE_ID"),
-				Values: []*string{aws.String(instance.ID)},
+				Values: []*string{aws.String(instance.InstanceName)},
 			},
 		},
 		Metrics: []*string{aws.String("UnblendedCost")},
@@ -117,8 +117,8 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	result, err := s.conn.CostExplorer.GetCostAndUsageWithResources(input)
 	if err != nil {
 		s.logger.Error("Error getting cost and usage with resources",
-			zap.String("account", s.Account.Name),
-			zap.String("instance_id", instance.ID),
+			zap.String("account", s.Account.AccountName),
+			zap.String("instance_name", instance.InstanceName),
 			zap.Error(err))
 		return err
 	}
@@ -131,7 +131,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 				amount, err := strconv.ParseFloat(*singleCost.Amount, 64)
 				if err != nil {
 					s.logger.Error("Error parsing cost amount",
-						zap.String("account", s.Account.Name),
+						zap.String("account", s.Account.AccountName),
 						zap.Float64("amount", amount),
 						zap.Error(err))
 					return err
@@ -141,13 +141,13 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 				expenseDate, err := time.Parse(time.RFC3339, *resultByTime.TimePeriod.Start)
 				if err != nil {
 					s.logger.Error("Error parsing start date",
-						zap.String("account", s.Account.Name),
+						zap.String("account", s.Account.AccountName),
 						zap.String("start", *resultByTime.TimePeriod.Start),
 						zap.Error(err))
 					return err
 				}
 
-				instance.Expenses = append(instance.Expenses, *inventory.NewExpense(instance.ID, amount, expenseDate))
+				instance.AddExpense(*inventory.NewExpense(instance.InstanceName, amount, expenseDate))
 			}
 		}
 	}
@@ -160,7 +160,7 @@ func (s AWSBillingStocker) PrintStock() {
 	s.Account.PrintAccount()
 }
 
-// GetResults returns the account configured for this stocker
-func (s AWSBillingStocker) GetResults() inventory.Account {
+// GetAccount returns the account configured for this stocker
+func (s AWSBillingStocker) GetAccount() inventory.Account {
 	return *s.Account
 }

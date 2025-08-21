@@ -1,18 +1,8 @@
 package inventory
 
 import (
-	"encoding/json"
 	"time"
 )
-
-// JSONMarshal converts an inventory object as JSON format for printing
-func JSONMarshal(object interface{}) (string, error) {
-	b, err := json.MarshalIndent(object, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
 
 // Calculates Age parameter in days If the resulting age is 0, 1 is returned
 // instead. This is because when calculating daily_cost, if the instance has age

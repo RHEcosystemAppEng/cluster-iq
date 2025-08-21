@@ -213,39 +213,6 @@ func NewClusterListResponse(clusters []inventory.Cluster) *ClusterListResponse {
 	return &response
 }
 
-// AccountListResponse represents the API response containing a list of accounts.
-type AccountListResponse struct {
-	Count    int                 `json:"count,omitempty"` // Number of accounts, omitted if empty.
-	Accounts []inventory.Account `json:"accounts"`        // List of accounts.
-}
-
-// NewAccountListResponse creates a new AccountListResponse instance.
-// It ensures that an empty array is returned if the input account list is empty.
-//
-// Parameters:
-// - accounts: A slice of inventory.Account.
-//
-// Returns:
-// - A pointer to an AccountListResponse.
-func NewAccountListResponse(accounts []inventory.Account) *AccountListResponse {
-	numAccounts := len(accounts)
-
-	// If there is no clusters, an empty array is returned instead of null
-	if numAccounts == 0 {
-		accounts = []inventory.Account{}
-	}
-
-	response := AccountListResponse{
-		Accounts: accounts,
-	}
-	// If there is more than one account, the response contains a 'count' field
-	if numAccounts > 1 {
-		response.Count = numAccounts
-	}
-
-	return &response
-}
-
 // ClusterStatusChangeResponse represents the response object sent by the API
 // when a cluster has been powered on or off. It includes details about the
 // affected cluster, its region, instances, and the resulting status or error.
@@ -254,7 +221,7 @@ type ClusterStatusChangeResponse struct {
 	ClusterID   string                   `json:"cluster_id"`        // The ID of the cluster.
 	Instances   []string                 `json:"instance_id"`       // List of instance IDs within the cluster.
 	Region      string                   `json:"availability_zone"` // The region where the cluster resides.
-	Status      inventory.InstanceStatus `json:"status"`            // The resulting status of the cluster.
+	Status      inventory.ResourceStatus `json:"status"`            // The resulting status of the cluster.
 	Error       string                   `json:"error_msg"`         // Error message if any issue occurred.
 }
 
@@ -271,7 +238,7 @@ type ClusterStatusChangeResponse struct {
 //
 // Returns:
 // - A pointer to a ClusterStatusChangeResponse.
-func NewClusterStatusChangeResponse(accountName string, clusterID string, region string, status inventory.InstanceStatus, instances []string, err error) *ClusterStatusChangeResponse {
+func NewClusterStatusChangeResponse(accountName string, clusterID string, region string, status inventory.ResourceStatus, instances []string, err error) *ClusterStatusChangeResponse {
 	if err == nil {
 		err = fmt.Errorf("")
 	}
