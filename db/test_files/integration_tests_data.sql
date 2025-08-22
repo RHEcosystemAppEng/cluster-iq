@@ -1,7 +1,7 @@
 BEGIN;
 
 -- Cleaning
-TRUNCATE expenses, instance_tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
+TRUNCATE expenses, tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
 
 -- ## Accounts ##
 INSERT INTO accounts (account_id, account_name, provider, last_scan_ts, created_at) VALUES
@@ -36,7 +36,7 @@ INSERT INTO instances (instance_id, instance_name, cluster_id, provider, instanc
   ('id-3123456789Z', 'az-instance-2b',  6, 'Azure', 'D2s_v3',     'westeurope-2',   'Unknown', '2025-08-03 12:00:00+00', '2025-03-06 00:00:00+00', 159);
 
 -- ## Instance Tags ##
-INSERT INTO instance_tags (key, value, instance_id) VALUES
+INSERT INTO tags (key, value, instance_id) VALUES
   ('name','aws-instance-1a',1), ('owner','john.doe',1),
   ('name','aws-instance-1b',2), ('owner','john.doe',2),
   ('name','aws-instance-2a',3), ('owner','john.doe',3),

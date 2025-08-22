@@ -145,7 +145,6 @@ func (c *Cluster) AddInstance(instance *Instance) error {
 
 	// Updating owner cluster
 	instance.Cluster = c
-	instance.ClusterID = c.ClusterID
 
 	// Adding Instance
 	c.Instances = append(c.Instances, *instance)
@@ -156,7 +155,6 @@ func (c *Cluster) DeleteInstance(instanceName string) error {
 	for i, instance := range c.Instances {
 		if instance.InstanceName == instanceName {
 			// Removing owner cluster
-			instance.ClusterID = ""
 			instance.Cluster = nil
 
 			// Removing instance

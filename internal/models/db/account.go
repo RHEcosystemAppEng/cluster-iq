@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
+	dtomodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 // TODO comments
@@ -22,8 +22,8 @@ type AccountDBResponse struct {
 }
 
 // TODO comments
-func (a AccountDBResponse) ToAccountDTOResponse() *dto.AccountDTOResponse {
-	return &dto.AccountDTOResponse{
+func (a AccountDBResponse) ToAccountDTOResponse() *dtomodel.AccountDTOResponse {
+	return &dtomodel.AccountDTOResponse{
 		AccountID:             a.AccountID,
 		AccountName:           a.AccountName,
 		Provider:              a.Provider,

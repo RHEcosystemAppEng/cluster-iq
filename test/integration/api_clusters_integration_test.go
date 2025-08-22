@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/apiresponsetypes"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 const (
@@ -114,7 +114,7 @@ func testGetClusterInstances(t *testing.T) {
 	// TODO Add elements check
 }
 
-func postClusters(t *testing.T, accounts string) *apiresponsetypes.PostResponse {
+func postClusters(t *testing.T, accounts string) *responsetypes.PostResponse {
 	// Posting test data
 	resp, err := http.Post(APIClustersURL, "application/json", bytes.NewBuffer([]byte(accounts)))
 	if err != nil {
@@ -132,7 +132,7 @@ func postClusters(t *testing.T, accounts string) *apiresponsetypes.PostResponse 
 		t.Fatal("Cant Read API Response Body")
 	}
 
-	var response apiresponsetypes.PostResponse
+	var response responsetypes.PostResponse
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		t.Fatal("Can't Unmarshal API Response")
@@ -280,7 +280,7 @@ func testDeleteCluster(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	var response apiresponsetypes.DeleteResponse
+	var response responsetypes.DeleteResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode DeleteCluster response body: %v", err)
 	}

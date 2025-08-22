@@ -3,7 +3,7 @@
 BEGIN;
 
 -- Limpia datos previos (si los hubiera)
-TRUNCATE expenses, instance_tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
+TRUNCATE expenses, tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
 -- Inserta 3 cuentas (una por proveedor) y guarda sus IDs
 WITH ins AS (
   INSERT INTO accounts (account_id, account_name, provider, last_scan_ts)
@@ -184,7 +184,7 @@ BEGIN
         RETURNING id INTO r_ins_id;
 
         -- Tags fijas por instancia
-        INSERT INTO instance_tags(key, value, instance_id)
+        INSERT INTO tags(key, value, instance_id)
         VALUES
           ('name',  r_ins_name, r_ins_id),
           ('owner', 'john.doe@example.com', r_ins_id);

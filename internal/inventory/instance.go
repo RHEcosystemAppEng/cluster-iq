@@ -24,7 +24,7 @@ type Instance struct {
 	Provider         CloudProvider  `db:"provider"`          // Instance provider (public/private cloud provider)
 	AvailabilityZone string         `db:"availability_zone"` // Availability Zone in which the instance is running on
 	Status           ResourceStatus `db:"status"`            // Instance Status
-	ClusterID        string         `db:"cluster_id"`        // ClusterID
+	ClusterID        int            `db:"cluster_id"`        // ClusterID
 	LastScanTS       time.Time      `db:"last_scan_ts"`      // Last scan timestamp of the instance
 	CreatedAt        time.Time      `db:"created_at"`        // Timestamp when the instance was created
 	Age              int            `db:"age"`               // Ammount of days since the instance was created
@@ -47,7 +47,7 @@ func NewInstance(instanceID string, instanceName string, provider CloudProvider,
 		InstanceType:     instanceType,
 		AvailabilityZone: availabilityZone,
 		Status:           status,
-		ClusterID:        "",
+		ClusterID:        0,
 		LastScanTS:       time.Time{},
 		CreatedAt:        creationTimestamp,
 		Age:              age,

@@ -70,14 +70,14 @@ CREATE TABLE clusters_p7 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAI
 
 -- Instances
 CREATE TABLE IF NOT EXISTS instances (
-  id                       BIGSERIAL,
-  instance_id           TEXT NOT NULL,
+  id                      BIGSERIAL,
+  instance_id             TEXT NOT NULL,
   instance_name           TEXT,
-  instance_type            TEXT,
-  provider                CLOUD_PROVIDER NOT NULL,                         -- Cloud Provider
+  instance_type           TEXT,
+  provider                CLOUD_PROVIDER NOT NULL,
   availability_zone       TEXT,
-  status                   STATUS,
-  cluster_id               INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
+  status                  STATUS,
+  cluster_id              INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
   last_scan_ts            TIMESTAMP WITH TIME ZONE,
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
@@ -147,14 +147,14 @@ CREATE TABLE IF NOT EXISTS expenses (
 -- ## Accounts
 -- #############################################################################
 -- Accounts Cluster Count view
-CREATE VIEW account_cluster_count AS
+CREATE VIEW accounts_with_cluster_count AS
 SELECT c.account_id, COUNT(*)::bigint AS cluster_count
 FROM clusters c
 GROUP BY c.account_id;
 
 
 -- Accounts Costs view
-CREATE VIEW account_costs AS
+CREATE VIEW accounts_with_costs AS
 WITH base AS (
   SELECT a.id, e.date, e.amount
   FROM accounts a
@@ -191,8 +191,8 @@ SELECT
   COALESCE(ac.last_month_cost, 0)                                      AS last_month_cost,
   COALESCE(ac.current_month_so_far_cost, 0)                            AS current_month_so_far_cost
 FROM accounts a
-LEFT JOIN account_cluster_count cc ON cc.account_id = a.id
-LEFT JOIN account_costs         ac ON ac.id = a.id;
+LEFT JOIN accounts_with_cluster_count cc ON cc.account_id = a.id
+LEFT JOIN accounts_with_costs         ac ON ac.id = a.id;
 
 
 -- ## Accounts Indexes
@@ -216,14 +216,14 @@ CREATE INDEX ix_accounts_name
 -- #############################################################################
 
 -- Cluster Instances Count view
-CREATE VIEW cluster_cluster_count AS
+CREATE VIEW clusters_with_instance_count AS
 SELECT i.cluster_id, COUNT(*)::bigint AS instance_count
 FROM instances i
 GROUP BY i.cluster_id;
 
 
 -- clusters Costs view
-CREATE VIEW cluster_costs AS
+CREATE VIEW clusters_with_costs AS
 WITH base AS (
   SELECT c.id, e.date, e.amount
   FROM clusters c
@@ -267,8 +267,8 @@ SELECT
   COALESCE(ac.current_month_so_far_cost, 0)                            AS current_month_so_far_cost
 FROM clusters c
 LEFT JOIN accounts a ON c.account_id = a.id
-LEFT JOIN cluster_cluster_count cc ON cc.cluster_id = c.id
-LEFT JOIN cluster_costs         ac ON ac.id = c.id;
+LEFT JOIN clusters_with_instance_count cc ON cc.cluster_id = c.id
+LEFT JOIN clusters_with_costs         ac ON ac.id = c.id;
 
 
 
@@ -300,7 +300,7 @@ CREATE INDEX ix_clusters_last_scan_active
 -- #############################################################################
 
 -- Instances Costs view
-CREATE VIEW instance_costs AS
+CREATE VIEW instances_with_costs AS
 WITH base AS (
   SELECT i.id, e.date, e.amount
   FROM instances i
@@ -335,13 +335,43 @@ SELECT
   i.last_scan_ts,
   i.created_at,
   i.age,
-  COALESCE(ic.total_cost, 0)                                           AS total_cost,
-  COALESCE(ic.last_15_days_cost, 0)                                    AS last_15_days_cost,
-  COALESCE(ic.last_month_cost, 0)                                      AS last_month_cost,
-  COALESCE(ic.current_month_so_far_cost, 0)                            AS current_month_so_far_cost
+  COALESCE(ic.total_cost, 0)                 AS total_cost,
+  COALESCE(ic.last_15_days_cost, 0)          AS last_15_days_cost,
+  COALESCE(ic.last_month_cost, 0)            AS last_month_cost,
+  COALESCE(ic.current_month_so_far_cost, 0)  AS current_month_so_far_cost
 FROM instances i
 LEFT JOIN clusters        c ON c.id = i.cluster_id
-LEFT JOIN instance_costs ic ON ic.id = i.id;
+LEFT JOIN instances_with_costs ic ON ic.id = i.id;
+
+
+-- Instances Full view
+CREATE VIEW instances_full_view_with_tags AS
+SELECT
+  i.instance_id,
+  i.instance_name,
+  i.instance_type,
+  i.provider,
+  i.availability_zone,
+  i.status,
+  c.cluster_id,
+  c.cluster_name,
+  i.last_scan_ts,
+  i.created_at,
+  i.age,
+  COALESCE(ic.total_cost, 0)                 AS total_cost,
+  COALESCE(ic.last_15_days_cost, 0)          AS last_15_days_cost,
+  COALESCE(ic.last_month_cost, 0)            AS last_month_cost,
+  COALESCE(ic.current_month_so_far_cost, 0)  AS current_month_so_far_cost,
+  COALESCE(t.tags, '[]'::jsonb)              AS tags_json
+FROM instances i
+LEFT JOIN clusters        c ON c.id = i.cluster_id
+LEFT JOIN instances_with_costs ic ON ic.id = i.id
+LEFT JOIN LATERAL (
+    SELECT 
+      jsonb_agg(jsonb_build_object('key', t.key, 'value', t.value) ORDER BY t.key) AS tags
+    FROM tags t
+    WHERE t.instance_id = i.id
+) t ON true;
 
 
 

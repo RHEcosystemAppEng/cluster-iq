@@ -24,6 +24,7 @@ type InstanceDTOResponse struct {
 	Last15DaysCost        float64                  `json:"last15DaysCost"`
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
+	Tags                  TagDTOResponseList       `json:"tags"`
 }
 
 // TODO: comments
@@ -51,43 +52,4 @@ func NewInstanceDTOResponseList(instances []InstanceDTOResponse) *InstanceDTORes
 	}
 
 	return &response
-}
-
-// TODO: comments
-type InstanceDTORequest struct {
-	InstanceID       string                   `json:"instanceID"`        // Instance's ID
-	InstanceName     string                   `json:"instanceName"`      // Instance's Name
-	InstanceType     string                   `json:"instanceType"`      // Instance's Type
-	Provider         inventory.CloudProvider  `json:"provider"`          // Infrastructure provider identifier.
-	AvailabilityZone string                   `json:"availabilityZone"`  // The region of the infrastructure provider in which the cluster is deployed
-	Status           inventory.ResourceStatus `json:"status"`            // Defines the status of the cluster if its infrastructure is running or not or it was removed
-	ClusterID        string                   `json:"clusterID"`         // Account ID which this cluster belongs to
-	LastScanTS       time.Time                `json:"lastScanTimestamp"` // Last scan timestamp of the cluster
-	CreatedAt        time.Time                `json:"creationTimestamp"` // Timestamp when the cluster was created
-	Age              int                      `json:"age"`               // Amount of days since the cluster was created
-	Owner            string                   `json:"owner"`             // Cluster's owner
-}
-
-func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
-	instance := inventory.NewInstance(
-		i.InstanceID,
-		i.InstanceName,
-		i.Provider,
-		i.InstanceType,
-		i.AvailabilityZone,
-		i.Status,
-		[]inventory.Tag{},
-		i.CreatedAt,
-	)
-
-	instance.LastScanTS = i.LastScanTS
-	instance.ClusterID = i.ClusterID
-
-	return instance
-}
-
-// TODO: comments
-// InstanceDTORequestList represents the API Request containing a list of accounts.
-type InstanceDTORequestList struct {
-	Instances []InstanceDTORequest `json:"instances"` // List of accounts.
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	dbmodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"go.uber.org/zap"
 )
 
@@ -77,8 +77,8 @@ const (
 // Returns:
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
-func (a SQLClient) GetClusters() ([]models.ClusterDBResponse, error) {
-	var clusters []models.ClusterDBResponse
+func (a SQLClient) GetClusters() ([]dbmodel.ClusterDBResponse, error) {
+	var clusters []dbmodel.ClusterDBResponse
 	if err := a.db.Select(&clusters, SelectClustersQuery); err != nil {
 		return nil, err
 	}
@@ -93,8 +93,8 @@ func (a SQLClient) GetClusters() ([]models.ClusterDBResponse, error) {
 // Returns:
 // - A slice containing a single inventory.Cluster object.
 // - An error if the query fails or the cluster ID does not exist.
-func (a SQLClient) GetClusterByID(clusterID string) (*models.ClusterDBResponse, error) {
-	var cluster models.ClusterDBResponse
+func (a SQLClient) GetClusterByID(clusterID string) (*dbmodel.ClusterDBResponse, error) {
+	var cluster dbmodel.ClusterDBResponse
 	if err := a.db.Get(&cluster, SelectClustersByIDuery, clusterID); err != nil {
 		return nil, err
 	}
@@ -125,8 +125,8 @@ func (a SQLClient) GetClusterTags(clusterID string) ([]inventory.Tag, error) {
 // Returns:
 // - A slice of inventory.Instance objects representing the instances in the cluster.
 // - An error if the query fails.
-func (a SQLClient) GetInstancesOnCluster(clusterID string) ([]models.InstanceDBResponse, error) {
-	var instances []models.InstanceDBResponse
+func (a SQLClient) GetInstancesOnCluster(clusterID string) ([]dbmodel.InstanceDBResponse, error) {
+	var instances []dbmodel.InstanceDBResponse
 	if err := a.db.Select(&instances, SelectInstancesOnClusterQuery, clusterID); err != nil {
 		return nil, err
 	}

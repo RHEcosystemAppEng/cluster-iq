@@ -1,61 +1,68 @@
 package sqlclient
 
 import (
+	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	dbmodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"go.uber.org/zap"
 )
 
 const (
-	// SelectInstancesByIDQuery returns an instance by its ID
-	SelectInstancesByIDQuery = `
-		SELECT * FROM instances
-		JOIN tags ON
-			instances.id = tags.instance_id
-		WHERE id = $1
-		ORDER BY name
-	`
-
 	// SelectInstancesQuery returns every instance in the inventory ordered by ID
 	SelectInstancesQuery = `
-		SELECT * FROM instances
-		JOIN tags ON
-			instances.id = tags.instance_id
-		ORDER BY name
+		SELECT
+			*
+		FROM instances_full_view_with_tags
+		ORDER BY instance_id
+	`
+
+	// SelectInstancesByIDQuery returns an instance by its ID
+	SelectInstancesByIDQuery = `
+		SELECT
+			*
+		FROM instances_full_view_with_tags
+		WHERE instance_id = $1
+		ORDER BY instance_id
+	`
+
+	// SelectInstancesOverview returns the total count of all instances
+	SelectInstancesOverview = `
+		SELECT
+			COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running,
+			COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped,
+			COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived
+		FROM instances;
 	`
 
 	// InsertInstancesQuery inserts into a new instance in its table
 	InsertInstancesQuery = `
 		INSERT INTO instances (
-			id,
-			name,
-			provider,
+			instance_id,
+			instance_name,
 			instance_type,
+			provider,
 			availability_zone,
 			status,
 			cluster_id,
 			last_scan_ts,
 			created_at,
-			age,
-			daily_cost,
-			total_cost
+			age
 		) VALUES (
-			:id,
-			:name,
-			:provider,
+			:instance_id,
+			:instance_name,
 			:instance_type,
+			:provider,
 			:availability_zone,
 			:status,
 			:cluster_id,
 			:last_scan_ts,
 			:created_at,
-			:age,
-			:daily_cost,
-			:total_cost
+			:age
 		) ON CONFLICT (id) DO UPDATE SET
-			name = EXCLUDED.name,
-			provider = EXCLUDED.provider,
+			instance_name = EXCLUDED.instance_name,
 			instance_type = EXCLUDED.instance_type,
+			provider = EXCLUDED.provider,
 			availability_zone = EXCLUDED.availability_zone,
 			status = EXCLUDED.status,
 			cluster_id = EXCLUDED.cluster_id,
@@ -65,7 +72,7 @@ const (
 	`
 
 	// DeleteInstanceQuery removes an instance by its ID
-	DeleteInstanceQuery = `DELETE FROM instances WHERE id=$1`
+	DeleteInstanceQuery = `DELETE FROM instances WHERE instance_id = $1`
 )
 
 // GetInstances retrieves all instances from the database and maps them to inventory.Instance objects.
@@ -73,15 +80,13 @@ const (
 // Returns:
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
-func (a SQLClient) GetInstances() ([]models.InstanceDBResponse, error) {
-	var dbinstances []models.InstanceDBResponse
+func (a SQLClient) GetInstances() ([]dbmodel.InstanceDBResponse, error) {
+	var dbinstances []dbmodel.InstanceDBResponse
 	if err := a.db.Select(&dbinstances, SelectInstancesQuery); err != nil {
 		return nil, err
 	}
 
-	instances := joinInstancesTags(dbinstances)
-
-	return instances, nil
+	return dbinstances, nil
 }
 
 // GetInstanceByID retrieves an instance by its ID.
@@ -92,15 +97,21 @@ func (a SQLClient) GetInstances() ([]models.InstanceDBResponse, error) {
 // Returns:
 // - A slice of inventory.Instance objects (usually one element).
 // - An error if the query fails.
-func (a SQLClient) GetInstanceByID(instanceID string) ([]inventory.Instance, error) {
-	var dbinstances []models.InstanceDB
-	if err := a.db.Select(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
+func (a SQLClient) GetInstanceByID(instanceID string) (*dbmodel.InstanceDBResponse, error) {
+	var dbinstances dbmodel.InstanceDBResponse
+	if err := a.db.Get(&dbinstances, SelectInstancesByIDQuery, instanceID); err != nil {
 		return nil, err
 	}
 
-	instances := joinInstancesTags(dbinstances)
+	return &dbinstances, nil
+}
 
-	return instances, nil
+func (a SQLClient) GetClusterInternalID(clusterID string) (int, error) {
+	var id int
+	if err := a.db.Get(&id, fmt.Sprintf("SELECT id FROM clusters WHERE cluster_id = '%s'", clusterID)); err != nil {
+		return -1, err
+	}
+	return id, nil
 }
 
 // WriteInstances writes a batch of instances and their tags to the database in a transaction.
@@ -134,9 +145,11 @@ func (a SQLClient) WriteInstances(instances []inventory.Instance) error {
 	}
 
 	// Writing tags
-	if _, err := tx.NamedExec(InsertTagsQuery, tags); err != nil {
-		a.logger.Error("Failed to prepare InsertTagsQuery query", zap.Error(err))
-		return err
+	if len(tags) > 0 {
+		if _, err := tx.NamedExec(InsertTagsQuery, tags); err != nil {
+			a.logger.Error("Failed to prepare InsertTagsQuery query", zap.Error(err))
+			return err
+		}
 	}
 
 	// Commit the transaction
@@ -167,51 +180,11 @@ func (a SQLClient) DeleteInstance(instanceID string) error {
 		}
 	}()
 
-	tx.MustExec(DeleteTagsQuery, instanceID)
+	// TODO review if ON CASCADE delete works
+	//tx.MustExec(DeleteTagsQuery, instanceID)
 	tx.MustExec(DeleteInstanceQuery, instanceID)
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 	return nil
-}
-
-// joinInstancesTags maps an array of InstanceDBResponse objects into a slice of inventory.Instance objects.
-//
-// Parameters:
-// - dbinstances: A slice of InstanceDB objects.
-//
-// Returns:
-// - A slice of inventory.Instance objects.
-func joinInstancesTags(dbinstances []models.InstanceDBResponse) []inventory.Instance {
-	instanceMap := make(map[string]*inventory.Instance)
-	for _, dbinstance := range dbinstances {
-		if _, ok := instanceMap[dbinstance.ID]; ok {
-			// Adding tag to an already read instance
-			instance := instanceMap[dbinstance.ID]
-			instance.AddTag(
-				*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID),
-			)
-		} else {
-			// Adding a new instance to the response
-			instanceMap[dbinstance.ID] = inventory.NewInstance(
-				dbinstance.ID,
-				dbinstance.Name,
-				dbinstance.Provider,
-				dbinstance.InstanceType,
-				dbinstance.AvailabilityZone,
-				dbinstance.Status,
-				[]inventory.Tag{*inventory.NewTag(dbinstance.TagKey, dbinstance.TagValue, dbinstance.ID)},
-				dbinstance.CreationTimestamp,
-			)
-			instanceMap[dbinstance.ID].ClusterID = dbinstance.ClusterID
-		}
-	}
-
-	// Converting map into list
-	var instances []inventory.Instance
-	for _, instance := range instanceMap {
-		instances = append(instances, *instance)
-	}
-
-	return instances
 }

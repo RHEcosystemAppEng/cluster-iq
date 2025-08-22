@@ -6,9 +6,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/apiresponsetypes"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -145,9 +145,9 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 		return
 	}
 
+	// Capturing request body
 	var clusters dto.ClusterDTORequestList
-	err = json.Unmarshal(body, &clusters)
-	if err != nil {
+	if err = json.Unmarshal(body, &clusters); err != nil {
 		a.logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
 		return
@@ -155,12 +155,12 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 
 	a.logger.Debug("Writing new Clusters", zap.Reflect("clusters", clusters))
 
+	// Filling Account internal ID for every cluster
 	var toWriteClusters []inventory.Cluster
-
 	for _, cluster := range clusters.Clusters {
 		newCluster := *cluster.ToInventoryCluster()
 		if id, err := a.sql.GetAccountInternalID(cluster.AccountID); err != nil {
-			a.logger.Error("Can't obtain internal ID for cluster", zap.Error(err))
+			a.logger.Error("Can't obtain internal ID for Account", zap.Error(err))
 			c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
 			return
 		} else {
@@ -169,14 +169,14 @@ func (a APIServer) HandlerPostCluster(c *gin.Context) {
 		}
 	}
 
-	err = a.sql.WriteClusters(toWriteClusters)
-	if err != nil {
+	// Writing to DB
+	if err = a.sql.WriteClusters(toWriteClusters); err != nil {
 		a.logger.Error("Can't write new Clusters into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
-	c.PureJSON(http.StatusOK, apiresponsetypes.PostResponse{
+	c.PureJSON(http.StatusOK, responsetypes.PostResponse{
 		Count:  len(clusters.Clusters),
 		Status: "Cluster(s) Post OK",
 	})
@@ -203,7 +203,7 @@ func (a APIServer) HandlerDeleteCluster(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, apiresponsetypes.DeleteResponse{
+	c.PureJSON(http.StatusOK, responsetypes.DeleteResponse{
 		Count:  1,
 		Status: fmt.Sprintf("Cluster '%s' Delete OK", clusterID),
 	})

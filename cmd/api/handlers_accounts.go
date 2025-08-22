@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/apiresponsetypes"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
+	art "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
+	dtomodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -21,7 +21,7 @@ import (
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	dto.AccountDTOResponseList
+//	@Success		200	{object}	dtomodel.AccountDTOResponseList
 //	@Failure		500	{object}	GenericErrorResponse
 //	@Router			/accounts [get]
 func (a APIServer) HandlerGetAccounts(c *gin.Context) {
@@ -36,12 +36,12 @@ func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 
 	// Transforming into DTO type
 	// TODO move to function
-	var response []dto.AccountDTOResponse
+	var response []dtomodel.AccountDTOResponse
 	for _, account := range accounts {
 		response = append(response, *account.ToAccountDTOResponse())
 	}
 
-	c.PureJSON(http.StatusOK, dto.NewAccountDTOResponseList(response))
+	c.PureJSON(http.StatusOK, dtomodel.NewAccountDTOResponseList(response))
 }
 
 // HandlerGetAccountsByID handles the request for obtain an Account by its Name
@@ -52,7 +52,7 @@ func (a APIServer) HandlerGetAccounts(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			account_id	path		string	true	"Account Name"
-//	@Success		200			{object}	dto.AccountDTOResponseList
+//	@Success		200			{object}	dtomodel.AccountDTOResponseList
 //	@Failure		404			{object}	GenericErrorResponse
 //	@Router			/accounts/{account_id} [get]
 func (a APIServer) HandlerGetAccountsByID(c *gin.Context) {
@@ -66,7 +66,7 @@ func (a APIServer) HandlerGetAccountsByID(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, dto.NewAccountDTOResponseList([]dto.AccountDTOResponse{*accounts.ToAccountDTOResponse()}))
+	c.PureJSON(http.StatusOK, dtomodel.NewAccountDTOResponseList([]dtomodel.AccountDTOResponse{*accounts.ToAccountDTOResponse()}))
 }
 
 // HandlerGetClustersOnAccount handles the request for obtain the list of clusters deployed on a specific Account
@@ -92,11 +92,11 @@ func (a APIServer) HandlerGetClustersOnAccount(c *gin.Context) {
 	}
 
 	// Transforming into DTO type
-	var response []dto.ClusterDTOResponse
+	var response []dtomodel.ClusterDTOResponse
 	for _, cluster := range clusters {
 		response = append(response, *cluster.ToClusterDTOResponse())
 	}
-	c.PureJSON(http.StatusOK, dto.NewClusterDTOResponseList(response))
+	c.PureJSON(http.StatusOK, dtomodel.NewClusterDTOResponseList(response))
 }
 
 // HandlerPostAccount handles the request for writing a new Account in the inventory
@@ -120,7 +120,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 		return
 	}
 
-	var accounts dto.AccountDTORequestList
+	var accounts dtomodel.AccountDTORequestList
 	err = json.Unmarshal(body, &accounts)
 	if err != nil {
 		a.logger.Error("Can't obtain data from body request", zap.Error(err))
@@ -134,7 +134,7 @@ func (a APIServer) HandlerPostAccount(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, apiresponsetypes.PostResponse{Count: len(accounts.Accounts), Status: "Account(s) Post OK"})
+	c.PureJSON(http.StatusOK, art.PostResponse{Count: len(accounts.Accounts), Status: "Account(s) Post OK"})
 }
 
 // HandlerDeleteAccount handles the request for deleting an Account in the inventory
@@ -158,7 +158,7 @@ func (a APIServer) HandlerDeleteAccount(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, apiresponsetypes.DeleteResponse{
+	c.PureJSON(http.StatusOK, art.DeleteResponse{
 		Count:  1,
 		Status: fmt.Sprintf("Account '%s' Delete OK", accountID),
 	})

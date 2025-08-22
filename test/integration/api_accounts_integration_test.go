@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/apiresponsetypes"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 const (
@@ -22,11 +22,13 @@ func TestAPIAccounts(t *testing.T) {
 	waitForAPIReady(t)
 
 	t.Run("TestGetAccount", func(t *testing.T) { testGetAccounts(t) })
-	t.Run("TestGetAccountByID", func(t *testing.T) { testGetAccountByID(t) })
+	t.Run("TestGetAccountByID Success", func(t *testing.T) { testGetAccountByID_Exists(t) })
+	t.Run("TestGetAccountByID Not Found", func(t *testing.T) { testGetAccountByID_NoExists(t) })
 	t.Run("TestGetAccountClusters", func(t *testing.T) { testGetAccountClusters(t) })
 	t.Run("TestPostOneAccount", func(t *testing.T) { testPostOneAccount(t) })
 	t.Run("TestPostMultipleAccounts", func(t *testing.T) { testPostMultipleAccounts(t) })
-	t.Run("TestDeleteAccount", func(t *testing.T) { testDeleteAccount(t) })
+	t.Run("TestDeleteAccount Success", func(t *testing.T) { testDeleteAccount_Exists(t) })
+	t.Run("TestDeleteAccount Not Found", func(t *testing.T) { testDeleteAccount_NoExists(t) })
 	t.Run("TestPatchAccount", func(t *testing.T) { testPatchAccount(t) })
 }
 
@@ -56,7 +58,7 @@ func testGetAccounts(t *testing.T) {
 	}
 }
 
-func testGetAccountByID(t *testing.T) {
+func testGetAccountByID_Exists(t *testing.T) {
 	expectedCount := 1
 
 	// Getting Clusters data
@@ -69,6 +71,33 @@ func testGetAccountByID(t *testing.T) {
 	// Check response code
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Decode the JSON response
+	var response dto.AccountDTOResponseList
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode GetAccountsByID response body: %v", err)
+	}
+
+	// Comparing data
+	if len(response.Accounts) != expectedCount {
+		t.Fatalf("Expected: %d, Have: %d", expectedCount, response.Count)
+	}
+}
+
+func testGetAccountByID_NoExists(t *testing.T) {
+	expectedCount := 0
+
+	// Getting Clusters data
+	resp, err := http.Get(APIAccountsURL + "/missing-account")
+	if err != nil {
+		t.Fatalf("Failed to make GetAccountByID request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("Expected status 404, got %d", resp.StatusCode)
 	}
 
 	// Decode the JSON response
@@ -112,7 +141,7 @@ func testGetAccountClusters(t *testing.T) {
 	// TODO Add elements check
 }
 
-func postAccounts(t *testing.T, accounts string) *apiresponsetypes.PostResponse {
+func postAccounts(t *testing.T, accounts string) *responsetypes.PostResponse {
 	// Posting test data
 	resp, err := http.Post(APIAccountsURL, "application/json", bytes.NewBuffer([]byte(accounts)))
 	if err != nil {
@@ -130,7 +159,7 @@ func postAccounts(t *testing.T, accounts string) *apiresponsetypes.PostResponse 
 		t.Fatal("Cant Read API Response Body")
 	}
 
-	var response apiresponsetypes.PostResponse
+	var response responsetypes.PostResponse
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		t.Fatal("Can't Unmarshal API Response")
@@ -233,7 +262,7 @@ func testPatchAccount(t *testing.T) {
 	}
 }
 
-func testDeleteAccount(t *testing.T) {
+func testDeleteAccount_Exists(t *testing.T) {
 	// Preparing DELETE request
 	accountID := "ACC-001"
 	req, err := http.NewRequest(http.MethodDelete, APIAccountsURL+"/"+accountID, nil)
@@ -254,7 +283,7 @@ func testDeleteAccount(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	var response apiresponsetypes.DeleteResponse
+	var response responsetypes.DeleteResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode DeleteAccount response body: %v", err)
 	}
@@ -265,5 +294,36 @@ func testDeleteAccount(t *testing.T) {
 
 	if response.Status != fmt.Sprintf("Account '%s' Delete OK", accountID) {
 		t.Fatalf("Unexpected Status Message: '%s'", response.Status)
+	}
+}
+
+func testDeleteAccount_NoExists(t *testing.T) {
+	// Preparing DELETE request
+	accountID := "missing"
+	req, err := http.NewRequest(http.MethodDelete, APIAccountsURL+"/"+accountID, nil)
+	if err != nil {
+		t.Fatalf("Failed to create DeleteAccount request: %v", err)
+	}
+
+	// Executing DELETE request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute DeleteAccount request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("Expected status 404, got %d", resp.StatusCode)
+	}
+
+	var response responsetypes.DeleteResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode DeleteAccount response body: %v", err)
+	}
+
+	if response.Count != 0 {
+		t.Fatalf("Expected 0 Deleted Account, got %d", response.Count)
 	}
 }

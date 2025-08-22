@@ -2,7 +2,7 @@ package sqlclient
 
 import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	dbmodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"go.uber.org/zap"
 )
 
@@ -54,8 +54,8 @@ const (
 // Returns:
 // - A slice of model.AccountDBResponse objects.
 // - An error if the query fails.
-func (a SQLClient) GetAccounts() ([]models.AccountDBResponse, error) {
-	var accounts []models.AccountDBResponse
+func (a SQLClient) GetAccounts() ([]dbmodel.AccountDBResponse, error) {
+	var accounts []dbmodel.AccountDBResponse
 	if err := a.db.Select(&accounts, SelectAccountsQuery); err != nil {
 		return nil, err
 	}
@@ -68,10 +68,10 @@ func (a SQLClient) GetAccounts() ([]models.AccountDBResponse, error) {
 // - accountID: The name of the account to retrieve.
 //
 // Returns:
-// - A pointer of models.AccountDBResponse.
+// - A pointer of dbmodel.AccountDBResponse.
 // - An error if the query fails.
-func (a SQLClient) GetAccountByID(accountID string) (*models.AccountDBResponse, error) {
-	var account models.AccountDBResponse
+func (a SQLClient) GetAccountByID(accountID string) (*dbmodel.AccountDBResponse, error) {
+	var account dbmodel.AccountDBResponse
 	if err := a.db.Get(&account, SelectAccountsByIDQuery, accountID); err != nil {
 		return nil, err
 	}
@@ -86,8 +86,8 @@ func (a SQLClient) GetAccountByID(accountID string) (*models.AccountDBResponse, 
 // Returns:
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
-func (a SQLClient) GetClustersOnAccount(accountID string) ([]models.ClusterDBResponse, error) {
-	var clusters []models.ClusterDBResponse
+func (a SQLClient) GetClustersOnAccount(accountID string) ([]dbmodel.ClusterDBResponse, error) {
+	var clusters []dbmodel.ClusterDBResponse
 	if err := a.db.Select(&clusters, SelectClustersOnAccountQuery, accountID); err != nil {
 		return nil, err
 	}

@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
+	art "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	dtomodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -35,12 +37,39 @@ func (a APIServer) HandlerGetInstances(c *gin.Context) {
 
 	// Transforming into DTO type
 	// TODO move to function
-	var response []dto.InstanceDTOResponse
+	var response []dtomodel.InstanceDTOResponse
 	for _, instance := range instances {
 		response = append(response, *instance.ToInstanceDTOResponse())
 	}
 
-	c.PureJSON(http.StatusOK, dto.NewInstanceDTOResponseList(response))
+	c.PureJSON(http.StatusOK, dtomodel.NewInstanceDTOResponseList(response))
+}
+
+// HandlerGetInstanceByID handles the request for obtain an Instance by its ID
+//
+//	@Summary		Obtain a single Instance by its ID
+//	@Description	Returns a list of Instances with a single Instance filtered by ID
+//	@Tags			Instances
+//	@Accept			json
+//	@Produce		json
+//	@Param			instance_id	path		string	true	"Instance ID"
+//	@Success		200			{object}	InstanceListResponse
+//	@Failure		404			{object}	nil
+//	@Router			/instances/{instance_id} [get]
+func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
+	instanceID := c.Param("instance_id")
+	a.logger.Debug("Retrieving instance by ID", zap.String("instance_id", instanceID))
+
+	instances, err := a.sql.GetInstanceByID(instanceID)
+	if err != nil {
+		// TODO Fix this error message. Not always is "NotFound"
+		// TODO Check also this in the rest of handlers
+		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
+		c.PureJSON(http.StatusNotFound, nil)
+		return
+	}
+
+	c.PureJSON(http.StatusOK, dtomodel.NewInstanceDTOResponseList([]dtomodel.InstanceDTOResponse{*instances.ToInstanceDTOResponse()}))
 }
 
 // HandlerGetInstancesForBillingUpdate handles the request for obtain a list of instances that needs to update its billing information
@@ -63,32 +92,7 @@ func (a APIServer) HandlerGetInstancesForBillingUpdate(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
-}
-
-// HandlerGetInstanceByID handles the request for obtain an Instance by its ID
-//
-//	@Summary		Obtain a single Instance by its ID
-//	@Description	Returns a list of Instances with a single Instance filtered by ID
-//	@Tags			Instances
-//	@Accept			json
-//	@Produce		json
-//	@Param			instance_id	path		string	true	"Instance ID"
-//	@Success		200			{object}	InstanceListResponse
-//	@Failure		404			{object}	nil
-//	@Router			/instances/{instance_id} [get]
-func (a APIServer) HandlerGetInstanceByID(c *gin.Context) {
-	instanceID := c.Param("instance_id")
-	a.logger.Debug("Retrieving instance by ID", zap.String("instance_id", instanceID))
-
-	instances, err := a.sql.GetInstanceByID(instanceID)
-	if err != nil {
-		a.logger.Error("Instance not found", zap.String("instance_id", instanceID), zap.Error(err))
-		c.PureJSON(http.StatusNotFound, nil)
-		return
-	}
-
-	c.PureJSON(http.StatusOK, NewInstanceListResponse(instances))
+	c.PureJSON(http.StatusOK, instances)
 }
 
 // HandlerPostInstance handles the request for writing a new Instance in the inventory
@@ -111,22 +115,36 @@ func (a APIServer) HandlerPostInstance(c *gin.Context) {
 		return
 	}
 
-	var instances []inventory.Instance
-	err = json.Unmarshal(body, &instances)
-	if err != nil {
+	var instances dtomodel.InstanceDTORequestList
+	if err = json.Unmarshal(body, &instances); err != nil {
 		a.logger.Error("Can't obtain data from body request", zap.Error(err))
 		c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
 		return
 	}
 
 	a.logger.Debug("Writing a new Instance", zap.Reflect("instance", instances))
-	err = a.sql.WriteInstances(instances)
-	if err != nil {
+
+	// Filling Account internal ID for every instance
+	var toWriteInstances []inventory.Instance
+	for _, instance := range instances.Instances {
+		newInstance := *instance.ToInventoryInstance()
+		if id, err := a.sql.GetClusterInternalID(instance.ClusterID); err != nil {
+			a.logger.Error("Can't obtain internal ID for Cluster", zap.Error(err))
+			c.PureJSON(http.StatusBadRequest, NewGenericErrorResponse(err.Error()))
+			return
+		} else {
+			newInstance.ClusterID = id
+			toWriteInstances = append(toWriteInstances, newInstance)
+		}
+	}
+
+	if err = a.sql.WriteInstances(toWriteInstances); err != nil {
 		a.logger.Error("Can't write new instances into DB", zap.Error(err))
 		c.PureJSON(http.StatusInternalServerError, NewGenericErrorResponse(err.Error()))
 		return
 	}
-	c.PureJSON(http.StatusOK, nil)
+
+	c.PureJSON(http.StatusOK, art.PostResponse{Count: len(toWriteInstances), Status: "Instance(s) Post OK"})
 }
 
 // HandlerDeleteInstance handles the request for removing an Instance in the inventory
@@ -152,7 +170,10 @@ func (a APIServer) HandlerDeleteInstance(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, nil)
+	c.PureJSON(http.StatusOK, art.DeleteResponse{
+		Count:  1,
+		Status: fmt.Sprintf("Instance '%s' Delete OK", instanceID),
+	})
 }
 
 // HandlerPatchInstance handles the request for patching an Instance in the inventory

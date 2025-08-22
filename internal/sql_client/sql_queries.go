@@ -224,15 +224,6 @@ const (
 			amount = EXCLUDED.amount
 	`
 
-	// SelectInstancesOverview returns the total count of all instances
-	SelectInstancesOverview = `
-		SELECT 
-			COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running,
-			COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped,
-			COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived
-		FROM instances;
-	`
-
 	// SelectClustersOverview returns the number of clusters grouped by status
 	SelectClustersOverview = `
 		SELECT 
