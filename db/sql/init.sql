@@ -28,12 +28,12 @@ CREATE TYPE RESOURCE_TYPE AS ENUM (
 
 -- Accounts Table
 CREATE TABLE IF NOT EXISTS accounts (
-  id                      SERIAL,                                          -- Internal account ID
-  account_id              TEXT NOT NULL,                                   -- Account ID assigned by the Cloud Provider
-  account_name            TEXT NOT NULL,                                   -- Account Name assigned by the Cloud Provider OR as an alias
-  provider                CLOUD_PROVIDER NOT NULL,                         -- Cloud Provider
-  last_scan_ts            TIMESTAMP WITH TIME ZONE,                        -- Timestamp of the last time the account was scanned
-  created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), -- Timestamp when the account was created
+  id                      INT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  account_id              TEXT NOT NULL,
+  account_name            TEXT NOT NULL,
+  provider                CLOUD_PROVIDER NOT NULL,
+  last_scan_ts            TIMESTAMP WITH TIME ZONE,
+  created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   PRIMARY KEY (id),
   UNIQUE (account_id)
 );
@@ -41,11 +41,11 @@ CREATE TABLE IF NOT EXISTS accounts (
 
 -- Clusters Table
 CREATE TABLE IF NOT EXISTS clusters (
-  id                      BIGSERIAL,
-  cluster_id              TEXT NOT NULL, -- cluster_id is the result of joining: "name+infra_id+account"
+  id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  cluster_id              TEXT NOT NULL,                                   -- cluster_id is the result of joining: "name+infra_id"
   cluster_name            TEXT NOT NULL,
   infra_id                TEXT NOT NULL,
-  provider                CLOUD_PROVIDER NOT NULL,                         -- Cloud Provider
+  provider                CLOUD_PROVIDER NOT NULL,
   status                  STATUS,
   region                  TEXT,
   account_id              INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS clusters (
   age                     INTEGER DEFAULT 0,
   owner                   TEXT,
   PRIMARY KEY (id),
-  UNIQUE (id, cluster_name, account_id)
+  UNIQUE (id, cluster_id, account_id)
 ) PARTITION BY HASH (id);
 
 CREATE TABLE clusters_p0 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 0);
@@ -70,7 +70,7 @@ CREATE TABLE clusters_p7 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAI
 
 -- Instances
 CREATE TABLE IF NOT EXISTS instances (
-  id                      BIGSERIAL,
+  id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   instance_id             TEXT NOT NULL,
   instance_name           TEXT,
   instance_type           TEXT,
@@ -104,10 +104,11 @@ CREATE TABLE instances_p15 PARTITION OF instances FOR VALUES WITH (MODULUS 16, R
 
 
 -- Instances Tags
+-- TODO Check if is more efficient to move this table to JSONB column on the Instances table
 CREATE TABLE IF NOT EXISTS tags (
   key                     TEXT,
   value                   TEXT,
-  instance_id             INTEGER REFERENCES instances(id) ON DELETE CASCADE,
+  instance_id             BIGINT REFERENCES instances(id) ON DELETE CASCADE,
   PRIMARY KEY (key, instance_id)
 ) PARTITION BY HASH(instance_id);
 
@@ -130,12 +131,16 @@ CREATE TABLE tags_p15 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 1
 
 
 -- Instances expenses
+-- TODO pg_cron to create partitions automatically
 CREATE TABLE IF NOT EXISTS expenses (
-  instance_id             BIGSERIAL REFERENCES instances(id) ON DELETE CASCADE,
+  instance_id              BIGINT REFERENCES instances(id) ON DELETE CASCADE,
   date                     DATE,
   amount                   NUMERIC(12,2) DEFAULT 0.0,
   PRIMARY KEY (instance_id, date)
 ) PARTITION BY RANGE (date);
+
+-- Default expenses partition. The rest of expenses will be created by pg_cron
+CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
 
 
 
@@ -164,8 +169,9 @@ WITH base AS (
 )
 SELECT
   a.id,
-  COALESCE(SUM(b.amount), 0.0)                                          AS total_cost,
-  COALESCE(SUM(b.amount) FILTER (WHERE b.date >= current_date - 14), 0) AS last_15_days_cost,
+  COALESCE(SUM(b.amount), 0.0)                                           AS total_cost,
+  COALESCE(SUM(b.amount) FILTER (
+            WHERE b.date >= current_date - 14), 0)                       AS last_15_days_cost,
   COALESCE(SUM(b.amount) FILTER (
             WHERE b.date >= (date_trunc('month', current_date)::date - INTERVAL '1 month')
               AND b.date <  date_trunc('month', current_date)::date), 0) AS last_month_cost,
@@ -177,7 +183,8 @@ LEFT JOIN base b ON b.id = a.id
 GROUP BY a.id;
 
 
--- Accounts Full view 
+-- Accounts Full view
+-- TODO: check if we can include MATERIALIZED views (using pg_cron)
 CREATE VIEW accounts_full_view AS
 SELECT
   a.account_id,
@@ -367,11 +374,33 @@ FROM instances i
 LEFT JOIN clusters        c ON c.id = i.cluster_id
 LEFT JOIN instances_with_costs ic ON ic.id = i.id
 LEFT JOIN LATERAL (
-    SELECT 
+    SELECT
       jsonb_agg(jsonb_build_object('key', t.key, 'value', t.value) ORDER BY t.key) AS tags
     FROM tags t
     WHERE t.instance_id = i.id
 ) t ON true;
+
+
+-- Instances pending for expense update
+CREATE VIEW instances_pending_expense_update AS
+SELECT
+	instances.instance_id
+FROM
+	instances
+LEFT JOIN (
+	SELECT
+		instance_id,
+		MAX(date) AS last_expense_date
+	FROM
+		expenses
+	GROUP BY
+		instance_id
+) AS last_expenses
+ON
+	instances.id = last_expenses.instance_id
+WHERE
+	last_expenses.last_expense_date IS NULL
+	OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day';
 
 
 
