@@ -2,20 +2,20 @@ package inventory
 
 import "strings"
 
-// InstanceStatus defines the status of the instance
-type InstanceStatus string
+// ResourceStatus defines the status of the instance
+type ResourceStatus string
 
 const (
 	// Running Instance status
-	Running InstanceStatus = "Running"
+	Running ResourceStatus = "Running"
 	// Stopped Instance status
-	Stopped InstanceStatus = "Stopped"
+	Stopped ResourceStatus = "Stopped"
 	// Terminated Instance status
-	Terminated InstanceStatus = "Terminated"
+	Terminated ResourceStatus = "Terminated"
 )
 
-// AsInstanceStatus converts the incoming argument into a InstanceStatus type
-func AsInstanceStatus(status string) InstanceStatus {
+// AsResourceStatus converts the incoming argument into a ResourceStatus type
+func AsResourceStatus(status string) ResourceStatus {
 	switch strings.ToLower(status) {
 	case "running":
 		return Running

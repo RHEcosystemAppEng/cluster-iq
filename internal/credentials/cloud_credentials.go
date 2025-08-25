@@ -6,6 +6,7 @@ import (
 )
 
 type AccountConfig struct {
+	ID             string
 	Name           string
 	Provider       inventory.CloudProvider
 	User           string
@@ -27,7 +28,8 @@ func ReadCloudAccounts(credsFile string) ([]AccountConfig, error) {
 	var accounts []AccountConfig
 	for _, section := range cfg.Sections() {
 		account := AccountConfig{
-			Name:           section.Name(),
+			ID:             section.Name(),
+			Name:           section.Key("name").String(),
 			Provider:       inventory.GetCloudProvider(section.Key("provider").String()),
 			User:           section.Key("user").String(),
 			Key:            section.Key("key").String(),
