@@ -1,0 +1,51 @@
+{{- if .Values.database.cron.enabled -}}
+kind: CronJob
+apiVersion: batch/v1
+metadata:
+  name: database-cron
+  labels:
+    {{- include "cluster-iq.labels" . | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "database" | nindent 4 }}
+spec:
+  schedule: "{{ .Values.database.cron.schedule }}"
+  concurrencyPolicy: Replace
+  suspend: false
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          {{- with .Values.database.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "cluster-iq.databaseServiceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.database.podSecurityContext | nindent 12 }}
+          volumes:
+            - name: postgresql-cm
+              configMap:
+                name: postgresql
+                defaultMode: 0550
+          containers:
+            - name: cron
+              image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+              command: ["/bin/bash", "-c"]
+              args:
+                - /opt/scripts/expenses_partition_script.sh
+              env:
+                - name: CIQ_DB_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql
+                      key: POSTGRESQL_CONNECTION_STRING
+              resources:
+                {{- toYaml .Values.database.cron.resources | nindent 16 }}
+              volumeMounts:
+                - name: postgresql-cm
+                  mountPath: /opt/scripts/expenses_partition_script.sh
+                  subPath: expenses_partition_script.sh
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 5
+{{- end -}}

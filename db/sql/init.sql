@@ -131,7 +131,6 @@ CREATE TABLE tags_p15 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 1
 
 
 -- Instances expenses
--- TODO pg_cron to create partitions automatically
 CREATE TABLE IF NOT EXISTS expenses (
   instance_id              BIGINT REFERENCES instances(id) ON DELETE CASCADE,
   date                     DATE,
@@ -141,6 +140,27 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 -- Default expenses partition. The rest of expenses will be created by pg_cron
 CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
+
+-- Function for creating expenses partitions
+CREATE OR REPLACE FUNCTION create_next_month_expenses_partition()
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  next_month  date := (date_trunc('month', current_date)::date + interval '1 month')::date;
+  start_date  date := next_month;
+  end_date    date := (next_month + interval '1 month')::date;
+  part_name   text := format('expenses_%s', to_char(next_month, 'YYYY_MM'));
+BEGIN
+  EXECUTE format(
+    'CREATE TABLE IF NOT EXISTS %I PARTITION OF public.expenses
+       FOR VALUES FROM (%L) TO (%L);',
+    part_name, start_date, end_date
+  );
+
+  RETURN part_name;
+END;
+$$;
 
 
 
@@ -452,6 +472,8 @@ CREATE INDEX ix_itags_key_lower_val
 CREATE INDEX ix_expenses_instance
   ON expenses (instance_id);
 
+CREATE INDEX ix_expenses_date
+  ON expenses (date);
 
 
 
@@ -500,8 +522,6 @@ CREATE TABLE IF NOT EXISTS schedule (
 
 
 
-
-
 -- ## Audit logs
 -- #############################################################################
 
@@ -519,8 +539,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
   PRIMARY KEY (id, event_timestamp)
 ) PARTITION BY RANGE (event_timestamp);
-
-
 
 
 
