@@ -464,13 +464,24 @@ database:
 
   affinity: {}
 
-  cron:
+  cron_partitions:
     enabled: true
     schedule: "0 0 * * 6" # Every Sunday at midnight
     resources:
       requests:
-        memory: "32Mi"
-        cpu: "20m"
+        memory: "24Mi"
+        cpu: "10m"
       limits:
         memory: "64Mi"
-        cpu: "50m"
+        cpu: "20m"
+
+  cron_inventory_maintenance:
+    enabled: true
+    schedule: "0 */6 * * *" # Every 6 hours
+    resources:
+      requests:
+        memory: "24Mi"
+        cpu: "10m"
+      limits:
+        memory: "64Mi"
+        cpu: "20m"

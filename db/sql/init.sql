@@ -567,3 +567,12 @@ BEGIN
   WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
+
+-- Runs check_terminated_clusters/instances functions
+CREATE OR REPLACE FUNCTION check_terminated_inventory()
+RETURNS void AS $$
+BEGIN
+  PERFORM check_terminated_clusters()
+  PERFORM check_terminated_instances()
+END;
+$$ LANGUAGE plpgsql;
