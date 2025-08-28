@@ -1,13 +1,12 @@
--- ## Basic Inventory definition (Types, Tables and partitions) ##
+-- ## Cluster IQ Database Definition ##
 -- #################################################################################################
--- Supported values for Cloud Providers
-CREATE TYPE CLOUD_PROVIDER AS ENUM (
-  'AWS',
-  'GCP',
-  'Azure',
-  'UNKNOWN'
-);
 
+\! echo '## Initializing ClusterIQ Database definition'
+
+-- ## Data Types
+-- ############################################################
+
+\! echo '## Creating custom Data Types'
 
 -- Supported values of Status (Valid for Clusters and and Instances)
 CREATE TYPE STATUS AS ENUM (
@@ -17,7 +16,6 @@ CREATE TYPE STATUS AS ENUM (
   'Unknown'
 );
 
-
 -- Supported values of resources_types
 CREATE TYPE RESOURCE_TYPE AS ENUM (
   'Account',
@@ -25,8 +23,46 @@ CREATE TYPE RESOURCE_TYPE AS ENUM (
   'Instance'
 );
 
+-- Supported values of Action Operations
+CREATE TYPE ACTION_OPERATION AS ENUM (
+  'PowerOnCluster',
+  'PowerOffCluster'
+);
 
--- Accounts Table
+-- Supported values of action types
+CREATE TYPE ACTION_TYPE AS ENUM (
+  'instant_action',
+  'cron_action',
+  'scheduled_action'
+);
+
+-- Supported values of action status
+CREATE TYPE ACTION_STATUS AS ENUM (
+  'Pending',
+  'Running',
+  'Success',
+  'Failed',
+  'Unknown'
+);
+
+-- Supported values for Cloud Providers
+CREATE TYPE CLOUD_PROVIDER AS ENUM (
+  'AWS',
+  'GCP',
+  'Azure',
+  'UNKNOWN'
+);
+
+
+
+-- ## Tables, Indexes and Partitions
+-- ############################################################
+
+-- #############################################################################
+-- Accounts
+-- #############################################################################
+\! echo '## Creating Accounts table'
+
 CREATE TABLE IF NOT EXISTS accounts (
   id                      INT GENERATED ALWAYS AS IDENTITY NOT NULL,
   account_id              TEXT NOT NULL,
@@ -35,14 +71,25 @@ CREATE TABLE IF NOT EXISTS accounts (
   last_scan_ts            TIMESTAMP WITH TIME ZONE,
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   PRIMARY KEY (id),
-  UNIQUE (account_id)
+  UNIQUE (provider, account_id),
+  UNIQUE (provider, account_name)
 );
 
+CREATE INDEX ix_accounts_provider          ON accounts (provider);
+CREATE INDEX ix_accounts_id                ON accounts (account_id);
+CREATE INDEX ix_accounts_last_scan_ts_desc ON accounts (last_scan_ts DESC);
+CREATE INDEX ix_accounts_name              ON accounts (lower(account_name));
 
--- Clusters Table
+
+
+-- #############################################################################
+-- Clusters
+-- #############################################################################
+\! echo '## Creating Clusters table'
+
 CREATE TABLE IF NOT EXISTS clusters (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-  cluster_id              TEXT NOT NULL,                                   -- cluster_id is the result of joining: "name+infra_id"
+  cluster_id              TEXT NOT NULL,  -- cluster_id is the result of joining: "name+infra_id"
   cluster_name            TEXT NOT NULL,
   infra_id                TEXT NOT NULL,
   provider                CLOUD_PROVIDER NOT NULL,
@@ -55,20 +102,23 @@ CREATE TABLE IF NOT EXISTS clusters (
   age                     INTEGER DEFAULT 0,
   owner                   TEXT,
   PRIMARY KEY (id),
-  UNIQUE (id, cluster_id, account_id)
-) PARTITION BY HASH (id);
+  CONSTRAINT uq_clusters_accountid_clusterid UNIQUE (account_id, cluster_id)
+);
 
-CREATE TABLE clusters_p0 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 0);
-CREATE TABLE clusters_p1 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 1);
-CREATE TABLE clusters_p2 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 2);
-CREATE TABLE clusters_p3 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 3);
-CREATE TABLE clusters_p4 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 4);
-CREATE TABLE clusters_p5 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 5);
-CREATE TABLE clusters_p6 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 6);
-CREATE TABLE clusters_p7 PARTITION OF clusters FOR VALUES WITH (MODULUS 8, REMAINDER 7);
+CREATE INDEX ix_clusters_account            ON clusters (account_id);
+CREATE INDEX ix_clusters_acct_status        ON clusters (account_id, status);
+CREATE INDEX ix_clusters_acct_region_status ON clusters (account_id, region, status);
+CREATE INDEX ix_clusters_last_scan_ts_desc  ON clusters (last_scan_ts DESC);
+CREATE INDEX ix_clusters_acct_name          ON clusters (account_id, lower(cluster_name));
+CREATE INDEX ix_clusters_last_scan_active   ON clusters (last_scan_ts) WHERE status <> 'Terminated';
 
 
+
+-- #############################################################################
 -- Instances
+-- #############################################################################
+\! echo '## Creating Instances table'
+
 CREATE TABLE IF NOT EXISTS instances (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   instance_id             TEXT NOT NULL,
@@ -82,29 +132,36 @@ CREATE TABLE IF NOT EXISTS instances (
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
   PRIMARY KEY (id),
-  UNIQUE (id, instance_name, cluster_id)
+  CONSTRAINT uq_instances_cluster_name UNIQUE (id, instance_id, cluster_id)
 ) PARTITION BY HASH(id);
 
-CREATE TABLE instances_p00 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 00);
-CREATE TABLE instances_p01 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 01);
-CREATE TABLE instances_p02 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 02);
-CREATE TABLE instances_p03 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 03);
-CREATE TABLE instances_p04 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 04);
-CREATE TABLE instances_p05 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 05);
-CREATE TABLE instances_p06 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 06);
-CREATE TABLE instances_p07 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 07);
-CREATE TABLE instances_p08 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 08);
-CREATE TABLE instances_p09 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 09);
-CREATE TABLE instances_p10 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 10);
-CREATE TABLE instances_p11 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 11);
-CREATE TABLE instances_p12 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 12);
-CREATE TABLE instances_p13 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 13);
-CREATE TABLE instances_p14 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 14);
-CREATE TABLE instances_p15 PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER 15);
+CREATE INDEX ix_instances_cluster               ON instances (cluster_id);
+CREATE INDEX ix_instances_cluster_status        ON instances (cluster_id, status);
+CREATE INDEX ix_instances_cluster_lastscan_desc ON instances (cluster_id, last_scan_ts DESC);
+CREATE INDEX ix_instances_cluster_name          ON instances (cluster_id, lower(instance_name));
+CREATE INDEX ix_instances_last_scan_active      ON instances (last_scan_ts) WHERE status <> 'Terminated';
+
+-- Instances Partitions (16)
+DO $$
+DECLARE i int;
+BEGIN
+  FOR i IN 0..15 LOOP
+    EXECUTE format(
+			'CREATE TABLE %I PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER %s);',
+      'instances_p' || to_char(i, 'FM00'),
+      i
+    );
+  END LOOP;
+END$$;
 
 
+
+-- ############################################################
 -- Instances Tags
+-- ############################################################
 -- TODO Check if is more efficient to move this table to JSONB column on the Instances table
+\! echo '## Creating Tags table'
+
 CREATE TABLE IF NOT EXISTS tags (
   key                     TEXT,
   value                   TEXT,
@@ -112,25 +169,30 @@ CREATE TABLE IF NOT EXISTS tags (
   PRIMARY KEY (key, instance_id)
 ) PARTITION BY HASH(instance_id);
 
-CREATE TABLE tags_p00 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 00);
-CREATE TABLE tags_p01 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 01);
-CREATE TABLE tags_p02 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 02);
-CREATE TABLE tags_p03 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 03);
-CREATE TABLE tags_p04 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 04);
-CREATE TABLE tags_p05 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 05);
-CREATE TABLE tags_p06 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 06);
-CREATE TABLE tags_p07 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 07);
-CREATE TABLE tags_p08 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 08);
-CREATE TABLE tags_p09 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 09);
-CREATE TABLE tags_p10 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 10);
-CREATE TABLE tags_p11 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 11);
-CREATE TABLE tags_p12 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 12);
-CREATE TABLE tags_p13 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 13);
-CREATE TABLE tags_p14 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 14);
-CREATE TABLE tags_p15 PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER 15);
+CREATE INDEX ix_itags_instance      ON tags (instance_id);
+CREATE INDEX ix_itags_key_val       ON tags (key, value);
+CREATE INDEX ix_itags_key           ON tags (key);
+CREATE INDEX ix_itags_key_lower_val ON tags (key, lower(value));
+
+-- Tags Partitions (16)
+DO $$
+DECLARE i int;
+BEGIN
+  FOR i IN 0..15 LOOP
+    EXECUTE format(
+			'CREATE TABLE %I PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER %s);',
+      'tags_p' || to_char(i, 'FM00'),
+      i
+    );
+  END LOOP;
+END$$;
 
 
+-- ############################################################
 -- Instances expenses
+-- ############################################################
+\! echo '## Creating Expenses table'
+
 CREATE TABLE IF NOT EXISTS expenses (
   instance_id              BIGINT REFERENCES instances(id) ON DELETE CASCADE,
   date                     DATE,
@@ -138,45 +200,72 @@ CREATE TABLE IF NOT EXISTS expenses (
   PRIMARY KEY (instance_id, date)
 ) PARTITION BY RANGE (date);
 
+CREATE INDEX ix_expenses_instance ON expenses (instance_id);
+CREATE INDEX ix_expenses_date     ON expenses (date);
+
 -- Default expenses partition. The rest of expenses will be created by pg_cron
 CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
 
--- Function for creating expenses partitions
-CREATE OR REPLACE FUNCTION create_next_month_expenses_partition()
-RETURNS text
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  next_month  date := (date_trunc('month', current_date)::date + interval '1 month')::date;
-  start_date  date := next_month;
-  end_date    date := (next_month + interval '1 month')::date;
-  part_name   text := format('expenses_%s', to_char(next_month, 'YYYY_MM'));
-BEGIN
-  EXECUTE format(
-    'CREATE TABLE IF NOT EXISTS %I PARTITION OF public.expenses
-       FOR VALUES FROM (%L) TO (%L);',
-    part_name, start_date, end_date
-  );
-
-  RETURN part_name;
-END;
-$$;
 
 
+-- ############################################################
+-- Audit logs
+-- ############################################################
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  event_timestamp         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  triggered_by            TEXT NOT NULL,
+  action_name             TEXT NOT NULL,
+  resource_id             TEXT NOT NULL,
+  resource_type           TEXT NOT NULL,
+  result                  TEXT NOT NULL,
+  description             TEXT NULL,
+  severity                TEXT DEFAULT 'info'::TEXT NOT NULL,
+  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
+  PRIMARY KEY (id, event_timestamp)
+) PARTITION BY RANGE (event_timestamp);
+
+-- Audit Logs Indexes
+CREATE INDEX IF NOT EXISTS ix_audit_logs_type_id_time ON audit_logs (resource_type, resource_id, event_timestamp DESC);
 
 
 
--- ## Advanced Inventory definition (Views, Indexes...) ##
+-- #############################################################################
+-- ## Actions and Scheduling definition ##
+-- #############################################################################
+\! echo '## Creating Schedule table'
+
+CREATE TABLE IF NOT EXISTS schedule (
+  id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  type                    ACTION_TYPE NOT NULL DEFAULT 'scheduled_action',
+  time                    TIMESTAMP WITH TIME ZONE,
+  cron_exp                TEXT,
+  operation               ACTION_OPERATION NOT NULL,
+  target                  INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
+  status                  ACTION_STATUS NOT NULL DEFAULT 'Unknown',
+  enabled                 BOOLEAN DEFAULT false,
+	PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_schedule_target_enabled ON schedule (target, enabled);
+CREATE INDEX IF NOT EXISTS ix_schedule_status         ON schedule (status);
+
+
+
+-- ## Advanced Inventory definition (Views & Functions) ##
 -- #################################################################################################
 
+\! echo '## Creating Inventory Functions'
+
+-- ############################################################
 -- ## Accounts
--- #############################################################################
+-- ############################################################
+
 -- Accounts Cluster Count view
 CREATE VIEW accounts_with_cluster_count AS
 SELECT c.account_id, COUNT(*)::bigint AS cluster_count
 FROM clusters c
 GROUP BY c.account_id;
-
 
 -- Accounts Costs view
 CREATE VIEW accounts_with_costs AS
@@ -202,7 +291,6 @@ FROM accounts a
 LEFT JOIN base b ON b.id = a.id
 GROUP BY a.id;
 
-
 -- Accounts Full view
 -- TODO: check if we can include MATERIALIZED views (using pg_cron)
 CREATE VIEW accounts_full_view AS
@@ -222,32 +310,16 @@ LEFT JOIN accounts_with_cluster_count cc ON cc.account_id = a.id
 LEFT JOIN accounts_with_costs         ac ON ac.id = a.id;
 
 
--- ## Accounts Indexes
-CREATE INDEX ix_accounts_provider
-  ON accounts (provider);
 
-CREATE INDEX ix_accounts_id
-  ON accounts (account_id);
-
-CREATE INDEX ix_accounts_last_scan_ts_desc
-  ON accounts (last_scan_ts DESC);
-
-CREATE INDEX ix_accounts_name
-  ON accounts (lower(account_name));
-
-
-
-
-
+-- ############################################################
 -- ## Clusters
--- #############################################################################
+-- ############################################################
 
 -- Cluster Instances Count view
 CREATE VIEW clusters_with_instance_count AS
 SELECT i.cluster_id, COUNT(*)::bigint AS instance_count
 FROM instances i
 GROUP BY i.cluster_id;
-
 
 -- clusters Costs view
 CREATE VIEW clusters_with_costs AS
@@ -270,7 +342,6 @@ SELECT
 FROM clusters c
 LEFT JOIN base b ON b.id = c.id
 GROUP BY c.id;
-
 
 -- clusters Full view
 CREATE VIEW clusters_full_view AS
@@ -299,31 +370,8 @@ LEFT JOIN clusters_with_costs         ac ON ac.id = c.id;
 
 
 
--- ## Clusters Indexes
-CREATE INDEX ix_clusters_account
-  ON clusters (account_id);
-
-CREATE INDEX ix_clusters_acct_status
-  ON clusters (account_id, status);
-
-CREATE INDEX ix_clusters_acct_region_status
-  ON clusters (account_id, region, status);
-
-CREATE INDEX ix_clusters_last_scan_ts_desc
-  ON clusters (last_scan_ts DESC);
-
-CREATE INDEX ix_clusters_acct_name
-  ON clusters (account_id, lower(cluster_name));
-
-CREATE INDEX ix_clusters_last_scan_active
-  ON clusters (last_scan_ts)
-  WHERE status <> 'Terminated';
-
-
-
-
-
--- ## Instances
+-- #############################################################################
+-- Instances
 -- #############################################################################
 
 -- Instances Costs view
@@ -347,7 +395,6 @@ FROM instances i
 LEFT JOIN base b ON b.id = i.id
 GROUP BY i.id;
 
-
 -- Instances Full view
 CREATE VIEW instances_full_view AS
 SELECT
@@ -369,7 +416,6 @@ SELECT
 FROM instances i
 LEFT JOIN clusters        c ON c.id = i.cluster_id
 LEFT JOIN instances_with_costs ic ON ic.id = i.id;
-
 
 -- Instances Full view
 CREATE VIEW instances_full_view_with_tags AS
@@ -400,7 +446,6 @@ LEFT JOIN LATERAL (
     WHERE t.instance_id = i.id
 ) t ON true;
 
-
 -- Instances pending for expense update
 CREATE VIEW instances_pending_expense_update AS
 SELECT
@@ -424,128 +469,67 @@ WHERE
 
 
 
--- ## Instances Indexes
-CREATE INDEX ix_instances_cluster
-  ON instances (cluster_id);
-
-CREATE INDEX ix_instances_cluster_status
-  ON instances (cluster_id, status);
-
-CREATE INDEX ix_instances_cluster_lastscan_desc
-  ON instances (cluster_id, last_scan_ts DESC);
-
-CREATE INDEX ix_instances_cluster_name
-  ON instances (cluster_id, lower(instance_name));
-
-CREATE INDEX ix_instances_last_scan_active
-  ON instances (last_scan_ts)
-  WHERE status <> 'Terminated';
-
-
-
-
-
 -- ## Tags
 -- #############################################################################
-
--- ## Tags Indexes
-CREATE INDEX ix_itags_instance
-  ON tags (instance_id);
-
-CREATE INDEX ix_itags_key_val
-  ON tags (key, value);
-
-CREATE INDEX ix_itags_key
-  ON tags (key);
-
-CREATE INDEX ix_itags_key_lower_val
-  ON tags (key, lower(value));
-
-
 
 
 
 -- ## Expenses
 -- #############################################################################
 
--- ## Expenses Indexes
-CREATE INDEX ix_expenses_instance
-  ON expenses (instance_id);
+-- Function for creating expenses partitions
+CREATE OR REPLACE FUNCTION create_next_month_expenses_partition()
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  next_month  date := (date_trunc('month', current_date)::date + interval '1 month')::date;
+  start_date  date := next_month;
+  end_date    date := (next_month + interval '1 month')::date;
+  part_name   text := format('expenses_%s', to_char(next_month, 'YYYY_MM'));
+BEGIN
+  EXECUTE format(
+    'CREATE TABLE IF NOT EXISTS %I PARTITION OF public.expenses
+       FOR VALUES FROM (%L) TO (%L);',
+    part_name, start_date, end_date
+  );
 
-CREATE INDEX ix_expenses_date
-  ON expenses (date);
+  RETURN part_name;
+END;
+$$;
 
 
 
-
--- ## Actions and Scheduling definition ##
+-- ## Audit Logs
 -- #############################################################################
 
--- Supported values of Action Operations
-CREATE TYPE ACTION_OPERATION AS ENUM (
-  'PowerOnCluster',
-  'PowerOffCluster'
-);
+-- Function for creating audit_logs partitions
+CREATE OR REPLACE FUNCTION create_next_month_audit_logs_partition()
+RETURNS text
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  next_month  date := (date_trunc('month', current_date)::date + interval '1 month')::date;
+  start_date  date := next_month;
+  end_date    date := (next_month + interval '1 month')::date;
+  part_name   text := format('audit_logs_%s', to_char(next_month, 'YYYY_MM'));
+BEGIN
+  EXECUTE format(
+    'CREATE TABLE IF NOT EXISTS %I PARTITION OF public.audit_logs
+       FOR VALUES FROM (%L) TO (%L);',
+    part_name, start_date, end_date
+  );
 
-
--- Supported values of action types
-CREATE TYPE ACTION_TYPE AS ENUM (
-  'instant_action',
-  'cron_action',
-  'scheduled_action'
-);
-
-
--- Supported values of action status
-CREATE TYPE ACTION_STATUS AS ENUM (
-  'Pending',
-  'Running',
-  'Success',
-  'Failed',
-  'Unknown'
-);
-
-
--- Scheduled actions
-CREATE TABLE IF NOT EXISTS schedule (
-  id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-  type ACTION_TYPE NOT NULL DEFAULT 'scheduled_action',
-  time TIMESTAMP WITH TIME ZONE,
-  cron_exp TEXT,
-  operation ACTION_OPERATION NOT NULL,
-  target INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
-  status ACTION_STATUS NOT NULL DEFAULT 'Unknown',
-  enabled BOOLEAN DEFAULT false
-);
-
-
-
-
-
--- ## Audit logs
--- #############################################################################
-
--- Audit logs
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-  event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  triggered_by TEXT NOT NULL,
-  action_name TEXT NOT NULL,
-  resource_id TEXT NOT NULL,
-  resource_type TEXT NOT NULL,
-  result TEXT NOT NULL,
-  description TEXT NULL,
-  severity TEXT DEFAULT 'info'::TEXT NOT NULL,
-  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
-  PRIMARY KEY (id, event_timestamp)
-) PARTITION BY RANGE (event_timestamp);
-
-
+  RETURN part_name;
+END;
+$$;
 
 
 
 -- ## Maintenance Functions ##
 -- #############################################################################
+
+\! echo '## Creating Maintenance Functions'
 
 -- Marks instances as 'Terminated' if they haven't been scanned in the last 24 hours
 CREATE OR REPLACE FUNCTION check_terminated_instances()
@@ -553,7 +537,8 @@ RETURNS void AS $$
 BEGIN
   UPDATE instances
   SET status = 'Terminated'
-  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE status <> 'Terminated' 
+	  AND last_scan_ts < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -564,7 +549,8 @@ RETURNS void AS $$
 BEGIN
   UPDATE clusters
   SET status = 'Terminated'
-  WHERE last_scan_timestamp < NOW() - INTERVAL '1 day';
+  WHERE status <> 'Terminated' 
+	  AND last_scan_ts < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -572,7 +558,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION check_terminated_inventory()
 RETURNS void AS $$
 BEGIN
-  PERFORM check_terminated_clusters()
-  PERFORM check_terminated_instances()
+  PERFORM check_terminated_clusters();
+  PERFORM check_terminated_instances();
 END;
 $$ LANGUAGE plpgsql;

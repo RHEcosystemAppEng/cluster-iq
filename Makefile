@@ -45,6 +45,9 @@ AGENT_IMG_NAME ?= $(PROJECT_NAME)-agent
 AGENT_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(AGENT_IMG_NAME)
 AGENT_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-agent
 AGENT_PROTO_PATH ?= ./cmd/agent/proto/agent.proto
+PGSQL_IMG_NAME ?= $(PROJECT_NAME)-pgsql
+PGSQL_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(PGSQL_IMG_NAME)
+PGSQL_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-pgsql
 
 # Standard targets
 all: ## Stop, build and start the development environment based on containers
@@ -82,9 +85,10 @@ local-build-agent: ## Build the agent binary
 # Container based working targets
 clean: ## Remove the container images
 	@echo "### [Cleaning Container images] ###"
-	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) -e $(AGENT_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
+	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) -e $(AGENT_IMAGE) -e $(PGSQL_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
-build: build-api build-scanner build-agent ## Build all container images
+build: ## Build all container images
+build: build-api build-scanner build-agent build-pgsql
 build-api: ## Build the API container image
 	@echo "### [Building API container image] ###"
 	@$(CONTAINER_ENGINE) build \
@@ -110,6 +114,15 @@ build-agent: ## Build the agent container image
 		--build-arg COMMIT=$(SHORT_COMMIT_HASH) \
 		-t $(AGENT_IMAGE):latest -f $(AGENT_CONTAINERFILE) .
 	@$(CONTAINER_ENGINE) tag $(AGENT_IMAGE):latest $(AGENT_IMAGE):$(SHORT_COMMIT_HASH)
+	@echo "Build Successful"
+
+build-pgsql: ## Build the PGSQL container image
+	@echo "### [Building PGSQL container image] ###"
+	@$(CONTAINER_ENGINE) build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(SHORT_COMMIT_HASH) \
+		-t $(PGSQL_IMAGE):latest -f $(PGSQL_CONTAINERFILE) .
+	@$(CONTAINER_ENGINE) tag $(PGSQL_IMAGE):latest $(PGSQL_IMAGE):$(SHORT_COMMIT_HASH)
 	@echo "Build Successful"
 
 
