@@ -132,27 +132,15 @@ CREATE TABLE IF NOT EXISTS instances (
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
   PRIMARY KEY (id),
-  CONSTRAINT uq_instances_cluster_name UNIQUE (id, instance_id, cluster_id)
-) PARTITION BY HASH(id);
+  CONSTRAINT uq_instances_instance_name_cluster UNIQUE (cluster_id, instance_name)
+  CONSTRAINT uq_instances_provider_instance_id  UNIQUE (provider, instance_id)
+);
 
 CREATE INDEX IF NOT EXISTS ix_instances_cluster               ON instances (cluster_id);
 CREATE INDEX IF NOT EXISTS ix_instances_cluster_status        ON instances (cluster_id, status);
 CREATE INDEX IF NOT EXISTS ix_instances_cluster_lastscan_desc ON instances (cluster_id, last_scan_ts DESC);
 CREATE INDEX IF NOT EXISTS ix_instances_cluster_name          ON instances (cluster_id, lower(instance_name));
 CREATE INDEX IF NOT EXISTS ix_instances_last_scan_active      ON instances (last_scan_ts) WHERE status <> 'Terminated';
-
--- Instances Partitions (16)
-DO $$
-DECLARE i int;
-BEGIN
-  FOR i IN 0..15 LOOP
-    EXECUTE format(
-			'CREATE TABLE %I PARTITION OF instances FOR VALUES WITH (MODULUS 16, REMAINDER %s);',
-      'instances_p' || to_char(i, 'FM00'),
-      i
-    );
-  END LOOP;
-END$$;
 
 
 
