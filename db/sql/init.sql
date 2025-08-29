@@ -75,10 +75,10 @@ CREATE TABLE IF NOT EXISTS accounts (
   UNIQUE (provider, account_name)
 );
 
-CREATE INDEX ix_accounts_provider          ON accounts (provider);
-CREATE INDEX ix_accounts_id                ON accounts (account_id);
-CREATE INDEX ix_accounts_last_scan_ts_desc ON accounts (last_scan_ts DESC);
-CREATE INDEX ix_accounts_name              ON accounts (lower(account_name));
+CREATE INDEX IF NOT EXISTS ix_accounts_provider          ON accounts (provider);
+CREATE INDEX IF NOT EXISTS ix_accounts_id                ON accounts (account_id);
+CREATE INDEX IF NOT EXISTS ix_accounts_last_scan_ts_desc ON accounts (last_scan_ts DESC);
+CREATE INDEX IF NOT EXISTS ix_accounts_name              ON accounts (lower(account_name));
 
 
 
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS clusters (
   cluster_name            TEXT NOT NULL,
   infra_id                TEXT NOT NULL,
   provider                CLOUD_PROVIDER NOT NULL,
-  status                  STATUS,
+  status                  STATUS DEFAULT 'Unknown' NOT NULL,
   region                  TEXT,
   account_id              INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
   console_link            TEXT,
@@ -105,12 +105,12 @@ CREATE TABLE IF NOT EXISTS clusters (
   CONSTRAINT uq_clusters_accountid_clusterid UNIQUE (account_id, cluster_id)
 );
 
-CREATE INDEX ix_clusters_account            ON clusters (account_id);
-CREATE INDEX ix_clusters_acct_status        ON clusters (account_id, status);
-CREATE INDEX ix_clusters_acct_region_status ON clusters (account_id, region, status);
-CREATE INDEX ix_clusters_last_scan_ts_desc  ON clusters (last_scan_ts DESC);
-CREATE INDEX ix_clusters_acct_name          ON clusters (account_id, lower(cluster_name));
-CREATE INDEX ix_clusters_last_scan_active   ON clusters (last_scan_ts) WHERE status <> 'Terminated';
+CREATE INDEX IF NOT EXISTS ix_clusters_account            ON clusters (account_id);
+CREATE INDEX IF NOT EXISTS ix_clusters_acct_status        ON clusters (account_id, status);
+CREATE INDEX IF NOT EXISTS ix_clusters_acct_region_status ON clusters (account_id, region, status);
+CREATE INDEX IF NOT EXISTS ix_clusters_last_scan_ts_desc  ON clusters (last_scan_ts DESC);
+CREATE INDEX IF NOT EXISTS ix_clusters_acct_name          ON clusters (account_id, lower(cluster_name));
+CREATE INDEX IF NOT EXISTS ix_clusters_last_scan_active   ON clusters (last_scan_ts) WHERE status <> 'Terminated';
 
 
 
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS instances (
   instance_type           TEXT,
   provider                CLOUD_PROVIDER NOT NULL,
   availability_zone       TEXT,
-  status                  STATUS,
+  status                  STATUS DEFAULT 'Unknown' NOT NULL,
   cluster_id              INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
   last_scan_ts            TIMESTAMP WITH TIME ZONE,
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -135,11 +135,11 @@ CREATE TABLE IF NOT EXISTS instances (
   CONSTRAINT uq_instances_cluster_name UNIQUE (id, instance_id, cluster_id)
 ) PARTITION BY HASH(id);
 
-CREATE INDEX ix_instances_cluster               ON instances (cluster_id);
-CREATE INDEX ix_instances_cluster_status        ON instances (cluster_id, status);
-CREATE INDEX ix_instances_cluster_lastscan_desc ON instances (cluster_id, last_scan_ts DESC);
-CREATE INDEX ix_instances_cluster_name          ON instances (cluster_id, lower(instance_name));
-CREATE INDEX ix_instances_last_scan_active      ON instances (last_scan_ts) WHERE status <> 'Terminated';
+CREATE INDEX IF NOT EXISTS ix_instances_cluster               ON instances (cluster_id);
+CREATE INDEX IF NOT EXISTS ix_instances_cluster_status        ON instances (cluster_id, status);
+CREATE INDEX IF NOT EXISTS ix_instances_cluster_lastscan_desc ON instances (cluster_id, last_scan_ts DESC);
+CREATE INDEX IF NOT EXISTS ix_instances_cluster_name          ON instances (cluster_id, lower(instance_name));
+CREATE INDEX IF NOT EXISTS ix_instances_last_scan_active      ON instances (last_scan_ts) WHERE status <> 'Terminated';
 
 -- Instances Partitions (16)
 DO $$
@@ -163,16 +163,16 @@ END$$;
 \! echo '## Creating Tags table'
 
 CREATE TABLE IF NOT EXISTS tags (
-  key                     TEXT,
+  key                     TEXT NOT NULL,
   value                   TEXT,
-  instance_id             BIGINT REFERENCES instances(id) ON DELETE CASCADE,
+  instance_id             BIGINT REFERENCES instances(id) ON DELETE CASCADE NOT NULL,
   PRIMARY KEY (key, instance_id)
 ) PARTITION BY HASH(instance_id);
 
-CREATE INDEX ix_itags_instance      ON tags (instance_id);
-CREATE INDEX ix_itags_key_val       ON tags (key, value);
-CREATE INDEX ix_itags_key           ON tags (key);
-CREATE INDEX ix_itags_key_lower_val ON tags (key, lower(value));
+CREATE INDEX IF NOT EXISTS ix_itags_instance      ON tags (instance_id);
+CREATE INDEX IF NOT EXISTS ix_itags_key_val       ON tags (key, value);
+CREATE INDEX IF NOT EXISTS ix_itags_key           ON tags (key);
+CREATE INDEX IF NOT EXISTS ix_itags_key_lower_val ON tags (key, lower(value));
 
 -- Tags Partitions (16)
 DO $$
@@ -195,13 +195,16 @@ END$$;
 
 CREATE TABLE IF NOT EXISTS expenses (
   instance_id              BIGINT REFERENCES instances(id) ON DELETE CASCADE,
-  date                     DATE,
+  date                     DATE NOT NULL,
   amount                   NUMERIC(12,2) DEFAULT 0.0,
-  PRIMARY KEY (instance_id, date)
+  PRIMARY KEY (instance_id, date),
+  CONSTRAINT chk_expenses_amount_nonneg CHECK (amount >=0)
 ) PARTITION BY RANGE (date);
 
-CREATE INDEX ix_expenses_instance ON expenses (instance_id);
-CREATE INDEX ix_expenses_date     ON expenses (date);
+CREATE INDEX IF NOT EXISTS ix_expenses_instance           ON expenses (instance_id);
+CREATE INDEX IF NOT EXISTS ix_expenses_date               ON expenses (date);
+CREATE INDEX IF NOT EXISTS ix_expenses_instance_date_desc ON expenses (instance_id, date DESC);
+
 
 -- Default expenses partition. The rest of expenses will be created by pg_cron
 CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
@@ -242,9 +245,10 @@ CREATE TABLE IF NOT EXISTS schedule (
   cron_exp                TEXT,
   operation               ACTION_OPERATION NOT NULL,
   target                  INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
-  status                  ACTION_STATUS NOT NULL DEFAULT 'Unknown',
+  status                  ACTION_STATUS DEFAULT 'Unknown' NOT NULL,
   enabled                 BOOLEAN DEFAULT false,
-	PRIMARY KEY (id)
+	PRIMARY KEY (id),
+  CONSTRAINT chk_schedule_time_or_cron CHECK ((time IS NOT NULL) <> (cron_exp IS NOT NULL))
 );
 
 CREATE INDEX IF NOT EXISTS ix_schedule_target_enabled ON schedule (target, enabled);
