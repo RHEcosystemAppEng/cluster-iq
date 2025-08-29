@@ -493,7 +493,6 @@ BEGIN
        FOR VALUES FROM (%L) TO (%L);',
     part_name, start_date, end_date
   );
-
   RETURN part_name;
 END;
 $$;
@@ -519,10 +518,11 @@ BEGIN
        FOR VALUES FROM (%L) TO (%L);',
     part_name, start_date, end_date
   );
-
   RETURN part_name;
 END;
 $$;
+
+
 
 
 

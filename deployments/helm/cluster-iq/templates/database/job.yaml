@@ -20,7 +20,7 @@ spec:
       volumes:
         - name: init
           configMap:
-            name: postgresql
+            name: postgresql-init
       containers:
         - name: init-pgsql
           command:

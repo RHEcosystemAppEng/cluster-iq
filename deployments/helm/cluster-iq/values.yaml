@@ -463,14 +463,3 @@ database:
   tolerations: []
 
   affinity: {}
-
-  cron:
-    enabled: true
-    schedule: "0 0 * * 6" # Every Sunday at midnight
-    resources:
-      requests:
-        memory: "32Mi"
-        cpu: "20m"
-      limits:
-        memory: "64Mi"
-        cpu: "50m"
