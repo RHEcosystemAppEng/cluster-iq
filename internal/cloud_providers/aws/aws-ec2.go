@@ -225,20 +225,17 @@ func EC2InstanceToInventoryInstance(instance *ec2.Instance) *inventory.Instance 
 	id := *instance.InstanceId
 	tags := ConvertEC2TagtoTag(instance.Tags, id)
 	name := inventory.GetInstanceNameFromTags(tags)
-	provider := inventory.AWSProvider
 	instanceType := *instance.InstanceType
 	availabilityZone := *instance.Placement.AvailabilityZone
-	status := inventory.AsInstanceStatus(*instance.State.Name)
-	clusterID := inventory.GetClusterIDFromTags(tags)
+	status := inventory.AsResourceStatus(*instance.State.Name)
 	creationTimestamp := getInstanceCreationTimestamp(*instance)
 	return inventory.NewInstance(
 		id,
 		name,
-		provider,
+		inventory.AWSProvider,
 		instanceType,
 		availabilityZone,
 		status,
-		clusterID,
 		tags,
 		creationTimestamp,
 	)
