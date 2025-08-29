@@ -7,22 +7,11 @@ metadata:
     {{- include "cluster-iq.componentLabels" "database" | nindent 4 }}
 immutable: false
 data:
-  maintenance.sh: |
-    echo "Running DB maintenance"
+  expenses_partition_script.sh: |
     for i in $(seq 0 9); do
       psql "$CIQ_DB_URL" -c "SELECT true" && break || sleep 10;
       echo "PGSQL Not ready yet..."
     done
-    echo "Updating 'Terminated' resources..."
-    psql "$CIQ_DB_URL" -c "SELECT check_terminated_inventory();" && { echo "Done!"; exit 0; } || { echo "Error..."; exit 1; }
-
-  partition_script.sh: |
-    echo "Running DB partitioning"
-    for i in $(seq 0 9); do
-      psql "$CIQ_DB_URL" -c "SELECT true" && break || sleep 10;
-      echo "PGSQL Not ready yet..."
-    done
-    echo "Creating partitions..."
     psql "$CIQ_DB_URL" -c "SELECT create_next_month_expenses_partition();" && { echo "Done!"; exit 0; } || { echo "Error..."; exit 1; }
 
   init.sql: |

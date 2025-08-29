@@ -537,7 +537,7 @@ RETURNS void AS $$
 BEGIN
   UPDATE instances
   SET status = 'Terminated'
-  WHERE status <> 'Terminated' 
+  WHERE status <> 'Terminated'
 	  AND last_scan_ts < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
@@ -549,7 +549,7 @@ RETURNS void AS $$
 BEGIN
   UPDATE clusters
   SET status = 'Terminated'
-  WHERE status <> 'Terminated' 
+  WHERE status <> 'Terminated'
 	  AND last_scan_ts < NOW() - INTERVAL '1 day';
 END;
 $$ LANGUAGE plpgsql;
