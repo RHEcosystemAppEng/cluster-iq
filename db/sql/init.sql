@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS instances (
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
   PRIMARY KEY (id),
-  CONSTRAINT uq_instances_instance_name_cluster UNIQUE (cluster_id, instance_name)
+  CONSTRAINT uq_instances_instance_name_cluster UNIQUE (cluster_id, instance_name),
   CONSTRAINT uq_instances_provider_instance_id  UNIQUE (provider, instance_id)
 );
 
