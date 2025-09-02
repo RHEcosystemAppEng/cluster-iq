@@ -65,7 +65,7 @@ func (c *AWSRoute53Connection) GetZonesWithTags() ([]HostedZone, error) {
 // ZoneBelongsToCluster returns true or false if the hosted zone is associated to a cluster Ingress (routers)
 func (c *AWSRoute53Connection) ZoneBelongsToCluster(cluster *inventory.Cluster, zoneWithTags HostedZone) bool {
 	for _, tag := range zoneWithTags.Tags {
-		if strings.Contains(*(tag.Key), cluster.Name) {
+		if strings.Contains(*(tag.Key), cluster.ClusterName) {
 			return true
 		}
 	}

@@ -18,7 +18,7 @@ type Expense struct {
 func NewExpense(instanceID string, amount float64, date time.Time) *Expense {
 	// Checking if cost is below zero, which is not possible
 	if amount < 0.0 {
-		return nil
+		amount = 0.0
 	}
 
 	return &Expense{

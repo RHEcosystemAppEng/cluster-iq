@@ -6,5 +6,5 @@ import "github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 type Stocker interface {
 	MakeStock() error
 	PrintStock()
-	GetResults() inventory.Account
+	GetAccount() inventory.Account
 }

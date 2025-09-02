@@ -32,7 +32,7 @@ services:
     environment:
       CIQ_API_URL: "http://api:8080/api/v1"
       CIQ_CREDS_FILE: "/credentials"
-      CIQ_SKIP_NO_OPENSHIFT_INSTANCES: true
+      CIQ_SKIP_NO_OPENSHIFT_INSTANCES: "true"
       CIQ_LOG_LEVEL: "DEBUG"
     volumes:
       - ../../secrets/credentials:/credentials:ro,Z
@@ -57,7 +57,7 @@ services:
       - cluster_iq
 
   pgsql:
-    image: registry.redhat.io/rhel8/postgresql-16:1-44.1749482738
+    image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
     container_name: pgsql
     restart: always
     ports:
@@ -67,6 +67,8 @@ services:
       POSTGRESQL_PASSWORD: "password"
       POSTGRESQL_DATABASE: "clusteriq"
       POSTGRESQL_ADMIN_PASSWORD: "admin"
+      POSTGRESQL_LIBRARIES: "pg_cron"
+      POSTGRESQL_EXTENSIONS: "pg_cron"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 15s
@@ -76,17 +78,35 @@ services:
       - cluster_iq
 
   init-pgsql:
-    image: registry.redhat.io/rhel8/postgresql-16:1-44.1749482738
+    image: registry.redhat.io/rhel9/postgresql-16@sha256:2017a5806a07b02dc0d6e9ab38ac8c508688bf7842111af2d796c8a4233e88ed
     container_name: init-pgsql
     restart: "no"
     command: |
-      sh -c 'while true; do
-                 psql postgresql://user:password@pgsql:5432/clusteriq -c "SELECT true" && break || sleep 2;
-             done
-             psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+      bash -c '
+        echo "Waiting for PGSQL to start up"
+        while true; do
+            psql postgresql://user:password@pgsql:5432/clusteriq -c "SELECT true" && break || sleep 2;
+        done
+
+        echo "Initializing ClusterIQ Database"
+        psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+
+        echo "Creating PG_CRON tasks"
+        psql postgresql://postgres:admin@pgsql:5432/postgres < /cron.sql && { echo "Ok"; } || { echo "Cron Tasks creation Failed"; exit 1; }
+
+        if [[ $CIQ_DB_PRELOAD_DATA == "true" ]]; then
+          echo "Initializing DB with fake data"
+          psql postgresql://user:password@pgsql:5432/clusteriq < /load_example_data.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+        fi
+
+        echo "Done!"
       '
+    environment:
+      CIQ_DB_PRELOAD_DATA: "true"
     volumes:
       - ./../../db/sql/init.sql:/init.sql:ro,Z
+      - ./../../db/sql/cron.sql:/cron.sql:ro,Z
+      - ./../../db/test_files/load_example_data.sql:/load_example_data.sql:ro,Z
     depends_on:
       pgsql:
         condition: service_healthy
