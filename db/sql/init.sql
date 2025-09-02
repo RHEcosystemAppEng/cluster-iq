@@ -132,8 +132,8 @@ CREATE TABLE IF NOT EXISTS instances (
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
   PRIMARY KEY (id),
-  CONSTRAINT uq_instances_instance_name_cluster UNIQUE (cluster_id, instance_name),
-  CONSTRAINT uq_instances_provider_instance_id  UNIQUE (provider, instance_id)
+  CONSTRAINT uq_instances_instance_id_cluster_id UNIQUE (instance_id, cluster_id),
+  CONSTRAINT uq_instances_instance_id_provider   UNIQUE (instance_id, provider)
 );
 
 CREATE INDEX IF NOT EXISTS ix_instances_cluster               ON instances (cluster_id);
@@ -193,7 +193,6 @@ CREATE INDEX IF NOT EXISTS ix_expenses_instance           ON expenses (instance_
 CREATE INDEX IF NOT EXISTS ix_expenses_date               ON expenses (date);
 CREATE INDEX IF NOT EXISTS ix_expenses_instance_date_desc ON expenses (instance_id, date DESC);
 
-
 -- Default expenses partition. The rest of expenses will be created by pg_cron
 CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
 
@@ -218,6 +217,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 -- Audit Logs Indexes
 CREATE INDEX IF NOT EXISTS ix_audit_logs_type_id_time ON audit_logs (resource_type, resource_id, event_timestamp DESC);
+
+-- Default expenses partition. The rest of expenses will be created by pg_cron
+CREATE TABLE audit_logs_default PARTITION OF audit_logs DEFAULT;
 
 
 
@@ -284,7 +286,6 @@ LEFT JOIN base b ON b.id = a.id
 GROUP BY a.id;
 
 -- Accounts Full view
--- TODO: check if we can include MATERIALIZED views (using pg_cron)
 CREATE VIEW accounts_full_view AS
 SELECT
   a.account_id,
@@ -300,6 +301,8 @@ SELECT
 FROM accounts a
 LEFT JOIN accounts_with_cluster_count cc ON cc.account_id = a.id
 LEFT JOIN accounts_with_costs         ac ON ac.id = a.id;
+
+CREATE MATERIALIZED VIEW m_accounts_full_view AS SELECT * FROM accounts_full_view;
 
 
 
@@ -360,6 +363,8 @@ LEFT JOIN accounts a ON c.account_id = a.id
 LEFT JOIN clusters_with_instance_count cc ON cc.cluster_id = c.id
 LEFT JOIN clusters_with_costs         ac ON ac.id = c.id;
 
+CREATE MATERIALIZED VIEW m_clusters_full_view AS SELECT * FROM clusters_full_view;
+
 
 
 -- #############################################################################
@@ -409,6 +414,8 @@ FROM instances i
 LEFT JOIN clusters        c ON c.id = i.cluster_id
 LEFT JOIN instances_with_costs ic ON ic.id = i.id;
 
+CREATE MATERIALIZED VIEW m_instances_full_view AS SELECT * FROM instances_full_view;
+
 -- Instances Full view
 CREATE VIEW instances_full_view_with_tags AS
 SELECT
@@ -438,6 +445,8 @@ LEFT JOIN LATERAL (
     WHERE t.instance_id = i.id
 ) t ON true;
 
+CREATE MATERIALIZED VIEW m_instances_full_view_with_tags AS SELECT * FROM instances_full_view_with_tags;
+
 -- Instances pending for expense update
 CREATE VIEW instances_pending_expense_update AS
 SELECT
@@ -458,6 +467,8 @@ ON
 WHERE
 	last_expenses.last_expense_date IS NULL
 	OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day';
+
+CREATE MATERIALIZED VIEW m_instances_pending_expense_update AS SELECT * FROM instances_pending_expense_update;
 
 
 
@@ -552,5 +563,17 @@ RETURNS void AS $$
 BEGIN
   PERFORM check_terminated_clusters();
   PERFORM check_terminated_instances();
+END;
+$$ LANGUAGE plpgsql;
+
+-- Updates every materialized view
+CREATE OR REPLACE FUNCTION refresh_materialized_views()
+RETURNS void AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW m_accounts_full_view;
+  REFRESH MATERIALIZED VIEW m_clusters_full_view;
+  REFRESH MATERIALIZED VIEW m_instances_full_view;
+  REFRESH MATERIALIZED VIEW m_instances_full_view_with_tags;
+  REFRESH MATERIALIZED VIEW m_instances_pending_expense_update;
 END;
 $$ LANGUAGE plpgsql;
