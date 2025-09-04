@@ -2,7 +2,12 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/RHEcosystemAppEng/cluster-iq)](https://goreportcard.com/report/github.com/RHEcosystemAppEng/cluster-iq)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RHEcosystemAppEng/cluster-iq.svg)](https://pkg.go.dev/github.com/RHEcosystemAppEng/cluster-iq)
-[![Cluster IQ Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/container-image-building.yaml)
+![Version](https://img.shields.io/badge/version-0.4.2-blue)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
+---
+[![Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/build-container-images.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/build-container-images.yaml)
+[![Pull Request Validation](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/validate-pr.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/validate-pr.yaml)
+---
 
 Cluster IQ is a tool for making stock of the Openshift Clusters and its
 resources running on the most common cloud providers and collects relevant
@@ -11,6 +16,9 @@ information about the compute resources, access routes and billing.
 Metrics and monitoring is not part of the scope of this project, the main
 purpose is to maintain and updated inventory of the clusters and offer a easier
 way to identify, manage, and estimate costs.
+
+ClusterIQ has a Web UI called [ClusterIQ Console](https://github.com/RHEcosystemAppEng/cluster-iq-console).
+Follow this [link](https://github.com/RHEcosystemAppEng/cluster-iq-console?tab=readme-ov-file#development-scripts) for installation instructions.
 
 ## Supported cloud providers
 

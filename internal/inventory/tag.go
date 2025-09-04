@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	// Regular expresion for extracting the Cluster's Name configured by `openshift-installer` from AWS Tags
+	// Regular expresion for extracting the Cluster Name configured by `openshift-installer` from AWS Tags
 	clusterNameRegexp = "kubernetes.io/cluster/(.*?)-.{5}$"
 	// Regular expresion for extracting the InfrastructureID configured by `openshift-installer` from AWS Tags
 	infraIDRegexp = "kubernetes.io/cluster/.*-(.{5}?)$"
-	// Regular expresion for extracting the InfrastructureID configured by `openshift-installer` from AWS Tags
+	// Regular expresion for extracting the ClusterID (ClusterName + InfraID) configured by `openshift-installer` from AWS Tags
 	clusterIDRegexp = "kubernetes.io/cluster/(.*)$"
 
 	UnknownClusterNameCode = "UNKNOWN-CLUSTER"
@@ -36,10 +36,9 @@ func NewTag(key string, value string, instanceID string) *Tag {
 
 // lookForTagByKey looks for a Tag based on its Key and returns a pointer to it
 func LookForTagByKey(key string, tags []Tag) *Tag {
-	var resultTag Tag
 	for _, tag := range tags {
 		if tag.Key == key {
-			return &resultTag
+			return &tag
 		}
 	}
 	return nil
@@ -57,9 +56,9 @@ func parseClusterName(key string) string {
 	return res[0][1]
 }
 
-// parseClusterName parses a Tag key to obtain the clusterName
+// parseClusterName parses a Tag key to obtain the clusterID
 func parseClusterID(key string) string {
-	re := regexp.MustCompile(clusterNameRegexp)
+	re := regexp.MustCompile(clusterIDRegexp)
 	res := re.FindAllStringSubmatch(key, 1)
 
 	// if there are no results, return empty string, if there are, return first match
@@ -83,17 +82,17 @@ func parseInfraID(key string) string {
 
 // GetOwnerFromTags looks for a tag with the key "Owner" and returns its value
 func GetOwnerFromTags(tags []Tag) string {
-	result := (LookForTagByKey("Owner", tags))
+	result := LookForTagByKey("Owner", tags)
 	if result != nil {
-		return result.Key
+		return result.Value
 	}
 	return ""
 }
 
 func GetInstanceNameFromTags(tags []Tag) string {
-	result := (LookForTagByKey("Name", tags))
+	result := LookForTagByKey("Name", tags)
 	if result != nil {
-		return result.Key
+		return result.Value
 	}
 	return ""
 }

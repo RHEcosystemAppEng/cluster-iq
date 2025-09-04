@@ -1,6 +1,10 @@
 package inventory
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 const (
 	accountName = "Test-Account"
@@ -9,10 +13,17 @@ const (
 )
 
 func TestNewInventory(t *testing.T) {
-	inv := NewInventory()
-	if inv == nil {
-		t.Errorf("Inventory object retrieved is nil")
+	accounts := make(map[string]*Account)
+
+	expectedInventory := &Inventory{
+		Accounts: accounts,
 	}
+
+	actualInventory := NewInventory()
+	assert.NotNil(t, actualInventory)
+
+	expectedInventory.CreationTimestamp = actualInventory.CreationTimestamp
+	assert.Equal(t, expectedInventory, actualInventory)
 }
 
 func TestIsAccountOnInventory(t *testing.T) {

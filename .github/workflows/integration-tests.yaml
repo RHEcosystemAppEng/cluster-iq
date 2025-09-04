@@ -1,0 +1,41 @@
+name: Integration Tests
+
+on:
+  workflow_call:
+    inputs:
+      compose_file:
+        required: false
+        type: string
+        default: "./deployments/compose/compose-gh.yaml"
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract Go Version from go.mod
+        id: go_version
+        run: echo "GO_VERSION=$(awk '/^go /{print $2}' go.mod)" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install podman and podman-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman python3-pip
+          pip3 install --user podman-compose
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run Go Integration Tests
+        run: |
+          make build-api
+          podman-compose -f ${{ inputs.compose_file }} up -d
+          make go-integration-tests

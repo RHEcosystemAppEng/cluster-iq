@@ -103,16 +103,16 @@ func NewCluster(name string, infraID string, provider CloudProvider, region stri
 	}
 }
 
-// isClusterStopped checks if the Cluster is Stopped
-func (c Cluster) isClusterStopped() bool {
+// IsClusterStopped checks if the Cluster is Stopped
+func (c Cluster) IsClusterStopped() bool {
 	if c.Status == Stopped {
 		return true
 	}
 	return false
 }
 
-// isClusterRunning checks if the Cluster is Running
-func (c Cluster) isClusterRunning() bool {
+// IsClusterRunning checks if the Cluster is Running
+func (c Cluster) IsClusterRunning() bool {
 	if c.Status == Running {
 		return true
 	}
@@ -167,7 +167,7 @@ func (c *Cluster) UpdateCosts() error {
 		newCost += instance.TotalCost
 	}
 
-	if c.TotalCost < newCost {
+	if c.TotalCost > newCost {
 		return fmt.Errorf("New estimated cost is lower than expected. Review the cluster/instances costs. Current Cost: %f, New estimated cost: %f", c.TotalCost, newCost)
 	}
 
@@ -192,7 +192,6 @@ func (c *Cluster) UpdateStatus() {
 	}
 
 	terminatedCount := 0
-
 	for _, instance := range c.Instances {
 		if instance.Status == Running {
 			c.Status = Running
