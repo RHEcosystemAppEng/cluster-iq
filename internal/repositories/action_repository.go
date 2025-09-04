@@ -134,7 +134,7 @@ func (r *actionRepositoryImpl) EnableScheduledAction(ctx context.Context, action
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Writing Scheduled Actions
 	if _, err := tx.ExecContext(ctx, EnableActionQuery, actionID); err != nil {
@@ -159,7 +159,7 @@ func (r *actionRepositoryImpl) DisableScheduledAction(ctx context.Context, actio
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Writing Scheduled Actions
 	if _, err := tx.ExecContext(ctx, DisableActionQuery, actionID); err != nil {
@@ -203,7 +203,7 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	schedActions, cronActions := actions.SplitActionsByType(newActions)
 
@@ -239,7 +239,7 @@ func (r *actionRepositoryImpl) DeleteScheduledAction(ctx context.Context, action
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Deleting
 	if _, err := tx.ExecContext(ctx, DeleteScheduledActionsQuery, actionID); err != nil {
@@ -262,8 +262,8 @@ func buildActionWhereClauses(filters map[string]interface{}) ([]string, map[stri
 		case "operation":
 			clauses = append(clauses, "operation = :operation")
 			args["operation"] = value
-		case "status":
-			clauses = append(clauses, "status = :status")
+		case "status": //nolint:goconst
+			clauses = append(clauses, "status = :status") //nolint:goconst
 			args["status"] = value
 		// TODO. will it work with boolean?
 		case "enabled":

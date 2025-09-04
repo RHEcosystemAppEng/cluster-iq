@@ -18,14 +18,12 @@ type Account struct {
 	Name string `db:"name"`
 
 	// Infrastructure provider identifier.
-	// TODO
 	Provider CloudProvider `db:"provider"`
 
 	// ClusterCount
 	ClusterCount int `db:"cluster_count"`
 
 	// ListClusters of clusters deployed on this account indexed by Cluster's name
-	// TODO
 	Clusters map[string]*Cluster `db:"-"`
 
 	// Last scan timestamp of the account

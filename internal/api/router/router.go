@@ -42,11 +42,12 @@ func setupAccountRoutes(group *gin.RouterGroup, handler *handlers.AccountHandler
 		accounts.GET("", handler.List)
 		accounts.POST("", handler.Create)
 		accounts.GET("/:name", handler.GetByName)
+		accounts.PATCH("/:name", handler.Update)
 		accounts.DELETE("/:name", handler.Delete)
 	}
 }
 
-func setupClusterRoutes(group *gin.RouterGroup, clusterHandler *handlers.ClusterHandler, instanceHandler *handlers.InstanceHandler, eventHandler *handlers.EventHandler) {
+func setupClusterRoutes(group *gin.RouterGroup, clusterHandler *handlers.ClusterHandler, _ *handlers.InstanceHandler, eventHandler *handlers.EventHandler) {
 	clusters := group.Group("/clusters")
 	{
 		clusters.GET("", clusterHandler.List)

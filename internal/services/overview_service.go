@@ -59,9 +59,11 @@ func (s *overviewServiceImpl) GetOverview(ctx context.Context) (inventory.Overvi
 	return overview, nil
 }
 
+//nolint:cyclop
 func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventory.ProvidersSummary, error) {
 	summary := inventory.ProvidersSummary{}
-	opts := repositories.ListOptions{PageSize: 1000, Offset: 0} // Assuming we have less than 1000 accounts
+	const maxAccounts = 1000 // Assuming we have less than 1000 accounts
+	opts := repositories.ListOptions{PageSize: maxAccounts, Offset: 0}
 
 	accounts, _, err := s.accountRepo.ListAccounts(ctx, opts)
 	if err != nil {
@@ -75,22 +77,22 @@ func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventor
 
 	for _, acc := range accounts {
 		switch acc.Provider {
-		case "aws":
+		case inventory.AWSProvider:
 			summary.AWS.AccountCount++
-		case "gcp":
+		case inventory.GCPProvider:
 			summary.GCP.AccountCount++
-		case "azure":
+		case inventory.AzureProvider:
 			summary.Azure.AccountCount++
 		}
 	}
 
 	for _, cls := range clusters {
 		switch cls.Provider {
-		case "aws":
+		case inventory.AWSProvider:
 			summary.AWS.ClusterCount++
-		case "gcp":
+		case inventory.GCPProvider:
 			summary.GCP.ClusterCount++
-		case "azure":
+		case inventory.AzureProvider:
 			summary.Azure.ClusterCount++
 		}
 	}

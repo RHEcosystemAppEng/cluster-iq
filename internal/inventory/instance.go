@@ -10,7 +10,7 @@ import (
 var (
 	ErrInstanceTotalCostLessZero = errors.New("TotalCost of an instance cannot be less than zero")
 	ErrInstanceDailyCostLessZero = errors.New("DailyCost of an instance cannot be less than zero")
-	ErrInstanceAgeLessZero       = errors.New("Cannot recalculate costs if instance's Age is 0")
+	ErrInstanceAgeLessZero       = errors.New("cannot recalculate costs if instance's age is 0")
 )
 
 // Instance model a cloud provider instance

@@ -19,11 +19,9 @@ type Cluster struct {
 	InfraID string `db:"infra_id"`
 
 	// Infrastructure provider identifier.
-	//TODO
 	Provider CloudProvider `db:"provider"`
 
 	// Defines the status of the cluster if its infrastructure is running or not or it was removed
-	//TODO
 	Status InstanceStatus `db:"status"`
 
 	// The region of the infrastructure provider in which the cluster is deployed

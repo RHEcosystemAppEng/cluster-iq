@@ -159,3 +159,19 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// Update handles the update of an existing account.
+//
+//	@Summary		Update an account
+//	@Description	Updates an existing account by its name.
+//	@Tags			Accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			name	path		string		true	"Account Name"
+//	@Param			account	body		dto.Account	true	"Updated account data"
+//	@Success		200		{object}	nil
+//	@Failure		501		{object}	nil	"Not Implemented"
+//	@Router			/accounts/{name} [patch]
+func (h *AccountHandler) Update(c *gin.Context) {
+	c.PureJSON(http.StatusNotImplemented, nil)
+}

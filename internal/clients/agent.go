@@ -14,16 +14,17 @@ import (
 // not for the entire underlying cloud operation to complete.
 const (
 	// grpcTimeoutSeconds defines the timeout in seconds for gRPC operations.
-	grpcRequestTimeoutSeconds = 10
+	grpcRequestTimeoutSeconds = 10 //nolint:unused
 )
 
 // ClusterStatusChangeRequest represents the request to the gRPC Agent for powering on/off clusters.
 // It includes details such as the account name, region, cluster ID, and the list of instance IDs associated with the cluster.
 type ClusterStatusChangeRequest struct {
-	AccountName     string   // The name of the account associated with the cluster.
-	Region          string   // The AWS region where the cluster is located.
-	ClusterID       string   // The unique identifier of the cluster.
-	InstancesIdList []string // A list of instance IDs belonging to the cluster.
+	AccountName string // The name of the account associated with the cluster.
+	Region      string // The AWS region where the cluster is located.
+	ClusterID   string // The unique identifier of the cluster.
+	//revive:disable:var-naming
+	InstancesIdList []string //nolint:stylecheck // A list of instance IDs belonging to the cluster.
 }
 
 type AgentClient interface {

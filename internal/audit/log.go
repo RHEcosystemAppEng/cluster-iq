@@ -9,6 +9,8 @@ import (
 // AuditLog represents an immutable record of an action taken within the system.
 // It provides key metadata such as the action performed, the resource involved,
 // the result, severity, and the user who triggered the event.
+//
+//revive:disable:exported
 type AuditLog struct {
 	// Unique identifier for the log entry.
 	ID int64 `db:"id"`

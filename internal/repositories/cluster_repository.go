@@ -168,7 +168,7 @@ func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, id string) er
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	// Defer a rollback in case anything fails.
-	defer tx.Rollback() // Rollback is a no-op if the transaction is already committed.
+	defer func() { _ = tx.Rollback() }() // Rollback is a no-op if the transaction is already committed.
 
 	_, err = tx.ExecContext(ctx, DeleteClusterQuery, id)
 	if err != nil {
@@ -193,7 +193,7 @@ func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []i
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.PrepareNamedContext(ctx, InsertClustersQuery)
 	if err != nil {

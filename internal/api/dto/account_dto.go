@@ -42,8 +42,7 @@ type Account struct {
 	CurrentMonthSoFarCost float64 `json:"currentMonthSoFarCost"`
 
 	// Billing information flag
-	// TODO SHould be unexported??
-	billingEnabled bool
+	billingEnabled bool //nolint:unused
 }
 
 // NewAccount represents the data needed to create a new account.

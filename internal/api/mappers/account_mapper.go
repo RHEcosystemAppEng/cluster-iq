@@ -36,7 +36,7 @@ func ToAccountDTOList(models []inventory.Account) []dto.Account {
 func ToAccountModels(dtos []dto.NewAccount) []inventory.Account {
 	models := make([]inventory.Account, len(dtos))
 	for i, newAccountDTO := range dtos {
-		provider := inventory.GetProvider(newAccountDTO.Provider)
+		provider := inventory.GetCloudProvider(newAccountDTO.Provider)
 		model := inventory.NewAccount(newAccountDTO.ID, newAccountDTO.Name, provider, "", "")
 		models[i] = *model
 	}
