@@ -42,5 +42,5 @@ func (s *expenseServiceImpl) GetByInstanceID(ctx context.Context, instanceID str
 
 // Create creates new expense records.
 func (s *expenseServiceImpl) Create(ctx context.Context, expenses []inventory.Expense) error {
-	return s.repo.WriteExpenses(ctx, expenses)
+	return s.repo.Create(ctx, expenses)
 }

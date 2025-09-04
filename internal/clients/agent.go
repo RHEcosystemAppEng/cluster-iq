@@ -2,16 +2,19 @@ package clients
 
 import (
 	"context"
+
 	pb "github.com/RHEcosystemAppEng/cluster-iq/generated/agent"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// TOdO, review timeout
+// grpcRequestTimeoutSeconds defines the deadline for a single gRPC request.
+// This is the maximum time the client will wait for the agent to accept the request,
+// not for the entire underlying cloud operation to complete.
 const (
 	// grpcTimeoutSeconds defines the timeout in seconds for gRPC operations.
-	grpcTimeoutSeconds = 10
+	grpcRequestTimeoutSeconds = 10
 )
 
 // ClusterStatusChangeRequest represents the request to the gRPC Agent for powering on/off clusters.

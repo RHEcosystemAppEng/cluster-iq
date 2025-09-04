@@ -19,7 +19,7 @@ type InstanceRepository interface {
 	ListInstances(ctx context.Context, opts ListOptions) ([]inventory.Instance, int, error)
 	GetInstancesOverview(ctx context.Context) (inventory.InstancesSummary, error)
 	GetInstanceByID(ctx context.Context, instanceID string) (*inventory.Instance, error)
-	WriteInstances(ctx context.Context, instances []inventory.Instance) error
+	CreateInstances(ctx context.Context, instances []inventory.Instance) error
 	DeleteInstance(ctx context.Context, instanceID string) error
 	GetInstancesOutdatedBilling(ctx context.Context) ([]inventory.Instance, error)
 }
@@ -123,14 +123,14 @@ func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID
 	return &instance, nil
 }
 
-// WriteInstances writes a batch of instances and their tags to the database in a transaction.
+// CreateInstances writes a batch of instances and their tags to the database in a transaction.
 //
 // Parameters:
 // - instances: A slice of inventory.Instance objects to insert.
 //
 // Returns:
 // - An error if the transaction fails.
-func (r *instanceRepositoryImpl) WriteInstances(ctx context.Context, instances []inventory.Instance) error {
+func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances []inventory.Instance) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -213,18 +213,6 @@ func buildInstanceWhereClauses(filters map[string]interface{}) ([]string, map[st
 
 	for key, value := range filters {
 		switch key {
-		case "id":
-			clauses = append(clauses, "id = :id")
-			args["id"] = value
-		case "provider":
-			clauses = append(clauses, "provider = :provider")
-			args["provider"] = value
-		case "instance_type":
-			clauses = append(clauses, "instance_type = :instance_type")
-			args["instance_type"] = value
-		case "availability_zone":
-			clauses = append(clauses, "availability_zone = :availability_zone")
-			args["availability_zone"] = value
 		case "cluster_id":
 			clauses = append(clauses, "cluster_id = :cluster_id")
 			args["cluster_id"] = value

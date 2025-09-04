@@ -14,6 +14,7 @@ type InstanceService interface {
 	List(ctx context.Context, options repositories.ListOptions) ([]inventory.Instance, int, error)
 	Get(ctx context.Context, id string) (*inventory.Instance, error)
 	GetSummary(ctx context.Context) (inventory.InstancesSummary, error)
+	Create(ctx context.Context, instances []inventory.Instance) error
 }
 
 var _ InstanceService = (*instanceServiceImpl)(nil)
@@ -43,4 +44,9 @@ func (s *instanceServiceImpl) Get(ctx context.Context, id string) (*inventory.In
 // GetSummary retrieves a summary of instance counts.
 func (s *instanceServiceImpl) GetSummary(ctx context.Context) (inventory.InstancesSummary, error) {
 	return s.repo.GetInstancesOverview(ctx)
+}
+
+// Create creates new instances.
+func (s *instanceServiceImpl) Create(ctx context.Context, instances []inventory.Instance) error {
+	return s.repo.CreateInstances(ctx, instances)
 }

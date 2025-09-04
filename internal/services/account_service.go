@@ -44,7 +44,7 @@ func (s *accountServiceImpl) GetByName(ctx context.Context, name string) (*inven
 
 // Create creates one or more new accounts.
 func (s *accountServiceImpl) Create(ctx context.Context, accounts []inventory.Account) error {
-	return s.repo.WriteAccounts(ctx, accounts)
+	return s.repo.Create(ctx, accounts)
 }
 
 // Delete removes an account by its name.

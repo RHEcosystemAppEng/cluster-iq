@@ -6,6 +6,7 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,38 @@ func (f *expenseFilterParams) toRepoFilters() map[string]interface{} {
 type listExpensesRequest struct {
 	dto.PaginationRequest
 	Filters expenseFilterParams `form:"inline"`
+}
+
+// Create handles the request to create new expense records.
+//
+//	@Summary		Create new expense records
+//	@Description	Adds one or more expense records to the database
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Param			expenses	body		[]dto.CreateExpense	true	"A list of new expenses to create"
+//	@Success		201			{object}	nil
+//	@Failure		400			{object}	dto.GenericErrorResponse
+//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Router			/expenses [post]
+func (h *ExpenseHandler) Create(c *gin.Context) {
+	var expenseDTOs []dto.CreateExpense
+	if err := c.ShouldBindJSON(&expenseDTOs); err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		return
+	}
+
+	expenses := make([]inventory.Expense, len(expenseDTOs))
+	for i, dto := range expenseDTOs {
+		expenses[i] = mappers.ToExpenseModel(dto)
+	}
+
+	if err := h.service.Create(c.Request.Context(), expenses); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create expenses: "+err.Error()))
+		return
+	}
+
+	c.Status(http.StatusCreated)
 }
 
 // List handles the request to list all expenses.
@@ -67,7 +100,7 @@ func (h *ExpenseHandler) List(c *gin.Context) {
 		return
 	}
 
-	expenseDTOs := mappers.ToExpenseDTOs(expenses)
+	expenseDTOs := mappers.ToExpenseDTOList(expenses)
 	response := dto.NewListResponse(expenseDTOs, total)
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)

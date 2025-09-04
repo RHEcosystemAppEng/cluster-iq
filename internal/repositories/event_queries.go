@@ -38,7 +38,7 @@ const (
 			al.severity
 		FROM audit_logs al
 		WHERE al.resource_id = $1
-		ORDER BY al.event_timestamp DESC;
+		ORDER BY al.event_timestamp DESC
 	`
 	// SelectSystemEventsQuery returns system-wide audit logs.
 	SelectSystemEventsQuery = `
@@ -63,7 +63,6 @@ const (
 				THEN (SELECT c.account_name FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = al.resource_id))
 			END
 		)
-		ORDER BY al.event_timestamp DESC;
 	`
 	// UpdateEventStatusQuery updates the result status of an audit log entry based on its ID.
 	UpdateEventStatusQuery = `UPDATE audit_logs SET result=$1 WHERE id=$2`

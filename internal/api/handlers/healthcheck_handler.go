@@ -23,28 +23,29 @@ func NewHealthCheckHandler(db *sqlx.DB, logger *zap.Logger) *HealthCheckHandler 
 }
 
 type healthCheckResponse struct {
-	APIStatus string `json:"api_status"`
-	DBStatus  string `json:"db_status"`
+	APIHealth bool `json:"api_health"`
+	DBHealth  bool `json:"db_health"`
 }
 
-// Check handles the request for checking the health level of the API.
+// Check handles the request for checking the health of the API.
 //
 //	@Summary		Runs HealthChecks
-//	@Description	Runs several checks for evaluating the health level of ClusterIQ
+//	@Description	Runs checks to evaluate the health of ClusterIQ.
 //	@Tags			Health
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	healthCheckResponse
-//	@Router			/health [get]
+//	@Router			/healthcheck [get]
 func (h *HealthCheckHandler) Check(c *gin.Context) {
-	dbStatus := "OK"
-	if err := h.db.Ping(); err != nil {
+	dbStatus := false
+	if err := h.db.Ping(); err == nil {
+		dbStatus = true
+	} else {
 		h.logger.Error("Database health check failed", zap.Error(err))
-		dbStatus = "Unavailable"
 	}
 
 	c.JSON(http.StatusOK, healthCheckResponse{
-		APIStatus: "OK",
-		DBStatus:  dbStatus,
+		APIHealth: true,
+		DBHealth:  dbStatus,
 	})
 }

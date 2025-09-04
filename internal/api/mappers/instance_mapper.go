@@ -13,17 +13,40 @@ func ToInstanceDTO(model *inventory.Instance) dto.Instance {
 	return dto.Instance{
 		ID:                model.ID,
 		Name:              model.Name,
-		Provider:          model.Provider,
+		Provider:          string(model.Provider),
 		InstanceType:      model.InstanceType,
 		ClusterID:         model.ClusterID,
 		Status:            string(model.Status),
 		CreationTimestamp: model.CreationTimestamp,
-		Tags:              ToTagDTOs(model.Tags),
+		Tags:              ToTagsDTOList(model.Tags),
 	}
 }
 
-// ToInstanceDTOs converts a slice of inventory.Instance models to a slice of dto.Instance.
-func ToInstanceDTOs(models []inventory.Instance) []dto.Instance {
+// ToInstanceModel converts a dto.Instance to an inventory.Instance model.
+func ToInstanceModel(dto dto.Instance) inventory.Instance {
+	return inventory.Instance{
+		ID:                dto.ID,
+		Provider:          inventory.CloudProvider(dto.Provider),
+		InstanceType:      dto.InstanceType,
+		AvailabilityZone:  dto.AvailabilityZone,
+		ClusterID:         dto.ClusterID,
+		Status:            inventory.InstanceStatus(dto.Status),
+		Tags:              ToTagsModelList(dto.Tags),
+		CreationTimestamp: dto.CreationTimestamp,
+	}
+}
+
+// ToInstanceModelList converts a slice of dto.Instance to a slice of inventory.Instance models.
+func ToInstanceModelList(dtos []dto.Instance) []inventory.Instance {
+	models := make([]inventory.Instance, len(dtos))
+	for i, d := range dtos {
+		models[i] = ToInstanceModel(d)
+	}
+	return models
+}
+
+// ToInstanceDTOList converts a slice of inventory.Instance models to a slice of dto.Instance.
+func ToInstanceDTOList(models []inventory.Instance) []dto.Instance {
 	dtos := make([]dto.Instance, len(models))
 	for i, model := range models {
 		dtos[i] = ToInstanceDTO(&model)

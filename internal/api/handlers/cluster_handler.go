@@ -86,7 +86,7 @@ func (h *ClusterHandler) List(c *gin.Context) {
 		return
 	}
 
-	clusterDTOs := mappers.ToClusterDTOs(clusters)
+	clusterDTOs := mappers.ToClusterDTOList(clusters)
 	response := dto.NewListResponse(clusterDTOs, total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
@@ -122,34 +122,33 @@ func (h *ClusterHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, clusterDTO)
 }
 
-// Create handles the creation of a new cluster.
+// Create handles the creation of new clusters.
 //
-//	@Summary		Create a cluster
-//	@Description	Creates a new cluster.
+//	@Summary		Create clusters
+//	@Description	Creates one or more new clusters.
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Param			cluster	body		dto.Cluster	true	"Cluster to create"
-//	@Success		201		{object}	dto.Cluster
-//	@Failure		400		{object}	dto.GenericErrorResponse
-//	@Failure		500		{object}	dto.GenericErrorResponse
+//	@Param			clusters	body		[]dto.Cluster	true	"A list of clusters to create"
+//	@Success		201			{object}	nil
+//	@Failure		400			{object}	dto.GenericErrorResponse
+//	@Failure		500			{object}	dto.GenericErrorResponse
 //	@Router			/clusters [post]
 func (h *ClusterHandler) Create(c *gin.Context) {
-	var newClusterDTO dto.Cluster
-	if err := c.ShouldBindJSON(&newClusterDTO); err != nil {
+	var newClusterDTOs []dto.Cluster
+	if err := c.ShouldBindJSON(&newClusterDTOs); err != nil {
 		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
 		return
 	}
 
-	cluster := mappers.ToClusterModel(newClusterDTO)
-	err := h.service.Create(c.Request.Context(), cluster)
+	clusters := mappers.ToClusterModelList(newClusterDTOs)
+	err := h.service.Create(c.Request.Context(), clusters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create cluster: "+err.Error()))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create clusters: "+err.Error()))
 		return
 	}
 
-	createdClusterDTO := mappers.ToClusterDTO(&cluster)
-	c.JSON(http.StatusCreated, createdClusterDTO)
+	c.Status(http.StatusCreated)
 }
 
 // Delete handles the deletion of a cluster.
@@ -256,7 +255,7 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, mappers.ToTagDTOs(tags))
+	c.JSON(http.StatusOK, mappers.ToTagsDTOList(tags))
 }
 
 // Update handles the request to update an existing cluster.

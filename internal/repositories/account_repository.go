@@ -19,7 +19,7 @@ type AccountRepository interface {
 	DeleteAccount(ctx context.Context, accountName string) error
 	GetAccountByName(ctx context.Context, accountName string) (*inventory.Account, error)
 	ListAccounts(ctx context.Context, opts ListOptions) ([]inventory.Account, int, error)
-	WriteAccounts(ctx context.Context, accounts []inventory.Account) error
+	Create(ctx context.Context, accounts []inventory.Account) error
 }
 
 type accountRepositoryImpl struct {
@@ -69,14 +69,14 @@ func (r *accountRepositoryImpl) GetAccountByName(ctx context.Context, accountNam
 	return &account, nil
 }
 
-// WriteAccounts inserts multiple accounts into the database in a transaction.
+// Create inserts multiple accounts into the database in a transaction.
 //
 // Parameters:
 // - accounts: A slice of inventory.Account objects to insert.
 //
 // Returns:
 // - An error if the transaction fails.
-func (r *accountRepositoryImpl) WriteAccounts(ctx context.Context, accounts []inventory.Account) error {
+func (r *accountRepositoryImpl) Create(ctx context.Context, accounts []inventory.Account) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -120,12 +120,6 @@ func buildAccountWhereClauses(filters map[string]interface{}) ([]string, map[str
 		case "provider":
 			clauses = append(clauses, "provider = :provider")
 			args["provider"] = value
-		case "name":
-			clauses = append(clauses, "name = :name")
-			args["name"] = value
-		case "id":
-			clauses = append(clauses, "id = :id")
-			args["id"] = value
 		}
 	}
 

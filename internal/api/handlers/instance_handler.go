@@ -76,7 +76,7 @@ func (h *InstanceHandler) List(c *gin.Context) {
 		return
 	}
 
-	instanceDTOs := mappers.ToInstanceDTOs(instances)
+	instanceDTOs := mappers.ToInstanceDTOList(instances)
 	response := dto.NewListResponse(instanceDTOs, total)
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -111,64 +111,31 @@ func (h *InstanceHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, instanceDTO)
 }
 
-// GetSummary handles the request for obtaining a summary of instance statuses.
+// Create handles the creation of new instances.
 //
-//	@Summary		Get instances summary
-//	@Description	Returns a summary of instance counts.
+//	@Summary		Create instances
+//	@Description	Creates one or more new instances.
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	inventory.InstancesSummary
-//	@Failure		500	{object}	dto.GenericErrorResponse
-//	@Router			/instances/summary [get]
-// func (h *InstanceHandler) GetSummary(c *gin.Context) {
-// 	summary, err := h.service.GetSummary(c.Request.Context())
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve instances summary"))
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, summary)
-// }
-
-// ListByCluster handles the request for obtaining instances for a specific cluster.
-//
-//	@Summary		List cluster's instances
-//	@Description	Returns a paginated list of instances for a specific cluster.
-//	@Tags			Clusters
-//	@Accept			json
-//	@Produce		json
-//	@Param			id			path		string	true	"Cluster ID"
-//	@Param			page		query		int		false	"Page number for pagination"	default(1)
-//	@Param			page_size	query		int		false	"Number of items per page"		default(10)
-//	@Success		200			{object}	dto.ListResponse[dto.Instance]
+//	@Param			instances	body		[]dto.Instance	true	"A list of instances to create"
+//	@Success		201			{object}	nil
 //	@Failure		400			{object}	dto.GenericErrorResponse
 //	@Failure		500			{object}	dto.GenericErrorResponse
-//	@Router			/clusters/{id}/instances [get]
-func (h *InstanceHandler) ListByCluster(c *gin.Context) {
-	clusterID := c.Param("id")
-	var req dto.PaginationRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid query parameters: "+err.Error()))
+//	@Router			/instances [post]
+func (h *InstanceHandler) Create(c *gin.Context) {
+	var newInstanceDTOs []dto.Instance
+	if err := c.ShouldBindJSON(&newInstanceDTOs); err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
 		return
 	}
 
-	filters := map[string]interface{}{"cluster_id": clusterID}
-
-	opts := repositories.ListOptions{
-		PageSize: req.PageSize,
-		Offset:   (req.Page - 1) * req.PageSize,
-		Filters:  filters,
-	}
-
-	instances, total, err := h.service.List(c.Request.Context(), opts)
+	instances := mappers.ToInstanceModelList(newInstanceDTOs)
+	err := h.service.Create(c.Request.Context(), instances)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve instances for cluster "+clusterID))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create instances: "+err.Error()))
 		return
 	}
 
-	instanceDTOs := mappers.ToInstanceDTOs(instances)
-	response := dto.NewListResponse(instanceDTOs, total)
-	c.Header("X-Total-Count", strconv.Itoa(total))
-	c.JSON(http.StatusOK, response)
+	c.Status(http.StatusCreated)
 }

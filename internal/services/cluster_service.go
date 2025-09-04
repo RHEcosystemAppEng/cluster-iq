@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -15,7 +16,7 @@ type ClusterService interface {
 	GetSummary(ctx context.Context) (inventory.ClustersSummary, error)
 	PowerOn(ctx context.Context, clusterID string) error
 	PowerOff(ctx context.Context, clusterID string) error
-	Create(ctx context.Context, cluster inventory.Cluster) error
+	Create(ctx context.Context, clusters []inventory.Cluster) error
 	Delete(ctx context.Context, clusterID string) error
 	GetTags(ctx context.Context, clusterID string) ([]inventory.Tag, error)
 	Update(ctx context.Context, cluster inventory.Cluster) error
@@ -24,15 +25,22 @@ type ClusterService interface {
 var _ ClusterService = (*clusterServiceImpl)(nil)
 
 type clusterServiceImpl struct {
-	repo        repositories.ClusterRepository
-	agentClient clients.AgentClient
+	repo                repositories.ClusterRepository
+	agentClient         clients.AgentClient
+	agentRequestTimeout time.Duration
+}
+
+// ClusterServiceOptions contains configurable parameters for the ClusterService.
+type ClusterServiceOptions struct {
+	AgentRequestTimeout int
 }
 
 // NewClusterService creates a new instance of ClusterService.
-func NewClusterService(repo repositories.ClusterRepository, agentClient clients.AgentClient) ClusterService {
+func NewClusterService(repo repositories.ClusterRepository, agentClient clients.AgentClient, opts ClusterServiceOptions) ClusterService {
 	return &clusterServiceImpl{
-		repo:        repo,
-		agentClient: agentClient,
+		repo:                repo,
+		agentClient:         agentClient,
+		agentRequestTimeout: time.Duration(opts.AgentRequestTimeout) * time.Second,
 	}
 }
 
@@ -73,6 +81,9 @@ func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string) erro
 		InstancesIdList: instanceIDs,
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, s.agentRequestTimeout)
+	defer cancel()
+
 	return s.agentClient.PowerOnCluster(ctx, req)
 }
 
@@ -98,12 +109,15 @@ func (s *clusterServiceImpl) PowerOff(ctx context.Context, clusterID string) err
 		InstancesIdList: instanceIDs,
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, s.agentRequestTimeout)
+	defer cancel()
+
 	return s.agentClient.PowerOffCluster(ctx, req)
 }
 
-// Create creates a new cluster.
-func (s *clusterServiceImpl) Create(ctx context.Context, cluster inventory.Cluster) error {
-	return s.repo.CreateCluster(ctx, cluster)
+// Create creates new clusters.
+func (s *clusterServiceImpl) Create(ctx context.Context, clusters []inventory.Cluster) error {
+	return s.repo.CreateClusters(ctx, clusters)
 }
 
 // Delete deletes a cluster by its ID.

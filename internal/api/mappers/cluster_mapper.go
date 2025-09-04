@@ -14,8 +14,8 @@ func ToClusterDTO(model *inventory.Cluster) dto.Cluster {
 		ID:                    model.ID,
 		Name:                  model.Name,
 		InfraID:               model.InfraID,
-		Provider:              model.Provider,
-		Status:                model.Status,
+		Provider:              string(model.Provider),
+		Status:                string(model.Status),
 		Region:                model.Region,
 		AccountName:           model.AccountName,
 		ConsoleLink:           model.ConsoleLink,
@@ -28,13 +28,13 @@ func ToClusterDTO(model *inventory.Cluster) dto.Cluster {
 		Last15DaysCost:        model.Last15DaysCost,
 		LastMonthCost:         model.LastMonthCost,
 		CurrentMonthSoFarCost: model.CurrentMonthSoFarCost,
-		Instances:             ToInstanceDTOs(model.Instances),
+		Instances:             ToInstanceDTOList(model.Instances),
 		// Tags are not a direct field in the model, they are part of instances
 	}
 }
 
-// ToClusterDTOs converts a slice of inventory.Cluster models to a slice of dto.Cluster.
-func ToClusterDTOs(models []inventory.Cluster) []dto.Cluster {
+// ToClusterDTOList converts a slice of inventory.Cluster models to a slice of dto.Cluster.
+func ToClusterDTOList(models []inventory.Cluster) []dto.Cluster {
 	dtos := make([]dto.Cluster, len(models))
 	for i, model := range models {
 		dtos[i] = ToClusterDTO(&model)
@@ -50,11 +50,20 @@ func ToClusterModel(dto dto.Cluster) inventory.Cluster {
 		ID:          dto.ID,
 		Name:        dto.Name,
 		InfraID:     dto.InfraID,
-		Provider:    dto.Provider,
-		Status:      dto.Status,
+		Provider:    inventory.CloudProvider(dto.Provider),
+		Status:      inventory.InstanceStatus(dto.Status),
 		Region:      dto.Region,
 		AccountName: dto.AccountName,
 		ConsoleLink: dto.ConsoleLink,
 		Owner:       dto.Owner,
 	}
+}
+
+// ToClusterModelList converts a slice of dto.Cluster to a slice of inventory.Cluster models.
+func ToClusterModelList(dtos []dto.Cluster) []inventory.Cluster {
+	models := make([]inventory.Cluster, len(dtos))
+	for i, d := range dtos {
+		models[i] = ToClusterModel(d)
+	}
+	return models
 }

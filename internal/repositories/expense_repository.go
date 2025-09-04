@@ -16,7 +16,7 @@ var _ ExpenseRepository = (*expenseRepositoryImpl)(nil)
 type ExpenseRepository interface {
 	ListExpenses(ctx context.Context, opts ListOptions) ([]inventory.Expense, int, error)
 	GetExpensesByInstance(ctx context.Context, instanceID string) ([]inventory.Expense, error)
-	WriteExpenses(ctx context.Context, expenses []inventory.Expense) error
+	Create(ctx context.Context, expenses []inventory.Expense) error
 }
 
 type expenseRepositoryImpl struct {
@@ -64,14 +64,14 @@ func (r *expenseRepositoryImpl) GetExpensesByInstance(ctx context.Context, insta
 	return expenses, nil
 }
 
-// WriteExpenses writes a batch of expenses to the database in a transaction.
+// Create writes a batch of expenses to the database in a transaction.
 //
 // Parameters:
 // - expenses: A slice of inventory.Expense objects to insert.
 //
 // Returns:
 // - An error if the transaction fails.
-func (r *expenseRepositoryImpl) WriteExpenses(ctx context.Context, expenses []inventory.Expense) error {
+func (r *expenseRepositoryImpl) Create(ctx context.Context, expenses []inventory.Expense) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -80,7 +80,6 @@ func (r *expenseRepositoryImpl) WriteExpenses(ctx context.Context, expenses []in
 
 	// Writing Expenses
 	if _, err := tx.NamedExecContext(ctx, InsertExpensesQuery, expenses); err != nil {
-
 		return fmt.Errorf("failed to execute insert expenses query: %w", err)
 	}
 

@@ -23,20 +23,12 @@ func NewAccountHandler(service services.AccountService) *AccountHandler {
 
 type accountFilterParams struct {
 	Provider string `form:"provider"`
-	Name     string `form:"name"`
-	ID       string `form:"id"`
 }
 
 func (f *accountFilterParams) toRepoFilters() map[string]interface{} {
 	filters := make(map[string]interface{})
 	if f.Provider != "" {
 		filters["provider"] = f.Provider
-	}
-	if f.Name != "" {
-		filters["name"] = f.Name
-	}
-	if f.ID != "" {
-		filters["id"] = f.ID
 	}
 	return filters
 }
@@ -56,8 +48,6 @@ type listAccountsRequest struct {
 //	@Param			page		query		int		false	"Page number for pagination"	default(1)
 //	@Param			page_size	query		int		false	"Number of items per page"		default(10)
 //	@Param			provider	query		string	false	"Filter by cloud provider"		example(aws)
-//	@Param			name		query		string	false	"Filter by account name"
-//	@Param			id			query		string	false	"Filter by account ID"
 //	@Success		200			{object}	dto.ListResponse[dto.Account]
 //	@Failure		400			{object}	dto.GenericErrorResponse
 //	@Failure		500			{object}	dto.GenericErrorResponse
@@ -81,7 +71,7 @@ func (h *AccountHandler) List(c *gin.Context) {
 		return
 	}
 
-	accountDTOs := mappers.ToAccountDTOs(accounts)
+	accountDTOs := mappers.ToAccountDTOList(accounts)
 	response := dto.NewListResponse(accountDTOs, total)
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -141,7 +131,7 @@ func (h *AccountHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, mappers.ToAccountDTOs(accounts))
+	c.JSON(http.StatusCreated, mappers.ToAccountDTOList(accounts))
 }
 
 // Delete handles the deletion of an account.

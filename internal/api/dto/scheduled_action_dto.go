@@ -2,16 +2,23 @@ package dto
 
 import "time"
 
+// ActionTarget represents the target resource information for an action.
+type ActionTarget struct {
+	AccountName string   `json:"accountName"`
+	Region      string   `json:"region"`
+	ClusterID   string   `json:"clusterID"`
+	Instances   []string `json:"instances"`
+}
+
 // ScheduledAction represents the data transfer object for a scheduled action.
+// This DTO handles both scheduled actions (with time) and cron actions (with cronExp).
 type ScheduledAction struct {
-	ID             string    `json:"id"`
-	Operation      string    `json:"operation"`
-	ClusterID      string    `json:"cluster_id"`
-	Region         string    `json:"region"`
-	AccountName    string    `json:"account_name"`
-	Instances      []string  `json:"instances"`
-	Status         string    `json:"status"`
-	Enabled        bool      `json:"enabled"`
-	Timestamp      time.Time `json:"timestamp,omitempty"`
-	CronExpression string    `json:"cron_expression,omitempty"`
+	ID        string       `json:"id"`
+	Type      string       `json:"type"`
+	Operation string       `json:"operation"`
+	Target    ActionTarget `json:"target"`
+	Status    string       `json:"status"`
+	Enabled   bool         `json:"enabled"`
+	Time      *time.Time   `json:"time,omitempty"`    // for scheduled_action
+	CronExp   *string      `json:"cronExp,omitempty"` // for cron_action
 }

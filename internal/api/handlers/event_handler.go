@@ -87,7 +87,7 @@ func (h *EventHandler) ListSystem(c *gin.Context) {
 		return
 	}
 
-	eventDTOs := mappers.ToSystemEventDTOs(events)
+	eventDTOs := mappers.ToSystemEventDTOList(events)
 	response := dto.NewListResponse(eventDTOs, total)
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -126,7 +126,7 @@ func (h *EventHandler) ListByCluster(c *gin.Context) {
 		return
 	}
 
-	eventDTOs := mappers.ToClusterEventDTOs(events)
+	eventDTOs := mappers.ToClusterEventDTOList(events)
 	response := dto.NewListResponse(eventDTOs, total)
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)

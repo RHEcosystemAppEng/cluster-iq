@@ -20,8 +20,8 @@ func ToClusterEventDTO(model audit.AuditLog) dto.ClusterEvent {
 	}
 }
 
-// ToClusterEventDTOs converts a slice of audit.AuditLog models to a slice of dto.ClusterEvent.
-func ToClusterEventDTOs(models []audit.AuditLog) []dto.ClusterEvent {
+// ToClusterEventDTOList converts a slice of audit.AuditLog models to a slice of dto.ClusterEvent.
+func ToClusterEventDTOList(models []audit.AuditLog) []dto.ClusterEvent {
 	dtos := make([]dto.ClusterEvent, len(models))
 	for i, model := range models {
 		dtos[i] = ToClusterEventDTO(model)
@@ -38,8 +38,8 @@ func ToSystemEventDTO(model audit.SystemAuditLogs) dto.SystemEvent {
 	}
 }
 
-// ToSystemEventDTOs converts a slice of audit.SystemAuditLogs models to a slice of dto.SystemEvent.
-func ToSystemEventDTOs(models []audit.SystemAuditLogs) []dto.SystemEvent {
+// ToSystemEventDTOList converts a slice of audit.SystemAuditLogs models to a slice of dto.SystemEvent.
+func ToSystemEventDTOList(models []audit.SystemAuditLogs) []dto.SystemEvent {
 	dtos := make([]dto.SystemEvent, len(models))
 	for i, model := range models {
 		dtos[i] = ToSystemEventDTO(model)

@@ -2,8 +2,6 @@ package dto
 
 import (
 	"time"
-
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
 // Cluster is the object to store Openshift Clusters and its properties
@@ -19,12 +17,10 @@ type Cluster struct {
 	InfraID string `json:"infra_id"`
 
 	// Infrastructure provider identifier.
-	// TODO
-	Provider inventory.CloudProvider `json:"provider"`
+	Provider string `json:"provider"`
 
 	// Defines the status of the cluster if its infrastructure is running or not or it was removed
-	// TODO
-	Status inventory.InstanceStatus `json:"status"`
+	Status string `json:"status"`
 
 	// Region where the cluster is located
 	Region string `json:"region"`

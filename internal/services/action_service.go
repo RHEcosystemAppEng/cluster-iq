@@ -16,8 +16,6 @@ type ActionService interface {
 	Create(ctx context.Context, newActions []actions.Action) error
 	Enable(ctx context.Context, actionID string) error
 	Disable(ctx context.Context, actionID string) error
-	Patch(ctx context.Context, newActions []actions.Action) error
-	PatchStatus(ctx context.Context, actionID string, status string) error
 	Delete(ctx context.Context, actionID string) error
 }
 
@@ -46,7 +44,7 @@ func (s *actionServiceImpl) Get(ctx context.Context, actionID string) (actions.A
 
 // Create creates new scheduled actions.
 func (s *actionServiceImpl) Create(ctx context.Context, newActions []actions.Action) error {
-	return s.repo.WriteScheduledActions(ctx, newActions)
+	return s.repo.Create(ctx, newActions)
 }
 
 // Enable enables a scheduled action.
@@ -57,16 +55,6 @@ func (s *actionServiceImpl) Enable(ctx context.Context, actionID string) error {
 // Disable disables a scheduled action.
 func (s *actionServiceImpl) Disable(ctx context.Context, actionID string) error {
 	return s.repo.DisableScheduledAction(ctx, actionID)
-}
-
-// Patch updates a scheduled action.
-func (s *actionServiceImpl) Patch(ctx context.Context, newActions []actions.Action) error {
-	return s.repo.PatchScheduledAction(ctx, newActions)
-}
-
-// PatchStatus updates the status of a scheduled action.
-func (s *actionServiceImpl) PatchStatus(ctx context.Context, actionID string, status string) error {
-	return s.repo.PatchScheduledActionStatus(ctx, actionID, status)
 }
 
 // Delete removes a scheduled action by its ID.

@@ -22,8 +22,7 @@ type ClusterRepository interface {
 	GetClustersOnAccount(ctx context.Context, accountName string) ([]inventory.Cluster, error)
 	GetInstancesOnCluster(ctx context.Context, clusterID string) ([]inventory.Instance, error)
 	DeleteCluster(ctx context.Context, id string) error
-	WriteClusters(ctx context.Context, clusters []inventory.Cluster) error
-	CreateCluster(ctx context.Context, cluster inventory.Cluster) error
+	CreateClusters(ctx context.Context, clusters []inventory.Cluster) error
 	UpdateCluster(ctx context.Context, cluster inventory.Cluster) error
 	UpdateClusterStatusByClusterID(ctx context.Context, status string, clusterID string) error
 }
@@ -182,14 +181,14 @@ func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, id string) er
 	return nil
 }
 
-// WriteClusters inserts a list of clusters into the database in a transaction.
+// CreateClusters inserts a list of clusters into the database in a transaction.
 //
 // Parameters:
 // - clusters: A slice of inventory.Cluster objects to insert.
 //
 // Returns:
 // - An error if the transaction fails or the query encounters an issue.
-func (r *clusterRepositoryImpl) WriteClusters(ctx context.Context, clusters []inventory.Cluster) error {
+func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []inventory.Cluster) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -212,15 +211,6 @@ func (r *clusterRepositoryImpl) WriteClusters(ctx context.Context, clusters []in
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return nil
-}
-
-// CreateCluster inserts a single cluster into the database.
-func (r *clusterRepositoryImpl) CreateCluster(ctx context.Context, cluster inventory.Cluster) error {
-	_, err := r.db.NamedExecContext(ctx, InsertClustersQuery, &cluster)
-	if err != nil {
-		return fmt.Errorf("failed to create cluster %s: %w", cluster.ID, err)
-	}
 	return nil
 }
 
@@ -265,9 +255,9 @@ func buildClusterWhereClauses(filters map[string]interface{}) ([]string, map[str
 		case "status":
 			clauses = append(clauses, "status = :status")
 			args["status"] = value
-		case "owner":
-			clauses = append(clauses, "owner LIKE :owner")
-			args["owner"] = "%" + fmt.Sprintf("%v", value) + "%"
+		case "account_name":
+			clauses = append(clauses, "account_name = :account_name")
+			args["account_name"] = value
 		}
 	}
 

@@ -23,8 +23,8 @@ func ToAccountDTO(model *inventory.Account) dto.Account {
 	}
 }
 
-// ToAccountDTOs converts a slice of inventory.Account models to a slice of dto.Account.
-func ToAccountDTOs(models []inventory.Account) []dto.Account {
+// ToAccountDTOList converts a slice of inventory.Account models to a slice of dto.Account.
+func ToAccountDTOList(models []inventory.Account) []dto.Account {
 	dtos := make([]dto.Account, len(models))
 	for i, model := range models {
 		dtos[i] = ToAccountDTO(&model)

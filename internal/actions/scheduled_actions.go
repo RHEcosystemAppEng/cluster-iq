@@ -6,9 +6,9 @@ import "time"
 // It embeds BaseAction to inherit common action properties and includes a timestamp indicating when the action should be executed.
 type ScheduledAction struct {
 	// When specifies the scheduled time for the action execution.
-	When time.Time `db:"time" json:"time"`
+	When time.Time `db:"time"`
 
-	Type string `db:"type" json:"type"`
+	Type string `db:"type"`
 
 	BaseAction
 }

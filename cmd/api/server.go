@@ -144,7 +144,7 @@ func (a APIServer) signalHandler(signal os.Signal) error {
 }
 
 //	@title			ClusterIQ API
-//	@version		0.3
+//	@version		0.5
 //	@description	This is the API of the ClusterIQ cloud inventory software
 //	@termsOfService	http://swagger.io/terms/
 
@@ -195,36 +195,32 @@ func main() {
 	actionRepo := repositories.NewActionRepository(db)
 
 	// Initializing services
-	accountSvc := services.NewAccountService(accountRepo)
-	clusterSvc := services.NewClusterService(clusterRepo, agentClient)
-	instanceSvc := services.NewInstanceService(instanceRepo)
-	expenseSvc := services.NewExpenseService(expenseRepo)
-	eventSvc := services.NewEventService(eventRepo)
-	actionSvc := services.NewActionService(actionRepo)
+	accountService := services.NewAccountService(accountRepo)
+	clusterServiceOpts := services.ClusterServiceOptions{
+		AgentRequestTimeout: cfg.AgentRequestTimeout,
+	}
+	clusterService := services.NewClusterService(clusterRepo, agentClient, clusterServiceOpts)
+	instanceService := services.NewInstanceService(instanceRepo)
+	expenseService := services.NewExpenseService(expenseRepo)
+	eventService := services.NewEventService(eventRepo)
+	actionService := services.NewActionService(actionRepo)
+	overviewService := services.NewOverviewService(clusterRepo, instanceRepo, accountRepo)
 
 	// Initializing handlers
-	accountHandler := handlers.NewAccountHandler(accountSvc)
-	clusterHandler := handlers.NewClusterHandler(clusterSvc)
-	instanceHandler := handlers.NewInstanceHandler(instanceSvc)
-	expenseHandler := handlers.NewExpenseHandler(expenseSvc)
-	eventHandler := handlers.NewEventHandler(eventSvc)
-	actionHandler := handlers.NewActionHandler(actionSvc)
-	healthCheckHandler := handlers.NewHealthCheckHandler(db, logger)
-
-	// Initialize dependencies for router
-	deps := router.Dependencies{
-		AccountHandler:     accountHandler,
-		ClusterHandler:     clusterHandler,
-		InstanceHandler:    instanceHandler,
-		ExpenseHandler:     expenseHandler,
-		EventHandler:       eventHandler,
-		ActionHandler:      actionHandler,
-		HealthCheckHandler: healthCheckHandler,
+	handlers := router.APIHandlers{
+		AccountHandler:     handlers.NewAccountHandler(accountService),
+		ClusterHandler:     handlers.NewClusterHandler(clusterService),
+		InstanceHandler:    handlers.NewInstanceHandler(instanceService),
+		ExpenseHandler:     handlers.NewExpenseHandler(expenseService),
+		EventHandler:       handlers.NewEventHandler(eventService),
+		ActionHandler:      handlers.NewActionHandler(actionService),
+		OverviewHandler:    handlers.NewOverviewHandler(overviewService),
+		HealthCheckHandler: handlers.NewHealthCheckHandler(db, logger),
 	}
 
 	// Setup router
 	engine := setupGin(logger)
-	router.Setup(engine, deps)
+	router.Setup(engine, handlers)
 
 	logger.Info("ClusterIQ API server started",
 		zap.String("version", version),

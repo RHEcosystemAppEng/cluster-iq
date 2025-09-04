@@ -13,9 +13,9 @@ import (
 
 var _ ActionRepository = (*actionRepositoryImpl)(nil)
 
-// dbAction is a helper struct to scan the result from the database
+// ScheduleRecord is a helper struct to scan the result from the database
 // before converting it to a specific action type.
-type dbAction struct {
+type ScheduleRecord struct {
 	ID          string         `db:"id"`
 	Type        string         `db:"type"`
 	Time        sql.NullTime   `db:"time"`
@@ -29,24 +29,45 @@ type dbAction struct {
 	Instances   pq.StringArray `db:"instances"`
 }
 
-// toAction converts a dbAction to a concrete actions.Action implementation.
-func (da *dbAction) toAction() (actions.Action, error) {
-	actionOp := actions.ActionOperation(da.Operation)
-	target := actions.NewActionTarget(da.ClusterID, da.Region, da.AccountName, da.Instances)
+// toAction converts a ScheduleRecord to a concrete actions.Action implementation.
+func (sr *ScheduleRecord) toAction() (actions.Action, error) {
+	actionOp := actions.ActionOperation(sr.Operation)
+	target := actions.ActionTarget{
+		AccountName: sr.AccountName,
+		Region:      sr.Region,
+		ClusterID:   sr.ClusterID,
+		Instances:   sr.Instances,
+	}
 
-	switch da.Type {
+	baseAction := actions.BaseAction{
+		ID:        sr.ID,
+		Operation: actionOp,
+		Target:    target,
+		Status:    sr.Status,
+		Enabled:   sr.Enabled,
+	}
+
+	switch sr.Type {
 	case string(actions.ScheduledActionType):
-		if !da.Time.Valid {
-			return nil, fmt.Errorf("scheduled action %s has invalid time", da.ID)
+		if !sr.Time.Valid {
+			return nil, fmt.Errorf("scheduled action %s has invalid time", sr.ID)
 		}
-		return actions.NewScheduledAction(actionOp, *target, da.Status, da.Enabled, da.Time.Time), nil
+		return &actions.ScheduledAction{
+			BaseAction: baseAction,
+			When:       sr.Time.Time,
+			Type:       sr.Type,
+		}, nil
 	case string(actions.CronActionType):
-		if !da.CronExp.Valid {
-			return nil, fmt.Errorf("cron action %s has invalid cron expression", da.ID)
+		if !sr.CronExp.Valid {
+			return nil, fmt.Errorf("cron action %s has invalid cron expression", sr.ID)
 		}
-		return actions.NewCronAction(actionOp, *target, da.Status, da.Enabled, da.CronExp.String), nil
+		return &actions.CronAction{
+			BaseAction: baseAction,
+			Expression: sr.CronExp.String,
+			Type:       sr.Type,
+		}, nil
 	default:
-		return nil, fmt.Errorf("unknown action type: %s", da.Type)
+		return nil, fmt.Errorf("unknown action type: %s", sr.Type)
 	}
 }
 
@@ -56,10 +77,8 @@ type ActionRepository interface {
 	EnableScheduledAction(ctx context.Context, actionID string) error
 	DisableScheduledAction(ctx context.Context, actionID string) error
 	GetScheduledActionByID(ctx context.Context, actionID string) (actions.Action, error)
-	WriteScheduledActions(ctx context.Context, newActions []actions.Action) error
-	PatchScheduledAction(ctx context.Context, newActions []actions.Action) error
-	PatchScheduledActionStatus(ctx context.Context, actionID string, status string) error
 	DeleteScheduledAction(ctx context.Context, actionID string) error
+	Create(ctx context.Context, newActions []actions.Action) error
 }
 
 type actionRepositoryImpl struct {
@@ -78,20 +97,20 @@ func NewActionRepository(db *sqlx.DB) ActionRepository {
 //   - An array of actions.Action with the scheduled actions declared on the DB
 //   - An error if the query fails
 func (r *actionRepositoryImpl) ListScheduledActions(ctx context.Context, opts ListOptions) ([]actions.Action, int, error) {
-	var dbActions []dbAction
+	var scheduleRecords []ScheduleRecord
 	baseQuery := SelectScheduledActionsQuery
 	countQuery := "SELECT COUNT(*) FROM schedule"
 
 	whereClauses, namedArgs := buildActionWhereClauses(opts.Filters)
 
-	total, err := listQueryHelper(ctx, r.db, &dbActions, baseQuery, countQuery, opts, whereClauses, namedArgs)
+	total, err := listQueryHelper(ctx, r.db, &scheduleRecords, baseQuery, countQuery, opts, whereClauses, namedArgs)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list scheduled actions: %w", err)
 	}
 
-	resultActions := make([]actions.Action, len(dbActions))
-	for i, da := range dbActions {
-		action, err := (&da).toAction()
+	resultActions := make([]actions.Action, len(scheduleRecords))
+	for i, record := range scheduleRecords {
+		action, err := (&record).toAction()
 		if err != nil {
 			// Potentially log the error and continue, or fail fast
 			return nil, 0, fmt.Errorf("failed to convert db action to action: %w", err)
@@ -160,25 +179,25 @@ func (r *actionRepositoryImpl) DisableScheduledAction(ctx context.Context, actio
 //   - An actions.Action object
 //   - An error if the query fails
 func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actionID string) (actions.Action, error) {
-	var dbAct dbAction
-	if err := r.db.GetContext(ctx, &dbAct, SelectScheduledActionsByIDQuery, actionID); err != nil {
+	var scheduleRecord ScheduleRecord
+	if err := r.db.GetContext(ctx, &scheduleRecord, SelectScheduledActionsByIDQuery, actionID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to get scheduled action by id %s: %w", actionID, err)
 	}
 
-	return (&dbAct).toAction()
+	return (&scheduleRecord).toAction()
 }
 
-// WriteScheduledActions receives an array of actions.Action and writes them on the DB
+// Create creates a batch of scheduled actions in the database.
 //
 // Parameters:
 //   - An array of actions.Action to write on the DB
 //
 // Returns:
 //   - An error if the insert fails
-func (r *actionRepositoryImpl) WriteScheduledActions(ctx context.Context, newActions []actions.Action) error {
+func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) error {
 	// Begin transaction
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -202,68 +221,6 @@ func (r *actionRepositoryImpl) WriteScheduledActions(ctx context.Context, newAct
 			// a.logger.Error("Failed to prepare InsertCronActionsQuery query", zap.Error(err))
 			return fmt.Errorf("failed to insert cron actions: %w", err)
 		}
-	}
-
-	// Commit the transaction
-	return tx.Commit()
-}
-
-// PatchScheduledAction updates Action by its ID
-//
-// Parameters:
-//   - Action list
-//
-// Returns:
-//   - An error if the query fails
-func (r *actionRepositoryImpl) PatchScheduledAction(ctx context.Context, newActions []actions.Action) error {
-	// Begin transaction
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-	schedActions, cronActions := actions.SplitActionsByType(newActions)
-
-	// Writing Scheduled Actions
-	if len(schedActions) > 0 {
-		if _, err := tx.NamedExecContext(ctx, PatchScheduledActionsQuery, schedActions); err != nil {
-			// a.logger.Error("Failed to prepare PatchScheduledAction query", zap.Error(err))
-			return fmt.Errorf("failed to patch scheduled actions: %w", err)
-		}
-	}
-
-	// Writing Cron Actions
-	if len(cronActions) > 0 {
-		if _, err := tx.NamedExecContext(ctx, PatchCronActionsQuery, cronActions); err != nil {
-			// a.logger.Error("Failed to prepare PatchCronActionsQuery query", zap.Error(err))
-			return fmt.Errorf("failed to patch cron actions: %w", err)
-		}
-	}
-
-	// Commit the transaction
-	return tx.Commit()
-}
-
-// PatchScheduledActionStatus updates Action status by its ID
-//
-// Parameters:
-//   - Action list
-//
-// Returns:
-//   - An error if the query fails
-func (r *actionRepositoryImpl) PatchScheduledActionStatus(ctx context.Context, actionID string, status string) error {
-	// Begin transaction
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	enabled := status == "Pending"
-
-	if _, err := tx.ExecContext(ctx, PatchActionStatusQuery, actionID, status, enabled); err != nil {
-		// a.logger.Error("Failed to prepare PatchScheduledActionStatus query", zap.Error(err))
-		return fmt.Errorf("failed to patch action status for %s: %w", actionID, err)
 	}
 
 	// Commit the transaction
