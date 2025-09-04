@@ -20,13 +20,13 @@ const (
 // Tag model generic tags as a Key-Value object
 type Tag struct {
 	// Tag's key
-	Key string `db:"key" json:"key"`
+	Key string `db:"key"`
 
 	// Tag's Value
-	Value string `db:"value" json:"value"`
+	Value string `db:"value"`
 
-	// InstanceID reference
-	InstanceID string `db:"instance_id" json:"instance_id"`
+	// InstanceName reference
+	InstanceID string `db:"instance_id"`
 }
 
 // NewTag returns a new generic tag struct

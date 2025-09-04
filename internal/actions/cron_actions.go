@@ -4,9 +4,9 @@ package actions
 // It embeds BaseAction to inherit common action properties and includes a timestamp indicating when the action should be executed.
 type CronAction struct {
 	// When specifies the scheduled time for the action execution.
-	Expression string `db:"cron_exp" json:"cronExp"`
+	Expression string `db:"cron_exp"`
 
-	Type string `db:"type" json:"type"`
+	Type string `db:"type"`
 
 	BaseAction
 }

@@ -8,54 +8,54 @@ import (
 
 // Errors for Instances
 var (
-	ERR_INSTANCE_TOTAL_COST_LESS_ZERO = errors.New("TotalCost of an instance cannot be less than zero")
-	ERR_INSTANCE_DAILY_COST_LESS_ZERO = errors.New("DailyCost of an instance cannot be less than zero")
-	ERR_INSTANCE_AGE_LESS_ZERO        = errors.New("Cannot recalculate costs if instance's Age is 0")
+	ErrInstanceTotalCostLessZero = errors.New("TotalCost of an instance cannot be less than zero")
+	ErrInstanceDailyCostLessZero = errors.New("DailyCost of an instance cannot be less than zero")
+	ErrInstanceAgeLessZero       = errors.New("cannot recalculate costs if instance's age is 0")
 )
 
 // Instance model a cloud provider instance
 type Instance struct {
 	// Uniq Identifier of the instance
-	ID string `db:"id" json:"id"`
+	ID string `db:"id"`
 
 	// Instance Name. In some Cloud Providers, the name is managed as a Tag
-	Name string `db:"name" json:"name"`
+	Name string `db:"name"`
 
 	// Instance provider (public/private cloud provider)
-	Provider CloudProvider `db:"provider" json:"provider"`
+	Provider CloudProvider `db:"provider"`
 
 	// Instance type/size/flavour
-	InstanceType string `db:"instance_type" json:"instanceType"`
+	InstanceType string `db:"instance_type"`
 
 	// Availability Zone in which the instance is running on
-	AvailabilityZone string `db:"availability_zone" json:"availabilityZone"`
+	AvailabilityZone string `db:"availability_zone"`
 
 	// Instance Status
-	Status InstanceStatus `db:"status" json:"status"`
+	Status InstanceStatus `db:"status"`
 
 	// ClusterID
-	ClusterID string `db:"cluster_id" json:"clusterID"`
+	ClusterID string `db:"cluster_id"`
 
 	// Last scan timestamp of the instance
-	LastScanTimestamp time.Time `db:"last_scan_timestamp" json:"lastScanTimestamp"`
+	LastScanTimestamp time.Time `db:"last_scan_timestamp"`
 
 	// Timestamp when the instance was created
-	CreationTimestamp time.Time `db:"creation_timestamp" json:"creationTimestamp"`
+	CreationTimestamp time.Time `db:"creation_timestamp"`
 
 	// Ammount of days since the instance was created
-	Age int `db:"age" json:"age"`
+	Age int `db:"age"`
 
 	// Daily cost (US Dollars) estimated based on total cost and age of the instance
-	DailyCost float64 `db:"daily_cost" json:"dailyCost"`
+	DailyCost float64 `db:"daily_cost"`
 
 	// Total cost (US Dollars) accumulated since ClusterIQ is scanning
-	TotalCost float64 `db:"total_cost" json:"totalCost"`
+	TotalCost float64 `db:"total_cost"`
 
 	// Instance Tags as key-value array
-	Tags []Tag `json:"tags"`
+	Tags []Tag `db:"-"`
 
 	// Expenses list associated to the instance
-	Expenses []Expense `json:"expenses"`
+	Expenses []Expense `db:"-"`
 }
 
 // NewInstance returns a new Instance object
@@ -88,7 +88,7 @@ func (i *Instance) calculateTotalCost() error {
 	}
 
 	if totalCost < 0 {
-		return ERR_INSTANCE_TOTAL_COST_LESS_ZERO
+		return ErrInstanceTotalCostLessZero
 	}
 
 	i.TotalCost = totalCost
@@ -100,12 +100,12 @@ func (i *Instance) calculateDailyCost() error {
 	var dailyCost float64 = 0.0
 
 	if i.Age <= 0 {
-		return ERR_INSTANCE_AGE_LESS_ZERO
+		return ErrInstanceAgeLessZero
 	}
 	dailyCost = i.TotalCost / float64(i.Age)
 
 	if dailyCost < 0 {
-		return ERR_INSTANCE_DAILY_COST_LESS_ZERO
+		return ErrInstanceDailyCostLessZero
 	}
 
 	i.DailyCost = dailyCost

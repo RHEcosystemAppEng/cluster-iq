@@ -2,11 +2,11 @@ package actions
 
 // BaseAction defines the common parameters that every action has
 type BaseAction struct {
-	ID        string          `db:"id" json:"id"`
-	Operation ActionOperation `db:"operation" json:"operation"`
-	Target    ActionTarget    `db:"target" json:"target"`
-	Status    string          `db:"status" json:"status"`
-	Enabled   bool            `db:"enabled" json:"enabled"`
+	ID        string          `db:"id"`
+	Operation ActionOperation `db:"operation"`
+	Target    ActionTarget    `db:"target"`
+	Status    string          `db:"status"`
+	Enabled   bool            `db:"enabled"`
 }
 
 func NewBaseAction(ao ActionOperation, target ActionTarget, status string, enabled bool) *BaseAction {

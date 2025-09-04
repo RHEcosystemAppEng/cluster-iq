@@ -4,16 +4,16 @@ package actions
 // It includes information about the account, region, cluster, and instances involved in the action.
 type ActionTarget struct {
 	// AccountName is the name of the cloud account associated with the target.
-	AccountName string `db:"account_name" json:"accountName"`
+	AccountName string `db:"account_name"`
 
 	// Region specifies the cloud region where the target resources are located.
-	Region string `db:"region" json:"region"`
+	Region string `db:"region"`
 
 	// ClusterID is the unique identifier of the cluster targeted by the action.
-	ClusterID string `db:"cluster_id" json:"clusterID"`
+	ClusterID string `db:"cluster_id"`
 
 	// Instances is a list of instance IDs associated with the target cluster.
-	Instances []string `db:"instances" json:"instances"`
+	Instances []string `db:"instances"`
 }
 
 // NewActionTarget creates and returns a new instance of ActionTarget.
