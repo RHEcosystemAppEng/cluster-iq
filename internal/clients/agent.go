@@ -1,8 +1,7 @@
-package main
+package clients
 
 import (
 	"context"
-	"time"
 
 	pb "github.com/RHEcosystemAppEng/cluster-iq/generated/agent"
 	"go.uber.org/zap"
@@ -10,25 +9,39 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// grpcRequestTimeoutSeconds defines the deadline for a single gRPC request.
+// This is the maximum time the client will wait for the agent to accept the request,
+// not for the entire underlying cloud operation to complete.
 const (
 	// grpcTimeoutSeconds defines the timeout in seconds for gRPC operations.
-	grpcTimeoutSeconds = 10
+	grpcRequestTimeoutSeconds = 10 //nolint:unused
 )
 
-// APIGRPCClient manages the gRPC client connection and operations for the API server.
+// ClusterStatusChangeRequest represents the request to the gRPC Agent for powering on/off clusters.
+// It includes details such as the account name, region, cluster ID, and the list of instance IDs associated with the cluster.
+type ClusterStatusChangeRequest struct {
+	AccountName string // The name of the account associated with the cluster.
+	Region      string // The AWS region where the cluster is located.
+	ClusterID   string // The unique identifier of the cluster.
+	//revive:disable:var-naming
+	InstancesIdList []string //nolint:stylecheck // A list of instance IDs belonging to the cluster.
+}
+
+type AgentClient interface {
+	PowerOnCluster(ctx context.Context, request *ClusterStatusChangeRequest) error
+	PowerOffCluster(ctx context.Context, request *ClusterStatusChangeRequest) error
+}
+
+// GRPCAgentClient manages the gRPC client connection and operations for the API server.
 // It provides methods to interact with the Agent service via gRPC.
-type APIGRPCClient struct {
+type GRPCAgentClient struct {
 	// Client is the gRPC client used to communicate with the Agent service.
 	Client pb.AgentServiceClient
-	// CTX is the context used for gRPC operations.
-	CTX context.Context
-	// Cancel is the function to cancel the gRPC context.
-	Cancel context.CancelFunc
 	// logger is used for logging gRPC operations and errors.
 	logger *zap.Logger
 }
 
-// NewAPIGRPCClient initializes and returns a new APIGRPCClient.
+// NewGRPCAgentClient initializes and returns a new GRPCAgentClient.
 // It establishes a connection to the Agent service and sets up the gRPC client.
 //
 // Parameters:
@@ -36,20 +49,17 @@ type APIGRPCClient struct {
 // - logger: Logger instance for logging.
 //
 // Returns:
-// - A pointer to the initialized APIGRPCClient.
+// - A pointer to the initialized GRPCAgentClient.
 // - An error if the connection cannot be established.
-func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, error) {
+func NewGRPCAgentClient(agentURL string, logger *zap.Logger) (*GRPCAgentClient, error) {
 	// Initializing gRPC Client
 	conn, err := grpc.NewClient(agentURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), grpcTimeoutSeconds*time.Second)
 
-	return &APIGRPCClient{
+	return &GRPCAgentClient{
 		Client: pb.NewAgentServiceClient(conn),
-		CTX:    ctx,
-		Cancel: cancel,
 		logger: logger,
 	}, nil
 }
@@ -62,7 +72,7 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 //
 // Returns:
 // - An error if the gRPC call fails or the request cannot be completed.
-func (a APIGRPCClient) PowerOffCluster(request *ClusterStatusChangeRequest) error {
+func (c *GRPCAgentClient) PowerOffCluster(ctx context.Context, request *ClusterStatusChangeRequest) error {
 	// Creating PowerOffClusterRequest
 	rpcRequest := &pb.PowerOffClusterRequest{
 		AccountName:     request.AccountName,
@@ -72,7 +82,7 @@ func (a APIGRPCClient) PowerOffCluster(request *ClusterStatusChangeRequest) erro
 	}
 
 	// Logging the request details
-	a.logger.Info("Powering off Cluster",
+	c.logger.Info("Powering off Cluster",
 		zap.String("account_name", rpcRequest.AccountName),
 		zap.String("cluster_id", rpcRequest.ClusterId),
 		zap.String("region", rpcRequest.Region),
@@ -81,11 +91,11 @@ func (a APIGRPCClient) PowerOffCluster(request *ClusterStatusChangeRequest) erro
 	)
 
 	// Sending the PowerOffCluster request
-	resp, err := a.Client.PowerOffCluster(context.Background(), rpcRequest)
+	resp, err := c.Client.PowerOffCluster(ctx, rpcRequest)
 	if err != nil {
 		return err
 	}
-	a.logger.Info("Response from PowerOffCluster", zap.String("response", resp.Message))
+	c.logger.Info("Response from PowerOffCluster", zap.String("response", resp.Message))
 	return nil
 }
 
@@ -97,7 +107,8 @@ func (a APIGRPCClient) PowerOffCluster(request *ClusterStatusChangeRequest) erro
 //
 // Returns:
 // - An error if the gRPC call fails or the request cannot be completed.
-func (a APIGRPCClient) PowerOnCluster(request *ClusterStatusChangeRequest) error {
+// TODO
+func (c *GRPCAgentClient) PowerOnCluster(ctx context.Context, request *ClusterStatusChangeRequest) error {
 	// Creating PowerOnClusterRequest
 	rpcRequest := &pb.PowerOnClusterRequest{
 		AccountName:     request.AccountName,
@@ -107,7 +118,7 @@ func (a APIGRPCClient) PowerOnCluster(request *ClusterStatusChangeRequest) error
 	}
 
 	// Logging the request details
-	a.logger.Info("Powering On Cluster",
+	c.logger.Info("Powering On Cluster",
 		zap.String("account_name", rpcRequest.AccountName),
 		zap.String("cluster_id", rpcRequest.ClusterId),
 		zap.String("region", rpcRequest.Region),
@@ -116,10 +127,10 @@ func (a APIGRPCClient) PowerOnCluster(request *ClusterStatusChangeRequest) error
 	)
 
 	// Sending the PowerOnCluster request
-	resp, err := a.Client.PowerOnCluster(context.Background(), rpcRequest)
+	resp, err := c.Client.PowerOnCluster(ctx, rpcRequest)
 	if err != nil {
 		return err
 	}
-	a.logger.Info("Response from PowerOnCluster", zap.String("response", resp.Message))
+	c.logger.Info("Response from PowerOnCluster", zap.String("response", resp.Message))
 	return nil
 }

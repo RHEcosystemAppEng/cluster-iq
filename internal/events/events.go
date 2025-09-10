@@ -4,7 +4,7 @@ package events
 import (
 	"time"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/audit"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +18,7 @@ func NewEventService(sqlClient SQLEventClient, logger *zap.Logger) *EventService
 
 // LogEvent creates a new audit log entry and returns its ID.
 func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
-	event := models.AuditLog{
+	event := audit.AuditLog{
 		TriggeredBy:    opts.TriggeredBy,
 		ActionName:     opts.Action,
 		ResourceID:     opts.ResourceID,
@@ -76,7 +76,7 @@ func (t *EventTracker) Failed() {
 }
 
 // ToAuditEvents converts AuditLogs to AuditEvents
-func ToAuditEvents(logs []models.AuditLog) []AuditEvent {
+func ToAuditEvents(logs []audit.AuditLog) []AuditEvent {
 	events := make([]AuditEvent, len(logs))
 	for i, log := range logs {
 		events[i] = convertToAuditEvent(log)
@@ -85,7 +85,7 @@ func ToAuditEvents(logs []models.AuditLog) []AuditEvent {
 }
 
 // ToSystemAuditEvents converts SystemAuditLogs to SystemAuditEvents
-func ToSystemAuditEvents(logs []models.SystemAuditLogs) []SystemAuditEvent {
+func ToSystemAuditEvents(logs []audit.SystemAuditLogs) []SystemAuditEvent {
 	events := make([]SystemAuditEvent, len(logs))
 	for i, log := range logs {
 		events[i] = SystemAuditEvent{
@@ -98,7 +98,7 @@ func ToSystemAuditEvents(logs []models.SystemAuditLogs) []SystemAuditEvent {
 }
 
 // convertToAuditEvent converts single AuditLog to AuditEvent
-func convertToAuditEvent(log models.AuditLog) AuditEvent {
+func convertToAuditEvent(log audit.AuditLog) AuditEvent {
 	return AuditEvent{
 		ID:             log.ID,
 		ActionName:     log.ActionName,

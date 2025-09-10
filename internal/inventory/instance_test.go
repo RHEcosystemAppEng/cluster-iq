@@ -70,8 +70,8 @@ func TestCalculateTotalCost_ErrorNegative(t *testing.T) {
 		Expenses: []Expense{{Amount: -10}},
 	}
 	err := i.calculateTotalCost()
-	if !errors.Is(err, ERR_INSTANCE_TOTAL_COST_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_TOTAL_COST_LESS_ZERO, got %v", err)
+	if !errors.Is(err, ErrInstanceTotalCostLessZero) {
+		t.Errorf("expected ErrInstanceTotalCostLessZero, got %v", err)
 	}
 }
 
@@ -91,8 +91,8 @@ func TestCalculateDailyCost_Success(t *testing.T) {
 func TestCalculateDailyCost_ZeroAge(t *testing.T) {
 	i := Instance{TotalCost: 10.0, Age: 0}
 	err := i.calculateDailyCost()
-	if !errors.Is(err, ERR_INSTANCE_AGE_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_AGE_LESS_ZERO, got %v", err)
+	if !errors.Is(err, ErrInstanceAgeLessZero) {
+		t.Errorf("expected ErrInstanceAgeLessZero, got %v", err)
 	}
 }
 
@@ -100,8 +100,8 @@ func TestCalculateDailyCost_ZeroAge(t *testing.T) {
 func TestCalculateDailyCost_Negative(t *testing.T) {
 	i := Instance{TotalCost: -10.0, Age: 5}
 	err := i.calculateDailyCost()
-	if !errors.Is(err, ERR_INSTANCE_DAILY_COST_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_DAILY_COST_LESS_ZERO, got %v", err)
+	if !errors.Is(err, ErrInstanceDailyCostLessZero) {
+		t.Errorf("expected ErrInstanceDailyCostLessZero, got %v", err)
 	}
 }
 
@@ -127,8 +127,8 @@ func TestUpdateCosts_TotalCostError(t *testing.T) {
 		Expenses: []Expense{{Amount: -1}},
 	}
 	err := i.UpdateCosts()
-	if !errors.Is(err, ERR_INSTANCE_TOTAL_COST_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_TOTAL_COST_LESS_ZERO, got %v", err)
+	if !errors.Is(err, ErrInstanceTotalCostLessZero) {
+		t.Errorf("expected ErrInstanceTotalCostLessZero, got %v", err)
 	}
 }
 
@@ -139,8 +139,8 @@ func TestUpdateCosts_DailyCostError(t *testing.T) {
 		Expenses: []Expense{{Amount: 10}},
 	}
 	err := i.UpdateCosts()
-	if !errors.Is(err, ERR_INSTANCE_AGE_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_AGE_LESS_ZERO, got %v", err)
+	if !errors.Is(err, ErrInstanceAgeLessZero) {
+		t.Errorf("expected ErrInstanceAgeLessZero, got %v", err)
 	}
 }
 

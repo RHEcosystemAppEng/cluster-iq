@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/audit"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +23,7 @@ const (
 )
 
 type SQLEventClient interface {
-	AddEvent(event models.AuditLog) (int64, error)
+	AddEvent(event audit.AuditLog) (int64, error)
 	UpdateEventStatus(eventID int64, result string) error
 }
 
