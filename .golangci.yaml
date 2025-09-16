@@ -1,17 +1,19 @@
+version: "2"
+run:
+  relative-path-mode: gomod
+  modules-download-mode: readonly
+  tests: false
 linters:
-  disable-all: true
+  default: none
   enable:
     - containedctx
     - copyloopvar
     - cyclop
     - errcheck
     - exhaustive
-    - gci
     - gochecksumtype
     - goconst
     - gocritic
-    - gofmt
-    - gosimple
     - govet
     - inamedparam
     - ineffassign
@@ -21,27 +23,34 @@ linters:
     - revive
     - sqlclosecheck
     - staticcheck
-    - stylecheck
-    - typecheck
     - unconvert
     - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - internal/inventory/tag_test.go
+      - .*.pb.go
+      - generated/agent
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  # fix only newly added issue
-  # https://golangci-lint.run/welcome/faq/#how-to-integrate-golangci-lint-into-large-project-with-thousands-of-issues
-  new-from-rev: HEAD~1
-  # OR https://github.com/golangci/golangci-lint-action?tab=readme-ov-file#only-new-issues
   uniq-by-line: true
-  exclude-dirs:
-    - generated/agent
-  exclude-files:
-  # intentionally until we fix the import
-    - internal/inventory/tag_test.go
-    - .*.pb.go
-run:
-  timeout: "20m"
-  relative-path-mode: gomod
-  # intentionally until we add proper tests
-  tests: false
-  # fails when any changes to go.mod are needed. 
-  # this setting is most useful in a continuous integration and testing system
-  modules-download-mode: readonly
+formatters:
+  enable:
+    - gci
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - internal/inventory/tag_test.go
+      - .*.pb.go
+      - generated/agent
+      - third_party$
+      - builtin$
+      - examples$
