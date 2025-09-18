@@ -2,18 +2,25 @@ package inventory
 
 import "strings"
 
-// CloudProvider defines the supported cloud providers on the inventory
-type CloudProvider string
+// Provider defines the different values for the supported cloud/infrastructure providers
+type Provider string
 
 const (
-	AWSProvider     CloudProvider = "AWS"     // AWSProvider - Amazon Web Services Cloud Provider
-	AzureProvider   CloudProvider = "Azure"   // AzureProvider - Microsoft Azure Cloud Provider
-	GCPProvider     CloudProvider = "GCP"     // GCPProvider - Google Cloud Platform Cloud Provider
-	UnknownProvider CloudProvider = "UNKNOWN" // UnknownProvider - Unknown Platform Cloud Provider
+	// AWSProvider - Amazon Web Services Cloud Provider
+	AWSProvider Provider = "AWS"
+
+	// AzureProvider - Microsoft Azure Cloud Provider
+	AzureProvider Provider = "Azure"
+
+	// GCPProvider - Google Cloud Platform Cloud Provider
+	GCPProvider Provider = "GCP"
+
+	// UnknownProvider - Unknown Provider
+	UnknownProvider Provider = "UNKNOWN_PROVIDER"
 )
 
-// GetCloudProvider checks a incoming string and returns the corresponding inventory.CloudProvider value
-func GetCloudProvider(provider string) CloudProvider {
+// GetProvider checks a incoming string and returns the corresponding inventory.Provider value
+func GetProvider(provider string) Provider {
 	switch strings.ToUpper(provider) {
 	case "AWS":
 		return AWSProvider

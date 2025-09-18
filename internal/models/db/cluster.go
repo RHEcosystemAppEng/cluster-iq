@@ -1,4 +1,4 @@
-package dbmodels
+package db
 
 import (
 	"time"
@@ -13,7 +13,7 @@ type ClusterDBResponse struct {
 	ClusterID             string                   `db:"cluster_id"`
 	ClusterName           string                   `db:"cluster_name"`
 	InfraID               string                   `db:"infra_id"`
-	Provider              inventory.CloudProvider  `db:"provider"`
+	Provider              inventory.Provider       `db:"provider"`
 	Status                inventory.ResourceStatus `db:"status"`
 	Region                string                   `db:"region"`
 	AccountID             string                   `db:"account_id"`

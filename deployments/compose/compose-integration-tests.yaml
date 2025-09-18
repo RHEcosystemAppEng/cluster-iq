@@ -18,7 +18,7 @@ services:
       - cluster_iq_test
 
   pgsql-test:
-    image: registry.redhat.io/rhel8/postgresql-16:1-44.1749482738
+    image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
     container_name: pgsql-test
     restart: always
     ports:
@@ -41,16 +41,16 @@ services:
       sh -c '
          echo "Waiting for PGSQL to start up"
          while true; do
-             psql postgresql://user:password@pgsql:5432/clusteriq -c "SELECT true" && break || sleep 2;
+             psql postgresql://user:password@pgsql-test:5432/clusteriq -c "SELECT true" && break || sleep 2;
          done
 
          echo "Initializing ClusterIQ Database"
-         psql postgresql://user:password@pgsql:5432/clusteriq < /init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+         psql postgresql://user:password@pgsql-test:5432/clusteriq < /init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
 
          echo "Creating PG_CRON tasks"
-         psql postgresql://postgres:admin@pgsql:5432/postgres < /cron.sql && { echo "Ok"; } || { echo "Cron Tasks creation Failed"; exit 1; }
+         psql postgresql://postgres:admin@pgsql-test:5432/postgres < /cron.sql && { echo "Ok"; } || { echo "Cron Tasks creation Failed"; exit 1; }
 
-         if [[ "$CIQ_DB_PRELOAD_DATA" -eq "true" ]]; then
+         if [[ "$CIQ_DB_PRELOAD_DATA" == "true" ]]; then
            echo "Initializing DB with fake data"
            psql postgresql://user:password@pgsql-test:5432/clusteriq < /integration_tests_data.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
          fi
@@ -61,6 +61,7 @@ services:
       CIQ_DB_PRELOAD_DATA: "true"
     volumes:
       - ./../../db/sql/init.sql:/init.sql:ro,Z
+      - ./../../db/sql/cron.sql:/cron.sql:ro,Z
       - ./../../db/test_files/integration_tests_data.sql:/integration_tests_data.sql:ro,Z
     networks:
       - cluster_iq_test

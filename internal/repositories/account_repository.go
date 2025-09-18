@@ -1,0 +1,140 @@
+package repositories
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+)
+
+var _ AccountRepository = (*accountRepositoryImpl)(nil)
+
+// AccountRepository defines the interface for data access operations for accounts.
+type AccountRepository interface {
+	ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error)
+	GetAccountByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
+	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
+	CreateAccount(ctx context.Context, accounts []inventory.Account) error
+	DeleteAccount(ctx context.Context, accountID string) error
+}
+
+type accountRepositoryImpl struct {
+	db *dbclient.DBClient
+}
+
+func NewAccountRepository(db *dbclient.DBClient) AccountRepository {
+	return &accountRepositoryImpl{db: db}
+}
+
+// ListAccounts retrieves all accounts from the database.
+//
+// Returns:
+// - A slice of inventory.Account objects.
+// - An error if the query fails.
+func (r *accountRepositoryImpl) ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error) {
+	var accounts []db.AccountDBResponse
+
+	if err := r.db.Select(&accounts, SelectAccountsView, opts, "account_id", "*"); err != nil {
+		return accounts, 0, fmt.Errorf("failed to list accounts: %w", err)
+	}
+
+	return accounts, len(accounts), nil
+}
+
+// GetAccountByID retrieves an account by its name from the database.
+//
+// Parameters:
+// - accountID: The name of the account to retrieve.
+//
+// Returns:
+// - A slice of inventory.Account objects (usually containing one element).
+// - An error if the query fails.
+func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID string) (db.AccountDBResponse, error) {
+	var account db.AccountDBResponse
+
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"account_id": accountID,
+		},
+	}
+
+	if err := r.db.Get(&account, SelectAccountsView, opts, "*"); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return account, ErrNotFound
+		}
+		return account, err
+	}
+	return account, nil
+}
+
+// GetAccountClustersByID retrieves an account by its name from the database.
+//
+// Parameters:
+// - accountID: The name of the account to retrieve.
+//
+// Returns:
+// - A slice of inventory.Account objects (usually containing one element).
+// - An error if the query fails.
+func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error) {
+	var clusters []db.ClusterDBResponse
+
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"account_id": accountID,
+		},
+	}
+
+	if err := r.db.Select(&clusters, SelectClustersFullView, opts, "*"); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return clusters, ErrNotFound
+		}
+		return clusters, err
+	}
+	return clusters, nil
+}
+
+// Create inserts multiple accounts into the database in a transaction.
+//
+// Parameters:
+// - accounts: A slice of inventory.Account objects to insert.
+//
+// Returns:
+// - An error if the transaction fails.
+func (r *accountRepositoryImpl) CreateAccount(ctx context.Context, accounts []inventory.Account) error {
+	if err := r.db.Insert(InsertAccountsQuery, accounts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteAccount deletes an account from the database by its ID.
+//
+// Parameters:
+// - accountID: The ID of the account to delete.
+//
+// Returns:
+// - An error if the transaction fails.
+func (r *accountRepositoryImpl) DeleteAccount(ctx context.Context, accountID string) error {
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"account_id": accountID,
+		},
+	}
+
+	if err := r.db.Delete("accounts", opts); err != nil {
+		return err
+	}
+	return nil
+}

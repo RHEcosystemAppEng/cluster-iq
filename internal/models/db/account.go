@@ -1,29 +1,29 @@
-package dbmodels
+package db
 
 import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	dtomodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 // TODO comments
 type AccountDBResponse struct {
-	AccountID             string                  `db:"account_id"`
-	AccountName           string                  `db:"account_name"`
-	Provider              inventory.CloudProvider `db:"provider"`
-	LastScanTS            time.Time               `db:"last_scan_ts"`
-	CreatedAt             time.Time               `db:"created_at"`
-	ClusterCount          int                     `db:"cluster_count"`
-	TotalCost             float64                 `db:"total_cost"`
-	Last15DaysCost        float64                 `db:"last_15_days_cost"`
-	LastMonthCost         float64                 `db:"last_month_cost"`
-	CurrentMonthSoFarCost float64                 `db:"current_month_so_far_cost"`
+	AccountID             string             `db:"account_id"`
+	AccountName           string             `db:"account_name"`
+	Provider              inventory.Provider `db:"provider"`
+	LastScanTS            time.Time          `db:"last_scan_ts"`
+	CreatedAt             time.Time          `db:"created_at"`
+	ClusterCount          int                `db:"cluster_count"`
+	TotalCost             float64            `db:"total_cost"`
+	Last15DaysCost        float64            `db:"last_15_days_cost"`
+	LastMonthCost         float64            `db:"last_month_cost"`
+	CurrentMonthSoFarCost float64            `db:"current_month_so_far_cost"`
 }
 
 // TODO comments
-func (a AccountDBResponse) ToAccountDTOResponse() *dtomodel.AccountDTOResponse {
-	return &dtomodel.AccountDTOResponse{
+func (a AccountDBResponse) ToAccountDTOResponse() *dto.AccountDTOResponse {
+	return &dto.AccountDTOResponse{
 		AccountID:             a.AccountID,
 		AccountName:           a.AccountName,
 		Provider:              a.Provider,

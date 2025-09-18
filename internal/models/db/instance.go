@@ -1,4 +1,4 @@
-package dbmodels
+package db
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	dtomodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 type TagDBResponseJSON struct {
@@ -14,8 +14,8 @@ type TagDBResponseJSON struct {
 	Value string `json:"value"`
 }
 
-func (t *TagDBResponseJSON) ToTagDTOResponse() *dtomodel.TagDTOResponse {
-	return &dtomodel.TagDTOResponse{
+func (t *TagDBResponseJSON) ToTagDTOResponse() *dto.TagDTOResponse {
+	return &dto.TagDTOResponse{
 		Key:   t.Key,
 		Value: t.Value,
 	}
@@ -35,8 +35,8 @@ func (t *TagDBResponseList) Scan(src any) error {
 	return json.Unmarshal(b, t)
 }
 
-func (t *TagDBResponseList) ToTagDTOResponseList() *dtomodel.TagDTOResponseList {
-	var tags dtomodel.TagDTOResponseList
+func (t *TagDBResponseList) ToTagDTOResponseList() *dto.TagDTOResponseList {
+	var tags dto.TagDTOResponseList
 	for _, tag := range *t {
 		tags.Tags = append(tags.Tags, *tag.ToTagDTOResponse())
 	}
@@ -51,7 +51,7 @@ type InstanceDBResponse struct {
 	InstanceID            string                   `db:"instance_id"`
 	InstanceName          string                   `db:"instance_name"`
 	InstanceType          string                   `db:"instance_type"`
-	Provider              inventory.CloudProvider  `db:"provider"`
+	Provider              inventory.Provider       `db:"provider"`
 	AvailabilityZone      string                   `db:"availability_zone"`
 	Status                inventory.ResourceStatus `db:"status"`
 	ClusterID             string                   `db:"cluster_id"`
@@ -63,13 +63,16 @@ type InstanceDBResponse struct {
 	Last15DaysCost        float64                  `db:"last_15_days_cost"`
 	LastMonthCost         float64                  `db:"last_month_cost"`
 	CurrentMonthSoFarCost float64                  `db:"current_month_so_far_cost"`
-	Tags                  TagDBResponseList        `db:"tags_json"`
+	Tags                  []TagDBResponse          `db:"tags_json"`
 }
 
 // TODO: comments
-func (i InstanceDBResponse) ToInstanceDTOResponse() *dtomodel.InstanceDTOResponse {
-	tags := i.Tags.ToTagDTOResponseList()
-	return &dtomodel.InstanceDTOResponse{
+func (i InstanceDBResponse) ToInstanceDTOResponse() *dto.InstanceDTOResponse {
+	var tags []dto.TagDTOResponse
+	for _, tag := range i.Tags {
+		tags = append(tags, *tag.ToTagDTOResponse())
+	}
+	return &dto.InstanceDTOResponse{
 		InstanceID:            i.InstanceID,
 		InstanceName:          i.InstanceName,
 		InstanceType:          i.InstanceType,
@@ -85,6 +88,6 @@ func (i InstanceDBResponse) ToInstanceDTOResponse() *dtomodel.InstanceDTORespons
 		Last15DaysCost:        i.Last15DaysCost,
 		LastMonthCost:         i.LastMonthCost,
 		CurrentMonthSoFarCost: i.CurrentMonthSoFarCost,
-		Tags:                  *tags,
+		Tags:                  tags,
 	}
 }

@@ -4,50 +4,9 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	"go.uber.org/zap"
 )
 
-// Event states
-const (
-	ResultSuccess = "Success"
-	ResultFailed  = "Failed"
-	ResultPending = "Pending"
-)
-
-// Event severity levels
-const (
-	SeverityInfo    = "Info"
-	SeverityError   = "Error"
-	SeverityWarning = "Warning"
-)
-
-type SQLEventClient interface {
-	AddEvent(event models.AuditLog) (int64, error)
-	UpdateEventStatus(eventID int64, result string) error
-}
-
-type EventService struct {
-	sqlClient SQLEventClient
-	logger    *zap.Logger
-}
-
-type EventTracker struct {
-	eventID int64
-	service *EventService
-	logger  *zap.Logger
-}
-
-type EventOptions struct {
-	Action       actions.ActionOperation
-	Description  *string
-	ResourceID   string
-	ResourceType string
-	Result       string
-	Severity     string
-	TriggeredBy  string
-}
-
+// TODO Duplicated with AuditLog
 type AuditEvent struct {
 	// Unique identifier for the log entry.
 	ID int64 `json:"id"`
@@ -74,6 +33,6 @@ type SystemAuditEvent struct {
 	AuditEvent
 	// AccountID is the unique identifier of the cloud provider account.
 	AccountID string `json:"account_id"`
-	// Provider is the name of the cloud provider (e.g., "AWS", "GCP", "Azure").
+	// Provider is the name of the infrastructure provider (e.g., "AWS", "GCP", "Azure").
 	Provider string `json:"provider"`
 }

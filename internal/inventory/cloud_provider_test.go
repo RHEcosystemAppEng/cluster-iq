@@ -4,10 +4,11 @@ import (
 	"testing"
 )
 
+// TODO REWRITE NEW FORMAT
 func TestGetCloudProvider(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected CloudProvider
+		expected Provider
 	}{
 		{"aws", AWSProvider},
 		{"AWS", AWSProvider},
@@ -22,9 +23,9 @@ func TestGetCloudProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := GetCloudProvider(tt.input)
+			result := GetProvider(tt.input)
 			if result != tt.expected {
-				t.Errorf("GetCloudProvider(%q) = %v; want %v", tt.input, result, tt.expected)
+				t.Errorf("GetProvider(%q) = %v; want %v", tt.input, result, tt.expected)
 			}
 		})
 	}

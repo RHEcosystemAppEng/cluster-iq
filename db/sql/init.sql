@@ -477,6 +477,34 @@ CREATE MATERIALIZED VIEW m_instances_pending_expense_update AS SELECT * FROM ins
 
 
 
+-- ## Schedule
+-- #############################################################################
+-- Schedule with cluster and instances list view
+CREATE VIEW schedule_full_view AS
+SELECT
+	s.id,
+	s.type,
+	s.time,
+	s.cron_exp,
+	s.operation,
+	s.status,
+	s.enabled,
+	c.id AS cluster_id,
+	c.region,
+	c.account_id,
+	COALESCE(
+		array_agg(DISTINCT i.instance_id ORDER BY i.instance_id),
+		'{}'
+	) AS instances	
+FROM
+	schedule s
+JOIN clusters c ON c.id = s.target
+LEFT JOIN instances i ON i.cluster_id = c.id
+GROUP BY s.id, c.id
+ORDER BY s.id;
+
+
+
 -- ## Expenses
 -- #############################################################################
 

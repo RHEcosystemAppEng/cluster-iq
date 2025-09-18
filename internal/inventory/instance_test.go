@@ -13,9 +13,9 @@ import (
 
 // TestNewInstance verifies that NewInstance returns a correctly initialized instance
 func TestNewInstance(t *testing.T) {
-	id := "0000-11A"
+	id := InstanceID("0000-11A")
 	name := "testAccount"
-	var provider CloudProvider = UnknownProvider
+	var provider Provider = UnknownProvider
 	instanceType := "t2.micro"
 	availabilityZone := "us-west-1a"
 	status := Terminated

@@ -3,13 +3,13 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"testing"
 	"time"
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
@@ -43,13 +43,13 @@ func testGetAccounts(t *testing.T) {
 
 	// Check response code
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+		t.Fatalf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 
 	// Decode the JSON response
-	var response dto.AccountDTOResponseList
+	var response dto.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode GetAccounts response body: %v", err)
+		t.Fatalf("failed to decode GET response body: %v", err)
 	}
 
 	// Comparing data
@@ -59,10 +59,10 @@ func testGetAccounts(t *testing.T) {
 }
 
 func testGetAccountByID_Exists(t *testing.T) {
-	expectedCount := 1
+	expectedAccountID := "gcp-project-1"
 
 	// Getting Clusters data
-	resp, err := http.Get(APIAccountsURL + "/gcp-project-1")
+	resp, err := http.Get(APIAccountsURL + "/" + expectedAccountID)
 	if err != nil {
 		t.Fatalf("Failed to make GetAccountByID request: %v", err)
 	}
@@ -70,23 +70,23 @@ func testGetAccountByID_Exists(t *testing.T) {
 
 	// Check response code
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+		t.Fatalf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 
 	// Decode the JSON response
-	var response dto.AccountDTOResponseList
+	var response dto.AccountDTOResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode GetAccountsByID response body: %v", err)
 	}
 
 	// Comparing data
-	if len(response.Accounts) != expectedCount {
-		t.Fatalf("Expected: %d, Have: %d", expectedCount, response.Count)
+	if response.AccountID != expectedAccountID {
+		t.Fatalf("Expected: %s, Have: %s", expectedAccountID, response.AccountID)
 	}
 }
 
 func testGetAccountByID_NoExists(t *testing.T) {
-	expectedCount := 0
+	expectedMsg := "Account not found"
 
 	// Getting Clusters data
 	resp, err := http.Get(APIAccountsURL + "/missing-account")
@@ -101,14 +101,14 @@ func testGetAccountByID_NoExists(t *testing.T) {
 	}
 
 	// Decode the JSON response
-	var response dto.AccountDTOResponseList
+	var response dto.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode GetAccountsByID response body: %v", err)
 	}
 
 	// Comparing data
-	if len(response.Accounts) != expectedCount {
-		t.Fatalf("Expected: %d, Have: %d", expectedCount, response.Count)
+	if response.Message != expectedMsg {
+		t.Fatalf("Expected: %s, Have: %s", expectedMsg, response.Message)
 	}
 }
 
@@ -135,7 +135,7 @@ func testGetAccountClusters(t *testing.T) {
 	}
 
 	// Comparing data
-	if len(response.Clusters) != expectedCount {
+	if response.Count != expectedCount {
 		t.Fatalf("Expected: %d, Have: %d", expectedCount, response.Count)
 	}
 	// TODO Add elements check
@@ -150,8 +150,8 @@ func postAccounts(t *testing.T, accounts string) *responsetypes.PostResponse {
 	defer resp.Body.Close()
 
 	// Check response code
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("Expected status %d, got %d", http.StatusCreated, resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -171,16 +171,15 @@ func postAccounts(t *testing.T, accounts string) *responsetypes.PostResponse {
 func testPostOneAccount(t *testing.T) {
 	// TODO Transform into dto.AccountDTORequestList
 	payload := `
-	{
-		"accounts": [
+		[
 			{
 				"accountID": "ACC-001",
 				"accountName": "test-account-001",
 				"provider": "AWS",
-				"last_scan_timestamp": "1993-10-12T00:00:00Z"
+				"lastScanTS": "1993-10-12T00:00:00Z",
+				"createdAt": "1993-10-12T00:00:00Z"
 			}
 		]
-	}
 	`
 
 	// Posting test data
@@ -191,7 +190,7 @@ func testPostOneAccount(t *testing.T) {
 		t.Fatalf("Expected 1 Posted Account, got %d", response.Count)
 	}
 
-	if response.Status != "Account(s) Post OK" {
+	if response.Status != "OK" {
 		t.Fatalf("Unexpected Status Message: '%s'", response.Status)
 	}
 }
@@ -199,22 +198,22 @@ func testPostOneAccount(t *testing.T) {
 func testPostMultipleAccounts(t *testing.T) {
 	// TODO Transform into dto.AccountDTORequestList
 	payload := `
-	{
-		"accounts": [
+		[
 			{
 				"accountID": "ACC-002",
 				"accountName": "test-account-002",
 				"provider": "GCP",
-				"last_scan_timestamp": "2014-10-12T00:00:00Z"
+				"last_scan_timestamp": "2014-10-12T00:00:00Z",
+				"createdAt": "1993-10-12T00:00:00Z"
 			},
 			{
 				"accountID": "ACC-003",
 				"accountName": "test-account-003",
 				"provider": "Azure",
-				"last_scan_timestamp": "1970-10-12T00:00:00Z"
+				"last_scan_timestamp": "1970-10-12T00:00:00Z",
+				"createdAt": "1993-10-12T00:00:00Z"
 			}
 		]
-	}
 	`
 
 	// Posting test data
@@ -224,7 +223,7 @@ func testPostMultipleAccounts(t *testing.T) {
 		t.Fatalf("Expected 2 Posted Account, got %d", response.Count)
 	}
 
-	if response.Status != "Account(s) Post OK" {
+	if response.Status != "OK" {
 		t.Fatalf("Unexpected Status Message: '%s'", response.Status)
 	}
 }
@@ -278,22 +277,8 @@ func testDeleteAccount_Exists(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	// Check response code
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
-	}
-
-	var response responsetypes.DeleteResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode DeleteAccount response body: %v", err)
-	}
-
-	if response.Count != 1 {
-		t.Fatalf("Expected 1 Deleted Account, got %d", response.Count)
-	}
-
-	if response.Status != fmt.Sprintf("Account '%s' Delete OK", accountID) {
-		t.Fatalf("Unexpected Status Message: '%s'", response.Status)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Expected status %d, got %d", http.StatusNoContent, resp.StatusCode)
 	}
 }
 
@@ -314,16 +299,7 @@ func testDeleteAccount_NoExists(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Check response code
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("Expected status 404, got %d", resp.StatusCode)
-	}
-
-	var response responsetypes.DeleteResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode DeleteAccount response body: %v", err)
-	}
-
-	if response.Count != 0 {
-		t.Fatalf("Expected 0 Deleted Account, got %d", response.Count)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Expected status %d, got %d", http.StatusNoContent, resp.StatusCode)
 	}
 }

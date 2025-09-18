@@ -12,7 +12,6 @@ import (
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
-	dtomodel "github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 const (
@@ -110,13 +109,13 @@ func testGetInstancesWithTags(t *testing.T) {
 	}
 
 	// Comparing data
-	if len(response.Instances[0].Tags.Tags) != expectedCount {
+	if len(response.Instances[0].Tags) != expectedCount {
 		t.Fatalf("Expected: %d, Have: %d", expectedCount, response.Count)
 	}
 	// TODO Add elements check
 }
 
-func postInstances(t *testing.T, instances dtomodel.InstanceDTORequestList) *responsetypes.PostResponse {
+func postInstances(t *testing.T, instances dto.InstanceDTORequestList) *responsetypes.PostResponse {
 	jsonData, err := json.Marshal(instances)
 	if err != nil {
 		return nil
@@ -149,8 +148,8 @@ func postInstances(t *testing.T, instances dtomodel.InstanceDTORequestList) *res
 }
 
 func testPostOneInstance(t *testing.T) {
-	payload := dtomodel.InstanceDTORequestList{
-		Instances: []dtomodel.InstanceDTORequest{
+	payload := dto.InstanceDTORequestList{
+		Instances: []dto.InstanceDTORequest{
 			{
 				InstanceID:       "id-instance-01",
 				InstanceName:     "name-instance-01",
@@ -163,7 +162,7 @@ func testPostOneInstance(t *testing.T) {
 				CreatedAt:        time.Now(),
 				Age:              1,
 				Owner:            "John Doe",
-				Tags:             dtomodel.TagDTORequestList{},
+				Tags:             []dto.TagDTORequest{},
 			},
 		},
 	}
@@ -182,8 +181,8 @@ func testPostOneInstance(t *testing.T) {
 }
 
 func testPostOneInstanceWithTags(t *testing.T) {
-	payload := dtomodel.InstanceDTORequestList{
-		Instances: []dtomodel.InstanceDTORequest{
+	payload := dto.InstanceDTORequestList{
+		Instances: []dto.InstanceDTORequest{
 			{
 				InstanceID:       "id-instance-02",
 				InstanceName:     "name-instance-0",
@@ -196,16 +195,14 @@ func testPostOneInstanceWithTags(t *testing.T) {
 				CreatedAt:        time.Now(),
 				Age:              1,
 				Owner:            "John Doe",
-				Tags: dtomodel.TagDTORequestList{
-					Tags: []dtomodel.TagDTORequest{
-						{
-							Key:   "key-test-A",
-							Value: "false",
-						},
-						{
-							Key:   "key-test-B",
-							Value: "true",
-						},
+				Tags: []dto.TagDTORequest{
+					{
+						Key:   "key-test-A",
+						Value: "false",
+					},
+					{
+						Key:   "key-test-B",
+						Value: "true",
 					},
 				},
 			},
@@ -226,8 +223,8 @@ func testPostOneInstanceWithTags(t *testing.T) {
 }
 
 func testPostMultipleInstances(t *testing.T) {
-	payload := dtomodel.InstanceDTORequestList{
-		Instances: []dtomodel.InstanceDTORequest{
+	payload := dto.InstanceDTORequestList{
+		Instances: []dto.InstanceDTORequest{
 			{
 				InstanceID:       "id-instance-03",
 				InstanceName:     "name-instance-03",
@@ -240,7 +237,7 @@ func testPostMultipleInstances(t *testing.T) {
 				CreatedAt:        time.Now(),
 				Age:              1,
 				Owner:            "John Doe",
-				Tags:             dtomodel.TagDTORequestList{},
+				Tags:             []dto.TagDTORequest{},
 			},
 			{
 				InstanceID:       "id-instance-04",
@@ -254,7 +251,7 @@ func testPostMultipleInstances(t *testing.T) {
 				CreatedAt:        time.Now(),
 				Age:              1,
 				Owner:            "John Doe",
-				Tags:             dtomodel.TagDTORequestList{},
+				Tags:             []dto.TagDTORequest{},
 			},
 		},
 	}
@@ -272,8 +269,8 @@ func testPostMultipleInstances(t *testing.T) {
 }
 
 func testPostMultipleInstancesWithTags(t *testing.T) {
-	payload := dtomodel.InstanceDTORequestList{
-		Instances: []dtomodel.InstanceDTORequest{
+	payload := dto.InstanceDTORequestList{
+		Instances: []dto.InstanceDTORequest{
 			{
 				InstanceID:       "id-instance-05",
 				InstanceName:     "name-instance-05",
@@ -286,16 +283,14 @@ func testPostMultipleInstancesWithTags(t *testing.T) {
 				CreatedAt:        time.Now(),
 				Age:              1,
 				Owner:            "John Doe",
-				Tags: dtomodel.TagDTORequestList{
-					Tags: []dtomodel.TagDTORequest{
-						{
-							Key:   "key-test-C",
-							Value: "false",
-						},
-						{
-							Key:   "key-test-D",
-							Value: "true",
-						},
+				Tags: []dto.TagDTORequest{
+					{
+						Key:   "key-test-C",
+						Value: "false",
+					},
+					{
+						Key:   "key-test-D",
+						Value: "true",
 					},
 				},
 			},
@@ -311,16 +306,14 @@ func testPostMultipleInstancesWithTags(t *testing.T) {
 				CreatedAt:        time.Now(),
 				Age:              1,
 				Owner:            "John Doe",
-				Tags: dtomodel.TagDTORequestList{
-					Tags: []dtomodel.TagDTORequest{
-						{
-							Key:   "key-test-E",
-							Value: "false",
-						},
-						{
-							Key:   "key-test-F",
-							Value: "true",
-						},
+				Tags: []dto.TagDTORequest{
+					{
+						Key:   "key-test-E",
+						Value: "false",
+					},
+					{
+						Key:   "key-test-F",
+						Value: "true",
 					},
 				},
 			},

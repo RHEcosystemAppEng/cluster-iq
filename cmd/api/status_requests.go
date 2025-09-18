@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 
-	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 )
 
 // ClusterStatusChangeRequest represents the request to the gRPC Agent for powering on/off clusters.
@@ -26,16 +28,30 @@ type ClusterStatusChangeRequest struct {
 // Returns:
 // - Pointer to the newly created ClusterStatusChangeRequest.
 // - An error if there is an issue retrieving any of the required data.
-func NewClusterStatusChangeRequest(sql *sqlclient.SQLClient, clusterID string) (*ClusterStatusChangeRequest, error) {
-
-	cluster, err := sql.GetClusterByID(clusterID)
-	if err != nil {
+func NewClusterStatusChangeRequest(db *dbclient.DBClient, clusterID string) (*ClusterStatusChangeRequest, error) {
+	// Get Cluster details
+	var cluster inventory.Cluster
+	opts := models.ListOptions{
+		PageSize: -1,
+		Offset:   -1,
+		Filters: map[string]interface{}{
+			"cluster_id": clusterID,
+		},
+	}
+	if err := db.Select(cluster, "clusters", opts, "cluster_name", "*"); err != nil {
 		return nil, err
 	}
 
 	// Get Cluster's instances
-	instances, err := sql.GetInstancesOnCluster(clusterID)
-	if err != nil {
+	var instances []inventory.Instance
+	opts = models.ListOptions{
+		PageSize: -1,
+		Offset:   -1,
+		Filters: map[string]interface{}{
+			"cluster_id": clusterID,
+		},
+	}
+	if err := db.Select(instances, "instances", opts, "instance_name", "*"); err != nil {
 		return nil, err
 	}
 
@@ -47,11 +63,11 @@ func NewClusterStatusChangeRequest(sql *sqlclient.SQLClient, clusterID string) (
 	// Creating an array of InstancesIDs
 	var instancesIDs []string
 	for _, instance := range instances {
-		instancesIDs = append(instancesIDs, instance.InstanceID)
+		instancesIDs = append(instancesIDs, string(instance.InstanceID))
 	}
 
 	return &ClusterStatusChangeRequest{
-		AccountName:     cluster.AccountName,
+		AccountName:     string(cluster.AccountID),
 		Region:          cluster.Region,
 		ClusterID:       clusterID,
 		InstancesIdList: instancesIDs,

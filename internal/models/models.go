@@ -9,6 +9,13 @@ import (
 	"github.com/lib/pq"
 )
 
+// TODO: Check if there's a better place for this struct
+type ListOptions struct {
+	PageSize int
+	Offset   int
+	Filters  map[string]interface{}
+}
+
 // InstanceDB is an intermediate struct used to map instances and their tags into inventory.Instance objects.
 // It provides a detailed representation of an instance, including metadata, tags, and cost-related information.
 type InstanceDB struct {
@@ -17,10 +24,10 @@ type InstanceDB struct {
 
 	// Name represents the name of the instance.
 	// In some cloud providers, the name is managed as a tag.
-	Name string `db:"name"`
+	Name string `db:"aname"`
 
 	// Provider specifies the cloud provider (public or private) where the instance is hosted.
-	Provider inventory.CloudProvider `db:"provider"`
+	Provider inventory.Provider `db:"provider"`
 
 	// InstanceType represents the type, size, or flavor of the instance.
 	InstanceType string `db:"instance_type"`

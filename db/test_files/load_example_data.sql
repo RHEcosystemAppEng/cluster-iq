@@ -204,14 +204,42 @@ BEGIN
 END
 $$;
 
+INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
+SELECT 
+    'scheduled_action'::ACTION_TYPE,
+    now() + (g * interval '1 day') AS time,
+    NULL,
+    (ARRAY['PowerOnCluster','PowerOffCluster'])[1 + (random()*1)::int]::ACTION_OPERATION,
+    c.id AS target,
+    'Pending'::ACTION_STATUS,
+    (random() > 0.5) AS enabled
+FROM generate_series(1,3) g
+JOIN LATERAL (
+  SELECT id FROM clusters ORDER BY random() LIMIT 1
+) c ON true;
+
+INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
+SELECT 
+    'cron_action'::ACTION_TYPE,
+    NULL,
+		(ARRAY['0 6 * * *', '0 0 * * 0', '*/30 * * * *'])[g] AS cron_exp,
+    (ARRAY['PowerOnCluster','PowerOffCluster'])[1 + (random()*1)::int]::ACTION_OPERATION,
+    c.id AS target,
+    'Pending'::ACTION_STATUS,
+    (random() > 0.5) AS enabled
+FROM generate_series(1,3) g
+JOIN LATERAL (
+  SELECT id FROM clusters ORDER BY random() LIMIT 1
+) c ON true;
+
+
 COMMIT;
 
--- Comprobaciones rápidas (opcionales)
+-- Checks (opcionales)
 -- SELECT provider, COUNT(*) clusters FROM clusters JOIN accounts a ON a.id = clusters.account_id GROUP BY provider;
 -- SELECT COUNT(*) AS total_instances FROM instances;
 -- SELECT COUNT(*) AS total_expenses FROM expenses;
 
--- Vistas de métricas
 -- SELECT * FROM account_cluster_count ORDER BY account_id;
 -- SELECT * FROM account_costs ORDER BY id;
 -- SELECT * FROM account_full_view ORDER BY id;

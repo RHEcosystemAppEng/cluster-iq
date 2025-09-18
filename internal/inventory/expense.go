@@ -7,7 +7,7 @@ type Expense struct {
 	// InstanceID references the instance of the expense
 	InstanceID string `db:"instance_id" json:"instanceID"`
 
-	// Ammount represents the cost in USDollars
+	// Amount represents the cost in USDollars
 	Amount float64 `db:"amount" json:"amount"`
 
 	// Date (Year, month, day)

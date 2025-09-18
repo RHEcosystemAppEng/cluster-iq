@@ -12,9 +12,9 @@ import (
 	cexec "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_executors"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
+	eventservice "github.com/RHEcosystemAppEng/cluster-iq/internal/events/event_service"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
 	"go.uber.org/zap"
 )
 
@@ -48,13 +48,14 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 	client := http.Client{Transport: tr}
 
 	// Creating DB client
-	sqlCli, err := sqlclient.NewSQLClient(cfg.DBURL, logger)
+	// TODO Fix context
+	sqlCli, err := dbclient.NewDBClient(cfg.DBURL, logger, context.TODO())
 	if err != nil {
 		return nil
 	}
 
 	// Creating Event Service
-	eventService := events.NewEventService(sqlCli, logger)
+	eventService := eventservice.NewEventService(sqlCli, logger)
 
 	eas := ExecutorAgentService{
 		cfg:            cfg,
@@ -189,19 +190,19 @@ func (e *ExecutorAgentService) Start() error {
 		}
 
 		// Initialize event tracker
-		tracker := e.eventService.StartTracking(&events.EventOptions{
+		tracker := e.eventService.StartTracking(&eventservice.EventOptions{
 			Action:       newAction.GetActionOperation(),
 			Description:  &description,
 			ResourceID:   newAction.GetTarget().ClusterID,
 			ResourceType: inventory.ClusterResourceType,
-			Result:       events.ResultPending,
-			Severity:     events.SeverityInfo,
+			Result:       eventservice.ResultPending,
+			Severity:     eventservice.SeverityInfo,
 			// TODO. Rethink
 			TriggeredBy: "ClusterIQ Agent",
 		})
 
 		target := newAction.GetTarget()
-		cexec := *(e.GetExecutor(target.GetAccountName()))
+		cexec := *(e.GetExecutor(target.GetAccountID()))
 		if cexec == nil {
 			return fmt.Errorf("there's no Executor available for the requested account")
 		}

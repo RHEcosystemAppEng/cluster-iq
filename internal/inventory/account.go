@@ -6,25 +6,41 @@ import (
 )
 
 // Account defines an infrastructure provider account
-// AWS: AccountID
-// Azure: SubscriptionID
-// GCP: ProjectID
 type Account struct {
-	AccountID   string              `db:"account_id"`   // Account ID is the ID assigned by the cloud provider to the account
-	AccountName string              `db:"account_name"` // Account Name provided by the cloud provider or by the user as an "alias"
-	Provider    CloudProvider       `db:"provider"`     // Infrastructure provider identifier.
-	Clusters    map[string]*Cluster `db:"-"`            // List of clusters deployed on this account indexed by Cluster's name
-	LastScanTS  time.Time           `db:"last_scan_ts"` // Last scan timestamp of the account
-	CreatedAt   time.Time           `db:"created_at"`   // Timestamp when the account was created in the inventory
+	// AccountID is the internal account ID used by its provider. Depending on the provider, it's called different:
+	// AWS: AccountID
+	// Azure: SubscriptionID
+	// GCP: ProjectID
+	AccountID string `db:"account_id"`
+
+	// AccountName is the named assinged by the cloud provider to the account, or an alias configured by the user.
+	// The account will be identified by the AccountID, not by the AccountName.
+	AccountName string `db:"account_name"`
+
+	// Provider identifies the cloud/infrastructure provider.
+	Provider Provider `db:"provider"`
+
+	// LastScanTS is the timestamp when the account was scanned for the last time.
+	LastScanTS time.Time `db:"last_scan_ts"`
+
+	// CreatedAt is the timestamp when the account was created (from the inventory point of view, not from the provider).
+	CreatedAt time.Time `db:"created_at"`
 
 	// In-memory fields (no saved on DB)
-	user           string // Account's username
-	password       string // Account's password
-	billingEnabled bool   // Billing information flag
+	// ===========================================================================
+
+	// Clusters is the list of clusters deployed on this account indexed by ClusterID.
+	Clusters map[string]*Cluster
+
+	// billingEnabled determines if billing stockers are enabled or not for this account when scanning
+	billingEnabled bool
+
+	user     string
+	password string
 }
 
-// NewAccount create a new Could Provider account to store its instances
-func NewAccount(account_id string, account_name string, provider CloudProvider, user string, password string) *Account {
+// NewAccount create a new Could Provider account to store its instances.
+func NewAccount(account_id string, account_name string, provider Provider, user string, password string) *Account {
 	return &Account{
 		AccountID:   account_id,
 		AccountName: account_name,
@@ -45,7 +61,7 @@ func (a Account) Password() string {
 	return a.password
 }
 
-// IsClusterInAccount checks if a cluster is already in the Stock
+// IsClusterInAccount checks if a cluster is already in the account
 func (a Account) IsClusterInAccount(clusterID string) bool {
 	_, ok := a.Clusters[clusterID]
 	return ok
@@ -58,7 +74,7 @@ func (a *Account) AddCluster(cluster *Cluster) error {
 	}
 
 	// Assign reference to owner account
-	cluster.Account = a
+	cluster.AccountID = a.AccountID
 
 	// Adding to the map
 	a.Clusters[cluster.ClusterID] = cluster
@@ -73,7 +89,7 @@ func (a *Account) DeleteCluster(clusterID string) error {
 	}
 
 	// Removing reference to owner account
-	a.Clusters[clusterID].Account = nil
+	a.Clusters[clusterID].AccountID = ""
 
 	// Removing from the map
 	delete(a.Clusters, clusterID)

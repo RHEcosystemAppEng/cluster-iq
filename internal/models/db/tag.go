@@ -1,4 +1,4 @@
-package dbmodels
+package db
 
 import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
