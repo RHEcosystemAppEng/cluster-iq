@@ -12,15 +12,20 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // ClusterHandler handles HTTP requests for clusters.
 type ClusterHandler struct {
 	service services.ClusterService
+	logger  *zap.Logger
 }
 
-func NewClusterHandler(service services.ClusterService) *ClusterHandler {
-	return &ClusterHandler{service: service}
+func NewClusterHandler(service services.ClusterService, logger *zap.Logger) *ClusterHandler {
+	return &ClusterHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
 type clusterFilterParams struct {
@@ -84,6 +89,7 @@ func (h *ClusterHandler) List(c *gin.Context) {
 
 	clusters, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
+		h.logger.Error("error listing clusters", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve clusters"))
 		return
 	}
@@ -111,6 +117,7 @@ func (h *ClusterHandler) Get(c *gin.Context) {
 
 	cluster, err := h.service.Get(c.Request.Context(), clusterID)
 	if err != nil {
+		h.logger.Error("error getting a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
 			return
@@ -120,6 +127,35 @@ func (h *ClusterHandler) Get(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, cluster.ToClusterDTOResponse())
+}
+
+// GetInstances handles the request for obtaining a single cluster by its ID and its instances.
+//
+//	@Summary		Get a cluster by ID with its instances
+//	@Description	Returns a single cluster with its instances.
+//	@Tags			Clusters Instances
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Cluster ID"
+//	@Success		200	{object}	dto.Cluster
+//	@Failure		404	{object}	dto.GenericErrorResponse
+//	@Failure		500	{object}	dto.GenericErrorResponse
+//	@Router			/clusters/{id} [get]
+func (h *ClusterHandler) GetInstances(c *gin.Context) {
+	clusterID := c.Param("id")
+
+	instances, err := h.service.GetInstances(c.Request.Context(), clusterID)
+	if err != nil {
+		h.logger.Error("error getting a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve cluster"))
+		return
+	}
+
+	c.JSON(http.StatusOK, mappers.ToInstanceDTOResponseList(instances))
 }
 
 // Create handles the creation of new clusters.
@@ -137,11 +173,13 @@ func (h *ClusterHandler) Get(c *gin.Context) {
 func (h *ClusterHandler) Create(c *gin.Context) {
 	var newClusterDTOs []dto.ClusterDTORequest
 	if err := c.ShouldBindJSON(&newClusterDTOs); err != nil {
+		h.logger.Error("error processing cluster creation request", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
 		return
 	}
 
 	if err := h.service.Create(c.Request.Context(), mappers.ToClusterModelList(newClusterDTOs)); err != nil {
+		h.logger.Error("error creating a cluster", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create clusters: "+err.Error()))
 		return
 	}
@@ -167,6 +205,7 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 	clusterID := c.Param("id")
 
 	if err := h.service.Delete(c.Request.Context(), clusterID); err != nil {
+		h.logger.Error("error deleting a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
 			return
@@ -194,6 +233,7 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 	clusterID := c.Param("id")
 	err := h.service.PowerOn(c.Request.Context(), clusterID)
 	if err != nil {
+		h.logger.Error("error powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
 			return
@@ -221,6 +261,7 @@ func (h *ClusterHandler) PowerOff(c *gin.Context) {
 	clusterID := c.Param("id")
 	err := h.service.PowerOff(c.Request.Context(), clusterID)
 	if err != nil {
+		h.logger.Error("error powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
 			return
@@ -248,6 +289,7 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 	clusterID := c.Param("id")
 	tags, err := h.service.GetTags(c.Request.Context(), clusterID)
 	if err != nil {
+		h.logger.Error("error getting cluster tags", zap.String("cluster_id", clusterID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Cluster not found"))
 			return
@@ -272,6 +314,6 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 //	@Failure		501		{object}	nil	"Not Implemented"
 //	@Router			/clusters/{id} [patch]
 func (h *ClusterHandler) Update(c *gin.Context) {
-	//TODO
+	// TODO
 	c.PureJSON(http.StatusNotImplemented, nil)
 }

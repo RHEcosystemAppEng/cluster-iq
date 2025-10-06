@@ -54,43 +54,37 @@ const (
 	// InsertClustersQuery inserts into a new instance in its table
 	InsertClustersQuery = `
 		INSERT INTO clusters (
-			id,
-			name,
+			cluster_id,
+			cluster_name,
 			infra_id,
 			provider,
 			status,
 			region,
-			account_name,
+			account_id,
 			console_link,
-			instance_count,
-			last_scan_timestamp,
-			creation_timestamp,
+			last_scan_ts,
+			created_at,
 			age,
-			owner,
-			total_cost
+			owner
 		) VALUES (
-			:id,
-			:name,
+			:cluster_id,
+			:cluster_name,
 			:infra_id,
 			:provider,
 			:status,
 			:region,
-			:account_name,
+			:account_id,
 			:console_link,
-			:instance_count,
-			:last_scan_timestamp,
-			:creation_timestamp,
+			:last_scan_ts,
+			:created_at,
 			:age,
-			:owner,
-			:total_cost
+			:owner
 		) ON CONFLICT (id) DO UPDATE SET
-			provider = EXCLUDED.provider,
 			status = EXCLUDED.status,
 			region = EXCLUDED.region,
 			console_link = EXCLUDED.console_link,
-			instance_count = EXCLUDED.instance_count,
-			last_scan_timestamp = EXCLUDED.last_scan_timestamp,
-			creation_timestamp = EXCLUDED.creation_timestamp,
+			last_scan_ts = EXCLUDED.last_scan_ts,
+			created_at = EXCLUDED.created_at,
 			age = EXCLUDED.age,
 			owner = EXCLUDED.owner
 	`

@@ -6,20 +6,26 @@ import (
 	"strconv"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // InstanceHandler handles HTTP requests for instances.
 type InstanceHandler struct {
 	service services.InstanceService
+	logger  *zap.Logger
 }
 
-func NewInstanceHandler(service services.InstanceService) *InstanceHandler {
-	return &InstanceHandler{service: service}
+func NewInstanceHandler(service services.InstanceService, logger *zap.Logger) *InstanceHandler {
+	return &InstanceHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
 type instanceFilterParams struct {
@@ -73,6 +79,7 @@ func (h *InstanceHandler) List(c *gin.Context) {
 
 	instances, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
+		h.logger.Error("error listing instances", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve instances"))
 		return
 	}
@@ -100,6 +107,7 @@ func (h *InstanceHandler) Get(c *gin.Context) {
 
 	instance, err := h.service.Get(c.Request.Context(), instanceID)
 	if err != nil {
+		h.logger.Error("error getting instance", zap.String("instance_id", instanceID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Instance not found"))
 			return
@@ -131,9 +139,13 @@ func (h *InstanceHandler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), mappers.ToInstanceModelList(newInstanceDTOs)); err != nil {
+		h.logger.Error("error creating instances", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create instances: "+err.Error()))
 		return
 	}
 
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+		Count:  len(newInstanceDTOs),
+		Status: "OK"},
+	)
 }

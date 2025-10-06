@@ -1,6 +1,7 @@
 package repositories
 
 const (
+	AccountsTable = "accounts"
 	// Table for SELECT operations on Accounts
 	SelectAccountsView = "accounts_full_view"
 

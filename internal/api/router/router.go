@@ -54,6 +54,7 @@ func setupClusterRoutes(group *gin.RouterGroup, clusterHandler *handlers.Cluster
 		clusters.GET("", clusterHandler.List)
 		clusters.POST("", clusterHandler.Create)
 		clusters.GET("/:id", clusterHandler.Get)
+		clusters.GET("/:id/instances", clusterHandler.GetInstances)
 		clusters.DELETE("/:id", clusterHandler.Delete)
 		clusters.PATCH("/:id", clusterHandler.Update)
 		clusters.POST("/:id/power_on", clusterHandler.PowerOn)

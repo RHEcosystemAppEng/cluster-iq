@@ -7,16 +7,21 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // OverviewHandler handles HTTP requests for the overview endpoint.
 type OverviewHandler struct {
 	service services.OverviewService
+	logger  *zap.Logger
 }
 
 // NewOverviewHandler creates a new OverviewHandler.
-func NewOverviewHandler(service services.OverviewService) *OverviewHandler {
-	return &OverviewHandler{service: service}
+func NewOverviewHandler(service services.OverviewService, logger *zap.Logger) *OverviewHandler {
+	return &OverviewHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
 // Get handles the request for obtaining the inventory overview.
@@ -32,10 +37,10 @@ func NewOverviewHandler(service services.OverviewService) *OverviewHandler {
 func (h *OverviewHandler) Get(c *gin.Context) {
 	overview, err := h.service.GetOverview(c.Request.Context())
 	if err != nil {
+		h.logger.Error("error getting overview info", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve overview: "+err.Error()))
 		return
 	}
 
-	overviewDTO := mappers.ToOverviewSummaryDTO(overview)
-	c.JSON(http.StatusOK, overviewDTO)
+	c.JSON(http.StatusOK, mappers.ToOverviewSummaryDTO(overview))
 }

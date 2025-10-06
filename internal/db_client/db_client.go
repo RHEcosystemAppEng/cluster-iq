@@ -129,6 +129,7 @@ func (d *DBClient) Insert(query string, data interface{}) error {
 
 	return nil
 }
+
 func (d *DBClient) Update(query string, data interface{}) error {
 	builder := d.NewUpdateBuilder().Query(query).Data(data)
 

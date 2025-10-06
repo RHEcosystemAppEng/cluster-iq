@@ -12,7 +12,7 @@ import (
 // InstanceService defines the interface for instance-related business logic.
 type InstanceService interface {
 	List(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error)
-	Get(ctx context.Context, id string) (*db.InstanceDBResponse, error)
+	Get(ctx context.Context, instanceID string) (db.InstanceDBResponse, error)
 	GetSummary(ctx context.Context) (inventory.InstancesSummary, error)
 	Create(ctx context.Context, instances []inventory.Instance) error
 }
@@ -37,8 +37,8 @@ func (s *instanceServiceImpl) List(ctx context.Context, opts models.ListOptions)
 }
 
 // Get retrieves a single instance by its ID.
-func (s *instanceServiceImpl) Get(ctx context.Context, id string) (*db.InstanceDBResponse, error) {
-	return s.repo.GetInstanceByID(ctx, id)
+func (s *instanceServiceImpl) Get(ctx context.Context, instanceID string) (db.InstanceDBResponse, error) {
+	return s.repo.GetInstanceByID(ctx, instanceID)
 }
 
 // GetSummary retrieves a summary of instance counts.

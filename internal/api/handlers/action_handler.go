@@ -10,16 +10,21 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // ActionHandler handles HTTP requests for actions.
 type ActionHandler struct {
 	service services.ActionService
+	logger  *zap.Logger
 }
 
 // NewActionHandler creates a new ActionHandler.
-func NewActionHandler(service services.ActionService) *ActionHandler {
-	return &ActionHandler{service: service}
+func NewActionHandler(service services.ActionService, logger *zap.Logger) *ActionHandler {
+	return &ActionHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
 type scheduledActionFilterParams struct {
@@ -70,6 +75,7 @@ func (h *ActionHandler) ListScheduled(c *gin.Context) {
 
 	actions, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
+		h.logger.Error("error listing actions schedule", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list scheduled actions"))
 		return
 	}
@@ -93,6 +99,7 @@ func (h *ActionHandler) GetScheduled(c *gin.Context) {
 
 	action, err := h.service.Get(c.Request.Context(), actionID)
 	if err != nil {
+		h.logger.Error("error getting action", zap.String("action_id", actionID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Scheduled action not found"))
 			return
@@ -117,6 +124,7 @@ func (h *ActionHandler) EnableScheduled(c *gin.Context) {
 	actionID := c.Param("id")
 
 	if err := h.service.Enable(c.Request.Context(), actionID); err != nil {
+		h.logger.Error("error enabling action", zap.String("action_id", actionID), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to enable scheduled action"))
 		return
 	}
@@ -137,7 +145,35 @@ func (h *ActionHandler) DisableScheduled(c *gin.Context) {
 	actionID := c.Param("id")
 
 	if err := h.service.Disable(c.Request.Context(), actionID); err != nil {
+		h.logger.Error("error disabling action", zap.String("action_id", actionID), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to disable scheduled action"))
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// Delete handles the deletion of an action.
+//
+//	@Summary		Delete an action
+//	@Description	Deletes an action by its name.
+//	@Tags			actions
+//	@Accept			json
+//	@Param			name	path		string	true	"action Name"
+//	@Success		204		{object}	nil
+//	@Failure		404		{object}	dto.GenericErrorResponse
+//	@Failure		500		{object}	dto.GenericErrorResponse
+//	@Router			/actions/{name} [delete]
+func (h *ActionHandler) Delete(c *gin.Context) {
+	actionID := c.Param("id")
+
+	if err := h.service.Delete(c.Request.Context(), actionID); err != nil {
+		h.logger.Error("error deleting action", zap.String("action_id", actionID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("action not found"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to delete Action: "+err.Error()))
 		return
 	}
 

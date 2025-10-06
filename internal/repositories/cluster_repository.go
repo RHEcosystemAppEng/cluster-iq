@@ -48,7 +48,7 @@ func NewClusterRepository(db *dbclient.DBClient) ClusterRepository {
 func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error) {
 	var clusters []dbmodels.ClusterDBResponse
 
-	if err := r.db.Select(&clusters, "clusters_full_view", opts, "id", "*"); err != nil {
+	if err := r.db.Select(&clusters, SelectClustersFullView, opts, "cluster_id", "*"); err != nil {
 		return clusters, 0, fmt.Errorf("failed to list clusters: %w", err)
 	}
 
@@ -74,7 +74,7 @@ func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.Select(&cluster, SelectClustersFullView, opts, "id", "*"); err != nil {
+	if err := r.db.Get(&cluster, SelectClustersFullView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -137,7 +137,7 @@ func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.Select(rawTags, "instances_full_view_with_tags", opts, "id", "DISTINCT ON (tags_json) tags_json"); err != nil {
+	if err := r.db.Select(rawTags, SelectInstancesFullWithTagsView, opts, "cluster_id", "DISTINCT ON (tags_json) tags_json"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return result, ErrNotFound
 		}
@@ -193,8 +193,16 @@ func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clust
 		},
 	}
 
-	if err := r.db.Select(&instances, "instances_full_view", opts, "instance_id", "*"); err != nil {
-		return instances, fmt.Errorf("failed to list clusters: %w", err)
+	var cluster dbmodels.ClusterDBResponse
+	if err := r.db.Get(&cluster, SelectClustersFullView, opts, "*"); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	if err := r.db.Select(&instances, SelectInstancesFullView, opts, "cluster_id", "*"); err != nil {
+		return instances, fmt.Errorf("failed to list instances for cluster '%s': %w", clusterID, err)
 	}
 
 	return instances, nil
@@ -226,10 +234,14 @@ func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (invent
 func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []inventory.Cluster) error {
 	var newClusters []inventory.Cluster
 	for i := range clusters {
-		newClusters = append(newClusters, clusters[i])
+		if newCluster, err := r.parseAccountInternalID(ctx, clusters[i]); err != nil {
+			return err
+		} else {
+			newClusters = append(newClusters, *newCluster)
+		}
 	}
 
-	if err := r.db.Insert(InsertClustersQuery, clusters); err != nil {
+	if err := r.db.Insert(InsertClustersQuery, newClusters); err != nil {
 		return err
 	}
 	return nil
@@ -278,4 +290,26 @@ func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, clusterID str
 		return err
 	}
 	return nil
+}
+
+func (r *clusterRepositoryImpl) parseAccountInternalID(ctx context.Context, cluster inventory.Cluster) (*inventory.Cluster, error) {
+	var id string
+
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"account_id": cluster.AccountID,
+		},
+	}
+
+	if err := r.db.Get(&id, AccountsTable, opts, "id"); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	cluster.AccountID = id
+	return &cluster, nil
 }

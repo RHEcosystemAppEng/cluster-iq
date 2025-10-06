@@ -38,10 +38,10 @@ type healthCheckResponse struct {
 //	@Router			/healthcheck [get]
 func (h *HealthCheckHandler) Check(c *gin.Context) {
 	dbStatus := false
-	if err := h.db.Ping(); err == nil {
-		dbStatus = true
-	} else {
+	if err := h.db.Ping(); err != nil {
 		h.logger.Error("Database health check failed", zap.Error(err))
+	} else {
+		dbStatus = true
 	}
 
 	c.JSON(http.StatusOK, healthCheckResponse{

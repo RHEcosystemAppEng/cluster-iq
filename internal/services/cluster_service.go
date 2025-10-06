@@ -15,7 +15,8 @@ import (
 // ClusterService defines the interface for cluster-related business logic.
 type ClusterService interface {
 	List(ctx context.Context, options models.ListOptions) ([]db.ClusterDBResponse, int, error)
-	Get(ctx context.Context, id string) (*db.ClusterDBResponse, error)
+	Get(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error)
+	GetInstances(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error)
 	GetSummary(ctx context.Context) (inventory.ClustersSummary, error)
 	PowerOn(ctx context.Context, clusterID string) error
 	PowerOff(ctx context.Context, clusterID string) error
@@ -53,8 +54,13 @@ func (s *clusterServiceImpl) List(ctx context.Context, options models.ListOption
 }
 
 // Get retrieves a single cluster by its ID.
-func (s *clusterServiceImpl) Get(ctx context.Context, id string) (*db.ClusterDBResponse, error) {
-	return s.repo.GetClusterByID(ctx, id)
+func (s *clusterServiceImpl) Get(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error) {
+	return s.repo.GetClusterByID(ctx, clusterID)
+}
+
+// Get retrieves a single cluster by its ID.
+func (s *clusterServiceImpl) GetInstances(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error) {
+	return s.repo.GetInstancesOnCluster(ctx, clusterID)
 }
 
 // GetSummary retrieves a summary of cluster counts by status.

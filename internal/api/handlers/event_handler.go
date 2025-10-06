@@ -9,15 +9,20 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // EventHandler handles HTTP requests for events.
 type EventHandler struct {
 	service services.EventService
+	logger  *zap.Logger
 }
 
-func NewEventHandler(service services.EventService) *EventHandler {
-	return &EventHandler{service: service}
+func NewEventHandler(service services.EventService, logger *zap.Logger) *EventHandler {
+	return &EventHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
 type systemEventFilterParams struct {
@@ -83,6 +88,7 @@ func (h *EventHandler) ListSystem(c *gin.Context) {
 
 	events, total, err := h.service.ListSystemEvents(c.Request.Context(), opts)
 	if err != nil {
+		h.logger.Error("error listing system events", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list system events"))
 		return
 	}
@@ -122,6 +128,7 @@ func (h *EventHandler) ListByCluster(c *gin.Context) {
 
 	events, total, err := h.service.ListClusterEvents(c.Request.Context(), opts)
 	if err != nil {
+		h.logger.Error("error getting events for cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list cluster events"))
 		return
 	}

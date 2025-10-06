@@ -5,20 +5,24 @@ import (
 	"strconv"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // ExpenseHandler handles HTTP requests for expenses.
 type ExpenseHandler struct {
 	service services.ExpenseService
+	logger  *zap.Logger
 }
 
-func NewExpenseHandler(service services.ExpenseService) *ExpenseHandler {
-	return &ExpenseHandler{service: service}
+func NewExpenseHandler(service services.ExpenseService, logger *zap.Logger) *ExpenseHandler {
+	return &ExpenseHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
 type expenseFilterParams struct {
@@ -36,38 +40,6 @@ func (f *expenseFilterParams) toRepoFilters() map[string]interface{} {
 type listExpensesRequest struct {
 	dto.PaginationRequest
 	Filters expenseFilterParams `form:"inline"`
-}
-
-// Create handles the request to create new expense records.
-//
-//	@Summary		Create new expense records
-//	@Description	Adds one or more expense records to the database
-//	@Tags			Expenses
-//	@Accept			json
-//	@Produce		json
-//	@Param			expenses	body		[]dto.CreateExpense	true	"A list of new expenses to create"
-//	@Success		201			{object}	nil
-//	@Failure		400			{object}	dto.GenericErrorResponse
-//	@Failure		500			{object}	dto.GenericErrorResponse
-//	@Router			/expenses [post]
-func (h *ExpenseHandler) Create(c *gin.Context) {
-	var expenseDTOs []dto.ExpenseDTORequest
-	if err := c.ShouldBindJSON(&expenseDTOs); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
-		return
-	}
-
-	expenses := make([]inventory.Expense, len(expenseDTOs))
-	for i, dto := range expenseDTOs {
-		expenses[i] = mappers.ToExpenseModel(dto)
-	}
-
-	if err := h.service.Create(c.Request.Context(), expenses); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create expenses: "+err.Error()))
-		return
-	}
-
-	c.Status(http.StatusCreated)
 }
 
 // List handles the request to list all expenses.
@@ -96,12 +68,41 @@ func (h *ExpenseHandler) List(c *gin.Context) {
 
 	expenses, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
+		h.logger.Error("error listing expenses", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list expenses"))
 		return
 	}
 
-	expenseDTOs := mappers.ToExpenseDTOList(expenses)
-	response := dto.NewListResponse(expenseDTOs, total)
+	response := dto.NewListResponse(mappers.ToExpenseDTOList(expenses), total)
+
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
+}
+
+// Create handles the request to create new expense records.
+//
+//	@Summary		Create new expense records
+//	@Description	Adds one or more expense records to the database
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Param			expenses	body		[]dto.CreateExpense	true	"A list of new expenses to create"
+//	@Success		201			{object}	nil
+//	@Failure		400			{object}	dto.GenericErrorResponse
+//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Router			/expenses [post]
+func (h *ExpenseHandler) Create(c *gin.Context) {
+	var expenseDTOs []dto.ExpenseDTORequest
+	if err := c.ShouldBindJSON(&expenseDTOs); err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), mappers.ToExpenseModelList(expenseDTOs)); err != nil {
+		h.logger.Error("error creating expense", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create expenses: "+err.Error()))
+		return
+	}
+
+	c.Status(http.StatusCreated)
 }

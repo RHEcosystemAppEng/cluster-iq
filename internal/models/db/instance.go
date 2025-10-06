@@ -63,7 +63,7 @@ type InstanceDBResponse struct {
 	Last15DaysCost        float64                  `db:"last_15_days_cost"`
 	LastMonthCost         float64                  `db:"last_month_cost"`
 	CurrentMonthSoFarCost float64                  `db:"current_month_so_far_cost"`
-	Tags                  []TagDBResponse          `db:"tags_json"`
+	Tags                  TagDBResponses           `db:"tags_json"`
 }
 
 // TODO: comments

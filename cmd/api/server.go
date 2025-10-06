@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -209,12 +210,12 @@ func main() {
 	// Initializing handlers
 	handlers := router.APIHandlers{
 		AccountHandler:     handlers.NewAccountHandler(accountService, logger),
-		ClusterHandler:     handlers.NewClusterHandler(clusterService),
-		InstanceHandler:    handlers.NewInstanceHandler(instanceService),
-		ExpenseHandler:     handlers.NewExpenseHandler(expenseService),
-		EventHandler:       handlers.NewEventHandler(eventService),
-		ActionHandler:      handlers.NewActionHandler(actionService),
-		OverviewHandler:    handlers.NewOverviewHandler(overviewService),
+		ClusterHandler:     handlers.NewClusterHandler(clusterService, logger),
+		InstanceHandler:    handlers.NewInstanceHandler(instanceService, logger),
+		ExpenseHandler:     handlers.NewExpenseHandler(expenseService, logger),
+		EventHandler:       handlers.NewEventHandler(eventService, logger),
+		ActionHandler:      handlers.NewActionHandler(actionService, logger),
+		OverviewHandler:    handlers.NewOverviewHandler(overviewService, logger),
 		HealthCheckHandler: handlers.NewHealthCheckHandler(dbClient, logger),
 	}
 
@@ -222,12 +223,15 @@ func main() {
 	engine := setupGin(logger)
 	router.Setup(engine, handlers)
 
+	// parsing cfg.DBURL for removing user:password when logging
+	dburl, _ := url.Parse(cfg.DBURL)
+	dbHost := dburl.Hostname() + ":" + dburl.Port()
+
 	logger.Info("ClusterIQ API server started",
 		zap.String("version", version),
 		zap.String("commit", commit),
 		zap.String("listenURL", cfg.ListenURL),
-		// TODO remove or mask dbURL
-		zap.String("dbURL", cfg.DBURL),
+		zap.String("dbURL", dbHost),
 		zap.String("agentURL", cfg.AgentURL),
 	)
 

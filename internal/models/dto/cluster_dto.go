@@ -17,7 +17,7 @@ type ClusterDTORequest struct {
 	AccountID   string                   `json:"accountID"`
 	ConsoleLink string                   `json:"consoleLink"`
 	LastScanTS  time.Time                `json:"lastScanTimestamp"`
-	CreatedAt   time.Time                `json:"creationTimestamp"`
+	CreatedAt   time.Time                `json:"createdAt"`
 	Age         int                      `json:"age"`
 	Owner       string                   `json:"owner"`
 }
@@ -68,7 +68,7 @@ type ClusterDTOResponse struct {
 	ConsoleLink           string                   `json:"consoleLink"`
 	InstanceCount         int                      `json:"instanceCount"`
 	LastScanTS            time.Time                `json:"lastScanTimestamp"`
-	CreatedAt             time.Time                `json:"creationTimestamp"`
+	CreatedAt             time.Time                `json:"createdAt"`
 	Age                   int                      `json:"age"`
 	Owner                 string                   `json:"owner"`
 	TotalCost             float64                  `json:"totalCost"`

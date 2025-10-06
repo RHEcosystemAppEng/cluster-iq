@@ -74,7 +74,7 @@ func (h *AccountHandler) List(c *gin.Context) {
 
 	accounts, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
-		h.logger.Error("error when listing accounts", zap.Error(err))
+		h.logger.Error("error listing accounts", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve accounts"))
 		return
 	}
@@ -102,7 +102,7 @@ func (h *AccountHandler) GetByID(c *gin.Context) {
 
 	account, err := h.service.GetByID(c.Request.Context(), accountID)
 	if err != nil {
-		h.logger.Error("error when getting an account", zap.String("account_id", accountID), zap.Error(err))
+		h.logger.Error("error getting an account", zap.String("account_id", accountID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Account not found"))
 			return
@@ -131,7 +131,7 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 
 	clusters, err := h.service.GetAccountClustersByID(c.Request.Context(), accountID)
 	if err != nil {
-		h.logger.Error("error when getting an account", zap.String("account_id", accountID), zap.Error(err))
+		h.logger.Error("error getting an account", zap.String("account_id", accountID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Account not found"))
 			return
@@ -160,18 +160,13 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 func (h *AccountHandler) Create(c *gin.Context) {
 	var newAccountsDTO []dto.AccountDTORequest
 	if err := c.ShouldBindJSON(&newAccountsDTO); err != nil {
-		h.logger.Error("error when processing received accounts", zap.Error(err))
+		h.logger.Error("error processing received accounts", zap.Error(err))
 		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
 		return
 	}
 
-	if len(newAccountsDTO) == 0 {
-		h.logger.Error("NO ACCOUNTS!", zap.Any("accounts", newAccountsDTO))
-		return
-	}
-
 	if err := h.service.Create(c.Request.Context(), mappers.ToAccountModelList(newAccountsDTO)); err != nil {
-		h.logger.Error("error when creating accounts", zap.Error(err))
+		h.logger.Error("error creating accounts", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create accounts: "+err.Error()))
 		return
 	}
@@ -197,7 +192,7 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 	accountID := c.Param("id")
 
 	if err := h.service.Delete(c.Request.Context(), accountID); err != nil {
-		h.logger.Error("error when deleting accounts", zap.Error(err))
+		h.logger.Error("error deleting account", zap.String("account_id", accountID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Account not found"))
 			return

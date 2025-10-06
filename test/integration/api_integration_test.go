@@ -37,3 +37,9 @@ func waitForAPIReady(t *testing.T) {
 	}
 	t.Fatalf("API did not become ready at %s", url)
 }
+
+func checkHTTPResponseCode(t *testing.T, response *http.Response, expectedHTTPCode int) {
+	if response.StatusCode != expectedHTTPCode {
+		t.Fatalf("Expected HTTP Response code: %d, got %d", expectedHTTPCode, response.StatusCode)
+	}
+}
