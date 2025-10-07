@@ -213,7 +213,7 @@ func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clust
 func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error) {
 	var countsDB inventory.ClustersSummary
 
-	if err := r.db.Select(&countsDB, "clusters", models.ListOptions{}, "",
+	if err := r.db.Get(&countsDB, "clusters", models.ListOptions{},
 		"COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running",
 		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
 		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",

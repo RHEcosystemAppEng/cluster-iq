@@ -97,7 +97,7 @@ func (r *instanceRepositoryImpl) GetInstancesOutdatedBilling(ctx context.Context
 func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inventory.InstancesSummary, error) {
 	var countsDB inventory.InstancesSummary
 
-	if err := r.db.Select(&countsDB, InstancesTable, models.ListOptions{}, "",
+	if err := r.db.Get(&countsDB, InstancesTable, models.ListOptions{},
 		"COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running",
 		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
 		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",
