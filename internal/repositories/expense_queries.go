@@ -1,6 +1,8 @@
 package repositories
 
 const (
+	ExpensesTable = "expenses"
+
 	// SelectExpensesQuery returns every expense in the inventory ordered by instanceID
 	SelectExpensesQuery = `SELECT * FROM expenses`
 	// InsertExpensesQuery inserts into a new expense for an instance
@@ -10,7 +12,7 @@ const (
 			date,
 			amount
 		) VALUES (
-			:instance_id,
+			(SELECT id FROM instances WHERE instance_id=:instance_id),
 			:date,
 			:amount
 		) ON CONFLICT (instance_id, date) DO UPDATE SET

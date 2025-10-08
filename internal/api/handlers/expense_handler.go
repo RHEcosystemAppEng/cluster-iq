@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
@@ -104,5 +105,8 @@ func (h *ExpenseHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+		Count:  len(expenseDTOs),
+		Status: "OK"},
+	)
 }
