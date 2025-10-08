@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -48,7 +50,7 @@ type listScheduledActionsRequest struct {
 	Filters scheduledActionFilterParams `form:"inline"`
 }
 
-// ListScheduled handles the request to list all scheduled actions.
+// List handles the request to list all scheduled actions.
 //
 //	@Summary		List all scheduled actions
 //	@Description	Returns a list of scheduled actions
@@ -60,7 +62,7 @@ type listScheduledActionsRequest struct {
 //	@Success		200			{object}	dto.ListResponse[dto.ScheduledAction]
 //	@Failure		500			{object}	dto.GenericErrorResponse
 //	@Router			/schedule [get]
-func (h *ActionHandler) ListScheduled(c *gin.Context) {
+func (h *ActionHandler) List(c *gin.Context) {
 	var req listScheduledActionsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid query parameters: "+err.Error()))
@@ -80,11 +82,13 @@ func (h *ActionHandler) ListScheduled(c *gin.Context) {
 		return
 	}
 
+	response := dto.NewListResponse(db.ToActionDTOResponseList(actions), total)
+
 	c.Header("X-Total-Count", strconv.Itoa(total))
-	c.JSON(http.StatusOK, actions)
+	c.JSON(http.StatusOK, response)
 }
 
-// GetScheduled handles the request to get a single scheduled action by its ID.
+// Get handles the request to get a single scheduled action by its ID.
 //
 //	@Summary		Get scheduled action by ID
 //	@Description	Returns details of a specific scheduled action identified by its ID.
@@ -94,7 +98,7 @@ func (h *ActionHandler) ListScheduled(c *gin.Context) {
 //	@Failure		404	{object}	dto.GenericErrorResponse
 //	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/schedule/{id} [get]
-func (h *ActionHandler) GetScheduled(c *gin.Context) {
+func (h *ActionHandler) Get(c *gin.Context) {
 	actionID := c.Param("id")
 
 	action, err := h.service.Get(c.Request.Context(), actionID)
@@ -108,10 +112,50 @@ func (h *ActionHandler) GetScheduled(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, action)
+	c.JSON(http.StatusOK, action.ToActionDTOResponse())
 }
 
-// EnableScheduled handles the request to enable a scheduled action.
+// Create handles the creation of new actions.
+//
+//	@Summary		Create actions
+//	@Description	Creates one or more new actions.
+//	@Tags			Actions
+//	@Accept			json
+//	@Produce		json
+//	@Param			actions	body		[]dto.NewAction	true	"Action or actions to create"
+//	@Success		201			{object}	[]dto.Action
+//	@Failure		400			{object}	dto.GenericErrorResponse
+//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Router			/actions [post]
+func (h *ActionHandler) Create(c *gin.Context) {
+	var newActionsDTO []dto.ActionDTORequest
+	if err := c.ShouldBindJSON(&newActionsDTO); err != nil {
+		h.logger.Error("error processing received actions", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		return
+	}
+
+	actions := dto.ToModelActionList(newActionsDTO)
+	if actions == nil {
+		err := errors.New("error when processing actions")
+		h.logger.Error("error processing actions", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create actions: "+err.Error()))
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), *actions); err != nil {
+		h.logger.Error("error creating actions", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create actions: "+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+		Count:  len(newActionsDTO),
+		Status: "OK"},
+	)
+}
+
+// Enable handles the request to enable a scheduled action.
 //
 //	@Summary		Enable scheduled action
 //	@Description	Activates a scheduled action specified by its ID.
@@ -120,7 +164,7 @@ func (h *ActionHandler) GetScheduled(c *gin.Context) {
 //	@Success		204	{object}	nil
 //	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/schedule/{id}/enable [patch]
-func (h *ActionHandler) EnableScheduled(c *gin.Context) {
+func (h *ActionHandler) Enable(c *gin.Context) {
 	actionID := c.Param("id")
 
 	if err := h.service.Enable(c.Request.Context(), actionID); err != nil {
@@ -129,10 +173,10 @@ func (h *ActionHandler) EnableScheduled(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	c.Status(http.StatusOK)
 }
 
-// DisableScheduled handles the request to disable a scheduled action.
+// Disable handles the request to disable a scheduled action.
 //
 //	@Summary		Disable scheduled action
 //	@Description	Deactivates a scheduled action specified by its ID.
@@ -141,7 +185,7 @@ func (h *ActionHandler) EnableScheduled(c *gin.Context) {
 //	@Success		204	{object}	nil
 //	@Failure		500	{object}	dto.GenericErrorResponse
 //	@Router			/schedule/{id}/disable [patch]
-func (h *ActionHandler) DisableScheduled(c *gin.Context) {
+func (h *ActionHandler) Disable(c *gin.Context) {
 	actionID := c.Param("id")
 
 	if err := h.service.Disable(c.Request.Context(), actionID); err != nil {
@@ -150,7 +194,7 @@ func (h *ActionHandler) DisableScheduled(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	c.Status(http.StatusOK)
 }
 
 // Delete handles the deletion of an action.

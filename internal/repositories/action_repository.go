@@ -16,12 +16,12 @@ var _ ActionRepository = (*actionRepositoryImpl)(nil)
 
 // ActionRepository defines the interface for data access operations for actions.
 type ActionRepository interface {
-	ListScheduledActions(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error)
-	GetScheduledActionByID(ctx context.Context, actionID string) (db.ActionDBResponse, error)
-	EnableScheduledAction(ctx context.Context, actionID string) error
-	DisableScheduledAction(ctx context.Context, actionID string) error
+	List(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error)
+	GetByID(ctx context.Context, actionID string) (db.ActionDBResponse, error)
+	Enable(ctx context.Context, actionID string) error
+	Disable(ctx context.Context, actionID string) error
 	Create(ctx context.Context, newActions []actions.Action) error
-	DeleteScheduledAction(ctx context.Context, actionID string) error
+	Delete(ctx context.Context, actionID string) error
 }
 
 type actionRepositoryImpl struct {
@@ -32,53 +32,53 @@ func NewActionRepository(db *dbclient.DBClient) ActionRepository {
 	return &actionRepositoryImpl{db: db}
 }
 
-// ListScheduledActions runs the db select query for retrieving the scheduled actions on the DB
+// Lists runs the db select query for retrieving the scheduled actions on the DB
 //
 // Parameters:
 //
 // Returns:
 //   - An array of actions.Action with the scheduled actions declared on the DB
 //   - An error if the query fails
-func (r *actionRepositoryImpl) ListScheduledActions(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error) {
+func (r *actionRepositoryImpl) List(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error) {
 	var schedule []db.ActionDBResponse
 
-	if err := r.db.Select(schedule, "schedule_full_view", opts, "id", "*"); err != nil {
+	if err := r.db.Select(&schedule, SelectScheduleFullView, opts, "id", "*"); err != nil {
 		return schedule, 0, fmt.Errorf("failed to list schedule: %w", err)
 	}
 
 	return schedule, len(schedule), nil
 }
 
-// EnableScheduledAction enables an Action by its ID
+// Enable enables an Action by its ID
 //
 // Parameters:
 //   - Action ID
 //
 // Returns:
 //   - An error if the query fails
-func (r *actionRepositoryImpl) EnableScheduledAction(ctx context.Context, actionID string) error {
+func (r *actionRepositoryImpl) Enable(ctx context.Context, actionID string) error {
 	return r.db.Update(EnableActionQuery, actionID)
 }
 
-// DisableScheduledAction Disables an Action by its ID
+// Disable Disables an Action by its ID
 //
 // Parameters:
 //   - Action ID
 //
 // Returns:
 //   - An error if the query fails
-func (r *actionRepositoryImpl) DisableScheduledAction(ctx context.Context, actionID string) error {
+func (r *actionRepositoryImpl) Disable(ctx context.Context, actionID string) error {
 	return r.db.Update(DisableActionQuery, actionID)
 }
 
-// GetScheduledActionByID runs the db select query for retrieving a specific scheduled action by its ID
+// GetByID runs the db select query for retrieving a specific scheduled action by its ID
 //
 // Parameters:
 //
 // Returns:
 //   - An actions.Action object
 //   - An error if the query fails
-func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actionID string) (db.ActionDBResponse, error) {
+func (r *actionRepositoryImpl) GetByID(ctx context.Context, actionID string) (db.ActionDBResponse, error) {
 	var action db.ActionDBResponse
 
 	opts := models.ListOptions{
@@ -89,7 +89,7 @@ func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actio
 		},
 	}
 
-	if err := r.db.Select(action, "schedule_full_view", opts, "id", "*"); err != nil {
+	if err := r.db.Get(&action, SelectScheduleFullView, opts, "id", "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return action, ErrNotFound
 		}
@@ -124,7 +124,6 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 	// Writing Scheduled Actions
 	if len(schedActions) > 0 {
 		if _, err := tx.NamedExecContext(ctx, InsertScheduledActionsQuery, schedActions); err != nil {
-			// a.logger.Error("Failed to prepare InsertScheduledActionsQuery query", zap.Error(err))
 			return fmt.Errorf("failed to insert scheduled actions: %w", err)
 		}
 	}
@@ -132,7 +131,6 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 	// Writing Cron Actions
 	if len(cronActions) > 0 {
 		if _, err := tx.NamedExecContext(ctx, InsertCronActionsQuery, cronActions); err != nil {
-			// a.logger.Error("Failed to prepare InsertCronActionsQuery query", zap.Error(err))
 			return fmt.Errorf("failed to insert cron actions: %w", err)
 		}
 	}
@@ -141,14 +139,14 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 	return tx.Commit()
 }
 
-// DeleteScheduledAction removes an actions.ScheduledAction action from the DB based on its ID
+// Delete removes an actions.ScheduledAction action from the DB based on its ID
 //
 // Parameters:
 //   - A string containing the action ID to be removed
 //
 // Returns:
 //   - An error if the delete query fails
-func (r *actionRepositoryImpl) DeleteScheduledAction(ctx context.Context, actionID string) error {
+func (r *actionRepositoryImpl) Delete(ctx context.Context, actionID string) error {
 	opts := models.ListOptions{
 		PageSize: 0,
 		Offset:   0,

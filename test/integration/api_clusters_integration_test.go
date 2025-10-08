@@ -16,7 +16,7 @@ const (
 	APIClustersURL = APIBaseURL + "/clusters"
 )
 
-func TestClusterAccounts(t *testing.T) {
+func TestClusters(t *testing.T) {
 	waitForAPIReady(t)
 
 	t.Run("Test List Clusters", func(t *testing.T) { testListClusters(t) })

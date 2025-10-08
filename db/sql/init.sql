@@ -8,7 +8,7 @@
 
 \! echo '## Creating custom Data Types'
 
--- Supported values of Status (Valid for Clusters and and Instances)
+-- Supported values of Status (Valid for Clusters and Instances)
 CREATE TYPE STATUS AS ENUM (
   'Running',
   'Stopped',
@@ -230,7 +230,7 @@ CREATE TABLE events_default PARTITION OF events DEFAULT;
 
 CREATE TABLE IF NOT EXISTS schedule (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
-  type                    ACTION_TYPE NOT NULL DEFAULT 'scheduled_action',
+  type                    ACTION_TYPE NOT NULL,
   time                    TIMESTAMP WITH TIME ZONE,
   cron_exp                TEXT,
   operation               ACTION_OPERATION NOT NULL,

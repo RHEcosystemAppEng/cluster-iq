@@ -1,6 +1,10 @@
 package repositories
 
 const (
+	ScheduleTable = "schedule"
+
+	SelectScheduleFullView = "schedule_full_view"
+
 	// SelectScheduledActionsQuery returns the list of scheduled actions on the inventory with all the parameters needed for action execution
 	// ARRAY_AGG is used for joining every instance on the same row
 	SelectScheduledActionsQuery = `

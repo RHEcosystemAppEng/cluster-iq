@@ -70,9 +70,17 @@ INSERT INTO expenses (instance_id, date, amount) VALUES
   (12,'2025-07-30',1.10),(12,'2025-07-31',1.15),(12,'2025-08-01',1.20),(12,'2025-08-02',1.25),(12,'2025-08-03',1.30);
 
 
-INSERT INTO events ( event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity) VALUES
+INSERT INTO events (event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity) VALUES
   ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '1', 'cluster', 'OK', 'integration test event', 'info'),
   ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '10', 'instance', 'Pending', 'integration test event', 'critical');
+
+
+INSERT INTO schedule (type, time, operation, target, status, enabled) VALUES
+  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOffCluster', 1, 'Pending', 't'),
+  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOffCluster', 4, 'Pending', 'f');
+
+INSERT INTO schedule (type, cron_exp, operation, target, status, enabled) VALUES
+  ('scheduled_action', '30 */12 * 6 *', 'PowerOffCluster', 2, 'Pending', 'f');
 
 
 COMMIT;

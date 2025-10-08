@@ -59,7 +59,11 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 func ToModelActionList(dtos []ActionDTORequest) *[]actions.Action {
 	actions := make([]actions.Action, len(dtos))
 	for i, action := range dtos {
-		actions[i] = action.ToModelAction()
+		if a := action.ToModelAction(); a != nil {
+			actions[i] = a
+		} else {
+			return nil
+		}
 	}
 
 	return &actions
