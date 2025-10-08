@@ -10,7 +10,7 @@ import (
 
 // ScheduleRecord is a helper struct to scan the result from the database
 // before converting it to a specific action type.
-type ScheduleDBResponse struct {
+type ActionDBResponse struct {
 	ID        string         `db:"id"`
 	Type      string         `db:"type"`
 	Time      sql.NullTime   `db:"time"`
@@ -25,7 +25,7 @@ type ScheduleDBResponse struct {
 }
 
 // toAction converts a ScheduleRecord to a concrete actions.Action implementation.
-func (s *ScheduleDBResponse) ToActionDTOResponse() *dto.ActionDTOResponse {
+func (s *ActionDBResponse) ToActionDTOResponse() *dto.ActionDTOResponse {
 	var time time.Time
 	var cron string
 
@@ -50,4 +50,12 @@ func (s *ScheduleDBResponse) ToActionDTOResponse() *dto.ActionDTOResponse {
 		AccountID: s.AccountID,
 		Instances: s.Instances,
 	}
+}
+
+func ToActionDTOResponseList(models []ActionDBResponse) []dto.ActionDTOResponse {
+	dtos := make([]dto.ActionDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToActionDTOResponse()
+	}
+	return dtos
 }

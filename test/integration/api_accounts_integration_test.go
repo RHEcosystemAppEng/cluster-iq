@@ -218,7 +218,7 @@ func testGetAccountClusters(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}

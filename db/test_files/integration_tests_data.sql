@@ -69,4 +69,10 @@ INSERT INTO expenses (instance_id, date, amount) VALUES
   (11,'2025-07-30',1.70),(11,'2025-07-31',1.75),(11,'2025-08-01',1.80),(11,'2025-08-02',1.85),(11,'2025-08-03',1.90),
   (12,'2025-07-30',1.10),(12,'2025-07-31',1.15),(12,'2025-08-01',1.20),(12,'2025-08-02',1.25),(12,'2025-08-03',1.30);
 
+
+INSERT INTO events ( event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity) VALUES
+  ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '1', 'cluster', 'OK', 'integration test event', 'info'),
+  ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '10', 'instance', 'Pending', 'integration test event', 'critical');
+
+
 COMMIT;

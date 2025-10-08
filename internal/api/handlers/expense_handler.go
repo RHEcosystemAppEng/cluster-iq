@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
@@ -73,7 +73,7 @@ func (h *ExpenseHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := dto.NewListResponse(mappers.ToExpenseDTOList(expenses), total)
+	response := dto.NewListResponse(db.ToExpenseDTOResponseList(expenses), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -98,7 +98,7 @@ func (h *ExpenseHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), mappers.ToExpenseModelList(expenseDTOs)); err != nil {
+	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryExpenseList(expenseDTOs)); err != nil {
 		h.logger.Error("error creating expense", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create expenses: "+err.Error()))
 		return

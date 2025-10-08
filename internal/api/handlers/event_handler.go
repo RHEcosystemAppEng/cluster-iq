@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
@@ -89,14 +90,46 @@ func (h *EventHandler) ListSystem(c *gin.Context) {
 	events, total, err := h.service.ListSystemEvents(c.Request.Context(), opts)
 	if err != nil {
 		h.logger.Error("error listing system events", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list system events"))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list system events: "+err.Error()))
 		return
 	}
 
-	response := dto.NewListResponse(mappers.ToSystemEventDTOList(events), total)
+	response := dto.NewListResponse(db.ToSystemEventDTOResponseList(events), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
+}
+
+// Create handles the creation of new events.
+//
+//	@Summary		Create events
+//	@Description	Creates one or more new events.
+//	@Tags			events
+//	@Accept			json
+//	@Produce		json
+//	@Param			events	body		[]dto.Newevent	true	"event or events to create"
+//	@Success		201			{object}	[]dto.event
+//	@Failure		400			{object}	dto.GenericErrorResponse
+//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Router			/events [post]
+func (h *EventHandler) Create(c *gin.Context) {
+	var newEventsDTO dto.EventDTORequest
+	if err := c.ShouldBindJSON(&newEventsDTO); err != nil {
+		h.logger.Error("error processing received events", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		return
+	}
+
+	if _, err := h.service.Create(c.Request.Context(), *newEventsDTO.ToModelEvent()); err != nil {
+		h.logger.Error("error creating accounts", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create accounts: "+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+		Count:  1,
+		Status: "OK"},
+	)
 }
 
 // ListByCluster handles the request to list all events for a specific cluster.
@@ -110,7 +143,7 @@ func (h *EventHandler) ListSystem(c *gin.Context) {
 //	@Success		200			{object}	dto.ListResponse[dto.ClusterEvent]
 //	@Failure		500			{object}	dto.GenericErrorResponse
 //	@Router			/clusters/{id}/events [get]
-func (h *EventHandler) ListByCluster(c *gin.Context) {
+func (h *EventHandler) ListCluster(c *gin.Context) {
 	clusterID := c.Param("id")
 	var req dto.PaginationRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -133,8 +166,29 @@ func (h *EventHandler) ListByCluster(c *gin.Context) {
 		return
 	}
 
-	response := dto.NewListResponse(mappers.ToClusterEventDTOResponseList(events), total)
+	response := dto.NewListResponse(db.ToClusterEventDTOResponseList(events), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
+}
+
+func (h *EventHandler) Update(c *gin.Context) {
+	var newEventsDTO dto.EventDTORequest
+	if err := c.ShouldBindJSON(&newEventsDTO); err != nil {
+		h.logger.Error("error processing received events", zap.Error(err))
+		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		return
+	}
+
+	event := newEventsDTO.ToModelEvent()
+	if err := h.service.Update(c.Request.Context(), event.ID, event.Result); err != nil {
+		h.logger.Error("error updating events", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create accounts: "+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, responsetypes.PostResponse{
+		Count:  1,
+		Status: "OK"},
+	)
 }

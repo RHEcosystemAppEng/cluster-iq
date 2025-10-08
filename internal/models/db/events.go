@@ -10,7 +10,7 @@ type ClusterEventDBResponse struct {
 	ID             int64     `db:"id"`
 	EventTimestamp time.Time `db:"event_timestamp"`
 	TriggeredBy    string    `db:"triggered_by"`
-	ActionName     string    `db:"action_name"`
+	Action         string    `db:"action"`
 	ResourceID     string    `db:"resource_id"`
 	ResourceType   string    `db:"resource_type"`
 	Result         string    `db:"result"`
@@ -23,13 +23,22 @@ func (c ClusterEventDBResponse) ToClusterEventDTOResponse() *dto.ClusterEventDTO
 		ID:             c.ID,
 		EventTimestamp: c.EventTimestamp,
 		TriggeredBy:    c.TriggeredBy,
-		ActionName:     c.ActionName,
+		Action:         c.Action,
 		ResourceID:     c.ResourceID,
 		ResourceType:   c.ResourceType,
 		Result:         c.Result,
 		Description:    c.Description,
 		Severity:       c.Severity,
 	}
+}
+
+func ToClusterEventDTOResponseList(models []ClusterEventDBResponse) []dto.ClusterEventDTOResponse {
+	dtos := make([]dto.ClusterEventDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToClusterEventDTOResponse()
+	}
+
+	return dtos
 }
 
 type SystemEventDBResponse struct {
@@ -44,4 +53,13 @@ func (s SystemEventDBResponse) ToSystemEventDTOResponse() *dto.SystemEventDTORes
 		AccountID:               s.AccountID,
 		Provider:                s.Provider,
 	}
+}
+
+func ToSystemEventDTOResponseList(models []SystemEventDBResponse) []dto.SystemEventDTOResponse {
+	dtos := make([]dto.SystemEventDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToSystemEventDTOResponse()
+	}
+
+	return dtos
 }

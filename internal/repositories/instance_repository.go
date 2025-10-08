@@ -116,8 +116,6 @@ func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inve
 // Returns:
 // - An error if the transaction fails.
 func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances []inventory.Instance) error {
-	fmt.Println("INSERTING INSTANCES", instances)
-
 	if err := r.db.Insert(InsertInstancesQuery, instances); err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
@@ -42,5 +41,5 @@ func (h *OverviewHandler) Get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, mappers.ToOverviewSummaryDTO(overview))
+	c.JSON(http.StatusOK, dto.ToOverviewSummaryDTO(overview))
 }

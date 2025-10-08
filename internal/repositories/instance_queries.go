@@ -46,7 +46,6 @@ const (
 			instance_type = EXCLUDED.instance_type,
 			availability_zone = EXCLUDED.availability_zone,
 			status = EXCLUDED.status,
-			cluster_id = EXCLUDED.cluster_id,
 			last_scan_ts = EXCLUDED.last_scan_ts,
 			created_at = EXCLUDED.created_at,
 			age = EXCLUDED.age

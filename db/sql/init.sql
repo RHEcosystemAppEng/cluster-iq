@@ -199,27 +199,27 @@ CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
 
 
 -- ############################################################
--- Audit logs
+-- Events
 -- ############################################################
-CREATE TABLE IF NOT EXISTS audit_logs (
+CREATE TABLE IF NOT EXISTS events (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   event_timestamp         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   triggered_by            TEXT NOT NULL,
-  action_name             TEXT NOT NULL,
-  resource_id             TEXT NOT NULL,
+  action                  TEXT NOT NULL,
+  resource_id             INTEGER,
   resource_type           TEXT NOT NULL,
   result                  TEXT NOT NULL,
   description             TEXT NULL,
   severity                TEXT DEFAULT 'info'::TEXT NOT NULL,
-  CONSTRAINT audit_logs_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
+  CONSTRAINT events_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
   PRIMARY KEY (id, event_timestamp)
 ) PARTITION BY RANGE (event_timestamp);
 
--- Audit Logs Indexes
-CREATE INDEX IF NOT EXISTS ix_audit_logs_type_id_time ON audit_logs (resource_type, resource_id, event_timestamp DESC);
+-- Events Indexes
+CREATE INDEX IF NOT EXISTS ix_events_type_id_time ON events (resource_type, resource_id, event_timestamp DESC);
 
 -- Default expenses partition. The rest of expenses will be created by pg_cron
-CREATE TABLE audit_logs_default PARTITION OF audit_logs DEFAULT;
+CREATE TABLE events_default PARTITION OF events DEFAULT;
 
 
 
@@ -472,13 +472,18 @@ CREATE MATERIALIZED VIEW m_instances_pending_expense_update AS SELECT * FROM ins
 
 
 
+
+-- #############################################################################
 -- ## Tags
 -- #############################################################################
 
 
 
+
+-- #############################################################################
 -- ## Schedule
 -- #############################################################################
+
 -- Schedule with cluster and instances list view
 CREATE VIEW schedule_full_view AS
 SELECT
@@ -505,6 +510,7 @@ ORDER BY s.id;
 
 
 
+-- #############################################################################
 -- ## Expenses
 -- #############################################################################
 
@@ -530,11 +536,53 @@ $$;
 
 
 
--- ## Audit Logs
+-- #############################################################################
+-- ## Events
 -- #############################################################################
 
--- Function for creating audit_logs partitions
-CREATE OR REPLACE FUNCTION create_next_month_audit_logs_partition()
+-- View for Cluster Events
+CREATE VIEW cluster_events AS
+SELECT
+  id,
+  event_timestamp,
+  triggered_by,
+  action,
+  resource_id,
+  resource_type,
+  result,
+  description,
+  severity
+FROM events
+ORDER BY event_timestamp DESC;
+
+-- View for System Events
+CREATE VIEW system_events AS
+SELECT
+  ev.id,
+  ev.event_timestamp,
+  ev.triggered_by,
+  ev.action,
+  ev.resource_id,
+  ev.resource_type,
+  ev.result,
+  ev.description,
+  ev.severity,
+  acc.account_id,
+  acc.provider
+FROM events ev
+LEFT JOIN accounts acc ON acc.id = (
+  CASE
+    WHEN ev.resource_type = 'cluster'
+    THEN (SELECT c.account_id FROM clusters c WHERE c.id = ev.resource_id)
+    WHEN ev.resource_type = 'instance'
+    THEN (SELECT c.account_id FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = ev.resource_id))
+  END
+);
+
+
+
+-- Function for creating events partitions
+CREATE OR REPLACE FUNCTION create_next_month_events_partition()
 RETURNS text
 LANGUAGE plpgsql
 AS $$
@@ -542,10 +590,10 @@ DECLARE
   next_month  date := (date_trunc('month', current_date)::date + interval '1 month')::date;
   start_date  date := next_month;
   end_date    date := (next_month + interval '1 month')::date;
-  part_name   text := format('audit_logs_%s', to_char(next_month, 'YYYY_MM'));
+  part_name   text := format('events_%s', to_char(next_month, 'YYYY_MM'));
 BEGIN
   EXECUTE format(
-    'CREATE TABLE IF NOT EXISTS %I PARTITION OF public.audit_logs
+    'CREATE TABLE IF NOT EXISTS %I PARTITION OF public.events
        FOR VALUES FROM (%L) TO (%L);',
     part_name, start_date, end_date
   );

@@ -40,17 +40,10 @@ func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 	return cluster
 }
 
-// TODO: comments
-// ClusterDTORequestList represents the API Request containing a list of accounts.
-type ClusterDTORequestList struct {
-	Clusters []ClusterDTORequest `json:"clusters"` // List of accounts.
-}
-
-func (c ClusterDTORequestList) ToInventoryClusterList() *[]inventory.Cluster {
-	var clusters []inventory.Cluster
-
-	for _, cluster := range c.Clusters {
-		clusters = append(clusters, *cluster.ToInventoryCluster())
+func ToInventoryClusterList(dtos []ClusterDTORequest) *[]inventory.Cluster {
+	clusters := make([]inventory.Cluster, len(dtos))
+	for i, dto := range dtos {
+		clusters[i] = *dto.ToInventoryCluster()
 	}
 
 	return &clusters
@@ -75,31 +68,4 @@ type ClusterDTOResponse struct {
 	Last15DaysCost        float64                  `json:"last15DaysCost"`
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
-}
-
-// TODO: comments
-// ClusterDTOResponseList represents the API response containing a list of accounts.
-type ClusterDTOResponseList struct {
-	Count    int                  `json:"count,omitempty"` // Number of accounts, omitted if empty.
-	Clusters []ClusterDTOResponse `json:"clusters"`        // List of accounts.
-}
-
-// TODO: comments
-// NewClusterDTOResponseList creates a new ClusterDTOResponseList instance.
-// It ensures that an empty array is returned if the input account list is empty.
-//
-// Parameters:
-// - accounts: A slice of inventory.Account.
-//
-// Returns:
-// - A pointer to an ClusterDTOResponseList.
-func NewClusterDTOResponseList(clusters []ClusterDTOResponse) *ClusterDTOResponseList {
-	response := ClusterDTOResponseList{Clusters: clusters}
-
-	// Count only set list length > 0
-	if count := len(clusters); count > 0 {
-		response.Count = count
-	}
-
-	return &response
 }

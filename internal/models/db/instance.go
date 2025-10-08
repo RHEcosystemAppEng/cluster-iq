@@ -35,13 +35,12 @@ func (t *TagDBResponseList) Scan(src any) error {
 	return json.Unmarshal(b, t)
 }
 
-func (t *TagDBResponseList) ToTagDTOResponseList() *dto.TagDTOResponseList {
-	var tags dto.TagDTOResponseList
+func (t *TagDBResponseList) ToTagDTOResponseList() *[]dto.TagDTOResponse {
+	var tags []dto.TagDTOResponse
 	for _, tag := range *t {
-		tags.Tags = append(tags.Tags, *tag.ToTagDTOResponse())
+		tags = append(tags, *tag.ToTagDTOResponse())
 	}
 
-	tags.Count = len(tags.Tags)
 	return &tags
 }
 
@@ -90,4 +89,13 @@ func (i InstanceDBResponse) ToInstanceDTOResponse() *dto.InstanceDTOResponse {
 		CurrentMonthSoFarCost: i.CurrentMonthSoFarCost,
 		Tags:                  tags,
 	}
+}
+
+func ToInstanceDTOResponseList(models []InstanceDBResponse) []dto.InstanceDTOResponse {
+	dtos := make([]dto.InstanceDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToInstanceDTOResponse()
+	}
+
+	return dtos
 }

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -84,7 +84,7 @@ func (h *InstanceHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := dto.NewListResponse(mappers.ToInstanceDTOResponseList(instances), total)
+	response := dto.NewListResponse(db.ToInstanceDTOResponseList(instances), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -138,7 +138,7 @@ func (h *InstanceHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), mappers.ToInstanceModelList(newInstanceDTOs)); err != nil {
+	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryInstanceList(newInstanceDTOs)); err != nil {
 		h.logger.Error("error creating instances", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create instances: "+err.Error()))
 		return

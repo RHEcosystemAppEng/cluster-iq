@@ -39,18 +39,10 @@ func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
 
 	return instance
 }
-
-// TODO: comments
-// InstanceDTORequestList represents the API Request containing a list of accounts.
-type InstanceDTORequestList struct {
-	Instances []InstanceDTORequest `json:"instances"` // List of accounts.
-}
-
-func (i InstanceDTORequestList) ToInventoryInstanceList() *[]inventory.Instance {
-	var instances []inventory.Instance
-
-	for _, instance := range i.Instances {
-		instances = append(instances, *instance.ToInventoryInstance())
+func ToInventoryInstanceList(dtos []InstanceDTORequest) *[]inventory.Instance {
+	instances := make([]inventory.Instance, len(dtos))
+	for i, dto := range dtos {
+		instances[i] = *dto.ToInventoryInstance()
 	}
 
 	return &instances
@@ -75,31 +67,4 @@ type InstanceDTOResponse struct {
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
 	Tags                  []TagDTOResponse         `json:"tags"`
-}
-
-// TODO: comments
-// InstanceDTOResponseList represents the API response containing a list of accounts.
-type InstanceDTOResponseList struct {
-	Count     int                   `json:"count,omitempty"` // Number of accounts, omitted if empty.
-	Instances []InstanceDTOResponse `json:"instances"`       // List of accounts.
-}
-
-// TODO: comments
-// NewInstanceDTOResponseList creates a new InstanceDTOResponseList instance.
-// It ensures that an empty array is returned if the input account list is empty.
-//
-// Parameters:
-// - accounts: A slice of inventory.Account.
-//
-// Returns:
-// - A pointer to an InstanceDTOResponseList.
-func NewInstanceDTOResponseList(instances []InstanceDTOResponse) *InstanceDTOResponseList {
-	response := InstanceDTOResponseList{Instances: instances}
-
-	// Count only set list length > 0
-	if count := len(instances); count > 0 {
-		response.Count = count
-	}
-
-	return &response
 }

@@ -60,7 +60,7 @@ func setupClusterRoutes(group *gin.RouterGroup, clusterHandler *handlers.Cluster
 		clusters.POST("/:id/power_on", clusterHandler.PowerOn)
 		clusters.POST("/:id/power_off", clusterHandler.PowerOff)
 		clusters.GET("/:id/tags", clusterHandler.GetTags)
-		clusters.GET("/:id/events", eventHandler.ListByCluster)
+		clusters.GET("/:id/events", eventHandler.ListCluster)
 	}
 }
 
@@ -84,7 +84,9 @@ func setupExpenseRoutes(group *gin.RouterGroup, handler *handlers.ExpenseHandler
 func setupEventRoutes(group *gin.RouterGroup, handler *handlers.EventHandler) {
 	events := group.Group("/events")
 	{
-		events.GET("/system", handler.ListSystem)
+		events.GET("", handler.ListSystem)
+		events.POST("", handler.Create)
+		events.PATCH("", handler.Update)
 	}
 }
 

@@ -1,6 +1,8 @@
 package repositories
 
 const (
+	ClustersTable = "clusters"
+
 	// Table for SELECT operations on Accounts
 	SelectClustersFullView = "clusters_full_view"
 
@@ -73,7 +75,7 @@ const (
 			:provider,
 			:status,
 			:region,
-			:account_id,
+			(SELECT id FROM accounts WHERE account_id = :account_id),
 			:console_link,
 			:last_scan_ts,
 			:created_at,

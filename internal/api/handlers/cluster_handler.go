@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -94,7 +94,7 @@ func (h *ClusterHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := dto.NewListResponse(mappers.ToClusterDTOResponseList(clusters), total)
+	response := dto.NewListResponse(db.ToClusterDTOResponseList(clusters), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -155,7 +155,7 @@ func (h *ClusterHandler) GetInstances(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, mappers.ToInstanceDTOResponseList(instances))
+	c.JSON(http.StatusOK, db.ToInstanceDTOResponseList(instances))
 }
 
 // Create handles the creation of new clusters.
@@ -178,7 +178,7 @@ func (h *ClusterHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), mappers.ToClusterModelList(newClusterDTOs)); err != nil {
+	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryClusterList(newClusterDTOs)); err != nil {
 		h.logger.Error("error creating a cluster", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create clusters: "+err.Error()))
 		return
@@ -298,7 +298,7 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, mappers.ToTagsDTOResponseList(tags))
+	c.JSON(http.StatusOK, db.ToTagsDTOResponseList(tags))
 }
 
 // Update handles the request to update an existing cluster.

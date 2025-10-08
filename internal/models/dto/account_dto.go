@@ -29,15 +29,10 @@ func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
 	return account
 }
 
-type AccountDTORequestList struct {
-	Accounts []AccountDTORequest `json:"accounts"` // List of accounts.
-}
-
-func (a AccountDTORequestList) ToInventoryAccountList() *[]inventory.Account {
-	var accounts []inventory.Account
-
-	for _, cluster := range a.Accounts {
-		accounts = append(accounts, *cluster.ToInventoryAccount())
+func ToInventoryAccountList(dtos []AccountDTORequest) *[]inventory.Account {
+	accounts := make([]inventory.Account, len(dtos))
+	for i, dto := range dtos {
+		accounts[i] = *dto.ToInventoryAccount()
 	}
 
 	return &accounts
@@ -55,22 +50,4 @@ type AccountDTOResponse struct {
 	Last15DaysCost        float64            `json:"last15DaysCost"`
 	LastMonthCost         float64            `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64            `json:"currentMonthSoFarCost"`
-}
-
-// TODO comments
-type AccountDTOResponseList struct {
-	Count    int                  `json:"count,omitempty"`
-	Accounts []AccountDTOResponse `json:"accounts"`
-}
-
-// TODO comments
-func NewAccountDTOResponseList(accounts []AccountDTOResponse) *AccountDTOResponseList {
-	response := AccountDTOResponseList{Accounts: accounts}
-
-	// Count only set list length > 0
-	if count := len(accounts); count > 0 {
-		response.Count = count
-	}
-
-	return &response
 }

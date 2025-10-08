@@ -23,6 +23,15 @@ func (t TagDBResponse) ToTagDTOResponse() *dto.TagDTOResponse {
 	}
 }
 
+// ToTagsDTOList converts a slice of inventory.Tag models to a slice of TagDTOResponse.
+func ToTagsDTOResponseList(models []TagDBResponse) *[]dto.TagDTOResponse {
+	dtos := make([]dto.TagDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToTagDTOResponse()
+	}
+	return &dtos
+}
+
 // TagDBResponses implements sql.Scanner interface for processing tags as JSONB
 type TagDBResponses []TagDBResponse
 

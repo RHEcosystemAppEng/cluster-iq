@@ -52,3 +52,11 @@ func (c ClusterDBResponse) ToClusterDTOResponse() *dto.ClusterDTOResponse {
 		CurrentMonthSoFarCost: c.CurrentMonthSoFarCost,
 	}
 }
+
+func ToClusterDTOResponseList(models []ClusterDBResponse) []dto.ClusterDTOResponse {
+	dtos := make([]dto.ClusterDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToClusterDTOResponse()
+	}
+	return dtos
+}

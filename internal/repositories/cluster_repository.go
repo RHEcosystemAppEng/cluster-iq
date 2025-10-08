@@ -232,16 +232,7 @@ func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (invent
 // Returns:
 // - An error if the transaction fails or the query encounters an issue.
 func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []inventory.Cluster) error {
-	var newClusters []inventory.Cluster
-	for i := range clusters {
-		if newCluster, err := r.parseAccountInternalID(ctx, clusters[i]); err != nil {
-			return err
-		} else {
-			newClusters = append(newClusters, *newCluster)
-		}
-	}
-
-	if err := r.db.Insert(InsertClustersQuery, newClusters); err != nil {
+	if err := r.db.Insert(InsertClustersQuery, clusters); err != nil {
 		return err
 	}
 	return nil
@@ -290,26 +281,4 @@ func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, clusterID str
 		return err
 	}
 	return nil
-}
-
-func (r *clusterRepositoryImpl) parseAccountInternalID(ctx context.Context, cluster inventory.Cluster) (*inventory.Cluster, error) {
-	var id string
-
-	opts := models.ListOptions{
-		PageSize: 0,
-		Offset:   0,
-		Filters: map[string]interface{}{
-			"account_id": cluster.AccountID,
-		},
-	}
-
-	if err := r.db.Get(&id, AccountsTable, opts, "id"); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-
-	cluster.AccountID = id
-	return &cluster, nil
 }

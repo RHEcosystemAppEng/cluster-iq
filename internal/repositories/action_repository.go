@@ -9,19 +9,18 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	dbmodels "github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 )
 
 var _ ActionRepository = (*actionRepositoryImpl)(nil)
 
 // ActionRepository defines the interface for data access operations for actions.
 type ActionRepository interface {
-	ListScheduledActions(ctx context.Context, opts models.ListOptions) (dto.ActionDTOResponseList, int, error)
-	GetScheduledActionByID(ctx context.Context, actionID string) (*dto.ActionDTOResponse, error)
+	ListScheduledActions(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error)
+	GetScheduledActionByID(ctx context.Context, actionID string) (db.ActionDBResponse, error)
 	EnableScheduledAction(ctx context.Context, actionID string) error
 	DisableScheduledAction(ctx context.Context, actionID string) error
-	Create(ctx context.Context, newActions dto.ActionDTORequestList) error
+	Create(ctx context.Context, newActions []actions.Action) error
 	DeleteScheduledAction(ctx context.Context, actionID string) error
 }
 
@@ -40,21 +39,14 @@ func NewActionRepository(db *dbclient.DBClient) ActionRepository {
 // Returns:
 //   - An array of actions.Action with the scheduled actions declared on the DB
 //   - An error if the query fails
-func (r *actionRepositoryImpl) ListScheduledActions(ctx context.Context, opts models.ListOptions) (dto.ActionDTOResponseList, int, error) {
-	var schedule []dbmodels.ScheduleDBResponse
-	var result dto.ActionDTOResponseList
+func (r *actionRepositoryImpl) ListScheduledActions(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error) {
+	var schedule []db.ActionDBResponse
 
 	if err := r.db.Select(schedule, "schedule_full_view", opts, "id", "*"); err != nil {
-		return result, 0, fmt.Errorf("failed to list schedule: %w", err)
+		return schedule, 0, fmt.Errorf("failed to list schedule: %w", err)
 	}
 
-	for i := range schedule {
-		result.Actions = append(result.Actions, *schedule[i].ToActionDTOResponse())
-	}
-
-	result.Count = len(result.Actions)
-
-	return result, result.Count, nil
+	return schedule, len(schedule), nil
 }
 
 // EnableScheduledAction enables an Action by its ID
@@ -86,8 +78,8 @@ func (r *actionRepositoryImpl) DisableScheduledAction(ctx context.Context, actio
 // Returns:
 //   - An actions.Action object
 //   - An error if the query fails
-func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actionID string) (*dto.ActionDTOResponse, error) {
-	var record dbmodels.ScheduleDBResponse
+func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actionID string) (db.ActionDBResponse, error) {
+	var action db.ActionDBResponse
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -97,14 +89,14 @@ func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actio
 		},
 	}
 
-	if err := r.db.Select(record, "schedule_full_view", opts, "id", "*"); err != nil {
+	if err := r.db.Select(action, "schedule_full_view", opts, "id", "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return action, ErrNotFound
 		}
-		return nil, err
+		return action, err
 	}
 
-	return record.ToActionDTOResponse(), nil
+	return action, nil
 }
 
 // Create creates a batch of scheduled actions in the database.
@@ -116,10 +108,10 @@ func (r *actionRepositoryImpl) GetScheduledActionByID(ctx context.Context, actio
 //   - An error if the insert fails
 //
 // TODO: Temporal fix returning TX from DBClient to manage both insertions in the same sql transaction
-func (r *actionRepositoryImpl) Create(ctx context.Context, newActions dto.ActionDTORequestList) error {
+func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) error {
 	var actionList []actions.Action
-	for i := range newActions.Actions {
-		actionList = append(actionList, newActions.Actions[i].ToAction())
+	for i := range newActions {
+		actionList = append(actionList, newActions[i])
 	}
 	schedActions, cronActions := actions.SplitActionsByType(actionList)
 

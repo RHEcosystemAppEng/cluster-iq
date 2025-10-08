@@ -1,6 +1,10 @@
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+)
 
 // OverviewSummary represents the comprehensive overview of the system's inventory.
 type OverviewSummary struct {
@@ -40,4 +44,51 @@ type ProviderDetails struct {
 // Scanner provides information about the last inventory scan.
 type Scanner struct {
 	LastScanTimestamp time.Time `json:"last_scan_timestamp"`
+}
+
+// ToOverviewSummaryDTO converts an inventory OverviewSummary to a DTO.
+func ToOverviewSummaryDTO(model inventory.OverviewSummary) OverviewSummary {
+	return OverviewSummary{
+		Clusters:  toClusterSummaryDTO(model.Clusters),
+		Instances: toInstancesSummaryDTO(model.Instances),
+		Providers: toProvidersSummaryDTO(model.Providers),
+		Scanner:   toScannerDTO(model.Scanner),
+	}
+}
+
+func toClusterSummaryDTO(model inventory.ClustersSummary) ClusterSummary {
+	return ClusterSummary{
+		Running:  model.Running,
+		Stopped:  model.Stopped,
+		Archived: model.Archived,
+	}
+}
+
+func toInstancesSummaryDTO(model inventory.InstancesSummary) InstancesSummary {
+	return InstancesSummary{
+		Running:  model.Running,
+		Stopped:  model.Stopped,
+		Archived: model.Archived,
+	}
+}
+
+func toProvidersSummaryDTO(model inventory.ProvidersSummary) ProvidersSummary {
+	return ProvidersSummary{
+		AWS:   toProviderDetailsDTO(model.AWS),
+		GCP:   toProviderDetailsDTO(model.GCP),
+		Azure: toProviderDetailsDTO(model.Azure),
+	}
+}
+
+func toProviderDetailsDTO(model inventory.ProviderDetails) ProviderDetails {
+	return ProviderDetails{
+		AccountCount: model.AccountCount,
+		ClusterCount: model.ClusterCount,
+	}
+}
+
+func toScannerDTO(model inventory.Scanner) Scanner {
+	return Scanner{
+		LastScanTimestamp: model.LastScanTimestamp,
+	}
 }

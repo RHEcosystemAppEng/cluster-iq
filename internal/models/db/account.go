@@ -36,3 +36,13 @@ func (a AccountDBResponse) ToAccountDTOResponse() *dto.AccountDTOResponse {
 		CurrentMonthSoFarCost: a.CurrentMonthSoFarCost,
 	}
 }
+
+// ToAccountDTOList converts a slice of inventory.Account models to a slice of dto.Account.
+func ToAccountDTOResponseList(models []AccountDBResponse) []dto.AccountDTOResponse {
+	dtos := make([]dto.AccountDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToAccountDTOResponse()
+	}
+
+	return dtos
+}

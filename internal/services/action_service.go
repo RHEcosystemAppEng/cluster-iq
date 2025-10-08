@@ -5,16 +5,17 @@ package services
 import (
 	"context"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
 
 // ActionService defines the interface for action-related business logic.
 type ActionService interface {
-	List(ctx context.Context, options models.ListOptions) (dto.ActionDTOResponseList, int, error)
-	Get(ctx context.Context, actionID string) (*dto.ActionDTOResponse, error)
-	Create(ctx context.Context, newActions dto.ActionDTORequestList) error
+	List(ctx context.Context, options models.ListOptions) ([]db.ActionDBResponse, int, error)
+	Get(ctx context.Context, actionID string) (db.ActionDBResponse, error)
+	Create(ctx context.Context, newActions []actions.Action) error
 	Enable(ctx context.Context, actionID string) error
 	Disable(ctx context.Context, actionID string) error
 	Delete(ctx context.Context, actionID string) error
@@ -34,17 +35,17 @@ func NewActionService(repo repositories.ActionRepository) ActionService {
 }
 
 // List retrieves a paginated list of scheduled actions.
-func (s *actionServiceImpl) List(ctx context.Context, options models.ListOptions) (dto.ActionDTOResponseList, int, error) {
+func (s *actionServiceImpl) List(ctx context.Context, options models.ListOptions) ([]db.ActionDBResponse, int, error) {
 	return s.repo.ListScheduledActions(ctx, options)
 }
 
 // Get retrieves a single scheduled action by its ID.
-func (s *actionServiceImpl) Get(ctx context.Context, actionID string) (*dto.ActionDTOResponse, error) {
+func (s *actionServiceImpl) Get(ctx context.Context, actionID string) (db.ActionDBResponse, error) {
 	return s.repo.GetScheduledActionByID(ctx, actionID)
 }
 
 // Create creates new scheduled actions.
-func (s *actionServiceImpl) Create(ctx context.Context, newActions dto.ActionDTORequestList) error {
+func (s *actionServiceImpl) Create(ctx context.Context, newActions []actions.Action) error {
 	return s.repo.Create(ctx, newActions)
 }
 

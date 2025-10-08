@@ -54,7 +54,7 @@ func testListClusters(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.ClusterDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -80,7 +80,7 @@ func testListClustersWithPagination(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.ClusterDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -106,7 +106,7 @@ func testListClustersByStatus(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.ClusterDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -132,7 +132,7 @@ func testListClustersByProvider(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.ClusterDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -158,7 +158,7 @@ func testListClustersByRegion(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.ClusterDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -184,7 +184,7 @@ func testListClustersByAccount(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.ClusterDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -210,7 +210,7 @@ func testListClustersMultipleFilters(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ClusterDTOResponseList
+	var response dto.ListResponse[dto.ClusterDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}

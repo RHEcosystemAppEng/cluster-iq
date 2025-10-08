@@ -21,3 +21,12 @@ func (e ExpenseDBResponse) ToExpenseDTOResponse() *dto.ExpenseDTOResponse {
 		Date:       e.Date,
 	}
 }
+
+func ToExpenseDTOResponseList(models []ExpenseDBResponse) []dto.ExpenseDTOResponse {
+	dtos := make([]dto.ExpenseDTOResponse, len(models))
+	for i, model := range models {
+		dtos[i] = *model.ToExpenseDTOResponse()
+	}
+
+	return dtos
+}

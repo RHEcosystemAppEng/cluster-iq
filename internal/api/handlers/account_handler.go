@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -79,7 +79,7 @@ func (h *AccountHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := dto.NewListResponse(mappers.ToAccountDTOResponseList(accounts), total)
+	response := dto.NewListResponse(db.ToAccountDTOResponseList(accounts), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -140,7 +140,7 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 		return
 	}
 
-	response := dto.NewListResponse(mappers.ToClusterDTOResponseList(clusters), len(clusters))
+	response := dto.NewListResponse(db.ToClusterDTOResponseList(clusters), len(clusters))
 
 	c.JSON(http.StatusOK, response)
 }
@@ -165,7 +165,7 @@ func (h *AccountHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), mappers.ToAccountModelList(newAccountsDTO)); err != nil {
+	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryAccountList(newAccountsDTO)); err != nil {
 		h.logger.Error("error creating accounts", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create accounts: "+err.Error()))
 		return

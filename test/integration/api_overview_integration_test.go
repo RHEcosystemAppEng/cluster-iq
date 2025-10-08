@@ -25,7 +25,7 @@ func testGetOverview(t *testing.T) {
 	lastScanTS, _ := time.Parse(time.RFC3339, "0001-01-01T00:00:00Z")
 	expectedOverviewResponse := dto.OverviewSummary{
 		Clusters: dto.ClusterSummary{
-			Running:  5,
+			Running:  3,
 			Stopped:  2,
 			Archived: 0,
 		},
@@ -41,11 +41,11 @@ func testGetOverview(t *testing.T) {
 			},
 			GCP: dto.ProviderDetails{
 				AccountCount: 2,
-				ClusterCount: 3,
+				ClusterCount: 2,
 			},
 			Azure: dto.ProviderDetails{
 				AccountCount: 2,
-				ClusterCount: 3,
+				ClusterCount: 2,
 			},
 		},
 		Scanner: dto.Scanner{
