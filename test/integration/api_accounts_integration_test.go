@@ -50,7 +50,7 @@ func testListAccounts(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.AccountDTOResponse]
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -80,7 +80,7 @@ func testListAccountsWithPagination(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.AccountDTOResponse]
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -110,7 +110,7 @@ func testListAccountsByProvider(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.AccountDTOResponse]
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -140,7 +140,7 @@ func testListAccountsByWrongProvider(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -191,7 +191,7 @@ func testGetAccountByID_NoExists(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -218,7 +218,7 @@ func testGetAccountClusters(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.AccountDTOResponse]
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -346,7 +346,7 @@ func testPostWrongAccount(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}

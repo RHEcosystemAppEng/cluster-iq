@@ -1,5 +1,3 @@
-// Package main is the entry point for the ClusterIQ API server.
-// It initializes the API server, sets up routes, and handles server lifecycle events.
 package main
 
 import (
@@ -13,7 +11,6 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/router"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
@@ -208,7 +205,7 @@ func main() {
 	overviewService := services.NewOverviewService(clusterRepo, instanceRepo, accountRepo)
 
 	// Initializing handlers
-	handlers := router.APIHandlers{
+	handlers := APIHandlers{
 		AccountHandler:     handlers.NewAccountHandler(accountService, logger),
 		ClusterHandler:     handlers.NewClusterHandler(clusterService, logger),
 		InstanceHandler:    handlers.NewInstanceHandler(instanceService, logger),
@@ -221,7 +218,7 @@ func main() {
 
 	// Setup router
 	engine := setupGin(logger)
-	router.Setup(engine, handlers)
+	Setup(engine, handlers)
 
 	// parsing cfg.DBURL for removing user:password when logging
 	dburl, _ := url.Parse(cfg.DBURL)

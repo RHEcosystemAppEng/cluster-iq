@@ -8,13 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// HealthCheckHandler handles health check requests.
+// HealthCheckHandler exposes liveness/readiness-style endpoints.
 type HealthCheckHandler struct {
 	db     *dbclient.DBClient
 	logger *zap.Logger
 }
 
-// NewHealthCheckHandler creates a new HealthCheckHandler.
+// NewHealthCheckHandler wires DB client and logger into the handler.
 func NewHealthCheckHandler(db *dbclient.DBClient, logger *zap.Logger) *HealthCheckHandler {
 	return &HealthCheckHandler{
 		db:     db,
@@ -22,15 +22,16 @@ func NewHealthCheckHandler(db *dbclient.DBClient, logger *zap.Logger) *HealthChe
 	}
 }
 
+// healthCheckResponse defines the response output format for the healthcheck endpoint
 type healthCheckResponse struct {
 	APIHealth bool `json:"api_health"`
 	DBHealth  bool `json:"db_health"`
 }
 
-// Check handles the request for checking the health of the API.
+// Check returns current API and database health.
 //
-//	@Summary		Runs HealthChecks
-//	@Description	Runs checks to evaluate the health of ClusterIQ.
+//	@Summary		Health checks
+//	@Description	Report API process health and DB connectivity.
 //	@Tags			Health
 //	@Accept			json
 //	@Produce		json
@@ -38,6 +39,7 @@ type healthCheckResponse struct {
 //	@Router			/healthcheck [get]
 func (h *HealthCheckHandler) Check(c *gin.Context) {
 	dbStatus := false
+
 	if err := h.db.Ping(); err != nil {
 		h.logger.Error("Database health check failed", zap.Error(err))
 	} else {

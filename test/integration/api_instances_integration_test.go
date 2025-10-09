@@ -49,7 +49,7 @@ func testListInstances(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.InstanceDTOResponse]
+	var response responsetypes.ListResponse[dto.InstanceDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -75,7 +75,7 @@ func testListInstancesWithPagination(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.InstanceDTOResponse]
+	var response responsetypes.ListResponse[dto.InstanceDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -101,7 +101,7 @@ func testListInstancesByClusterID(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.InstanceDTOResponse]
+	var response responsetypes.ListResponse[dto.InstanceDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -127,7 +127,7 @@ func testListInstancesByStatus(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.InstanceDTOResponse]
+	var response responsetypes.ListResponse[dto.InstanceDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -153,7 +153,7 @@ func testListInstancesMultipleFilters(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.InstanceDTOResponse]
+	var response responsetypes.ListResponse[dto.InstanceDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -179,7 +179,7 @@ func testListInstancesWrongFilters(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
@@ -230,7 +230,7 @@ func testGetInstanceByID_NoExists(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -287,7 +287,7 @@ func testGetInstancesWithTags_NoExists(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -479,7 +479,7 @@ func testPostInstancesWrongValues(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}

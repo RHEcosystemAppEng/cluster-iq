@@ -1,4 +1,4 @@
-package router
+package main
 
 import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"

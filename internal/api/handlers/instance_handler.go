@@ -15,12 +15,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// InstanceHandler handles HTTP requests for instances.
+// InstanceHandler exposes instance-related HTTP endpoints.
 type InstanceHandler struct {
 	service services.InstanceService
 	logger  *zap.Logger
 }
 
+// NewInstanceHandler wires service and logger into the handler.
 func NewInstanceHandler(service services.InstanceService, logger *zap.Logger) *InstanceHandler {
 	return &InstanceHandler{
 		service: service,
@@ -28,11 +29,13 @@ func NewInstanceHandler(service services.InstanceService, logger *zap.Logger) *I
 	}
 }
 
+// instanceFilterParams defines the supported filter parameters
 type instanceFilterParams struct {
 	ClusterID string `form:"cluster_id"`
 	Status    string `form:"status"`
 }
 
+// toRepoFilters translates bound query params into repository filters.
 func (f *instanceFilterParams) toRepoFilters() map[string]interface{} {
 	filters := make(map[string]interface{})
 	if f.ClusterID != "" {
@@ -44,30 +47,34 @@ func (f *instanceFilterParams) toRepoFilters() map[string]interface{} {
 	return filters
 }
 
+// listInstancesRequest carries pagination and filters for List.
 type listInstancesRequest struct {
 	dto.PaginationRequest
 	Filters instanceFilterParams `form:"inline"`
 }
 
-// List handles the request for obtaining the Instance list.
+// List returns a paginated list of instances.
 //
 //	@Summary		List instances
-//	@Description	Returns a paginated list of instances based on optional filters.
+//	@Description	Paginated retrieval with optional filters.
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
-//	@Param			page		query		int		false	"Page number for pagination"	default(1)
-//	@Param			page_size	query		int		false	"Number of items per page"		default(10)
-//	@Param			cluster_id	query		string	false	"Filter by cluster ID"
-//	@Param			status		query		string	false	"Filter by instance status"
-//	@Success		200			{object}	dto.ListResponse[dto.Instance]
-//	@Failure		400			{object}	dto.GenericErrorResponse
-//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Param			page		query		int		false	"Page number"			default(1)
+//	@Param			page_size	query		int		false	"Items per page"		default(10)
+//	@Param			cluster_id	query		string	false	"Cluster ID filter"
+//	@Param			status		query		string	false	"Instance status filter"
+//	@Success		200			{object}	responsetypes.ListResponse[dto.Instance]
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/instances [get]
 func (h *InstanceHandler) List(c *gin.Context) {
 	var req listInstancesRequest
+
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid query parameters: "+err.Error()))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid query parameters: " + err.Error(),
+		})
 		return
 	}
 
@@ -80,27 +87,29 @@ func (h *InstanceHandler) List(c *gin.Context) {
 	instances, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
 		h.logger.Error("error listing instances", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve instances"))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve instances",
+		})
 		return
 	}
 
-	response := dto.NewListResponse(db.ToInstanceDTOResponseList(instances), total)
+	response := responsetypes.NewListResponse(db.ToInstanceDTOResponseList(instances), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
 }
 
-// Get handles the request for obtaining a single instance by its ID.
+// Get returns a single instance by ID.
 //
-//	@Summary		Get an instance by ID
-//	@Description	Returns a single instance.
+//	@Summary		Get instance by ID
+//	@Description	Return a single instance resource.
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Instance ID"
 //	@Success		200	{object}	dto.Instance
-//	@Failure		404	{object}	dto.GenericErrorResponse
-//	@Failure		500	{object}	dto.GenericErrorResponse
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/instances/{id} [get]
 func (h *InstanceHandler) Get(c *gin.Context) {
 	instanceID := c.Param("id")
@@ -109,38 +118,48 @@ func (h *InstanceHandler) Get(c *gin.Context) {
 	if err != nil {
 		h.logger.Error("error getting instance", zap.String("instance_id", instanceID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Instance not found"))
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Instance not found",
+			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve instance"))
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve instance",
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, instance.ToInstanceDTOResponse())
 }
 
-// Create handles the creation of new instances.
+// Create inserts one or more instances.
 //
 //	@Summary		Create instances
-//	@Description	Creates one or more new instances.
+//	@Description	Create one or multiple instances.
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
-//	@Param			instances	body		[]dto.Instance	true	"A list of instances to create"
-//	@Success		201			{object}	nil
-//	@Failure		400			{object}	dto.GenericErrorResponse
-//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Param			instances	body		[]dto.InstanceDTORequest	true	"Instances to create"
+//	@Success		201			{object}	responsetypes.PostResponse
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/instances [post]
 func (h *InstanceHandler) Create(c *gin.Context) {
 	var newInstanceDTOs []dto.InstanceDTORequest
+
 	if err := c.ShouldBindJSON(&newInstanceDTOs); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
 		return
 	}
 
 	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryInstanceList(newInstanceDTOs)); err != nil {
 		h.logger.Error("error creating instances", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create instances: "+err.Error()))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to create instances: " + err.Error(),
+		})
 		return
 	}
 

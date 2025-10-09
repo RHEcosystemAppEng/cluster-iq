@@ -15,13 +15,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// ActionHandler handles HTTP requests for actions.
+// ActionHandler wires HTTP endpoints to the ActionService.
 type ActionHandler struct {
 	service services.ActionService
 	logger  *zap.Logger
 }
 
-// NewActionHandler creates a new ActionHandler.
+// NewActionHandler returns an ActionHandler with its dependencies.
 func NewActionHandler(service services.ActionService, logger *zap.Logger) *ActionHandler {
 	return &ActionHandler{
 		service: service,
@@ -29,11 +29,13 @@ func NewActionHandler(service services.ActionService, logger *zap.Logger) *Actio
 	}
 }
 
+// scheduledActionFilterParams defines the supported filter parameters
 type scheduledActionFilterParams struct {
 	Enabled string `form:"enabled"`
 	Status  string `form:"status"`
 }
 
+// toRepoFilters maps bound query parameters to repository filters.
 func (f *scheduledActionFilterParams) toRepoFilters() map[string]interface{} {
 	filters := make(map[string]interface{})
 	if f.Enabled != "" {
@@ -45,27 +47,34 @@ func (f *scheduledActionFilterParams) toRepoFilters() map[string]interface{} {
 	return filters
 }
 
+// listScheduledActionsRequest carries pagination and filters for List.
 type listScheduledActionsRequest struct {
 	dto.PaginationRequest
 	Filters scheduledActionFilterParams `form:"inline"`
 }
 
-// List handles the request to list all scheduled actions.
+// List returns a paginated list of scheduled actions.
 //
-//	@Summary		List all scheduled actions
-//	@Description	Returns a list of scheduled actions
+//	@Summary		List scheduled actions
+//	@Description	Paginated retrieval with optional filters.
 //	@Tags			Actions
-//	@Param			enabled		query		string	false	"Filter by enabled state (true/false)"
-//	@Param			status		query		string	false	"Filter by action status"
-//	@Param			page		query		int		false	"Page number for pagination"	default(1)
-//	@Param			page_size	query		int		false	"Number of items per page"		default(10)
+//	@Accept			json
+//	@Produce		json
+//	@Param			enabled		query		string	false	"Enabled state filter (true/false)"
+//	@Param			status		query		string	false	"Status filter"
+//	@Param			page		query		int		false	"Page number"			default(1)
+//	@Param			page_size	query		int		false	"Items per page"		default(10)
 //	@Success		200			{object}	dto.ListResponse[dto.ScheduledAction]
-//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/schedule [get]
 func (h *ActionHandler) List(c *gin.Context) {
 	var req listScheduledActionsRequest
+
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid query parameters: "+err.Error()))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid query parameters: " + err.Error(),
+		})
 		return
 	}
 
@@ -78,25 +87,29 @@ func (h *ActionHandler) List(c *gin.Context) {
 	actions, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
 		h.logger.Error("error listing actions schedule", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list scheduled actions"))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to list scheduled actions",
+		})
 		return
 	}
 
-	response := dto.NewListResponse(db.ToActionDTOResponseList(actions), total)
+	response := responsetypes.NewListResponse(db.ToActionDTOResponseList(actions), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
 }
 
-// Get handles the request to get a single scheduled action by its ID.
+// Get returns a scheduled action by ID.
 //
 //	@Summary		Get scheduled action by ID
-//	@Description	Returns details of a specific scheduled action identified by its ID.
+//	@Description	Return a scheduled action resource.
 //	@Tags			Actions
-//	@Param			id	path		string	true	"Scheduled action identifier"
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Scheduled action ID"
 //	@Success		200	{object}	dto.ScheduledAction
-//	@Failure		404	{object}	dto.GenericErrorResponse
-//	@Failure		500	{object}	dto.GenericErrorResponse
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/schedule/{id} [get]
 func (h *ActionHandler) Get(c *gin.Context) {
 	actionID := c.Param("id")
@@ -105,33 +118,40 @@ func (h *ActionHandler) Get(c *gin.Context) {
 	if err != nil {
 		h.logger.Error("error getting action", zap.String("action_id", actionID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Scheduled action not found"))
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Scheduled action not found",
+			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve scheduled action"))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve scheduled action",
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, action.ToActionDTOResponse())
 }
 
-// Create handles the creation of new actions.
+// Create creates one or more actions.
 //
 //	@Summary		Create actions
-//	@Description	Creates one or more new actions.
+//	@Description	Create one or multiple actions.
 //	@Tags			Actions
 //	@Accept			json
 //	@Produce		json
-//	@Param			actions	body		[]dto.NewAction	true	"Action or actions to create"
-//	@Success		201			{object}	[]dto.Action
-//	@Failure		400			{object}	dto.GenericErrorResponse
-//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Param			actions	body		[]dto.ActionDTORequest	true	"Actions to create"
+//	@Success		201			{object}	responsetypes.PostResponse
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/actions [post]
 func (h *ActionHandler) Create(c *gin.Context) {
 	var newActionsDTO []dto.ActionDTORequest
+
 	if err := c.ShouldBindJSON(&newActionsDTO); err != nil {
 		h.logger.Error("error processing received actions", zap.Error(err))
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
 		return
 	}
 
@@ -139,13 +159,17 @@ func (h *ActionHandler) Create(c *gin.Context) {
 	if actions == nil {
 		err := errors.New("error when processing actions")
 		h.logger.Error("error processing actions", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create actions: "+err.Error()))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to create actions: " + err.Error(),
+		})
 		return
 	}
 
 	if err := h.service.Create(c.Request.Context(), *actions); err != nil {
 		h.logger.Error("error creating actions", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create actions: "+err.Error()))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to create actions: " + err.Error(),
+		})
 		return
 	}
 
@@ -155,69 +179,78 @@ func (h *ActionHandler) Create(c *gin.Context) {
 	)
 }
 
-// Enable handles the request to enable a scheduled action.
+// Enable activates a scheduled action by ID.
 //
 //	@Summary		Enable scheduled action
-//	@Description	Activates a scheduled action specified by its ID.
+//	@Description	Enable a scheduled action.
 //	@Tags			Actions
-//	@Param			id	path		string	true	"Scheduled action identifier"
-//	@Success		204	{object}	nil
-//	@Failure		500	{object}	dto.GenericErrorResponse
+//	@Param			id	path		string	true	"Scheduled action ID"
+//	@Success		200	{object}	nil
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/schedule/{id}/enable [patch]
 func (h *ActionHandler) Enable(c *gin.Context) {
 	actionID := c.Param("id")
 
 	if err := h.service.Enable(c.Request.Context(), actionID); err != nil {
 		h.logger.Error("error enabling action", zap.String("action_id", actionID), zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to enable scheduled action"))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to enable scheduled action",
+		})
 		return
 	}
 
 	c.Status(http.StatusOK)
 }
 
-// Disable handles the request to disable a scheduled action.
+// Disable deactivates a scheduled action by ID.
 //
 //	@Summary		Disable scheduled action
-//	@Description	Deactivates a scheduled action specified by its ID.
+//	@Description	Disable a scheduled action.
 //	@Tags			Actions
-//	@Param			id	path		string	true	"Scheduled action identifier"
-//	@Success		204	{object}	nil
-//	@Failure		500	{object}	dto.GenericErrorResponse
+//	@Param			id	path		string	true	"Scheduled action ID"
+//	@Success		200	{object}	nil
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/schedule/{id}/disable [patch]
 func (h *ActionHandler) Disable(c *gin.Context) {
 	actionID := c.Param("id")
 
 	if err := h.service.Disable(c.Request.Context(), actionID); err != nil {
 		h.logger.Error("error disabling action", zap.String("action_id", actionID), zap.Error(err))
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to disable scheduled action"))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to disable scheduled action",
+		})
 		return
 	}
 
 	c.Status(http.StatusOK)
 }
 
-// Delete handles the deletion of an action.
+// Delete removes an action by ID.
 //
 //	@Summary		Delete an action
-//	@Description	Deletes an action by its name.
-//	@Tags			actions
+//	@Description	Delete an action by ID.
+//	@Tags			Actions
 //	@Accept			json
-//	@Param			name	path		string	true	"action Name"
+//	@Param			id	path		string	true	"Action ID"
 //	@Success		204		{object}	nil
-//	@Failure		404		{object}	dto.GenericErrorResponse
-//	@Failure		500		{object}	dto.GenericErrorResponse
-//	@Router			/actions/{name} [delete]
+//	@Failure		404		{object}	responsetypes.GenericErrorResponse
+//	@Failure		500		{object}	responsetypes.GenericErrorResponse
+//	@Router			/actions/{id} [delete]
 func (h *ActionHandler) Delete(c *gin.Context) {
 	actionID := c.Param("id")
 
 	if err := h.service.Delete(c.Request.Context(), actionID); err != nil {
 		h.logger.Error("error deleting action", zap.String("action_id", actionID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("action not found"))
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "action not found",
+			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to delete Action: "+err.Error()))
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to delete Action: " + err.Error(),
+		})
 		return
 	}
 

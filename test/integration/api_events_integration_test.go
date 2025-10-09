@@ -39,7 +39,7 @@ func testListSystemEvents(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.SystemEventDTOResponse]
+	var response responsetypes.ListResponse[dto.SystemEventDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -70,7 +70,7 @@ func testListClusterEvents(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.SystemEventDTOResponse]
+	var response responsetypes.ListResponse[dto.SystemEventDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}

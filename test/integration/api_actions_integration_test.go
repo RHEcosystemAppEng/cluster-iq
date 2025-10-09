@@ -45,7 +45,7 @@ func testListActions(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.ActionDTOResponse]
+	var response responsetypes.ListResponse[dto.ActionDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -75,7 +75,7 @@ func testListActionsWithPagination(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.ListResponse[dto.ActionDTOResponse]
+	var response responsetypes.ListResponse[dto.ActionDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -131,7 +131,7 @@ func testGetActionByID_NoExists(t *testing.T) {
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
@@ -274,7 +274,7 @@ func testPostWrongAction(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Decode the JSON response
-	var response dto.GenericErrorResponse
+	var response responsetypes.GenericErrorResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
