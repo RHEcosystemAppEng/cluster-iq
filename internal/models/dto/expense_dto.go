@@ -31,6 +31,23 @@ func ToInventoryExpenseList(dtos []ExpenseDTORequest) *[]inventory.Expense {
 	return &expenses
 }
 
+func ToExpenseDTORequest(expense inventory.Expense) *ExpenseDTORequest {
+	return &ExpenseDTORequest{
+		InstanceID: expense.InstanceID,
+		Amount:     expense.Amount,
+		Date:       expense.Date,
+	}
+}
+
+func ToExpenseDTORequestList(expenses []inventory.Expense) *[]ExpenseDTORequest {
+	expenseList := make([]ExpenseDTORequest, len(expenses))
+	for i, expense := range expenses {
+		expenseList[i] = *ToExpenseDTORequest(expense)
+	}
+
+	return &expenseList
+}
+
 // Expense represents the data transfer object for an expense.
 type ExpenseDTOResponse struct {
 	InstanceID string    `json:"instanceID"`

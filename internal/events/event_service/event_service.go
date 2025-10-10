@@ -62,7 +62,7 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 		EventTimestamp: time.Now().UTC(),
 	}
 	// TODO Fix replace TODO context by request's context
-	eventID, err := e.repo.AddEvent(context.TODO(), event)
+	eventID, err := e.repo.CreateEvent(context.TODO(), event)
 	if err != nil {
 		e.logger.Error("Failed to log event", zap.Error(err))
 		return 0, err

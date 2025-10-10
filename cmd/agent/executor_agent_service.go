@@ -24,8 +24,8 @@ type ExecutorAgentService struct {
 	AgentService
 	executors      map[string]cexec.CloudExecutor
 	actionsChannel <-chan actions.Action
-	client         http.Client          // HTTP Client for retrieving the schedule from API
-	eventService   *events.EventService // Service for handling audit logs
+	client         http.Client                // HTTP Client for retrieving the schedule from API
+	eventService   *eventservice.EventService // Service for handling audit logs
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions

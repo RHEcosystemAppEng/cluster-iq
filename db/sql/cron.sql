@@ -18,9 +18,17 @@ SELECT cron.schedule_in_database(
 
 -- pg_cron task for creating a new monthly partition for 'audit_logs' table every Sunday
 SELECT cron.schedule_in_database(
-  'audit_logs_partitioning',
+  'events_partitioning',
   '0 0 * * 6',
-  $$SELECT create_next_month_audit_logs_partition();$$,
+  $$SELECT create_next_month_events_partition();$$,
+  'clusteriq'
+);
+
+-- pg_cron task for refreshing the materialized views if the process is not triggered
+SELECT cron.schedule_in_database(
+  'm_views_refresh',
+  '0 0 * * *',
+  $$SELECT refresh_materialized_views();$$,
   'clusteriq'
 );
 

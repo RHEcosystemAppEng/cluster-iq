@@ -48,6 +48,32 @@ func ToInventoryInstanceList(dtos []InstanceDTORequest) *[]inventory.Instance {
 	return &instances
 }
 
+func ToInstanceDTORequest(instance inventory.Instance) *InstanceDTORequest {
+	return &InstanceDTORequest{
+		InstanceID:       instance.InstanceID,
+		InstanceName:     instance.InstanceName,
+		InstanceType:     instance.InstanceType,
+		Provider:         instance.Provider,
+		AvailabilityZone: instance.AvailabilityZone,
+		Status:           instance.Status,
+		ClusterID:        instance.ClusterID,
+		LastScanTS:       instance.LastScanTS,
+		CreatedAt:        instance.CreatedAt,
+		Age:              instance.Age,
+		Owner:            inventory.GetOwnerFromTags(instance.Tags),
+		Tags:             *ToTagDTORequestList(instance.Tags),
+	}
+}
+
+func ToInstanceDTORequestList(instances []inventory.Instance) *[]InstanceDTORequest {
+	instanceList := make([]InstanceDTORequest, len(instances))
+	for i, instance := range instances {
+		instanceList[i] = *ToInstanceDTORequest(instance)
+	}
+
+	return &instanceList
+}
+
 // TODO: comments
 type InstanceDTOResponse struct {
 	InstanceID            string                   `json:"instanceID"`

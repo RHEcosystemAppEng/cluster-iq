@@ -500,7 +500,7 @@ SELECT
 	COALESCE(
 		array_agg(DISTINCT i.instance_id ORDER BY i.instance_id),
 		'{}'
-	) AS instances	
+	) AS instances
 FROM
 	schedule s
 JOIN clusters c ON c.id = s.target

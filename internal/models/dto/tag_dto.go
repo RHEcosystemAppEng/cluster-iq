@@ -28,6 +28,22 @@ func (t TagDTORequest) ToInventoryTagList(dtos []TagDTORequest) *[]inventory.Tag
 	return &tags
 }
 
+func ToTagDTORequest(tag inventory.Tag) *TagDTORequest {
+	return &TagDTORequest{
+		Key:   tag.Key,
+		Value: tag.Value,
+	}
+}
+
+func ToTagDTORequestList(tags []inventory.Tag) *[]TagDTORequest {
+	tagList := make([]TagDTORequest, len(tags))
+	for i, tag := range tags {
+		tagList[i] = *ToTagDTORequest(tag)
+	}
+
+	return &tagList
+}
+
 // TODO comments
 type TagDTOResponse struct {
 	Key        string `json:"key"`

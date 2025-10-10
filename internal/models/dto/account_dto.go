@@ -38,6 +38,16 @@ func ToInventoryAccountList(dtos []AccountDTORequest) *[]inventory.Account {
 	return &accounts
 }
 
+func ToAccountDTORequest(account inventory.Account) *AccountDTORequest {
+	return &AccountDTORequest{
+		AccountID:   account.AccountID,
+		AccountName: account.AccountName,
+		Provider:    account.Provider,
+		LastScanTS:  account.LastScanTS,
+		CreatedAt:   account.CreatedAt,
+	}
+}
+
 // AccountDTOResponse represents the data transfer object for an account.
 type AccountDTOResponse struct {
 	AccountID             string             `json:"accountID"`

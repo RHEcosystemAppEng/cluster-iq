@@ -8,7 +8,7 @@ import (
 type AccountConfig struct {
 	ID             string
 	Name           string
-	Provider       inventory.CloudProvider
+	Provider       inventory.Provider
 	User           string
 	Key            string
 	BillingEnabled bool
@@ -30,7 +30,7 @@ func ReadCloudAccounts(credsFile string) ([]AccountConfig, error) {
 		account := AccountConfig{
 			ID:             section.Name(),
 			Name:           section.Key("name").String(),
-			Provider:       inventory.GetCloudProvider(section.Key("provider").String()),
+			Provider:       inventory.GetProvider(section.Key("provider").String()),
 			User:           section.Key("user").String(),
 			Key:            section.Key("key").String(),
 			BillingEnabled: section.Key("billing_enabled").MustBool(),

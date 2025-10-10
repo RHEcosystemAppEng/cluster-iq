@@ -18,6 +18,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/stocker"
 	"go.uber.org/zap"
 )
@@ -233,8 +234,8 @@ func (s *Scanner) postNewAccount(account inventory.Account) error {
 	s.logger.Debug("Posting new Account", zap.String("account", account.AccountName))
 
 	// Converting to Array because API handler assumes a list of accounts
-	var accounts []inventory.Account
-	accounts = append(accounts, account)
+	var accounts []dto.AccountDTORequest
+	accounts = append(accounts, *dto.ToAccountDTORequest(account))
 	b, err := json.Marshal(accounts)
 	if err != nil {
 		s.logger.Error("Failed to marshal account", zap.String("account", account.AccountName), zap.Error(err))
@@ -291,7 +292,7 @@ func flatternAccount(account inventory.Account) ([]inventory.Cluster, []inventor
 
 // postClusters posts into the API, the new instances obtained after scanning
 func postClusters(clusters []inventory.Cluster) error {
-	b, err := json.Marshal(clusters)
+	b, err := json.Marshal(dto.ToClusterDTORequestList(clusters))
 	if err != nil {
 		return err
 	}
@@ -301,7 +302,7 @@ func postClusters(clusters []inventory.Cluster) error {
 
 // postInstances posts into the API, the instances obtained after scanning
 func postInstances(instances []inventory.Instance) error {
-	b, err := json.Marshal(instances)
+	b, err := json.Marshal(dto.ToInstanceDTORequestList(instances))
 	if err != nil {
 		return err
 	}
@@ -311,7 +312,7 @@ func postInstances(instances []inventory.Instance) error {
 
 // postExpenses posts into the API, the expenses obtained after scanning
 func postExpenses(expenses []inventory.Expense) error {
-	b, err := json.Marshal(expenses)
+	b, err := json.Marshal(dto.ToExpenseDTORequestList(expenses))
 	if err != nil {
 		return err
 	}

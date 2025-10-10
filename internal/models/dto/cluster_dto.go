@@ -49,6 +49,32 @@ func ToInventoryClusterList(dtos []ClusterDTORequest) *[]inventory.Cluster {
 	return &clusters
 }
 
+func ToClusterDTORequest(cluster inventory.Cluster) *ClusterDTORequest {
+	return &ClusterDTORequest{
+		ClusterID:   cluster.ClusterID,
+		ClusterName: cluster.ClusterName,
+		InfraID:     cluster.InfraID,
+		Provider:    cluster.Provider,
+		Status:      cluster.Status,
+		Region:      cluster.Region,
+		AccountID:   cluster.AccountID,
+		ConsoleLink: cluster.ConsoleLink,
+		LastScanTS:  cluster.LastScanTS,
+		CreatedAt:   cluster.CreatedAt,
+		Age:         cluster.Age,
+		Owner:       cluster.Owner,
+	}
+}
+
+func ToClusterDTORequestList(clusters []inventory.Cluster) *[]ClusterDTORequest {
+	clusterList := make([]ClusterDTORequest, len(clusters))
+	for i, cluster := range clusters {
+		clusterList[i] = *ToClusterDTORequest(cluster)
+	}
+
+	return &clusterList
+}
+
 // TODO: comments
 type ClusterDTOResponse struct {
 	ClusterID             string                   `json:"clusterID"`
