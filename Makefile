@@ -157,10 +157,10 @@ go-integration-tests: go-setup-tests
 	@echo -e "### [Running Integration tests] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml up -d
-	@sleep 20 # let init-pgsql to do its job
+	@sleep 10 # let init-pgsql to do its job
 	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out | sed -e 's/PASS/\x1b[32mPASS\x1b[0m/' -e 's/FAIL/\x1b[31mFAIL\x1b[0m/' -e 's/RUN/\x1b[33mRUN\x1b[0m/'
 	@$(GO) tool cover -func $(TEST_DIR)/cover-integration-tests.out
-	#@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
+	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
 
 go-tests: ## Runs every test
 go-tests: go-unit-tests go-integration-tests

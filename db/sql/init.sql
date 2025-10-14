@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS clusters (
   provider                CLOUD_PROVIDER NOT NULL,
   status                  STATUS DEFAULT 'Unknown' NOT NULL,
   region                  TEXT,
-  account_id              INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+  account_id              INTEGER REFERENCES accounts(id) ON DELETE CASCADE NOT NULL,
   console_link            TEXT,
   last_scan_ts            TIMESTAMP WITH TIME ZONE,
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS instances (
   provider                CLOUD_PROVIDER NOT NULL,
   availability_zone       TEXT,
   status                  STATUS DEFAULT 'Unknown' NOT NULL,
-  cluster_id              INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
+  cluster_id              INTEGER REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
   last_scan_ts            TIMESTAMP WITH TIME ZONE,
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
@@ -182,7 +182,7 @@ END$$;
 \! echo '## Creating Expenses table'
 
 CREATE TABLE IF NOT EXISTS expenses (
-  instance_id              BIGINT REFERENCES instances(id) ON DELETE CASCADE,
+  instance_id              BIGINT REFERENCES instances(id) ON DELETE CASCADE NOT NULL,
   date                     DATE NOT NULL,
   amount                   NUMERIC(12,2) DEFAULT 0.0,
   PRIMARY KEY (instance_id, date),
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS schedule (
   time                    TIMESTAMP WITH TIME ZONE,
   cron_exp                TEXT,
   operation               ACTION_OPERATION NOT NULL,
-  target                  INTEGER REFERENCES clusters(id) ON DELETE CASCADE,
+  target                  INTEGER REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
   status                  ACTION_STATUS DEFAULT 'Unknown' NOT NULL,
   enabled                 BOOLEAN DEFAULT false,
 	PRIMARY KEY (id),

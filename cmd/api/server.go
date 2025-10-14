@@ -185,6 +185,7 @@ func main() {
 	}
 
 	// Initializing repositories
+	inventoryRepo := repositories.NewInventoryRepository(dbClient)
 	accountRepo := repositories.NewAccountRepository(dbClient)
 	clusterRepo := repositories.NewClusterRepository(dbClient)
 	instanceRepo := repositories.NewInstanceRepository(dbClient)
@@ -193,6 +194,7 @@ func main() {
 	actionRepo := repositories.NewActionRepository(dbClient)
 
 	// Initializing services
+	inventoryService := services.NewInventoryService(inventoryRepo)
 	accountService := services.NewAccountService(accountRepo)
 	clusterServiceOpts := services.ClusterServiceOptions{
 		AgentRequestTimeout: cfg.AgentRequestTimeout,
@@ -206,6 +208,7 @@ func main() {
 
 	// Initializing handlers
 	handlers := APIHandlers{
+		InventoryHandler:   handlers.NewInventoryHandler(inventoryService, logger),
 		AccountHandler:     handlers.NewAccountHandler(accountService, logger),
 		ClusterHandler:     handlers.NewClusterHandler(clusterService, logger),
 		InstanceHandler:    handlers.NewInstanceHandler(instanceService, logger),

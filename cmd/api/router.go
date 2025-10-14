@@ -7,6 +7,7 @@ import (
 
 // APIHandlers holds all the handlers that the router needs.
 type APIHandlers struct {
+	InventoryHandler   *handlers.InventoryHandler
 	AccountHandler     *handlers.AccountHandler
 	ClusterHandler     *handlers.ClusterHandler
 	InstanceHandler    *handlers.InstanceHandler
@@ -21,6 +22,7 @@ type APIHandlers struct {
 func Setup(engine *gin.Engine, handlers APIHandlers) {
 	baseGroup := engine.Group("/api/v1")
 	{
+		setupInventoryRoutes(baseGroup, handlers.InventoryHandler)
 		setupHealthCheckRoutes(baseGroup, handlers.HealthCheckHandler)
 		setupAccountRoutes(baseGroup, handlers.AccountHandler)
 		setupClusterRoutes(baseGroup, handlers.ClusterHandler, handlers.InstanceHandler, handlers.EventHandler)
@@ -30,6 +32,10 @@ func Setup(engine *gin.Engine, handlers APIHandlers) {
 		setupActionRoutes(baseGroup, handlers.ActionHandler)
 		setupOverviewRoutes(baseGroup, handlers.OverviewHandler)
 	}
+}
+
+func setupInventoryRoutes(group *gin.RouterGroup, handler *handlers.InventoryHandler) {
+	group.POST("/inventory", handler.Refresh)
 }
 
 func setupHealthCheckRoutes(group *gin.RouterGroup, handler *handlers.HealthCheckHandler) {

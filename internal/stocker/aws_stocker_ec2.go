@@ -55,6 +55,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 		}
 
 		// Adding the instance to the Cluster
+		instance.ClusterID = cluster.ClusterID
 		s.Account.Clusters[cluster.ClusterID].AddInstance(&instance)
 	}
 }

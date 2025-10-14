@@ -35,7 +35,7 @@ func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 	cluster.LastScanTS = c.LastScanTS
 	cluster.CreatedAt = c.CreatedAt
 	cluster.Status = c.Status
-	cluster.AccountID = ""
+	cluster.AccountID = c.AccountID
 
 	return cluster
 }

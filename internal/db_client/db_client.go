@@ -56,6 +56,15 @@ func (d *DBClient) Ping() error {
 	return d.db.Ping()
 }
 
+func (d *DBClient) ExecFunc(query string) error {
+	var result string
+	if err := d.db.QueryRowx(query).Scan(&result); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d *DBClient) Get(dest interface{}, table string, opts models.ListOptions, columns ...string) error {
 	builder := d.NewSelectBuilder(columns...).From(table)
 

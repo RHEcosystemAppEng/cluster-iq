@@ -24,10 +24,11 @@ import (
 )
 
 const (
-	apiAccountEndpoint  = "/accounts"
-	apiClusterEndpoint  = "/clusters"
-	apiInstanceEndpoint = "/instances"
-	apiExpenseEndpoint  = "/expenses"
+	apiInventoryEndpoint = "/inventory"
+	apiAccountEndpoint   = "/accounts"
+	apiClusterEndpoint   = "/clusters"
+	apiInstanceEndpoint  = "/instances"
+	apiExpenseEndpoint   = "/expenses"
 )
 
 var (
@@ -354,6 +355,10 @@ func (s *Scanner) postScannerInventory() error {
 			s.logger.Error("Post Account Error", zap.Error(err))
 		}
 		return fmt.Errorf("error when posting Scanner inventory")
+	}
+
+	if err := postData(apiInventoryEndpoint, []byte{}); err != nil {
+		return err
 	}
 
 	s.logger.Info("Inventory posted correctly")

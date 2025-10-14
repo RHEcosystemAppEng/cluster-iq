@@ -35,10 +35,11 @@ func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
 	)
 
 	instance.LastScanTS = i.LastScanTS
-	instance.ClusterID = ""
+	instance.ClusterID = i.ClusterID
 
 	return instance
 }
+
 func ToInventoryInstanceList(dtos []InstanceDTORequest) *[]inventory.Instance {
 	instances := make([]inventory.Instance, len(dtos))
 	for i, dto := range dtos {

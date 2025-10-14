@@ -158,24 +158,3 @@ func (r *instanceRepositoryImpl) DeleteInstance(ctx context.Context, instanceID 
 	}
 	return nil
 }
-
-func (r *instanceRepositoryImpl) parseInstanceInternalID(ctx context.Context, instance inventory.Instance) (string, error) {
-	var id string
-
-	opts := models.ListOptions{
-		PageSize: 0,
-		Offset:   0,
-		Filters: map[string]interface{}{
-			"instance_id": instance.InstanceID,
-		},
-	}
-
-	if err := r.db.Get(&id, AccountsTable, opts, "id"); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", ErrNotFound
-		}
-		return "", err
-	}
-
-	return id, nil
-}

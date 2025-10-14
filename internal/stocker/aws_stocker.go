@@ -2,6 +2,7 @@ package stocker
 
 import (
 	"fmt"
+	"time"
 
 	cp "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_providers/aws"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -69,6 +70,8 @@ func (s *AWSStocker) MakeStock() error {
 	if err := s.FindOpenshiftConsoleURLs(); err != nil {
 		return err
 	}
+
+	s.Account.LastScanTS = time.Now()
 
 	return nil
 }
