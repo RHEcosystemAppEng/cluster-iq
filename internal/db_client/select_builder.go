@@ -17,7 +17,7 @@ type SelectBuilder struct {
 }
 
 // NewSelectBuilder creates a new SelectBuilder
-func (c *DBClient) NewSelectBuilder(columns ...string) *SelectBuilder {
+func (d *DBClient) NewSelectBuilder(columns ...string) *SelectBuilder {
 	return &SelectBuilder{
 		columns: columns,
 		limit:   -1,

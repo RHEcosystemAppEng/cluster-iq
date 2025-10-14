@@ -175,7 +175,11 @@ func main() {
 	if err != nil {
 		logger.Fatal("Could not establish database connection", zap.Error(err))
 	}
-	defer dbClient.CloseDBClient()
+	defer func() {
+		if err := dbClient.Close(); err != nil {
+			logger.Error("error closing dbclient", zap.Error(err))
+		}
+	}()
 
 	// Initializing gRPC AgentClient
 	agentClient, err := clients.NewGRPCAgentClient(cfg.AgentURL, logger)

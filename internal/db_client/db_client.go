@@ -41,7 +41,7 @@ func NewDBClient(dbURL string, logger *zap.Logger) (*DBClient, error) {
 	}, nil
 }
 
-func (d *DBClient) CloseDBClient() error {
+func (d *DBClient) Close() error {
 	return d.db.Close()
 }
 

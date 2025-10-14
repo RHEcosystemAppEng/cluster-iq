@@ -11,7 +11,7 @@ type DeleteBuilder struct {
 	args  []interface{}
 }
 
-func (c *DBClient) NewDeleteBuilder() *DeleteBuilder { return &DeleteBuilder{} }
+func (d *DBClient) NewDeleteBuilder() *DeleteBuilder { return &DeleteBuilder{} }
 
 func (d *DeleteBuilder) From(table string) *DeleteBuilder {
 	d.table = table

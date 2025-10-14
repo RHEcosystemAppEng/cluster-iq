@@ -5,7 +5,7 @@ type InsertBuilder struct {
 	data  interface{}
 }
 
-func (c *DBClient) NewInsertBuilder() *InsertBuilder { return &InsertBuilder{} }
+func (d *DBClient) NewInsertBuilder() *InsertBuilder { return &InsertBuilder{} }
 
 func (i *InsertBuilder) Query(query string) *InsertBuilder {
 	i.query = query

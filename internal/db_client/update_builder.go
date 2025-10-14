@@ -5,7 +5,7 @@ type UpdateBuilder struct {
 	data  interface{}
 }
 
-func (c *DBClient) NewUpdateBuilder() *UpdateBuilder { return &UpdateBuilder{} }
+func (d *DBClient) NewUpdateBuilder() *UpdateBuilder { return &UpdateBuilder{} }
 
 func (i *UpdateBuilder) Query(query string) *UpdateBuilder {
 	i.query = query
