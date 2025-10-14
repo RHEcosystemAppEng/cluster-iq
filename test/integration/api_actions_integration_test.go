@@ -18,6 +18,10 @@ const (
 func TestAPIActions(t *testing.T) {
 	waitForAPIReady(t)
 
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
+	}
+
 	t.Run("Test List Actions", func(t *testing.T) { testListActions(t) })
 	t.Run("Test List Actions with Pagination", func(t *testing.T) { testListActionsWithPagination(t) })
 	t.Run("Test Get Actions By ID Success", func(t *testing.T) { testGetActionByID_Exists(t) })

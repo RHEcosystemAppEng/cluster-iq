@@ -27,7 +27,7 @@ SELECT cron.schedule_in_database(
 -- pg_cron task for refreshing the materialized views if the process is not triggered
 SELECT cron.schedule_in_database(
   'm_views_refresh',
-  '0 0 * * *',
+  '0 */2 * * *',
   $$SELECT refresh_materialized_views();$$,
   'clusteriq'
 );

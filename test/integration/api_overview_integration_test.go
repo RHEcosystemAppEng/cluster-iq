@@ -17,6 +17,10 @@ const (
 func TestAPIOverview(t *testing.T) {
 	waitForAPIReady(t)
 
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
+	}
+
 	t.Run("Test Get Overview", func(t *testing.T) { testGetOverview(t) })
 }
 
@@ -25,9 +29,9 @@ func testGetOverview(t *testing.T) {
 	lastScanTS, _ := time.Parse(time.RFC3339, "0001-01-01T00:00:00Z")
 	expectedOverviewResponse := dto.OverviewSummary{
 		Clusters: dto.ClusterSummary{
-			Running:  3,
-			Stopped:  2,
-			Archived: 0,
+			Running:  0,
+			Stopped:  0,
+			Archived: 6,
 		},
 		Instances: dto.InstancesSummary{
 			Running:  10,

@@ -12,6 +12,70 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 )
 
+const (
+	// DB Table for instances
+	InstancesTable = "instances"
+	// View for SELECT operations on Instances
+	SelectInstancesFullView = "instances_full_view"
+	// View for SELECT operations on Instances
+	SelectInstancesFullMView = "m_instances_full_view"
+	// View for SELECT operations on Instances including tags
+	SelectInstancesFullWithTagsView = "instances_full_view_with_tags"
+	// View for SELECT operations on Instances including tags
+	SelectInstancesFullWithTagsMView = "m_instances_full_view_with_tags"
+	// View for SELECT operations for Instances pending on Expense Update
+	SelectInstancesPendingExpenseUpdateView = "instances_pending_expense_update"
+	// View for SELECT operations for Instances pending on Expense Update
+	SelectInstancesPendingExpenseUpdateMView = "m_instances_pending_expense_update"
+	// InsertInstancesQuery inserts into a new instance in its table
+	InsertInstancesQuery = `
+		INSERT INTO instances (
+			instance_id,
+			instance_name,
+			provider,
+			instance_type,
+			availability_zone,
+			status,
+			cluster_id,
+			last_scan_ts,
+			created_at,
+			age
+		) VALUES (
+			:instance_id,
+			:instance_name,
+			:provider,
+			:instance_type,
+			:availability_zone,
+			:status,
+			(SELECT id FROM clusters WHERE cluster_id = :cluster_id),
+			:last_scan_ts,
+			:created_at,
+			:age
+		) ON CONFLICT (instance_id, cluster_id) DO UPDATE SET
+			instance_name = EXCLUDED.instance_name,
+			provider = EXCLUDED.provider,
+			instance_type = EXCLUDED.instance_type,
+			availability_zone = EXCLUDED.availability_zone,
+			status = EXCLUDED.status,
+			last_scan_ts = EXCLUDED.last_scan_ts,
+			created_at = EXCLUDED.created_at,
+			age = EXCLUDED.age
+	`
+	// InsertTagsQuery inserts into a new tag for an instance
+	InsertTagsQuery = `
+		INSERT INTO tags (
+			key,
+			value,
+			instance_id
+		) VALUES (
+			:key,
+			:value,
+			(SELECT id FROM instances WHERE instance_id = :instance_id)
+		) ON CONFLICT (key, instance_id) DO UPDATE SET
+			value = EXCLUDED.value
+	`
+)
+
 var _ InstanceRepository = (*instanceRepositoryImpl)(nil)
 
 // InstanceRepository defines the interface for data access operations for instances.
@@ -40,7 +104,7 @@ func NewInstanceRepository(db *dbclient.DBClient) InstanceRepository {
 func (r *instanceRepositoryImpl) ListInstances(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error) {
 	var instances []db.InstanceDBResponse
 
-	if err := r.db.Select(&instances, SelectInstancesFullView, opts, "instance_id", "*"); err != nil {
+	if err := r.db.Select(&instances, SelectInstancesFullMView, opts, "instance_id", "*"); err != nil {
 		return instances, 0, fmt.Errorf("failed to list instances: %w", err)
 	}
 
@@ -66,7 +130,7 @@ func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID
 		},
 	}
 
-	if err := r.db.Get(&instance, SelectInstancesFullWithTagsView, opts, "instance_id", "*"); err != nil {
+	if err := r.db.Get(&instance, SelectInstancesFullWithTagsMView, opts, "instance_id", "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return instance, ErrNotFound
 		}
@@ -85,7 +149,7 @@ func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID
 func (r *instanceRepositoryImpl) GetInstancesOutdatedBilling(ctx context.Context) ([]db.InstanceDBResponse, error) {
 	var instances []db.InstanceDBResponse
 
-	if err := r.db.Select(instances, SelectInstancesPendingExpenseUpdate, models.ListOptions{}, "instance_id", "*"); err != nil {
+	if err := r.db.Select(instances, SelectInstancesPendingExpenseUpdateMView, models.ListOptions{}, "instance_id", "*"); err != nil {
 		return instances, fmt.Errorf("failed to list instances pending of expense update: %w", err)
 	}
 

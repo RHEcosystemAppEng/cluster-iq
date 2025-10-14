@@ -19,6 +19,10 @@ const (
 func TestAPIInstances(t *testing.T) {
 	waitForAPIReady(t)
 
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
+	}
+
 	t.Run("Test List Instances", func(t *testing.T) { testListInstances(t) })
 	t.Run("Test List Instances With Pagination", func(t *testing.T) { testListInstancesWithPagination(t) })
 	t.Run("Test List Instances By ClusterID", func(t *testing.T) { testListInstancesByClusterID(t) })

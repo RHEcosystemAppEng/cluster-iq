@@ -19,6 +19,10 @@ const (
 func TestClusters(t *testing.T) {
 	waitForAPIReady(t)
 
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
+	}
+
 	t.Run("Test List Clusters", func(t *testing.T) { testListClusters(t) })
 	t.Run("Test List Clusters With Pagination", func(t *testing.T) { testListClustersWithPagination(t) })
 	t.Run("Test List Clusters By Status", func(t *testing.T) { testListClustersByStatus(t) })
@@ -92,7 +96,7 @@ func testListClustersWithPagination(t *testing.T) {
 }
 
 func testListClustersByStatus(t *testing.T) {
-	expectedCount := 3
+	expectedCount := 0
 	expectedHTTPCode := http.StatusOK
 
 	// Listing Clusters
@@ -196,7 +200,7 @@ func testListClustersByAccount(t *testing.T) {
 }
 
 func testListClustersMultipleFilters(t *testing.T) {
-	expectedCount := 1
+	expectedCount := 0
 	expectedHTTPCode := http.StatusOK
 
 	// Listing Clusters

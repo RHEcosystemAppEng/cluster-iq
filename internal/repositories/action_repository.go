@@ -12,6 +12,65 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 )
 
+const (
+	// DB Table for actions
+	ScheduleTable = "schedule"
+	// View for getting scheduled actions
+	SelectScheduleFullView = "schedule_full_view"
+	// EnableActionQuery enables the action to be re-scheduled on next agent polling
+	EnableActionQuery = `
+		UPDATE
+			schedule
+		SET
+			enabled = true
+		WHERE id = $1
+	`
+	// DisableActionQuery disables the action to don't be re-scheduled on next agent polling
+	DisableActionQuery = `
+		UPDATE
+			schedule
+		SET
+			enabled = false
+		WHERE id = $1
+	`
+	// InsertScheduledActionQuery inserts new scheduled actions on the DB
+	InsertScheduledActionsQuery = `
+		INSERT INTO schedule (
+			type,
+			time,
+			operation,
+			target,
+			status,
+			enabled
+		) VALUES (
+			:type,
+			:time,
+			:operation,
+			:target.cluster_id,
+			:status,
+			:enabled
+		)
+	`
+	// InsertCronActionQuery inserts new Cron actions on the DB
+	InsertCronActionsQuery = `
+		INSERT INTO schedule (
+			type,
+			cron_exp,
+			operation,
+			target,
+			status,
+			enabled
+		) VALUES (
+			:type,
+			:cron_exp,
+			:operation,
+			:target.cluster_id,
+			:status,
+			:enabled
+		)
+	`
+)
+
 var _ ActionRepository = (*actionRepositoryImpl)(nil)
 
 // ActionRepository defines the interface for data access operations for actions.
@@ -155,7 +214,7 @@ func (r *actionRepositoryImpl) Delete(ctx context.Context, actionID string) erro
 		},
 	}
 
-	if err := r.db.Delete("schedule", opts); err != nil {
+	if err := r.db.Delete(ScheduleTable, opts); err != nil {
 		return err
 	}
 	return nil

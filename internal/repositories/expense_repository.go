@@ -10,6 +10,24 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 )
 
+const (
+	// DB Table for expenses
+	ExpensesTable = "expenses"
+	// InsertExpensesQuery inserts into a new expense for an instance
+	InsertExpensesQuery = `
+		INSERT INTO expenses (
+			instance_id,
+			date,
+			amount
+		) VALUES (
+			(SELECT id FROM instances WHERE instance_id=:instance_id),
+			:date,
+			:amount
+		) ON CONFLICT (instance_id, date) DO UPDATE SET
+			amount = EXCLUDED.amount
+	`
+)
+
 var _ ExpenseRepository = (*expenseRepositoryImpl)(nil)
 
 // ExpenseRepository defines the interface for data access operations for expenses.

@@ -10,6 +10,46 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 )
 
+const (
+	// DB Table for events
+	EventsTable = "events"
+	// View for SELECT operations of cluster related events
+	SelectClusterEventsView = "cluster_events"
+	// View for SELECT operations of system-wide events
+	SelectSystemEventsView = "system_events"
+	// InsertEventQuery insert a new audit event
+	InsertEventQuery = `
+		INSERT INTO events(
+			event_timestamp,
+			triggered_by,
+			action,
+			resource_id,
+			resource_type,
+			result,
+			description,
+			severity
+		) VALUES (
+			CURRENT_TIMESTAMP,
+			:triggered_by,
+			:action,
+			(
+				CASE
+					WHEN :resource_type = 'cluster'
+					THEN (SELECT id FROM clusters c WHERE c.cluster_id = :resource_id)
+					WHEN :resource_type = 'instance'
+					THEN (SELECT id FROM instances i WHERE i.instance_id = :resource_id)
+				END
+			),
+			:resource_type,
+			:result,
+			:description,
+			:severity
+		) RETURNING id
+	`
+	// UpdateEventStatusQuery updates the result status of an audit log entry based on its ID.
+	UpdateEventStatusQuery = `UPDATE events SET result=:result WHERE id=:id`
+)
+
 var _ EventRepository = (*eventRepositoryImpl)(nil)
 
 // EventRepository defines the interface for data access operations for events.

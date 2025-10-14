@@ -18,6 +18,10 @@ const (
 func TestAPIExpenses(t *testing.T) {
 	waitForAPIReady(t)
 
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
+	}
+
 	t.Run("Test List System Expenses", func(t *testing.T) { testListExpenses(t) })
 	t.Run("Test List Cluster Expenses", func(t *testing.T) { testListExpensesWithPagination(t) })
 	// TODO Add filter testing

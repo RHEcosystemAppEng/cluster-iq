@@ -18,6 +18,10 @@ const (
 func TestAPIEvents(t *testing.T) {
 	waitForAPIReady(t)
 
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
+	}
+
 	t.Run("Test List System Events", func(t *testing.T) { testListSystemEvents(t) })
 	t.Run("Test List Cluster Events", func(t *testing.T) { testListClusterEvents(t) })
 	t.Run("Test Post Events", func(t *testing.T) { testPostEvents(t) })

@@ -12,6 +12,32 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 )
 
+const (
+	// DB Table for accounts
+	AccountsTable = "accounts"
+	// View for SELECT operations on Accounts
+	SelectAccountsView = "accounts_full_view"
+	// Materialized view for SELECT operations on Accounts
+	SelectAccountsMView = "m_accounts_full_view"
+	// InsertAccountsQuery to insert or update new accounts
+	InsertAccountsQuery = `
+		INSERT INTO accounts (
+			account_id,
+			account_name,
+			provider,
+			last_scan_ts,
+			created_at
+		) VALUES (
+			:account_id,
+			:account_name,
+			:provider,
+			:last_scan_ts,
+			:created_at
+		) ON CONFLICT (account_id, provider) DO UPDATE SET
+			last_scan_ts = EXCLUDED.last_scan_ts
+	`
+)
+
 var _ AccountRepository = (*accountRepositoryImpl)(nil)
 
 // AccountRepository defines the interface for data access operations for accounts.
@@ -39,7 +65,7 @@ func NewAccountRepository(db *dbclient.DBClient) AccountRepository {
 func (r *accountRepositoryImpl) ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error) {
 	var accounts []db.AccountDBResponse
 
-	if err := r.db.Select(&accounts, SelectAccountsView, opts, "account_id", "*"); err != nil {
+	if err := r.db.Select(&accounts, SelectAccountsMView, opts, "account_id", "*"); err != nil {
 		return accounts, 0, fmt.Errorf("failed to list accounts: %w", err)
 	}
 
@@ -65,7 +91,7 @@ func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID st
 		},
 	}
 
-	if err := r.db.Get(&account, SelectAccountsView, opts, "*"); err != nil {
+	if err := r.db.Get(&account, SelectAccountsMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return account, ErrNotFound
 		}
@@ -93,7 +119,7 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 		},
 	}
 
-	if err := r.db.Select(&clusters, SelectClustersFullView, opts, "*"); err != nil {
+	if err := r.db.Select(&clusters, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return clusters, ErrNotFound
 		}

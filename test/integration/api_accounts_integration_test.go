@@ -20,6 +20,10 @@ const (
 func TestAPIAccounts(t *testing.T) {
 	waitForAPIReady(t)
 
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
+	}
+
 	t.Run("Test List Accounts", func(t *testing.T) { testListAccounts(t) })
 	t.Run("Test List Accounts with Pagination", func(t *testing.T) { testListAccountsWithPagination(t) })
 	t.Run("Test List Accounts By Provider", func(t *testing.T) { testListAccountsByProvider(t) })

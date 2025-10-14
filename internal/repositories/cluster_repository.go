@@ -15,6 +15,52 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
+const (
+	// DB Table for clusters
+	ClustersTable = "clusters"
+	// View for getting clusters
+	SelectClustersFullView = "clusters_full_view"
+	// Materialized view for getting clusters
+	SelectClustersFullMView = "m_clusters_full_view"
+	// InsertClustersQuery to insert or update new clusters
+	InsertClustersQuery = `
+		INSERT INTO clusters (
+			cluster_id,
+			cluster_name,
+			infra_id,
+			provider,
+			status,
+			region,
+			account_id,
+			console_link,
+			last_scan_ts,
+			created_at,
+			age,
+			owner
+		) VALUES (
+			:cluster_id,
+			:cluster_name,
+			:infra_id,
+			:provider,
+			:status,
+			:region,
+			(SELECT id FROM accounts WHERE account_id = :account_id),
+			:console_link,
+			:last_scan_ts,
+			:created_at,
+			:age,
+			:owner
+		) ON CONFLICT (id) DO UPDATE SET
+			status = EXCLUDED.status,
+			region = EXCLUDED.region,
+			console_link = EXCLUDED.console_link,
+			last_scan_ts = EXCLUDED.last_scan_ts,
+			created_at = EXCLUDED.created_at,
+			age = EXCLUDED.age,
+			owner = EXCLUDED.owner
+	`
+)
+
 var _ ClusterRepository = (*clusterRepositoryImpl)(nil)
 
 type ClusterRepository interface {
@@ -48,7 +94,7 @@ func NewClusterRepository(db *dbclient.DBClient) ClusterRepository {
 func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error) {
 	var clusters []dbmodels.ClusterDBResponse
 
-	if err := r.db.Select(&clusters, SelectClustersFullView, opts, "cluster_id", "*"); err != nil {
+	if err := r.db.Select(&clusters, SelectClustersFullMView, opts, "cluster_id", "*"); err != nil {
 		return clusters, 0, fmt.Errorf("failed to list clusters: %w", err)
 	}
 
@@ -74,7 +120,7 @@ func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.Get(&cluster, SelectClustersFullView, opts, "*"); err != nil {
+	if err := r.db.Get(&cluster, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -137,7 +183,7 @@ func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.Select(rawTags, SelectInstancesFullWithTagsView, opts, "cluster_id", "DISTINCT ON (tags_json) tags_json"); err != nil {
+	if err := r.db.Select(rawTags, SelectInstancesFullWithTagsMView, opts, "cluster_id", "DISTINCT ON (tags_json) tags_json"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return result, ErrNotFound
 		}
@@ -194,7 +240,7 @@ func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clust
 	}
 
 	var cluster dbmodels.ClusterDBResponse
-	if err := r.db.Get(&cluster, SelectClustersFullView, opts, "*"); err != nil {
+	if err := r.db.Get(&cluster, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -213,7 +259,7 @@ func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clust
 func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error) {
 	var countsDB inventory.ClustersSummary
 
-	if err := r.db.Get(&countsDB, "clusters", models.ListOptions{},
+	if err := r.db.Get(&countsDB, ClustersTable, models.ListOptions{},
 		"COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running",
 		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
 		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",
@@ -277,7 +323,7 @@ func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, clusterID str
 		},
 	}
 
-	if err := r.db.Delete("clusters", opts); err != nil {
+	if err := r.db.Delete(ClustersTable, opts); err != nil {
 		return err
 	}
 	return nil
