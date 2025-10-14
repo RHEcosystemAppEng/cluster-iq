@@ -36,4 +36,4 @@ jobs:
 
       - name: Run Go Integration Tests
         run: |
-          make build go-integration-tests
+          make build-api go-integration-tests
