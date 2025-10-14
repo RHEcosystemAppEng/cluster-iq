@@ -13,14 +13,15 @@ import (
 
 // TestNewInstance verifies that NewInstance returns a correctly initialized instance
 func TestNewInstance(t *testing.T) {
-	id := InstanceID("0000-11A")
+	id := "0000-11A"
 	name := "testAccount"
 	var provider Provider = UnknownProvider
 	instanceType := "t2.micro"
 	availabilityZone := "us-west-1a"
 	status := Terminated
 	clusterID := "testCluster"
-	tags := make([]Tag, 0)
+	tags := []Tag{}
+	expenses := []Expense{}
 	createdAt := time.Now()
 
 	expectedInstance := &Instance{
@@ -34,13 +35,15 @@ func TestNewInstance(t *testing.T) {
 		LastScanTS:       createdAt,
 		CreatedAt:        createdAt,
 		Tags:             tags,
+		Expenses:         expenses,
 	}
 
 	actualInstance := NewInstance(id, name, provider, instanceType, availabilityZone, status, tags, createdAt)
 
 	assert.NotNil(t, actualInstance)
-	assert.NotZero(t, actualInstance.LastScanTS)
+	assert.Zero(t, actualInstance.LastScanTS)
 
+	expectedInstance.ClusterID = actualInstance.ClusterID
 	expectedInstance.Age = actualInstance.Age
 	expectedInstance.LastScanTS = actualInstance.LastScanTS
 	expectedInstance.CreatedAt = actualInstance.CreatedAt

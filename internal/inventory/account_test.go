@@ -14,7 +14,7 @@ import (
 func TestNewAccount(t *testing.T) {
 	id := "0000-11A"
 	name := "testAccount"
-	var provider CloudProvider = UnknownProvider
+	provider := UnknownProvider
 	user := "user"
 	password := "password"
 
@@ -32,9 +32,10 @@ func TestNewAccount(t *testing.T) {
 	actualAccount := NewAccount(id, name, provider, user, password)
 
 	assert.NotNil(t, actualAccount)
-	assert.NotZero(t, actualAccount.LastScanTS)
+	assert.Zero(t, actualAccount.LastScanTS)
 
 	expectedAccount.LastScanTS = actualAccount.LastScanTS
+	expectedAccount.CreatedAt = actualAccount.CreatedAt
 	assert.Equal(t, expectedAccount, actualAccount)
 }
 

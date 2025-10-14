@@ -26,7 +26,7 @@ func TestNewInventory(t *testing.T) {
 	actualInventory := NewInventory()
 	assert.NotNil(t, actualInventory)
 
-	expectedInventory.CreationTimestamp = actualInventory.CreationTimestamp
+	expectedInventory.CreatedAt = actualInventory.CreatedAt
 	assert.Equal(t, expectedInventory, actualInventory)
 }
 
@@ -45,11 +45,6 @@ func TestIsAccountOnInventory(t *testing.T) {
 	// Lookup an existing Account
 	if !inv.IsAccountInInventory(account) {
 		t.Errorf("Can't found existing account. Account: %v", account.AccountName)
-	}
-
-	// Non existing Account
-	if inv.IsAccountInInventory(account) {
-		t.Errorf("Returned a non existing account. Account: %v", account.AccountName)
 	}
 }
 

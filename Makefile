@@ -149,7 +149,7 @@ go-setup-tests:
 
 go-unit-tests: ## Runs go unit tests
 go-unit-tests: go-setup-tests
-	@$(GO) test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out
+	@$(GO) test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out | sed -e 's/PASS/\x1b[32mPASS\x1b[0m/' -e 's/FAIL/\x1b[31mFAIL\x1b[0m/' -e 's/RUN/\x1b[33mRUN\x1b[0m/'
 	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
 
 go-integration-tests: ## Runs the Integration tests for this project

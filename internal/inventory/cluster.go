@@ -54,6 +54,10 @@ type Cluster struct {
 
 // NewCluster creates a new cluster instance
 func NewCluster(clusterName string, infraID string, provider Provider, region string, consoleLink string, owner string) *Cluster {
+	if clusterName == "" {
+		return nil
+	}
+
 	return &Cluster{
 		ClusterID:   generateClusterID(clusterName, infraID),
 		ClusterName: clusterName,

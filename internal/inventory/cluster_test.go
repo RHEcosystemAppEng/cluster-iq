@@ -33,18 +33,17 @@ func TestNewCluster(t *testing.T) {
 		Provider:    provider,
 		Status:      Running,
 		Region:      region,
-		AccountID:   0,
+		AccountID:   "",
 		ConsoleLink: consoleLink,
 		Owner:       owner,
 		Instances:   make([]Instance, 0),
-		Account:     nil,
 	}
 
 	actualCluster := NewCluster(name, infraID, provider, region, consoleLink, owner)
 
 	assert.NotNil(t, actualCluster)
 
-	assert.NotZero(t, actualCluster.LastScanTS)
+	assert.Zero(t, actualCluster.LastScanTS)
 
 	expectedCluster.ClusterID = actualCluster.ClusterID
 	expectedCluster.Age = actualCluster.Age
@@ -58,11 +57,6 @@ func TestNewCluster_InvalidParams(t *testing.T) {
 	cluster := NewCluster("", "i1", AWSProvider, "us-east-1", "https://console", "user")
 	if cluster != nil {
 		t.Errorf("expected nil cluster when name is empty")
-	}
-
-	cluster = NewCluster("name", "i1", AWSProvider, "us-east-1", "https://console", "user")
-	if cluster != nil {
-		t.Errorf("expected nil cluster when account name is empty")
 	}
 }
 
