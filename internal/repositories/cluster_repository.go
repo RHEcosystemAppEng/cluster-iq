@@ -11,7 +11,6 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
-	dbmodels "github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
@@ -92,9 +91,9 @@ func NewClusterRepository(db *dbclient.DBClient) ClusterRepository {
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error) {
-	var clusters []dbmodels.ClusterDBResponse
+	var clusters []db.ClusterDBResponse
 
-	if err := r.db.Select(&clusters, SelectClustersFullMView, opts, "cluster_id", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &clusters, SelectClustersFullMView, opts, "cluster_id", "*"); err != nil {
 		return clusters, 0, fmt.Errorf("failed to list clusters: %w", err)
 	}
 
@@ -110,7 +109,7 @@ func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.Li
 // - A slice containing a single inventory.Cluster object.
 // - An error if the query fails or the cluster ID does not exist.
 func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error) {
-	var cluster dbmodels.ClusterDBResponse
+	var cluster db.ClusterDBResponse
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -120,7 +119,7 @@ func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.Get(&cluster, SelectClustersFullMView, opts, "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -183,7 +182,7 @@ func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.Select(rawTags, SelectInstancesFullWithTagsMView, opts, "cluster_id", "DISTINCT ON (tags_json) tags_json"); err != nil {
+	if err := r.db.SelectWithContext(ctx, rawTags, SelectInstancesFullWithTagsMView, opts, "cluster_id", "DISTINCT ON (tags_json) tags_json"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return result, ErrNotFound
 		}
@@ -229,7 +228,7 @@ func (r *clusterRepositoryImpl) GetClustersOnAccount(ctx context.Context, accoun
 // - A slice of inventory.Instance objects representing the instances in the cluster.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error) {
-	var instances []dbmodels.InstanceDBResponse
+	var instances []db.InstanceDBResponse
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -239,15 +238,15 @@ func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clust
 		},
 	}
 
-	var cluster dbmodels.ClusterDBResponse
-	if err := r.db.Get(&cluster, SelectClustersFullMView, opts, "*"); err != nil {
+	var cluster db.ClusterDBResponse
+	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
 
-	if err := r.db.Select(&instances, SelectInstancesFullView, opts, "cluster_id", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullView, opts, "cluster_id", "*"); err != nil {
 		return instances, fmt.Errorf("failed to list instances for cluster '%s': %w", clusterID, err)
 	}
 
@@ -259,7 +258,7 @@ func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clust
 func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error) {
 	var countsDB inventory.ClustersSummary
 
-	if err := r.db.Get(&countsDB, ClustersTable, models.ListOptions{},
+	if err := r.db.GetWithContext(ctx, &countsDB, ClustersTable, models.ListOptions{},
 		"COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running",
 		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
 		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",
@@ -278,7 +277,7 @@ func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (invent
 // Returns:
 // - An error if the transaction fails or the query encounters an issue.
 func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []inventory.Cluster) error {
-	if err := r.db.Insert(InsertClustersQuery, clusters); err != nil {
+	if err := r.db.InsertWithContext(ctx, InsertClustersQuery, clusters); err != nil {
 		return err
 	}
 	return nil
@@ -286,7 +285,7 @@ func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []i
 
 // UpdateCluster updates an existing cluster's details in the database.
 func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, cluster dto.ClusterDTORequest) error {
-	//TODO
+	// TODO
 	return nil
 }
 
@@ -303,7 +302,7 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, cluster dto.C
 // Returns:
 // - An error if the status is invalid, the update operation fails, or no rows are affected.
 func (r *clusterRepositoryImpl) UpdateClusterStatusByClusterID(ctx context.Context, status string, clusterID string) error {
-	//TODO
+	// TODO
 	return nil
 }
 
@@ -323,7 +322,7 @@ func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, clusterID str
 		},
 	}
 
-	if err := r.db.Delete(ClustersTable, opts); err != nil {
+	if err := r.db.DeleteWithContext(ctx, ClustersTable, opts); err != nil {
 		return err
 	}
 	return nil

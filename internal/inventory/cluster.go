@@ -104,7 +104,7 @@ func (c *Cluster) Update() error {
 
 // UpdateAge updates cluster age based on the oldest instance creation timestamp. The cluster will be considered as old as the oldest instance
 func (c *Cluster) UpdateAge() error {
-	var creationTS time.Time = time.Now()
+	creationTS := time.Now()
 	for _, instance := range c.Instances {
 		if instance.CreatedAt.Before(creationTS) {
 			creationTS = instance.CreatedAt
@@ -158,7 +158,7 @@ func (c *Cluster) UpdateStatus() {
 // IsInstanceInCluster checks if an instance is already in the Cluster
 func (c Cluster) IsInstanceInCluster(instance *Instance) bool {
 	return slices.ContainsFunc(c.Instances, func(i Instance) bool {
-		return i.InstanceID == i.InstanceID
+		return instance.InstanceID == i.InstanceID
 	})
 }
 

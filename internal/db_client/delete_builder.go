@@ -26,7 +26,7 @@ func (d *DeleteBuilder) Where(condition string, args ...interface{}) *DeleteBuil
 
 func (d *DeleteBuilder) Build() (string, []interface{}, error) {
 	if d.table == "" {
-		return "", nil, fmt.Errorf("No table defined for DeleteBuilder")
+		return "", nil, fmt.Errorf("no table defined for DeleteBuilder")
 	}
 
 	query := fmt.Sprintf("DELETE FROM %s", d.table)

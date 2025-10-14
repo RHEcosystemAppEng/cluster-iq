@@ -171,8 +171,7 @@ func main() {
 	logger.Info("Configuration loaded successfully")
 
 	// Initialize database connection
-	// TODO: Define a better context
-	dbClient, err := dbclient.NewDBClient(cfg.DBURL, logger, context.TODO())
+	dbClient, err := dbclient.NewDBClient(cfg.DBURL, logger)
 	if err != nil {
 		logger.Fatal("Could not establish database connection", zap.Error(err))
 	}

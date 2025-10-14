@@ -65,7 +65,7 @@ func NewAccountRepository(db *dbclient.DBClient) AccountRepository {
 func (r *accountRepositoryImpl) ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error) {
 	var accounts []db.AccountDBResponse
 
-	if err := r.db.Select(&accounts, SelectAccountsMView, opts, "account_id", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &accounts, SelectAccountsMView, opts, "account_id", "*"); err != nil {
 		return accounts, 0, fmt.Errorf("failed to list accounts: %w", err)
 	}
 
@@ -91,7 +91,7 @@ func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID st
 		},
 	}
 
-	if err := r.db.Get(&account, SelectAccountsMView, opts, "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &account, SelectAccountsMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return account, ErrNotFound
 		}
@@ -119,7 +119,7 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 		},
 	}
 
-	if err := r.db.Select(&clusters, SelectClustersFullMView, opts, "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &clusters, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return clusters, ErrNotFound
 		}
@@ -136,7 +136,7 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 // Returns:
 // - An error if the transaction fails.
 func (r *accountRepositoryImpl) CreateAccount(ctx context.Context, accounts []inventory.Account) error {
-	if err := r.db.Insert(InsertAccountsQuery, accounts); err != nil {
+	if err := r.db.InsertWithContext(ctx, InsertAccountsQuery, accounts); err != nil {
 		return err
 	}
 
@@ -159,7 +159,7 @@ func (r *accountRepositoryImpl) DeleteAccount(ctx context.Context, accountID str
 		},
 	}
 
-	if err := r.db.Delete("accounts", opts); err != nil {
+	if err := r.db.DeleteWithContext(ctx, "accounts", opts); err != nil {
 		return err
 	}
 	return nil

@@ -101,7 +101,7 @@ func NewActionRepository(db *dbclient.DBClient) ActionRepository {
 func (r *actionRepositoryImpl) List(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error) {
 	var schedule []db.ActionDBResponse
 
-	if err := r.db.Select(&schedule, SelectScheduleFullView, opts, "id", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &schedule, SelectScheduleFullView, opts, "id", "*"); err != nil {
 		return schedule, 0, fmt.Errorf("failed to list schedule: %w", err)
 	}
 
@@ -116,7 +116,7 @@ func (r *actionRepositoryImpl) List(ctx context.Context, opts models.ListOptions
 // Returns:
 //   - An error if the query fails
 func (r *actionRepositoryImpl) Enable(ctx context.Context, actionID string) error {
-	return r.db.Update(EnableActionQuery, actionID)
+	return r.db.UpdateWithContext(ctx, EnableActionQuery, actionID)
 }
 
 // Disable Disables an Action by its ID
@@ -127,7 +127,7 @@ func (r *actionRepositoryImpl) Enable(ctx context.Context, actionID string) erro
 // Returns:
 //   - An error if the query fails
 func (r *actionRepositoryImpl) Disable(ctx context.Context, actionID string) error {
-	return r.db.Update(DisableActionQuery, actionID)
+	return r.db.UpdateWithContext(ctx, DisableActionQuery, actionID)
 }
 
 // GetByID runs the db select query for retrieving a specific scheduled action by its ID
@@ -148,7 +148,7 @@ func (r *actionRepositoryImpl) GetByID(ctx context.Context, actionID string) (db
 		},
 	}
 
-	if err := r.db.Get(&action, SelectScheduleFullView, opts, "id", "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &action, SelectScheduleFullView, opts, "id", "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return action, ErrNotFound
 		}
@@ -168,13 +168,9 @@ func (r *actionRepositoryImpl) GetByID(ctx context.Context, actionID string) (db
 //
 // TODO: Temporal fix returning TX from DBClient to manage both insertions in the same sql transaction
 func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) error {
-	var actionList []actions.Action
-	for i := range newActions {
-		actionList = append(actionList, newActions[i])
-	}
-	schedActions, cronActions := actions.SplitActionsByType(actionList)
+	schedActions, cronActions := actions.SplitActionsByType(newActions)
 
-	tx, err := r.db.BeginTxx()
+	tx, err := r.db.BeginTxx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -214,7 +210,7 @@ func (r *actionRepositoryImpl) Delete(ctx context.Context, actionID string) erro
 		},
 	}
 
-	if err := r.db.Delete(ScheduleTable, opts); err != nil {
+	if err := r.db.DeleteWithContext(ctx, ScheduleTable, opts); err != nil {
 		return err
 	}
 	return nil

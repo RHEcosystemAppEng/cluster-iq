@@ -14,7 +14,7 @@ type ClusterStatusChangeRequest struct {
 	AccountName     string   // The name of the account associated with the cluster.
 	Region          string   // The AWS region where the cluster is located.
 	ClusterID       string   // The unique identifier of the cluster.
-	InstancesIdList []string // A list of instance IDs belonging to the cluster.
+	InstancesIDList []string // A list of instance IDs belonging to the cluster.
 }
 
 // TODO: REVIEW!!!!
@@ -63,13 +63,13 @@ func NewClusterStatusChangeRequest(db *dbclient.DBClient, clusterID string) (*Cl
 	// Creating an array of InstancesIDs
 	var instancesIDs []string
 	for _, instance := range instances {
-		instancesIDs = append(instancesIDs, string(instance.InstanceID))
+		instancesIDs = append(instancesIDs, instance.InstanceID)
 	}
 
 	return &ClusterStatusChangeRequest{
-		AccountName:     string(cluster.AccountID),
+		AccountName:     cluster.AccountID,
 		Region:          cluster.Region,
 		ClusterID:       clusterID,
-		InstancesIdList: instancesIDs,
+		InstancesIDList: instancesIDs,
 	}, nil
 }

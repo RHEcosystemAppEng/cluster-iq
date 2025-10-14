@@ -48,8 +48,7 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 	client := http.Client{Transport: tr}
 
 	// Creating DB client
-	// TODO Fix context
-	sqlCli, err := dbclient.NewDBClient(cfg.DBURL, logger, context.TODO())
+	sqlCli, err := dbclient.NewDBClient(cfg.DBURL, logger)
 	if err != nil {
 		return nil
 	}

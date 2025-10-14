@@ -40,10 +40,10 @@ type Account struct {
 }
 
 // NewAccount create a new Could Provider account to store its instances.
-func NewAccount(account_id string, account_name string, provider Provider, user string, password string) *Account {
+func NewAccount(accountID string, accountName string, provider Provider, user string, password string) *Account {
 	return &Account{
-		AccountID:   account_id,
-		AccountName: account_name,
+		AccountID:   accountID,
+		AccountName: accountName,
 		Provider:    provider,
 		Clusters:    make(map[string]*Cluster),
 		LastScanTS:  time.Time{},

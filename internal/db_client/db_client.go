@@ -18,8 +18,6 @@ type DBClient struct {
 	db *sqlx.DB
 	// logger is used for logging database operations and errors.
 	logger *zap.Logger
-	// Transactions context
-	ctx context.Context
 }
 
 // NewDBClient initializes a new DBClient with the given database URL and logger.
@@ -31,7 +29,7 @@ type DBClient struct {
 // Returns:
 // - A pointer to an DBClient instance.
 // - An error if the database connection fails.
-func NewDBClient(dbURL string, logger *zap.Logger, ctx context.Context) (*DBClient, error) {
+func NewDBClient(dbURL string, logger *zap.Logger) (*DBClient, error) {
 	db, err := sqlx.Connect("postgres", dbURL)
 	if err != nil {
 		return nil, err
@@ -40,7 +38,6 @@ func NewDBClient(dbURL string, logger *zap.Logger, ctx context.Context) (*DBClie
 	return &DBClient{
 		db:     db,
 		logger: logger,
-		ctx:    ctx,
 	}, nil
 }
 
@@ -48,8 +45,8 @@ func (d *DBClient) Close() error {
 	return d.db.Close()
 }
 
-func (d *DBClient) BeginTxx() (*sqlx.Tx, error) {
-	return d.db.BeginTxx(d.ctx, nil)
+func (d *DBClient) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+	return d.db.BeginTxx(ctx, nil)
 }
 
 func (d *DBClient) Ping() error {
@@ -65,7 +62,7 @@ func (d *DBClient) ExecFunc(query string) error {
 	return nil
 }
 
-func (d *DBClient) Get(dest interface{}, table string, opts models.ListOptions, columns ...string) error {
+func (d *DBClient) GetWithContext(ctx context.Context, dest interface{}, table string, opts models.ListOptions, columns ...string) error {
 	builder := d.NewSelectBuilder(columns...).From(table)
 
 	// Preparing positional arguments
@@ -85,7 +82,11 @@ func (d *DBClient) Get(dest interface{}, table string, opts models.ListOptions, 
 	return d.db.Get(dest, query, args...)
 }
 
-func (d *DBClient) Select(dest interface{}, table string, opts models.ListOptions, orderColumn string, columns ...string) error {
+func (d *DBClient) Get(dest interface{}, table string, opts models.ListOptions, columns ...string) error {
+	return d.GetWithContext(context.TODO(), dest, table, opts, columns...)
+}
+
+func (d *DBClient) SelectWithContext(ctx context.Context, dest interface{}, table string, opts models.ListOptions, orderColumn string, columns ...string) error {
 	builder := d.NewSelectBuilder(columns...).From(table)
 
 	// Preparing positional arguments
@@ -108,13 +109,17 @@ func (d *DBClient) Select(dest interface{}, table string, opts models.ListOption
 		d.logger.Error("Error building SELECT query", zap.String("query", query), zap.Reflect("args", args), zap.Error(err))
 		return err
 	}
-	return d.db.Select(dest, query, args...)
+	return d.db.SelectContext(ctx, dest, query, args...)
 }
 
-func (d *DBClient) Insert(query string, data interface{}) error {
+func (d *DBClient) Select(dest interface{}, table string, opts models.ListOptions, orderColumn string, columns ...string) error {
+	return d.SelectWithContext(context.TODO(), dest, table, opts, orderColumn, columns...)
+}
+
+func (d *DBClient) InsertWithContext(ctx context.Context, query string, data interface{}) error {
 	builder := d.NewInsertBuilder().Query(query).Data(data)
 
-	tx, err := d.db.BeginTxx(d.ctx, nil)
+	tx, err := d.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -128,7 +133,7 @@ func (d *DBClient) Insert(query string, data interface{}) error {
 		}
 	}()
 
-	if _, err := tx.NamedExecContext(d.ctx, builder.query, builder.data); err != nil {
+	if _, err := tx.NamedExecContext(ctx, builder.query, builder.data); err != nil {
 		return fmt.Errorf("named-exec INSERT error: %w", err)
 	}
 
@@ -139,10 +144,14 @@ func (d *DBClient) Insert(query string, data interface{}) error {
 	return nil
 }
 
-func (d *DBClient) Update(query string, data interface{}) error {
+func (d *DBClient) Insert(query string, data interface{}) error {
+	return d.InsertWithContext(context.TODO(), query, data)
+}
+
+func (d *DBClient) UpdateWithContext(ctx context.Context, query string, data interface{}) error {
 	builder := d.NewUpdateBuilder().Query(query).Data(data)
 
-	tx, err := d.db.BeginTxx(d.ctx, nil)
+	tx, err := d.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -156,7 +165,7 @@ func (d *DBClient) Update(query string, data interface{}) error {
 		}
 	}()
 
-	if _, err := tx.ExecContext(d.ctx, builder.query, builder.data); err != nil {
+	if _, err := tx.ExecContext(ctx, builder.query, builder.data); err != nil {
 		return fmt.Errorf("exec UPDATE error: %w", err)
 	}
 
@@ -167,10 +176,14 @@ func (d *DBClient) Update(query string, data interface{}) error {
 	return nil
 }
 
-func (d *DBClient) NamedUpdate(query string, data interface{}) error {
+func (d *DBClient) Update(query string, data interface{}) error {
+	return d.UpdateWithContext(context.TODO(), query, data)
+}
+
+func (d *DBClient) NamedUpdateWithContext(ctx context.Context, query string, data interface{}) error {
 	builder := d.NewUpdateBuilder().Query(query).Data(data)
 
-	tx, err := d.db.BeginTxx(d.ctx, nil)
+	tx, err := d.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -184,7 +197,7 @@ func (d *DBClient) NamedUpdate(query string, data interface{}) error {
 		}
 	}()
 
-	if _, err := tx.NamedExecContext(d.ctx, builder.query, builder.data); err != nil {
+	if _, err := tx.NamedExecContext(ctx, builder.query, builder.data); err != nil {
 		return fmt.Errorf("named-exec UPDATE error: %w", err)
 	}
 
@@ -195,8 +208,12 @@ func (d *DBClient) NamedUpdate(query string, data interface{}) error {
 	return nil
 }
 
+func (d *DBClient) NamedUpdate(query string, data interface{}) error {
+	return d.NamedUpdateWithContext(context.TODO(), query, data)
+}
+
 // Delete executes a DELETE with a safe transaction pattern.Delete
-func (d *DBClient) Delete(table string, opts models.ListOptions) error {
+func (d *DBClient) DeleteWithContext(ctx context.Context, table string, opts models.ListOptions) error {
 	builder := d.NewDeleteBuilder().From(table)
 
 	// Processing "WHERE" conditions
@@ -213,7 +230,7 @@ func (d *DBClient) Delete(table string, opts models.ListOptions) error {
 		return fmt.Errorf("error building DELETE query: '%s'", query)
 	}
 
-	tx, err := d.db.BeginTxx(d.ctx, nil)
+	tx, err := d.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -227,7 +244,7 @@ func (d *DBClient) Delete(table string, opts models.ListOptions) error {
 		}
 	}()
 
-	if _, err := tx.ExecContext(d.ctx, query, args...); err != nil {
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("exec DELETE error: %w", err)
 	}
 
@@ -236,4 +253,8 @@ func (d *DBClient) Delete(table string, opts models.ListOptions) error {
 	}
 
 	return nil
+}
+
+func (d *DBClient) Delete(table string, opts models.ListOptions) error {
+	return d.DeleteWithContext(context.TODO(), table, opts)
 }

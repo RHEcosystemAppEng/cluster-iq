@@ -72,7 +72,7 @@ func NewEventRepository(db *dbclient.DBClient) EventRepository {
 func (r *eventRepositoryImpl) ListSystemEvents(ctx context.Context, opts models.ListOptions) ([]db.SystemEventDBResponse, int, error) {
 	var events []db.SystemEventDBResponse
 
-	if err := r.db.Select(&events, SelectSystemEventsView, opts, "event_timestamp", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &events, SelectSystemEventsView, opts, "event_timestamp", "*"); err != nil {
 		return events, 0, fmt.Errorf("failed to list events: %w", err)
 	}
 
@@ -84,7 +84,7 @@ func (r *eventRepositoryImpl) ListClusterEvents(ctx context.Context, opts models
 	var events []db.ClusterEventDBResponse
 	var id int
 
-	if err := r.db.Get(&id, ClustersTable, models.ListOptions{
+	if err := r.db.GetWithContext(ctx, &id, ClustersTable, models.ListOptions{
 		PageSize: 0,
 		Offset:   0,
 		Filters:  map[string]interface{}{"cluster_id": opts.Filters["resource_id"]},
@@ -94,7 +94,7 @@ func (r *eventRepositoryImpl) ListClusterEvents(ctx context.Context, opts models
 
 	opts.Filters["resource_id"] = id
 
-	if err := r.db.Select(&events, SelectClusterEventsView, opts, "event_timestamp", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &events, SelectClusterEventsView, opts, "event_timestamp", "*"); err != nil {
 		return events, 0, fmt.Errorf("failed to list cluster events: %w", err)
 	}
 
@@ -103,7 +103,7 @@ func (r *eventRepositoryImpl) ListClusterEvents(ctx context.Context, opts models
 
 // AddEvent inserts a new audit event into the database and returns the event ID.
 func (r *eventRepositoryImpl) CreateEvent(ctx context.Context, event events.Event) (int64, error) {
-	if err := r.db.Insert(InsertEventQuery, event); err != nil {
+	if err := r.db.InsertWithContext(ctx, InsertEventQuery, event); err != nil {
 		return -1, err
 	}
 
@@ -112,7 +112,7 @@ func (r *eventRepositoryImpl) CreateEvent(ctx context.Context, event events.Even
 
 // UpdateEventStatus updates the result status of an audit event.
 func (r *eventRepositoryImpl) UpdateEventStatus(ctx context.Context, eventID int64, result string) error {
-	if err := r.db.NamedUpdate(UpdateEventStatusQuery, events.Event{ID: eventID, Result: result}); err != nil {
+	if err := r.db.NamedUpdateWithContext(ctx, UpdateEventStatusQuery, events.Event{ID: eventID, Result: result}); err != nil {
 		return err
 	}
 

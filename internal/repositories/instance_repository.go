@@ -104,7 +104,7 @@ func NewInstanceRepository(db *dbclient.DBClient) InstanceRepository {
 func (r *instanceRepositoryImpl) ListInstances(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error) {
 	var instances []db.InstanceDBResponse
 
-	if err := r.db.Select(&instances, SelectInstancesFullMView, opts, "instance_id", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullMView, opts, "instance_id", "*"); err != nil {
 		return instances, 0, fmt.Errorf("failed to list instances: %w", err)
 	}
 
@@ -130,7 +130,7 @@ func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID
 		},
 	}
 
-	if err := r.db.Get(&instance, SelectInstancesFullWithTagsMView, opts, "instance_id", "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &instance, SelectInstancesFullWithTagsMView, opts, "instance_id", "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return instance, ErrNotFound
 		}
@@ -149,7 +149,7 @@ func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID
 func (r *instanceRepositoryImpl) GetInstancesOutdatedBilling(ctx context.Context) ([]db.InstanceDBResponse, error) {
 	var instances []db.InstanceDBResponse
 
-	if err := r.db.Select(instances, SelectInstancesPendingExpenseUpdateMView, models.ListOptions{}, "instance_id", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, instances, SelectInstancesPendingExpenseUpdateMView, models.ListOptions{}, "instance_id", "*"); err != nil {
 		return instances, fmt.Errorf("failed to list instances pending of expense update: %w", err)
 	}
 
@@ -161,7 +161,7 @@ func (r *instanceRepositoryImpl) GetInstancesOutdatedBilling(ctx context.Context
 func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inventory.InstancesSummary, error) {
 	var countsDB inventory.InstancesSummary
 
-	if err := r.db.Get(&countsDB, InstancesTable, models.ListOptions{},
+	if err := r.db.GetWithContext(ctx, &countsDB, InstancesTable, models.ListOptions{},
 		"COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running",
 		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
 		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",
@@ -180,7 +180,7 @@ func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inve
 // Returns:
 // - An error if the transaction fails.
 func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances []inventory.Instance) error {
-	if err := r.db.Insert(InsertInstancesQuery, instances); err != nil {
+	if err := r.db.InsertWithContext(ctx, InsertInstancesQuery, instances); err != nil {
 		return err
 	}
 
@@ -193,7 +193,7 @@ func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances 
 	}
 
 	if len(newTags) > 0 {
-		if err := r.db.Insert(InsertTagsQuery, newTags); err != nil {
+		if err := r.db.InsertWithContext(ctx, InsertTagsQuery, newTags); err != nil {
 			return err
 		}
 	}
@@ -217,7 +217,7 @@ func (r *instanceRepositoryImpl) DeleteInstance(ctx context.Context, instanceID 
 		},
 	}
 
-	if err := r.db.Delete(InstancesTable, opts); err != nil {
+	if err := r.db.DeleteWithContext(ctx, InstancesTable, opts); err != nil {
 		return err
 	}
 	return nil
