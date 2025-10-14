@@ -48,13 +48,13 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 	client := http.Client{Transport: tr}
 
 	// Creating DB client
-	sqlCli, err := dbclient.NewDBClient(cfg.DBURL, logger)
+	db, err := dbclient.NewDBClient(cfg.DBURL, logger)
 	if err != nil {
 		return nil
 	}
 
 	// Creating Event Service
-	eventService := eventservice.NewEventService(sqlCli, logger)
+	eventService := eventservice.NewEventService(db, logger)
 
 	eas := ExecutorAgentService{
 		cfg:            cfg,

@@ -284,7 +284,7 @@ func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []i
 }
 
 // UpdateCluster updates an existing cluster's details in the database.
-func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, cluster dto.ClusterDTORequest) error {
+func (r *clusterRepositoryImpl) UpdateCluster(_ context.Context, cluster dto.ClusterDTORequest) error {
 	// TODO
 	return nil
 }
@@ -301,7 +301,7 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, cluster dto.C
 //
 // Returns:
 // - An error if the status is invalid, the update operation fails, or no rows are affected.
-func (r *clusterRepositoryImpl) UpdateClusterStatusByClusterID(_ context.Context, status string, clusterID string) error {
+func (r *clusterRepositoryImpl) UpdateClusterStatusByClusterID(_ context.Context, _ string, _ string) error {
 	// TODO
 	return nil
 }
