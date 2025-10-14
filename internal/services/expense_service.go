@@ -5,8 +5,8 @@ package services
 import (
 	"context"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
