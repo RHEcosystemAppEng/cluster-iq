@@ -34,7 +34,7 @@ services:
       - cluster_iq_test
 
   init-pgsql-test:
-    image: registry.redhat.io/rhel8/postgresql-16:1-44.1749482738
+    image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
     container_name: init-pgsql-test
     restart: "no"
     command: |
