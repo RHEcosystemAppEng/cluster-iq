@@ -170,7 +170,7 @@ func (r *actionRepositoryImpl) GetByID(ctx context.Context, actionID string) (db
 func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) error {
 	schedActions, cronActions := actions.SplitActionsByType(newActions)
 
-	tx, err := r.db.BeginTxx(ctx)
+	tx, err := r.db.NewTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}

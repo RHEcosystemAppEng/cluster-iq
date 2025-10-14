@@ -45,7 +45,7 @@ func (d *DBClient) Close() error {
 	return d.db.Close()
 }
 
-func (d *DBClient) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+func (d *DBClient) NewTx(ctx context.Context) (*sqlx.Tx, error) {
 	return d.db.BeginTxx(ctx, nil)
 }
 
@@ -53,9 +53,9 @@ func (d *DBClient) Ping() error {
 	return d.db.Ping()
 }
 
-func (d *DBClient) ExecFunc(query string) error {
+func (d *DBClient) ExecFunc(ctx context.Context, query string) error {
 	var result string
-	if err := d.db.QueryRowx(query).Scan(&result); err != nil {
+	if err := d.db.QueryRowxContext(ctx, query).Scan(&result); err != nil {
 		return err
 	}
 
@@ -79,7 +79,7 @@ func (d *DBClient) GetWithContext(ctx context.Context, dest interface{}, table s
 		d.logger.Error("Error building SELECT query", zap.String("query", query), zap.Reflect("args", args), zap.Error(err))
 		return err
 	}
-	return d.db.Get(dest, query, args...)
+	return d.db.GetContext(ctx, dest, query, args...)
 }
 
 func (d *DBClient) Get(dest interface{}, table string, opts models.ListOptions, columns ...string) error {

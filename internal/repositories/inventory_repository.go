@@ -32,17 +32,17 @@ func NewInventoryRepository(db *dbclient.DBClient) InventoryRepository {
 
 func (r *inventoryRepositoryImpl) Refresh(ctx context.Context) error {
 	// Updating 'Terminated' Instances
-	if err := r.db.ExecFunc(UpdateTerminatedClustersQuery); err != nil {
+	if err := r.db.ExecFunc(ctx, UpdateTerminatedClustersQuery); err != nil {
 		return err
 	}
 
 	// Updating 'Terminated' Clusters
-	if err := r.db.ExecFunc(UpdateTerminatedClustersQuery); err != nil {
+	if err := r.db.ExecFunc(ctx, UpdateTerminatedClustersQuery); err != nil {
 		return err
 	}
 
 	// Refreshing Materialized Views
-	if err := r.db.ExecFunc(RefreshMaterializedViewsQuery); err != nil {
+	if err := r.db.ExecFunc(ctx, RefreshMaterializedViewsQuery); err != nil {
 		return err
 	}
 

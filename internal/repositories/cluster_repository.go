@@ -301,7 +301,7 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, cluster dto.C
 //
 // Returns:
 // - An error if the status is invalid, the update operation fails, or no rows are affected.
-func (r *clusterRepositoryImpl) UpdateClusterStatusByClusterID(ctx context.Context, status string, clusterID string) error {
+func (r *clusterRepositoryImpl) UpdateClusterStatusByClusterID(_ context.Context, status string, clusterID string) error {
 	// TODO
 	return nil
 }
