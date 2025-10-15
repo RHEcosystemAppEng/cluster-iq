@@ -173,6 +173,7 @@ func (c *Cluster) AddInstance(instance *Instance) error {
 	}
 
 	// Adding Instance
+	instance.ClusterID = c.ClusterID
 	c.Instances = append(c.Instances, *instance)
 	return c.Update()
 }

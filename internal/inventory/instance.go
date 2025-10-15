@@ -68,7 +68,7 @@ func NewInstance(instanceID string, instanceName string, provider Provider, inst
 		AvailabilityZone: availabilityZone,
 		Status:           status,
 		ClusterID:        "",
-		LastScanTS:       time.Time{},
+		LastScanTS:       now,
 		CreatedAt:        creationTimestamp,
 		Age:              age,
 		Tags:             tags,

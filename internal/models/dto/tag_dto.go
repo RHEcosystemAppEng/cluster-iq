@@ -19,7 +19,7 @@ func (t TagDTORequest) ToInventoryTag() *inventory.Tag {
 	)
 }
 
-func (t TagDTORequest) ToInventoryTagList(dtos []TagDTORequest) *[]inventory.Tag {
+func ToInventoryTagList(dtos []TagDTORequest) *[]inventory.Tag {
 	tags := make([]inventory.Tag, len(dtos))
 	for i, tag := range dtos {
 		tags[i] = *tag.ToInventoryTag()

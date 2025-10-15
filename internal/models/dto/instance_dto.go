@@ -30,7 +30,7 @@ func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
 		i.InstanceType,
 		i.AvailabilityZone,
 		i.Status,
-		[]inventory.Tag{},
+		*ToInventoryTagList(i.Tags),
 		i.CreatedAt,
 	)
 

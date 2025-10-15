@@ -220,16 +220,17 @@ func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
 }
 
 // EC2InstanceToInventoryInstance converts an EC2.instance into an inventory.Instance
-func EC2InstanceToInventoryInstance(instance *ec2.Instance) *inventory.Instance {
+func EC2InstanceToInventoryInstance(ec2instance *ec2.Instance) *inventory.Instance {
 	// Getting Instance properties
-	id := *instance.InstanceId
-	tags := ConvertEC2TagtoTag(instance.Tags, id)
+	id := *ec2instance.InstanceId
+	tags := ConvertEC2TagtoTag(ec2instance.Tags, id)
 	name := inventory.GetInstanceNameFromTags(tags)
-	instanceType := *instance.InstanceType
-	availabilityZone := *instance.Placement.AvailabilityZone
-	status := inventory.AsResourceStatus(*instance.State.Name)
-	creationTimestamp := getInstanceCreationTimestamp(*instance)
-	return inventory.NewInstance(
+	instanceType := *ec2instance.InstanceType
+	availabilityZone := *ec2instance.Placement.AvailabilityZone
+	status := inventory.AsResourceStatus(*ec2instance.State.Name)
+	creationTimestamp := getInstanceCreationTimestamp(*ec2instance)
+
+	instance := inventory.NewInstance(
 		id,
 		name,
 		inventory.AWSProvider,
@@ -239,6 +240,8 @@ func EC2InstanceToInventoryInstance(instance *ec2.Instance) *inventory.Instance 
 		tags,
 		creationTimestamp,
 	)
+
+	return instance
 }
 
 // getInstanceCreationTimestamp retrieves the creation timestamp of an EC2 instance.

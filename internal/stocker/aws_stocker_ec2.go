@@ -28,8 +28,7 @@ func (s *AWSStocker) processRegion(region string) error {
 // processInstances gets every AWS EC2 instance, parse it, a
 func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 	// Getting Instances metadata
-	for i, instance := range instances {
-
+	for _, instance := range instances {
 		// Generating ClusterID for this instance based on its properties
 		clusterName := inventory.GetClusterNameFromTags(instance.Tags)
 		if s.skipNoOpenShiftInstances && clusterName == inventory.UnknownClusterNameCode {
@@ -39,6 +38,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 				zap.String("region", instance.AvailabilityZone))
 			continue
 		}
+
 		infraID := inventory.GetInfraIDFromTags(instance.Tags)
 
 		// Checking if the cluster of the instance already exists on the inventory
@@ -48,17 +48,13 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			inventory.AWSProvider,
 			s.conn.GetRegion(),
 			unknownConsoleLinkCode,
-			inventory.GetOwnerFromTags(instances[i].Tags),
+			inventory.GetOwnerFromTags(instance.Tags),
 		)
-		if !s.Account.IsClusterInAccount(cluster.ClusterID) {
-			s.Account.AddCluster(cluster)
-		}
+		_ = s.Account.AddCluster(cluster)
 
 		// Adding the instance to the Cluster
 		if err := s.Account.Clusters[cluster.ClusterID].AddInstance(&instance); err != nil {
 			s.logger.Error("error adding instance to cluster", zap.String("instance", instance.InstanceID), zap.String("cluster", cluster.ClusterID))
-		} else {
-			instance.ClusterID = cluster.ClusterID
 		}
 	}
 }
