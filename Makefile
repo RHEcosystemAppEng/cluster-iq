@@ -148,8 +148,17 @@ go-integration-tests: go-setup-tests
 go-tests: ## Runs every test
 go-tests: go-unit-tests go-integration-tests
 
-go-linter: ## Runs go linter tools
+lint: ## Runs go linter tools against the whole project
 	@$(GO_LINTER) run
+
+lint-staged: ## Runs go linter tools against staged files
+	@echo "### [Running Linter against staged files] ###"
+	@STAGED_FILES=$$(git diff --name-only --staged -- '*.go' ':(exclude)*.pb.go'); \
+	if [ -z "$$STAGED_FILES" ]; then \
+		echo "No staged Go files to lint."; \
+	else \
+		$(GO_LINTER) run --new-from-patch=<(git diff --staged -- '*.go' ':(exclude)*.pb.go') --whole-files; \
+	fi
 
 go-fmt: ## Runs go formatting tools
 	@WRONG_LINES="$$($(GO_FMT) -l . | wc -l)"; \
