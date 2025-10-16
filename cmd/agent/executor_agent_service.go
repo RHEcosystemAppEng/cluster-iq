@@ -126,7 +126,7 @@ func (e *ExecutorAgentService) createExecutors() error {
 		case inventory.AWSProvider: // AWS
 			e.logger.Info("Creating Executor for AWS account", zap.String("account_name", account.Name))
 			exec := cexec.NewAWSExecutor(
-				inventory.NewAccount("", account.Name, account.Provider, account.User, account.Key),
+				inventory.NewAccount("", account.ID, account.Provider, account.User, account.Key),
 				e.actionsChannel,
 				logger,
 			)
@@ -156,13 +156,13 @@ func (e *ExecutorAgentService) createExecutors() error {
 // GetExecutor retrieves the CloudExecutor associated with a given account name.
 //
 // Parameters:
-// - accountName: The name of the account for which the executor is requested.
+// - accountID: The name of the account for which the executor is requested.
 //
 // Returns:
 // - cexec.CloudExecutor: The executor for the specified account.
 // - error: An error if no executor is found for the given account.
-func (e *ExecutorAgentService) GetExecutor(accountName string) *cexec.CloudExecutor {
-	exec, ok := e.executors[accountName]
+func (e *ExecutorAgentService) GetExecutor(accountID string) *cexec.CloudExecutor {
+	exec, ok := e.executors[accountID]
 	if !ok {
 		return nil
 	}
@@ -200,12 +200,14 @@ func (e *ExecutorAgentService) Start() error {
 			TriggeredBy: "ClusterIQ Agent",
 		})
 
-		target := newAction.GetTarget()
-		cexec := *(e.GetExecutor(target.GetAccountID()))
-		if cexec == nil {
+		var executor cexec.CloudExecutor
+		if exec := e.GetExecutor(newAction.GetTarget().AccountID); exec == nil {
 			return fmt.Errorf("there's no Executor available for the requested account")
+		} else {
+			executor = *exec
 		}
-		if err := cexec.ProcessAction(newAction); err != nil {
+
+		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
 			actionStatus = "Failed"
 			tracker.Failed()

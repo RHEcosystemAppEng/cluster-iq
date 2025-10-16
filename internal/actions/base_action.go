@@ -11,6 +11,7 @@ type BaseAction struct {
 
 func NewBaseAction(ao ActionOperation, target ActionTarget, status string, enabled bool) *BaseAction {
 	return &BaseAction{
+		ID:        target.AccountID + target.ClusterID + string(ao),
 		Operation: ao,
 		Target:    target,
 		Status:    status,
