@@ -130,9 +130,8 @@ func (s *Scanner) initAWSStockers(account *inventory.Account) error {
 		instancesToScan, err := s.getInstancesForBillingUpdate()
 		if err != nil {
 			return fmt.Errorf("failed to retrieve the list of instances required for billing information from AWS Cost Explorer")
-		} else {
-			s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
 		}
+		s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
 	}
 
 	return nil
@@ -163,11 +162,11 @@ func (s *Scanner) createStockers() error {
 			)
 			// TODO: Uncomment line below when Azure Stocker is implemented
 			// azureStocker = stocker.NewAzureStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
-
-		default:
+		case inventory.UnknownProvider:
 			s.logger.Warn("Unsupported cloud provider, skipping account",
 				zap.String("account", account.AccountID),
 				zap.String("provider", string(account.Provider)))
+		default:
 			continue
 		}
 	}
