@@ -114,69 +114,61 @@ func (s *Scanner) readCloudProviderAccounts() error {
 	return nil
 }
 
-func (s *Scanner) initAWSStockers(account *inventory.Account) error {
-	s.logger.Info("Processing AWS account", zap.String("account", account.AccountName))
-
-	// AWS API Stoker
-	awsStocker, err := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
-	if err != nil {
-		return err
-	}
-	s.stockers = append(s.stockers, awsStocker)
-
-	// AWS Billing API Stoker
-	if account.IsBillingEnabled() {
-		s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.AccountName))
-		instancesToScan, err := s.getInstancesForBillingUpdate()
-		if err != nil {
-			return fmt.Errorf("failed to retrieve the list of instances required for billing information from AWS Cost Explorer")
-		}
-		s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
-	}
-
-	return nil
-}
-
 // nolint:cyclop // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
-	var validStockers []stocker.Stocker
 	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
 		case inventory.AWSProvider:
-			if err := s.initAWSStockers(account); err != nil {
+			s.logger.Info("Processing AWS account", zap.String("account", account.AccountName))
+
+			// AWS API Stoker
+			awsStocker, err := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
+			if err != nil {
 				s.logger.Error("Failed to create AWS stocker; skipping this account",
-					zap.String("account", account.AccountID),
+					zap.String("account", account.AccountName),
 					zap.Error(err))
+				continue
+			}
+			s.stockers = append(s.stockers, awsStocker)
+
+			// AWS Billing API Stoker
+			if account.IsBillingEnabled() {
+				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.AccountName))
+				instancesToScan, err := s.getInstancesForBillingUpdate()
+				if err != nil {
+					s.logger.Error("Failed to retrieve the list of instances required for billing information from AWS Cost Explorer.",
+						zap.String("account", account.AccountName))
+				} else {
+					s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+				}
 			}
 		case inventory.GCPProvider:
 			s.logger.Warn("Failed to scan GCP account",
-				zap.String("account", account.AccountID),
+				zap.String("account", account.AccountName),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when GCP Stocker is implemented
 			// gcpStocker = stocker.NewGCPStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
 		case inventory.AzureProvider:
 			s.logger.Warn("Failed to scan Azure account",
-				zap.String("account", account.AccountID),
+				zap.String("account", account.AccountName),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when Azure Stocker is implemented
 			// azureStocker = stocker.NewAzureStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
-		case inventory.UnknownProvider:
-			s.logger.Warn("Unsupported cloud provider, skipping account",
-				zap.String("account", account.AccountID),
-				zap.String("provider", string(account.Provider)))
+
 		default:
+			s.logger.Warn("Unsupported cloud provider, skipping account",
+				zap.String("account", account.AccountName),
+				zap.String("provider", string(account.Provider)))
 			continue
 		}
 	}
 
-	s.stockers = validStockers
 	s.logger.Info("Account registration complete",
 		zap.Int("registeredAccounts", len(s.inventory.Accounts)),
 		zap.Int("registeredStockers", len(s.stockers)),
-		zap.Int("skippedAccounts", len(s.inventory.Accounts)-len(s.stockers)),
-	)
+		zap.Int("skippedAccounts", len(s.inventory.Accounts)-len(s.stockers)))
 
 	// If there are no stockers, nothing to do
 	if len(s.stockers) == 0 {
