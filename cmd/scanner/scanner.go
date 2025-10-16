@@ -129,7 +129,7 @@ func (s *Scanner) initAWSStockers(account *inventory.Account) error {
 		s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.AccountName))
 		instancesToScan, err := s.getInstancesForBillingUpdate()
 		if err != nil {
-			return fmt.Errorf("Failed to retrieve the list of instances required for billing information from AWS Cost Explorer")
+			return fmt.Errorf("failed to retrieve the list of instances required for billing information from AWS Cost Explorer")
 		} else {
 			s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
 		}

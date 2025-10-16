@@ -84,6 +84,8 @@ func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventor
 			summary.GCP.AccountCount++
 		case inventory.AzureProvider:
 			summary.Azure.AccountCount++
+		case inventory.UnknownProvider:
+			continue
 		default:
 			continue
 		}
@@ -97,6 +99,8 @@ func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventor
 			summary.GCP.ClusterCount++
 		case inventory.AzureProvider:
 			summary.Azure.ClusterCount++
+		case inventory.UnknownProvider:
+			continue
 		default:
 			continue
 		}

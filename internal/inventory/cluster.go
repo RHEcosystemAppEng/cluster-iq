@@ -144,10 +144,11 @@ func (c *Cluster) UpdateStatus() {
 			return
 		case Terminated:
 			terminatedCount++
+		case Stopped:
+			continue
 		default:
 			continue
 		}
-
 	}
 
 	if terminatedCount == instanceCount {

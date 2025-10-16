@@ -147,7 +147,7 @@ func (e *ExecutorAgentService) createExecutors() error {
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
-		default:
+		case inventory.UnknownProvider:
 			e.logger.Warn("Failed to create Executor for Unknown Provider account",
 				zap.String("account", account.Name),
 				zap.Any("provider", account.Provider),
