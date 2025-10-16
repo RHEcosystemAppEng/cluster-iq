@@ -204,6 +204,7 @@ BEGIN
 END
 $$;
 
+-- Generating scheduled actions
 INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
 SELECT 
     'scheduled_action'::ACTION_TYPE,
@@ -218,6 +219,7 @@ JOIN LATERAL (
   SELECT id FROM clusters ORDER BY random() LIMIT 1
 ) c ON true;
 
+-- Generating cron-based action
 INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
 SELECT 
     'cron_action'::ACTION_TYPE,
@@ -231,6 +233,21 @@ FROM generate_series(1,3) g
 JOIN LATERAL (
   SELECT id FROM clusters ORDER BY random() LIMIT 1
 ) c ON true;
+
+-- Generating events
+INSERT INTO events (
+  event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity
+)
+SELECT
+  now() - (random() * interval '10 days') AS event_timestamp,
+  (ARRAY['scanner','agent','api','scheduler','user'])[1 + floor(random()*5)],
+  (ARRAY['scan','PowerOnCluster','PowerOffCluster','RestartCluster','Terminate'])[1 + floor(random()*5)],
+  (1 + floor(random()*20))::int AS resource_id,
+  CASE WHEN random() < 0.6 THEN 'instance' ELSE 'cluster' END AS resource_type,
+  (ARRAY['success','failure','partial'])[1 + floor(random()*3)] AS result,
+  'auto-generated dev event' AS description,
+  (ARRAY['info','warning','error','notice'])[1 + floor(random()*4)] AS severity
+FROM generate_series(1,12);
 
 
 COMMIT;
