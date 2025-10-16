@@ -72,8 +72,6 @@ func (s *AWSBillingStocker) MakeStock() error {
 						continue
 					}
 					break
-				} else {
-					continue
 				}
 			}
 		}
@@ -127,7 +125,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	for _, resultByTime := range result.ResultsByTime {
 		if resultByTime.Total != nil {
 			if singleCost, ok := resultByTime.Total["UnblendedCost"]; ok {
-				// Getting Expense ammount as float64
+				// Getting Expense amount as float64
 				amount, err := strconv.ParseFloat(*singleCost.Amount, 64)
 				if err != nil {
 					s.logger.Error("Error parsing cost amount",

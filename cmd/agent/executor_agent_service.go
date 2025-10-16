@@ -147,6 +147,12 @@ func (e *ExecutorAgentService) createExecutors() error {
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
+		default:
+			e.logger.Warn("Failed to create Executor for Unknown Provider account",
+				zap.String("account", account.Name),
+				zap.Any("provider", account.Provider),
+				zap.String("reason", "Unknown provider"),
+			)
 
 		}
 	}
@@ -200,12 +206,13 @@ func (e *ExecutorAgentService) Start() error {
 			TriggeredBy: "ClusterIQ Agent",
 		})
 
-		var executor cexec.CloudExecutor
-		if exec := e.GetExecutor(newAction.GetTarget().AccountID); exec == nil {
-			return fmt.Errorf("there's no Executor available for the requested account")
-		} else {
-			executor = *exec
+		exec := e.GetExecutor(newAction.GetTarget().AccountID)
+		if exec == nil {
+			e.logger.Error("there's no Executor available for the requested account", zap.String("account", newAction.GetTarget().AccountID))
+			continue
 		}
+
+		executor := *exec
 
 		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))

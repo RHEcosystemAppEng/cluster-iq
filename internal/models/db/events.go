@@ -49,7 +49,7 @@ type SystemEventDBResponse struct {
 
 func (s SystemEventDBResponse) ToSystemEventDTOResponse() *dto.SystemEventDTOResponse {
 	return &dto.SystemEventDTOResponse{
-		ClusterEventDTOResponse: *s.ClusterEventDBResponse.ToClusterEventDTOResponse(),
+		ClusterEventDTOResponse: *s.ToClusterEventDTOResponse(),
 		AccountID:               s.AccountID,
 		Provider:                s.Provider,
 	}

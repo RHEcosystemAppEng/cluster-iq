@@ -31,11 +31,11 @@ func (i Inventory) IsAccountInInventory(account Account) bool {
 }
 
 // AddAccount adds a new account into the Inventory
-func (s *Inventory) AddAccount(account *Account) error {
-	if s.IsAccountInInventory(*account) {
+func (i *Inventory) AddAccount(account *Account) error {
+	if i.IsAccountInInventory(*account) {
 		return fmt.Errorf("Account %s already exists on Inventory", account.AccountID)
 	}
-	s.Accounts[account.AccountID] = account
+	i.Accounts[account.AccountID] = account
 	return nil
 }
 

@@ -77,18 +77,12 @@ func NewCluster(clusterName string, infraID string, provider Provider, region st
 
 // IsClusterStopped checks if the Cluster is Stopped
 func (c Cluster) IsClusterStopped() bool {
-	if c.Status == Stopped {
-		return true
-	}
-	return false
+	return c.Status == Stopped
 }
 
 // IsClusterRunning checks if the Cluster is Running
 func (c Cluster) IsClusterRunning() bool {
-	if c.Status == Running {
-		return true
-	}
-	return false
+	return c.Status == Running
 }
 
 // UpdateClusterInfo as a update function wrapper
@@ -119,7 +113,7 @@ func (c *Cluster) UpdateAge() error {
 	// Calculating Age in days since the cluster was created until last scraping
 	newAge := calculateAge(c.CreatedAt, c.LastScanTS)
 	if c.Age > newAge && c.Age != 0 {
-		return fmt.Errorf("New cluster age is lower than previous value. Current age: %d, New estimated age: %d", c.Age, newAge)
+		return fmt.Errorf("new cluster age is lower than previous value. Current age: %d, New estimated age: %d", c.Age, newAge)
 	}
 
 	c.Age = newAge
@@ -144,12 +138,14 @@ func (c *Cluster) UpdateStatus() {
 
 	terminatedCount := 0
 	for _, instance := range c.Instances {
-		if instance.Status == Running {
+		switch instance.Status {
+		case Running:
 			c.Status = Running
 			return
-		} else if instance.Status == Terminated {
+		case Terminated:
 			terminatedCount++
 		}
+
 	}
 
 	if terminatedCount == instanceCount {

@@ -389,11 +389,18 @@ func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 
 	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiInstanceEndpoint+"/expense_update")
 
-	resp, err := http.Get(requestURL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, requestURL, nil)
+	if err != nil {
+		s.logger.Error("Failed preparing last expenses list request", zap.Error(err))
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		s.logger.Error("Failed to get last expenses from API", zap.Error(err))
 		return nil, err
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {

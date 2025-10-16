@@ -47,7 +47,7 @@ func parseClusterName(key string) string {
 	res := re.FindAllStringSubmatch(key, 1)
 
 	// if there are no results, return empty string, if there are, return first match
-	if len(res) <= 0 {
+	if len(res) == 0 {
 		return UnknownClusterNameCode
 	}
 	return res[0][1]
@@ -59,7 +59,7 @@ func parseClusterID(key string) string {
 	res := re.FindAllStringSubmatch(key, 1)
 
 	// if there are no results, return empty string, if there are, return first match
-	if len(res) <= 0 {
+	if len(res) == 0 {
 		return UnknownClusterIDCode
 	}
 	return res[0][1]
@@ -71,7 +71,7 @@ func parseInfraID(key string) string {
 	res := re.FindAllStringSubmatch(key, 1)
 
 	// if there are no results, return empty string, if there are, return first match
-	if len(res) <= 0 {
+	if len(res) == 0 {
 		return ""
 	}
 	return res[0][1]

@@ -88,7 +88,7 @@ func (c *AWSRoute53Connection) GetHostedZoneRecords(hostedZoneID string) ([]*rou
 			return !lastPage // Continue if there are more record pages
 		})
 	if err != nil {
-		return nil, fmt.Errorf("Error getting the DNS registries: %w", err)
+		return nil, fmt.Errorf("error getting the DNS registries: %w", err)
 	}
 
 	return records, nil

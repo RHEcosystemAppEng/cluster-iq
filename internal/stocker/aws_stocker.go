@@ -9,11 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// Default codes for Unknown parameters
-	unknownAccountIDCode = "Unknown Account ID"
-)
-
 // AWSStocker object to make stock on AWS
 type AWSStocker struct {
 	Account                  *inventory.Account // Account to be scanned by the AWSStocker
