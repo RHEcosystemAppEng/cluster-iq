@@ -64,7 +64,7 @@ type listScheduledActionsRequest struct {
 //	@Param			status		query		string	false	"Status filter"
 //	@Param			page		query		int		false	"Page number"		default(1)
 //	@Param			page_size	query		int		false	"Items per page"	default(10)
-//	@Success		200			{object}	dto.ListResponse[dto.ScheduledAction]
+//	@Success		200			{object}	responsetypes.ListResponse[dto.ActionDTOResponse]
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/schedule [get]

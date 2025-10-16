@@ -59,7 +59,7 @@ type listAccountsRequest struct {
 //	@Param			page		query		int		false	"Page number"		default(1)
 //	@Param			page_size	query		int		false	"Items per page"	default(10)
 //	@Param			provider	query		string	false	"Cloud provider"	example(aws)
-//	@Success		200			{object}	responsetypes.ListResponse[dto.Account]
+//	@Success		200			{object}	responsetypes.ListResponse[dto.AccountDTOResponse]
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts [get]
@@ -102,7 +102,7 @@ func (h *AccountHandler) List(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Account ID"
-//	@Success		200	{object}	dto.Account
+//	@Success		200	{object}	dto.AccountDTOResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id} [get]
@@ -138,7 +138,7 @@ func (h *AccountHandler) GetByID(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Account ID"
-//	@Success		200	{object}	responsetypes.ListResponse[dto.Cluster]
+//	@Success		200	{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id}/clusters [get]
@@ -244,8 +244,8 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string		true	"Account ID"
-//	@Param			account	body		dto.Account	true	"Partial account payload"
+//	@Param			id		path		string					true	"Account ID"
+//	@Param			account	body		dto.AccountDTORequest	true	"Partial account payload"
 //	@Success		200		{object}	nil
 //	@Failure		501		{object}	nil	"Not Implemented"
 //	@Router			/accounts/{id} [patch]

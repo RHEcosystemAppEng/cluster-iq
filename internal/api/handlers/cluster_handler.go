@@ -74,7 +74,7 @@ type listClustersRequest struct {
 //	@Param			provider	query		string	false	"Cloud provider"	example(aws)
 //	@Param			region		query		string	false	"Provider region"	example(us-east-1)
 //	@Param			account		query		string	false	"Account name"
-//	@Success		200			{object}	responsetypes.ListResponse[dto.Cluster]
+//	@Success		200			{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters [get]
@@ -117,7 +117,7 @@ func (h *ClusterHandler) List(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
-//	@Success		200	{object}	dto.Cluster
+//	@Success		200	{object}	dto.ClusterDTOResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id} [get]
@@ -151,7 +151,7 @@ func (h *ClusterHandler) Get(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
-//	@Success		200	{object}	[]dto.Instance
+//	@Success		200	{object}	[]dto.InstanceDTOResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/instances [get]
@@ -324,7 +324,7 @@ func (h *ClusterHandler) PowerOff(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
-//	@Success		200	{object}	[]dto.Tag
+//	@Success		200	{object}	[]dto.TagDTOResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/tags [get]
@@ -356,8 +356,8 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string		true	"Cluster ID"
-//	@Param			cluster	body		dto.Cluster	true	"Partial cluster payload"
+//	@Param			id		path		string					true	"Cluster ID"
+//	@Param			cluster	body		dto.ClusterDTOResponse	true	"Partial cluster payload"
 //	@Success		200		{object}	nil
 //	@Failure		501		{object}	nil	"Not Implemented"
 //	@Router			/clusters/{id} [patch]
