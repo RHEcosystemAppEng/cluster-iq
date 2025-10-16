@@ -156,12 +156,14 @@ func (s *Scanner) createStockers() error {
 			)
 			// TODO: Uncomment line below when Azure Stocker is implemented
 			// azureStocker = stocker.NewAzureStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
-
+		case inventory.UnknownProvider:
+			s.logger.Warn("Unknown cloud provider, skipping account",
+				zap.String("account", account.AccountName),
+				zap.String("provider", string(account.Provider)))
 		default:
 			s.logger.Warn("Unsupported cloud provider, skipping account",
 				zap.String("account", account.AccountName),
 				zap.String("provider", string(account.Provider)))
-			continue
 		}
 	}
 
