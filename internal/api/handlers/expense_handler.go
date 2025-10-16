@@ -54,8 +54,8 @@ type listExpensesRequest struct {
 //	@Tags			Expenses
 //	@Accept			json
 //	@Produce		json
-//	@Param			page		query		int		false	"Page number"			default(1)
-//	@Param			page_size	query		int		false	"Items per page"		default(10)
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			page_size	query		int		false	"Items per page"	default(10)
 //	@Param			instance_id	query		string	false	"Instance ID filter"
 //	@Success		200			{object}	responsetypes.ListResponse[dto.Expense]
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse

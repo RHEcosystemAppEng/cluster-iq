@@ -56,9 +56,9 @@ type listAccountsRequest struct {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			page		query		int		false	"Page number"			default(1)
-//	@Param			page_size	query		int		false	"Items per page"		default(10)
-//	@Param			provider	query		string	false	"Cloud provider"		example(aws)
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			page_size	query		int		false	"Items per page"	default(10)
+//	@Param			provider	query		string	false	"Cloud provider"	example(aws)
 //	@Success		200			{object}	responsetypes.ListResponse[dto.Account]
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
@@ -101,10 +101,10 @@ func (h *AccountHandler) List(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string	true	"Account ID"
-//	@Success		200		{object}	dto.Account
-//	@Failure		404		{object}	responsetypes.GenericErrorResponse
-//	@Failure		500		{object}	responsetypes.GenericErrorResponse
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		200	{object}	dto.Account
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id} [get]
 //
 // NOTE: The handler reads path param "id". Ensure routing path uses {id}.
@@ -137,10 +137,10 @@ func (h *AccountHandler) GetByID(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string	true	"Account ID"
-//	@Success		200		{object}	responsetypes.ListResponse[dto.Cluster]
-//	@Failure		404		{object}	responsetypes.GenericErrorResponse
-//	@Failure		500		{object}	responsetypes.GenericErrorResponse
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		200	{object}	responsetypes.ListResponse[dto.Cluster]
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id}/clusters [get]
 //
 // NOTE: Align the documented route with the actual router configuration.
@@ -211,10 +211,10 @@ func (h *AccountHandler) Create(c *gin.Context) {
 //	@Description	Delete an account resource by its ID.
 //	@Tags			Accounts
 //	@Accept			json
-//	@Param			id		path		string	true	"Account ID"
-//	@Success		204		{object}	nil
-//	@Failure		404		{object}	responsetypes.GenericErrorResponse
-//	@Failure		500		{object}	responsetypes.GenericErrorResponse
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		204	{object}	nil
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id} [delete]
 func (h *AccountHandler) Delete(c *gin.Context) {
 	accountID := c.Param("id")
@@ -244,10 +244,10 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			id			path		string					true	"Account ID"
-//	@Param			account		body		dto.Account			true	"Partial account payload"
-//	@Success		200			{object}	nil
-//	@Failure		501			{object}	nil	"Not Implemented"
+//	@Param			id		path		string		true	"Account ID"
+//	@Param			account	body		dto.Account	true	"Partial account payload"
+//	@Success		200		{object}	nil
+//	@Failure		501		{object}	nil	"Not Implemented"
 //	@Router			/accounts/{id} [patch]
 func (h *AccountHandler) Update(c *gin.Context) {
 	// TODO: Implement partial update semantics

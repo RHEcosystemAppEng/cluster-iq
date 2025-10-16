@@ -60,8 +60,8 @@ type listInstancesRequest struct {
 //	@Tags			Instances
 //	@Accept			json
 //	@Produce		json
-//	@Param			page		query		int		false	"Page number"			default(1)
-//	@Param			page_size	query		int		false	"Items per page"		default(10)
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			page_size	query		int		false	"Items per page"	default(10)
 //	@Param			cluster_id	query		string	false	"Cluster ID filter"
 //	@Param			status		query		string	false	"Instance status filter"
 //	@Success		200			{object}	responsetypes.ListResponse[dto.Instance]

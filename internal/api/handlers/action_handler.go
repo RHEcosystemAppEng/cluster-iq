@@ -62,8 +62,8 @@ type listScheduledActionsRequest struct {
 //	@Produce		json
 //	@Param			enabled		query		string	false	"Enabled state filter (true/false)"
 //	@Param			status		query		string	false	"Status filter"
-//	@Param			page		query		int		false	"Page number"			default(1)
-//	@Param			page_size	query		int		false	"Items per page"		default(10)
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			page_size	query		int		false	"Items per page"	default(10)
 //	@Success		200			{object}	dto.ListResponse[dto.ScheduledAction]
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
@@ -140,9 +140,9 @@ func (h *ActionHandler) Get(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			actions	body		[]dto.ActionDTORequest	true	"Actions to create"
-//	@Success		201			{object}	responsetypes.PostResponse
-//	@Failure		400			{object}	responsetypes.GenericErrorResponse
-//	@Failure		500			{object}	responsetypes.GenericErrorResponse
+//	@Success		201		{object}	responsetypes.PostResponse
+//	@Failure		400		{object}	responsetypes.GenericErrorResponse
+//	@Failure		500		{object}	responsetypes.GenericErrorResponse
 //	@Router			/actions [post]
 func (h *ActionHandler) Create(c *gin.Context) {
 	var newActionsDTO []dto.ActionDTORequest
@@ -232,9 +232,9 @@ func (h *ActionHandler) Disable(c *gin.Context) {
 //	@Tags			Actions
 //	@Accept			json
 //	@Param			id	path		string	true	"Action ID"
-//	@Success		204		{object}	nil
-//	@Failure		404		{object}	responsetypes.GenericErrorResponse
-//	@Failure		500		{object}	responsetypes.GenericErrorResponse
+//	@Success		204	{object}	nil
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/actions/{id} [delete]
 func (h *ActionHandler) Delete(c *gin.Context) {
 	actionID := c.Param("id")

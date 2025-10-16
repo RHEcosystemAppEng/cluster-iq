@@ -69,8 +69,8 @@ type listSystemEventsRequest struct {
 //	@Tags			Events
 //	@Accept			json
 //	@Produce		json
-//	@Param			page			query		int		false	"Page number"				default(1)
-//	@Param			page_size		query		int		false	"Items per page"			default(10)
+//	@Param			page			query		int		false	"Page number"		default(1)
+//	@Param			page_size		query		int		false	"Items per page"	default(10)
 //	@Param			triggered_by	query		string	false	"Triggered by"
 //	@Param			action_name		query		string	false	"Action name"
 //	@Param			resource_type	query		string	false	"Resource type"
@@ -158,8 +158,8 @@ func (h *EventHandler) Create(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id			path		string	true	"Cluster ID"
-//	@Param			page		query		int		false	"Page number"				default(1)
-//	@Param			page_size	query		int		false	"Items per page"			default(10)
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			page_size	query		int		false	"Items per page"	default(10)
 //	@Success		200			{object}	responsetypes.ListResponse[dto.ClusterEvent]
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
