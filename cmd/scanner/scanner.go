@@ -137,7 +137,7 @@ func (s *Scanner) initAWSStockers(account *inventory.Account) error {
 	return nil
 }
 
-// createStockers creates and configures stocker instances for each provided account to be inventoried.
+// nolint:cyclop // createStockers creates and configures stocker instances for each provided account to be inventoried.
 func (s *Scanner) createStockers() error {
 	var validStockers []stocker.Stocker
 	for _, account := range s.inventory.Accounts {
