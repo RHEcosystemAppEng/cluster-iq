@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
@@ -92,10 +91,6 @@ func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string) erro
 		ClusterID:       cluster.ClusterID,
 		InstancesIdList: instanceIDs,
 	}
-
-	fmt.Println("====================> Cluster", cluster)
-	fmt.Println("====================> Instances", instances)
-	fmt.Println("====================> CSCR", req)
 
 	ctx, cancel := context.WithTimeout(ctx, s.agentRequestTimeout)
 	defer cancel()

@@ -144,6 +144,8 @@ func (c *Cluster) UpdateStatus() {
 			return
 		case Terminated:
 			terminatedCount++
+		default:
+			continue
 		}
 
 	}
