@@ -63,6 +63,8 @@ func NewCluster(clusterName string, infraID string, provider Provider, region st
 		return nil
 	}
 
+	now := time.Now()
+
 	return &Cluster{
 		ClusterID:   generateClusterID(clusterName, infraID),
 		ClusterName: clusterName,
@@ -72,8 +74,8 @@ func NewCluster(clusterName string, infraID string, provider Provider, region st
 		Region:      region,
 		AccountID:   "",
 		ConsoleLink: consoleLink,
-		LastScanTS:  time.Time{},
-		CreatedAt:   time.Now(),
+		LastScanTS:  now,
+		CreatedAt:   now,
 		Age:         0,
 		Owner:       owner,
 		Instances:   make([]Instance, 0),
@@ -174,6 +176,11 @@ func (c Cluster) IsInstanceInCluster(instance *Instance) bool {
 func (c *Cluster) AddInstance(instance *Instance) error {
 	if c.IsInstanceInCluster(instance) {
 		return fmt.Errorf("Instance '%s[%s]' already exists in Cluster %s", instance.ClusterID, instance.InstanceID, c.ClusterName)
+	}
+
+	// Setting cluster 'created_at' as old as the oldest instance
+	if instance.CreatedAt.Before(c.CreatedAt) {
+		c.CreatedAt = instance.CreatedAt
 	}
 
 	// Adding Instance
