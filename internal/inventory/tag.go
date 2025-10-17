@@ -9,9 +9,6 @@ const (
 	clusterNameRegexp = "kubernetes.io/cluster/(.*?)-.{5}$" // RegExp to get the Cluster Name configured by `openshift-installer` from Tags
 	infraIDRegexp     = "kubernetes.io/cluster/.*-(.{5}?)$" // RegExp to get the InfrastructureID configured by `openshift-installer` from Tags
 	clusterIDRegexp   = "kubernetes.io/cluster/(.*)$"       // RegExp to get the ClusterID (ClusterName + InfraID) configured by `openshift-installer` from Tags
-
-	UnknownClusterNameCode = "UNKNOWN-CLUSTER"
-	UnknownClusterIDCode   = "UNKNOWN-CLUSTER"
 )
 
 // Tag model generic tags as a Key-Value object

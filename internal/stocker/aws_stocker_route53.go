@@ -15,7 +15,7 @@ const (
 	consoleProtocolPrefix = "https://"
 	// consoleLinkPrefix is the pre-defined hostname for the Openshift Console
 	consoleLinkPrefix      = "console-openshift-console.apps."
-	unknownConsoleLinkCode = "UNKNOWN-CONSOLE"
+	unknownConsoleLinkCode = ""
 )
 
 // generateConsoleLink attaches the consoleLinkPrefix to the baseDomain specified by args

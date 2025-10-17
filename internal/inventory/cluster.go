@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+const (
+	UnknownClusterNameCode = "NO_CLUSTER"
+	UnknownClusterIDCode   = "UNKNOWN_CLUSTER_ID"
+)
+
 // Cluster is the object to store Openshift Clusters and its properties
 type Cluster struct {
 	// ClusterID is the unique key to identify every cluster independently of which account it belongs.
