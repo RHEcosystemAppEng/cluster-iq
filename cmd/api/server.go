@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/middleware"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	ginzap "github.com/gin-contrib/zap"
