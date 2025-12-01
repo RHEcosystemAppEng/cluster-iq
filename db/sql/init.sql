@@ -155,25 +155,13 @@ CREATE TABLE IF NOT EXISTS tags (
   value                   TEXT,
   instance_id             BIGINT REFERENCES instances(id) ON DELETE CASCADE NOT NULL,
   PRIMARY KEY (key, instance_id)
-) PARTITION BY HASH(instance_id);
+);
 
 CREATE INDEX IF NOT EXISTS ix_itags_instance      ON tags (instance_id);
 CREATE INDEX IF NOT EXISTS ix_itags_key_val       ON tags (key, value);
 CREATE INDEX IF NOT EXISTS ix_itags_key           ON tags (key);
 CREATE INDEX IF NOT EXISTS ix_itags_key_lower_val ON tags (key, lower(value));
 
--- Tags Partitions (16)
-DO $$
-DECLARE i int;
-BEGIN
-  FOR i IN 0..15 LOOP
-    EXECUTE format(
-			'CREATE TABLE %I PARTITION OF tags FOR VALUES WITH (MODULUS 16, REMAINDER %s);',
-      'tags_p' || to_char(i, 'FM00'),
-      i
-    );
-  END LOOP;
-END$$;
 
 
 -- ############################################################
