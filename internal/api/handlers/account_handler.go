@@ -168,6 +168,44 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetExpenseUpdateInstances lists the instances for a specific account that needs expense update
+//
+//	@Summary		List expense update instances
+//	@Description	Return the list of instances for expense update for a specified account.
+//	@Tags			Accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		200	{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/accounts/{id}/expense_update_instances [get]
+//
+// NOTE: Align the documented route with the actual router configuration.
+func (h *AccountHandler) GetExpensesUpdateInstances(c *gin.Context) {
+	accountID := c.Param("id")
+
+	instances, err := h.service.GetExpenseUpdateInstances(c.Request.Context(), accountID)
+	if err != nil {
+		h.logger.Error("error getting expense update instances", zap.String("account_id", accountID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Account not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve account",
+		})
+		return
+	}
+
+	response := responsetypes.NewListResponse(db.ToInstanceDTOResponseList(instances), len(instances))
+
+	c.JSON(http.StatusOK, response)
+}
+
 // Create creates one or more accounts.
 //
 //	@Summary		Create accounts

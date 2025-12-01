@@ -450,9 +450,10 @@ CREATE MATERIALIZED VIEW m_instances_full_view_with_tags AS SELECT * FROM instan
 -- Instances pending for expense update
 CREATE VIEW instances_pending_expense_update AS
 SELECT
-	instances.instance_id
+  a.account_id,
+	i.instance_id
 FROM
-	instances
+	instances i
 LEFT JOIN (
 	SELECT
 		instance_id,
@@ -463,12 +464,15 @@ LEFT JOIN (
 		instance_id
 ) AS last_expenses
 ON
-	instances.id = last_expenses.instance_id
+	i.id = last_expenses.instance_id
+JOIN clusters c ON c.id = i.cluster_id
+JOIN accounts a ON a.id = c.account_id
 WHERE
-	last_expenses.last_expense_date IS NULL
-	OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day';
-
-CREATE MATERIALIZED VIEW m_instances_pending_expense_update AS SELECT * FROM instances_pending_expense_update;
+  i.status <> 'Terminated'
+	AND (
+    last_expenses.last_expense_date IS NULL
+	  OR last_expenses.last_expense_date < CURRENT_DATE - INTERVAL '1 day'
+  );
 
 
 
@@ -650,6 +654,5 @@ BEGIN
   REFRESH MATERIALIZED VIEW m_clusters_full_view;
   REFRESH MATERIALIZED VIEW m_instances_full_view;
   REFRESH MATERIALIZED VIEW m_instances_full_view_with_tags;
-  REFRESH MATERIALIZED VIEW m_instances_pending_expense_update;
 END;
 $$ LANGUAGE plpgsql;

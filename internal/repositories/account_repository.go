@@ -19,6 +19,8 @@ const (
 	SelectAccountsView = "accounts_full_view"
 	// Materialized view for SELECT operations on Accounts
 	SelectAccountsMView = "m_accounts_full_view"
+	// View for SELECT operations for Instances pending on Expense Update
+	SelectInstancesPendingExpenseUpdateView = "instances_pending_expense_update"
 	// InsertAccountsQuery to insert or update new accounts
 	InsertAccountsQuery = `
 		INSERT INTO accounts (
@@ -45,6 +47,7 @@ type AccountRepository interface {
 	ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error)
 	GetAccountByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
+	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
 	CreateAccount(ctx context.Context, accounts []inventory.Account) error
 	DeleteAccount(ctx context.Context, accountID string) error
 }
@@ -126,6 +129,31 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 		return clusters, err
 	}
 	return clusters, nil
+}
+
+// GetExpenseUpdateInstances retrieves instances with outdated billing information.
+//
+// Parameters:
+//
+// Returns:
+// - A slice of inventory.Instance objects.
+// - An error if the query fails.
+func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error) {
+	var instances []db.InstanceDBResponse
+
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"account_id": accountID,
+		},
+	}
+
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesPendingExpenseUpdateView, opts, "instance_id", "instance_id"); err != nil {
+		return instances, fmt.Errorf("failed to list instances pending of expense update: %w", err)
+	}
+
+	return instances, nil
 }
 
 // Create inserts multiple accounts into the database in a transaction.

@@ -23,10 +23,6 @@ const (
 	SelectInstancesFullWithTagsView = "instances_full_view_with_tags"
 	// View for SELECT operations on Instances including tags
 	SelectInstancesFullWithTagsMView = "m_instances_full_view_with_tags"
-	// View for SELECT operations for Instances pending on Expense Update
-	SelectInstancesPendingExpenseUpdateView = "instances_pending_expense_update"
-	// View for SELECT operations for Instances pending on Expense Update
-	SelectInstancesPendingExpenseUpdateMView = "m_instances_pending_expense_update"
 	// InsertInstancesQuery inserts into a new instance in its table
 	InsertInstancesQuery = `
 		INSERT INTO instances (
@@ -82,7 +78,6 @@ var _ InstanceRepository = (*instanceRepositoryImpl)(nil)
 type InstanceRepository interface {
 	ListInstances(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error)
 	GetInstanceByID(ctx context.Context, instanceID string) (db.InstanceDBResponse, error)
-	GetInstancesOutdatedBilling(ctx context.Context) ([]db.InstanceDBResponse, error)
 	GetInstancesOverview(ctx context.Context) (inventory.InstancesSummary, error)
 	CreateInstances(ctx context.Context, instances []inventory.Instance) error
 	DeleteInstance(ctx context.Context, instanceID string) error
@@ -104,7 +99,7 @@ func NewInstanceRepository(db *dbclient.DBClient) InstanceRepository {
 func (r *instanceRepositoryImpl) ListInstances(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error) {
 	var instances []db.InstanceDBResponse
 
-	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullMView, opts, "instance_id", "*"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullMView, opts, "instance_id", "instance_id"); err != nil {
 		return instances, 0, fmt.Errorf("failed to list instances: %w", err)
 	}
 
@@ -137,23 +132,6 @@ func (r *instanceRepositoryImpl) GetInstanceByID(ctx context.Context, instanceID
 		return instance, err
 	}
 	return instance, nil
-}
-
-// GetInstancesOutdatedBilling retrieves instances with outdated billing information.
-//
-// Parameters:
-//
-// Returns:
-// - A slice of inventory.Instance objects.
-// - An error if the query fails.
-func (r *instanceRepositoryImpl) GetInstancesOutdatedBilling(ctx context.Context) ([]db.InstanceDBResponse, error) {
-	var instances []db.InstanceDBResponse
-
-	if err := r.db.SelectWithContext(ctx, instances, SelectInstancesPendingExpenseUpdateMView, models.ListOptions{}, "instance_id", "*"); err != nil {
-		return instances, fmt.Errorf("failed to list instances pending of expense update: %w", err)
-	}
-
-	return instances, nil
 }
 
 // GetInstancesOverview returns a summary of instances grouped by their status.

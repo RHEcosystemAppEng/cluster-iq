@@ -61,6 +61,7 @@ func (s *AWSBillingStocker) MakeStock() error {
 			instance := &cluster.Instances[j]
 			for _, targetInstance := range s.Instances {
 				if targetInstance.InstanceID == instance.InstanceID {
+					s.logger.Info("Getting expenses for instance", zap.String("instance_id", targetInstance.InstanceID))
 					err := s.getInstanceExpenses(instance)
 					if err != nil {
 						s.logger.Error("Error querying billing info for an instance",
@@ -145,7 +146,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 					return err
 				}
 
-				instance.AddExpense(*inventory.NewExpense(instance.InstanceName, amount, expenseDate))
+				instance.AddExpense(*inventory.NewExpense(instance.InstanceID, amount, expenseDate))
 			}
 		}
 	}

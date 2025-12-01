@@ -14,6 +14,7 @@ import (
 	"sync"
 	"syscall"
 
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -52,10 +53,11 @@ var (
 
 // Scanner models the cloud agnostic Scanner for looking up OCP deployments
 type Scanner struct {
-	inventory inventory.Inventory
-	stockers  []stocker.Stocker
-	cfg       *config.ScannerConfig
-	logger    *zap.Logger
+	inventory       inventory.Inventory
+	stockers        []stocker.Stocker
+	billingStockers []stocker.Stocker
+	cfg             *config.ScannerConfig
+	logger          *zap.Logger
 }
 
 // NewScanner creates and returns a new Scanner instance
@@ -119,7 +121,7 @@ func (s *Scanner) createStockers() error {
 	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
 		case inventory.AWSProvider:
-			s.logger.Info("Processing AWS account", zap.String("account", account.AccountName))
+			s.logger.Info("Processing AWS account", zap.String("account_name", account.AccountName))
 
 			// AWS API Stoker
 			awsStocker, err := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
@@ -133,13 +135,14 @@ func (s *Scanner) createStockers() error {
 
 			// AWS Billing API Stoker
 			if account.IsBillingEnabled() {
-				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account", account.AccountName))
-				instancesToScan, err := s.getInstancesForBillingUpdate()
+				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account_name", account.AccountName))
+				instancesToScan, err := s.getInstancesForBillingUpdate(account.AccountID)
 				if err != nil {
 					s.logger.Error("Failed to retrieve the list of instances required for billing information from AWS Cost Explorer.",
-						zap.String("account", account.AccountName))
+						zap.String("account_name", account.AccountName),
+						zap.Error(err))
 				} else {
-					s.stockers = append(s.stockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+					s.billingStockers = append(s.billingStockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
 				}
 			}
 		case inventory.GCPProvider:
@@ -191,10 +194,26 @@ func (s *Scanner) createStockers() error {
 // startStockers runs every stocker instance
 func (s *Scanner) startStockers() error {
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(s.stockers))
+	errChan := make(chan error, len(s.stockers)+len(s.billingStockers))
 
-	// Running Stockers.MakeStock procedure on parallel
+	// First iteration for infrastructure stockers
+	s.logger.Warn("Running Infrastructure Stockers!", zap.Int("stockers_count", len(s.stockers)))
 	for _, stockerInstance := range s.stockers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := stockerInstance.MakeStock(); err != nil {
+				errChan <- err
+			}
+		}()
+	}
+
+	// Waiting for every Stock
+	wg.Wait()
+
+	// Second iteration for billing stockers
+	s.logger.Warn("Running Billing Stockers!", zap.Int("stockers_count", len(s.billingStockers)))
+	for _, stockerInstance := range s.billingStockers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -265,6 +284,7 @@ func (s *Scanner) postNewAccount(account inventory.Account) error {
 
 	// Posting Expenses
 	if len(expenses) > 0 {
+		s.logger.Info("Posting expenses", zap.Int("expenses_count", len(expenses)))
 		if err := postExpenses(expenses); err != nil {
 			return err
 		}
@@ -382,10 +402,10 @@ func postData(path string, b []byte) error {
 }
 
 // getInstances fetches instances from the backend API
-func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
+func (s *Scanner) getInstancesForBillingUpdate(accountID string) ([]inventory.Instance, error) {
 	s.logger.Debug("Fetching instances for update billing from backend")
 
-	requestURL := fmt.Sprintf("%s%s", s.cfg.APIURL, apiInstanceEndpoint+"/expense_update")
+	requestURL := s.cfg.APIURL + apiAccountEndpoint + "/" + accountID + "/expense_update"
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, requestURL, nil)
 	if err != nil {
@@ -412,33 +432,23 @@ func (s *Scanner) getInstancesForBillingUpdate() ([]inventory.Instance, error) {
 		return nil, err
 	}
 
-	var result map[string]interface{}
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		s.logger.Error("Failed to unmarshal response body", zap.Error(err))
-		return nil, err
-	}
-
-	instancesData, ok := result["instances"]
-	if !ok {
-		s.logger.Error("Instances field not found in the response")
-		return nil, fmt.Errorf("instances field not found in the response")
-	}
-
-	instancesJSON, err := json.Marshal(instancesData)
-	if err != nil {
-		s.logger.Error("Failed to marshal instances data", zap.Error(err))
-		return nil, err
-	}
-
-	var instances []inventory.Instance
-	err = json.Unmarshal(instancesJSON, &instances)
+	var response responsetypes.ListResponse[dto.InstanceDTOResponse]
+	err = json.Unmarshal(body, &response)
 	if err != nil {
 		s.logger.Error("Failed to unmarshal instances JSON", zap.Error(err))
 		return nil, err
 	}
 
-	s.logger.Debug("Successfully fetched instances from backend", zap.Int("instances_num", len(instances)))
+	if response.Count == 0 {
+		return nil, fmt.Errorf("no instances for billing update")
+	}
+
+	s.logger.Debug("Successfully fetched instances from backend", zap.Int("instances_num", response.Count))
+
+	var instances []inventory.Instance
+	for _, instance := range response.Items {
+		instances = append(instances, *instance.ToInventoryInstance())
+	}
 	return instances, nil
 }
 

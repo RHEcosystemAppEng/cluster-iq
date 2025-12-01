@@ -14,6 +14,7 @@ type AccountService interface {
 	List(ctx context.Context, options models.ListOptions) ([]db.AccountDBResponse, int, error)
 	GetByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
+	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
 	Create(ctx context.Context, accounts []inventory.Account) error
 	Delete(ctx context.Context, accountID string) error
 }
@@ -47,6 +48,12 @@ func (s *accountServiceImpl) GetByID(ctx context.Context, accountID string) (db.
 // It returns an error if no account or more than one account is found.
 func (s *accountServiceImpl) GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error) {
 	return s.repo.GetAccountClustersByID(ctx, accountID)
+}
+
+// GetExpenseUpdateInstances retrieves a single account by its name.
+// It returns an error if no account or more than one account is found.
+func (s *accountServiceImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error) {
+	return s.repo.GetExpenseUpdateInstances(ctx, accountID)
 }
 
 // Create creates one or more new accounts.

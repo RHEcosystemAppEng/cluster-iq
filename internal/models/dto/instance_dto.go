@@ -95,3 +95,18 @@ type InstanceDTOResponse struct {
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
 	Tags                  []TagDTOResponse         `json:"tags"`
 }
+
+func (i *InstanceDTOResponse) ToInventoryInstance() *inventory.Instance {
+	return &inventory.Instance{
+		InstanceID:       i.InstanceID,
+		InstanceName:     i.InstanceName,
+		InstanceType:     i.InstanceType,
+		Provider:         i.Provider,
+		AvailabilityZone: i.AvailabilityZone,
+		Status:           i.Status,
+		ClusterID:        i.ClusterID,
+		LastScanTS:       i.LastScanTS,
+		CreatedAt:        i.CreatedAt,
+		Age:              i.Age,
+	}
+}
