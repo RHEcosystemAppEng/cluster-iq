@@ -365,6 +365,18 @@ LEFT JOIN clusters_with_costs         ac ON ac.id = c.id;
 
 CREATE MATERIALIZED VIEW m_clusters_full_view AS SELECT * FROM clusters_full_view;
 
+-- cluster tags view. Returns the cluster_id + every tag omitting repeated tags keys
+CREATE view clusters_tags AS
+SELECT
+    c.cluster_id,
+    t.key,
+    MIN(t.value) AS value
+FROM clusters   c
+JOIN instances  i ON i.cluster_id = c.id
+JOIN tags       t ON t.instance_id = i.id
+GROUP BY c.cluster_id, t.key
+HAVING COUNT(*) > 1;
+
 
 
 -- #############################################################################

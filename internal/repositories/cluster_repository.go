@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -19,6 +18,8 @@ const (
 	ClustersTable = "clusters"
 	// View for getting clusters
 	SelectClustersFullView = "clusters_full_view"
+	// View for getting cluster tags
+	SelectClusterTags = "clusters_tags"
 	// Materialized view for getting clusters
 	SelectClustersFullMView = "m_clusters_full_view"
 	// InsertClustersQuery to insert or update new clusters
@@ -171,7 +172,6 @@ func (r *clusterRepositoryImpl) GetClusterRegion(ctx context.Context, clusterID 
 // - A slice of inventory.Tag objects representing the cluster's tags.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error) {
-	var rawTags json.RawMessage
 	var result []db.TagDBResponse
 
 	opts := models.ListOptions{
@@ -182,16 +182,11 @@ func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.SelectWithContext(ctx, rawTags, SelectInstancesFullWithTagsMView, opts, "cluster_id", "DISTINCT ON (tags_json) tags_json"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &result, SelectClusterTags, opts, "cluster_id", "key, value"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return result, ErrNotFound
+			return nil, ErrNotFound
 		}
-		return result, err
-	}
-
-	var tags []inventory.Tag
-	if err := json.Unmarshal(rawTags, &tags); err != nil {
-		return result, err
+		return nil, err
 	}
 
 	return result, nil

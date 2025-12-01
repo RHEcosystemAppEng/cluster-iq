@@ -48,5 +48,5 @@ func ToTagDTORequestList(tags []inventory.Tag) *[]TagDTORequest {
 type TagDTOResponse struct {
 	Key        string `json:"key"`
 	Value      string `json:"value"`
-	InstanceID string `json:"instanceID"`
+	InstanceID string `json:"instanceID,omitempty"`
 }
