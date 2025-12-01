@@ -79,7 +79,7 @@ type listSystemEventsRequest struct {
 //	@Success		200				{object}	responsetypes.ListResponse[dto.SystemEventDTOResponse]
 //	@Failure		400				{object}	responsetypes.GenericErrorResponse
 //	@Failure		500				{object}	responsetypes.GenericErrorResponse
-//	@Router			/events/system [get]
+//	@Router			/events [get]
 func (h *EventHandler) ListSystem(c *gin.Context) {
 	var req listSystemEventsRequest
 
