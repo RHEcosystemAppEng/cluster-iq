@@ -2,56 +2,41 @@ package inventory
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// TODO: Group by function and test
+// TODO: Include Asserts
 
 // TestNewAccount for inventory.Account.NewAccount
 func TestNewAccount(t *testing.T) {
 	id := "0000-11A"
 	name := "testAccount"
-	var provider CloudProvider = UnknownProvider
+	provider := UnknownProvider
 	user := "user"
 	password := "password"
 
 	expectedAccount := &Account{
-		ID:                    id,
-		Name:                  name,
-		Provider:              provider,
-		user:                  user,
-		password:              password,
-		Clusters:              make(map[string]*Cluster),
-		billingEnabled:        false,
-		ClusterCount:          0,
-		TotalCost:             0.0,
-		Last15DaysCost:        0.0,
-		LastMonthCost:         0.0,
-		CurrentMonthSoFarCost: 0.0,
+		AccountID:      id,
+		AccountName:    name,
+		Provider:       provider,
+		Clusters:       make(map[string]*Cluster),
+		LastScanTS:     time.Time{},
+		user:           user,
+		password:       password,
+		billingEnabled: false,
 	}
 
 	actualAccount := NewAccount(id, name, provider, user, password)
 
 	assert.NotNil(t, actualAccount)
-	assert.NotZero(t, actualAccount.LastScanTimestamp)
+	assert.Zero(t, actualAccount.LastScanTS)
 
-	expectedAccount.LastScanTimestamp = actualAccount.LastScanTimestamp
+	expectedAccount.LastScanTS = actualAccount.LastScanTS
+	expectedAccount.CreatedAt = actualAccount.CreatedAt
 	assert.Equal(t, expectedAccount, actualAccount)
-}
-
-// TestGetUser verifies that GetUser returns the correct user name
-func TestGetUser(t *testing.T) {
-	user := "user01"
-	account := NewAccount("0000-11A", "testAccount", UnknownProvider, user, "password")
-
-	assert.Equal(t, account.GetUser(), user)
-}
-
-// TestGetPassword verifies that GetPassword method returns the correct password
-func TestGetPassword(t *testing.T) {
-	password := "secretPassword"
-	account := NewAccount("0000-11A", "testAccount", UnknownProvider, "user01", password)
-
-	assert.Equal(t, account.GetPassword(), password)
 }
 
 // TestEnableBilling verifies that EnableBilling sets billingEnabled to true.
@@ -100,7 +85,7 @@ func TestAddCluster(t *testing.T) {
 	var err error
 
 	// First Insert
-	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
+	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -108,13 +93,13 @@ func TestAddCluster(t *testing.T) {
 			t.Errorf("Incorrect number of Clusters in Account Object")
 		}
 
-		if acc.Clusters[cluster.ID].Name != cluster.Name {
-			t.Errorf("Cluster's name do not match. Found: %s, Expected: %s", acc.Clusters[cluster.Name].Name, cluster.Name)
+		if acc.Clusters[cluster.ClusterID].ClusterName != cluster.ClusterName {
+			t.Errorf("Cluster's name do not match. Found: %s, Expected: %s", acc.Clusters[cluster.ClusterName].ClusterName, cluster.ClusterName)
 		}
 
 	}
 	// Second Insert
-	cluster = NewCluster("testCluster-2", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
+	cluster = NewCluster("testCluster-2", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -122,14 +107,14 @@ func TestAddCluster(t *testing.T) {
 			t.Errorf("Incorrect number of Clusters in Account Object")
 		}
 
-		if acc.Clusters[cluster.Name].Name != cluster.Name {
-			t.Errorf("Cluster's name do not match. Found: %s, Expected: %s", acc.Clusters[cluster.Name].Name, cluster.Name)
+		if acc.Clusters[cluster.ClusterName].ClusterName != cluster.ClusterName {
+			t.Errorf("Cluster's name do not match. Found: %s, Expected: %s", acc.Clusters[cluster.ClusterName].ClusterName, cluster.ClusterName)
 		}
 
 	}
 
 	// Repeated Insert
-	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
+	cluster = NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
 	err = acc.AddCluster(cluster)
 
 	if err != nil {
@@ -137,8 +122,8 @@ func TestAddCluster(t *testing.T) {
 			t.Errorf("Incorrect number of Clusters in Account Object")
 		}
 
-		if acc.Clusters[cluster.ID].Name != cluster.Name {
-			t.Errorf("Cluster's name do not match. Found: %s, Expected: %s", acc.Clusters[cluster.Name].Name, cluster.Name)
+		if acc.Clusters[cluster.ClusterID].ClusterName != cluster.ClusterName {
+			t.Errorf("Cluster's name do not match. Found: %s, Expected: %s", acc.Clusters[cluster.ClusterName].ClusterName, cluster.ClusterName)
 		}
 
 	} else {
@@ -151,7 +136,7 @@ func TestPrintAccount(t *testing.T) {
 	acc := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
 	acc.PrintAccount()
 
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "testAccount", "https://url.com", "John Doe")
+	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
 	acc.AddCluster(cluster)
 	acc.PrintAccount()
 

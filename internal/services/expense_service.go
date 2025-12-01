@@ -6,13 +6,15 @@ import (
 	"context"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
 
 // ExpenseService defines the interface for expense-related business logic.
 type ExpenseService interface {
-	List(ctx context.Context, options repositories.ListOptions) ([]inventory.Expense, int, error)
-	GetByInstanceID(ctx context.Context, instanceID string) ([]inventory.Expense, error)
+	List(ctx context.Context, options models.ListOptions) ([]db.ExpenseDBResponse, int, error)
+	GetByInstanceID(ctx context.Context, instanceID string) ([]db.ExpenseDBResponse, error)
 	Create(ctx context.Context, expenses []inventory.Expense) error
 }
 
@@ -31,12 +33,12 @@ func NewExpenseService(repo repositories.ExpenseRepository) ExpenseService {
 }
 
 // List retrieves a paginated list of expenses.
-func (s *expenseServiceImpl) List(ctx context.Context, options repositories.ListOptions) ([]inventory.Expense, int, error) {
+func (s *expenseServiceImpl) List(ctx context.Context, options models.ListOptions) ([]db.ExpenseDBResponse, int, error) {
 	return s.repo.ListExpenses(ctx, options)
 }
 
 // GetByInstanceID retrieves all expenses associated with a specific instance.
-func (s *expenseServiceImpl) GetByInstanceID(ctx context.Context, instanceID string) ([]inventory.Expense, error) {
+func (s *expenseServiceImpl) GetByInstanceID(ctx context.Context, instanceID string) ([]db.ExpenseDBResponse, error) {
 	return s.repo.GetExpensesByInstance(ctx, instanceID)
 }
 

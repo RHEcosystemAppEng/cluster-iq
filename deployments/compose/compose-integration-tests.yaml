@@ -1,0 +1,67 @@
+networks:
+  cluster_iq_test:
+    driver: bridge
+
+services:
+  api-test:
+    image: quay.io/ecosystem-appeng/cluster-iq-api:latest
+    container_name: api-test
+    restart: always
+    ports:
+      - 8081:8080
+    environment:
+      CIQ_API_LISTEN_URL: "0.0.0.0:8080"
+      CIQ_AGENT_URL: "agent-test:50051"
+      CIQ_DB_URL: "postgresql://user:password@pgsql-test:5432/clusteriq?sslmode=disable"
+      CIQ_LOG_LEVEL: "DEBUG"
+    networks:
+      - cluster_iq_test
+
+  pgsql-test:
+    image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
+    container_name: pgsql-test
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRESQL_USER: "user"
+      POSTGRESQL_PASSWORD: "password"
+      POSTGRESQL_DATABASE: "clusteriq"
+      POSTGRESQL_ADMIN_PASSWORD: "admin"
+      POSTGRESQL_LIBRARIES: "pg_cron"
+      POSTGRESQL_EXTENSIONS: "pg_cron"
+    networks:
+      - cluster_iq_test
+
+  init-pgsql-test:
+    image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
+    container_name: init-pgsql-test
+    restart: "no"
+    command: |
+      sh -c '
+         echo "Waiting for PGSQL to start up"
+         while true; do
+             psql postgresql://user:password@pgsql-test:5432/clusteriq -c "SELECT true" && break || sleep 2;
+         done
+
+         echo "Initializing ClusterIQ Database"
+         psql postgresql://user:password@pgsql-test:5432/clusteriq < /init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+
+         echo "Creating PG_CRON tasks"
+         psql postgresql://postgres:admin@pgsql-test:5432/postgres < /cron.sql && { echo "Ok"; } || { echo "Cron Tasks creation Failed"; exit 1; }
+
+         if [[ "$CIQ_DB_PRELOAD_DATA" == "true" ]]; then
+           echo "Initializing DB with fake data"
+           psql postgresql://user:password@pgsql-test:5432/clusteriq < /integration_tests_data.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+         fi
+
+         echo "Done!"
+      '
+    environment:
+      CIQ_DB_PRELOAD_DATA: "true"
+    volumes:
+      - ./../../db/sql/init.sql:/init.sql:ro,Z
+      - ./../../db/sql/cron.sql:/cron.sql:ro,Z
+      - ./../../db/test_files/integration_tests_data.sql:/integration_tests_data.sql:ro,Z
+    networks:
+      - cluster_iq_test

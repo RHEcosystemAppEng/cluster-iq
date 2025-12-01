@@ -12,9 +12,9 @@ import (
 	cexec "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_executors"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
+	eventservice "github.com/RHEcosystemAppEng/cluster-iq/internal/events/event_service"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
 	"go.uber.org/zap"
 )
 
@@ -24,8 +24,8 @@ type ExecutorAgentService struct {
 	AgentService
 	executors      map[string]cexec.CloudExecutor
 	actionsChannel <-chan actions.Action
-	client         http.Client          // HTTP Client for retrieving the schedule from API
-	eventService   *events.EventService // Service for handling audit logs
+	client         http.Client                // HTTP Client for retrieving the schedule from API
+	eventService   *eventservice.EventService // Service for handling audit logs
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
@@ -48,13 +48,13 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 	client := http.Client{Transport: tr}
 
 	// Creating DB client
-	sqlCli, err := sqlclient.NewSQLClient(cfg.DBURL, logger)
+	db, err := dbclient.NewDBClient(cfg.DBURL, logger)
 	if err != nil {
 		return nil
 	}
 
 	// Creating Event Service
-	eventService := events.NewEventService(sqlCli, logger)
+	eventService := eventservice.NewEventService(db, logger)
 
 	eas := ExecutorAgentService{
 		cfg:            cfg,
@@ -126,7 +126,7 @@ func (e *ExecutorAgentService) createExecutors() error {
 		case inventory.AWSProvider: // AWS
 			e.logger.Info("Creating Executor for AWS account", zap.String("account_name", account.Name))
 			exec := cexec.NewAWSExecutor(
-				inventory.NewAccount("", account.Name, account.Provider, account.User, account.Key),
+				inventory.NewAccount("", account.ID, account.Provider, account.User, account.Key),
 				e.actionsChannel,
 				logger,
 			)
@@ -147,6 +147,12 @@ func (e *ExecutorAgentService) createExecutors() error {
 				zap.String("account", account.Name),
 				zap.String("reason", "not implemented"),
 			)
+		case inventory.UnknownProvider:
+			e.logger.Warn("Failed to create Executor for Unknown Provider account",
+				zap.String("account", account.Name),
+				zap.Any("provider", account.Provider),
+				zap.String("reason", "Unknown provider"),
+			)
 
 		}
 	}
@@ -156,13 +162,13 @@ func (e *ExecutorAgentService) createExecutors() error {
 // GetExecutor retrieves the CloudExecutor associated with a given account name.
 //
 // Parameters:
-// - accountName: The name of the account for which the executor is requested.
+// - accountID: The name of the account for which the executor is requested.
 //
 // Returns:
 // - cexec.CloudExecutor: The executor for the specified account.
 // - error: An error if no executor is found for the given account.
-func (e *ExecutorAgentService) GetExecutor(accountName string) *cexec.CloudExecutor {
-	exec, ok := e.executors[accountName]
+func (e *ExecutorAgentService) GetExecutor(accountID string) *cexec.CloudExecutor {
+	exec, ok := e.executors[accountID]
 	if !ok {
 		return nil
 	}
@@ -189,23 +195,26 @@ func (e *ExecutorAgentService) Start() error {
 		}
 
 		// Initialize event tracker
-		tracker := e.eventService.StartTracking(&events.EventOptions{
+		tracker := e.eventService.StartTracking(&eventservice.EventOptions{
 			Action:       newAction.GetActionOperation(),
 			Description:  &description,
 			ResourceID:   newAction.GetTarget().ClusterID,
 			ResourceType: inventory.ClusterResourceType,
-			Result:       events.ResultPending,
-			Severity:     events.SeverityInfo,
+			Result:       eventservice.ResultPending,
+			Severity:     eventservice.SeverityInfo,
 			// TODO. Rethink
 			TriggeredBy: "ClusterIQ Agent",
 		})
 
-		target := newAction.GetTarget()
-		cexec := *(e.GetExecutor(target.GetAccountName()))
-		if cexec == nil {
-			return fmt.Errorf("there's no Executor available for the requested account")
+		exec := e.GetExecutor(newAction.GetTarget().AccountID)
+		if exec == nil {
+			e.logger.Error("there's no Executor available for the requested account", zap.String("account", newAction.GetTarget().AccountID))
+			continue
 		}
-		if err := cexec.ProcessAction(newAction); err != nil {
+
+		executor := *exec
+
+		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
 			actionStatus = "Failed"
 			tracker.Failed()

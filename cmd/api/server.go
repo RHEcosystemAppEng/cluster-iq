@@ -1,23 +1,21 @@
-// Package main is the entry point for the ClusterIQ API server.
-// It initializes the API server, sets up routes, and handles server lifecycle events.
 package main
 
 import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/router"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/middleware"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/database"
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	ginzap "github.com/gin-contrib/zap"
@@ -173,11 +171,15 @@ func main() {
 	logger.Info("Configuration loaded successfully")
 
 	// Initialize database connection
-	db, err := database.Connect(cfg.DBURL, logger)
+	dbClient, err := dbclient.NewDBClient(cfg.DBURL, logger)
 	if err != nil {
 		logger.Fatal("Could not establish database connection", zap.Error(err))
 	}
-	defer db.Close()
+	defer func() {
+		if err := dbClient.Close(); err != nil {
+			logger.Error("error closing dbclient", zap.Error(err))
+		}
+	}()
 
 	// Initializing gRPC AgentClient
 	agentClient, err := clients.NewGRPCAgentClient(cfg.AgentURL, logger)
@@ -186,14 +188,16 @@ func main() {
 	}
 
 	// Initializing repositories
-	accountRepo := repositories.NewAccountRepository(db)
-	clusterRepo := repositories.NewClusterRepository(db)
-	instanceRepo := repositories.NewInstanceRepository(db)
-	expenseRepo := repositories.NewExpenseRepository(db)
-	eventRepo := repositories.NewEventRepository(db)
-	actionRepo := repositories.NewActionRepository(db)
+	inventoryRepo := repositories.NewInventoryRepository(dbClient)
+	accountRepo := repositories.NewAccountRepository(dbClient)
+	clusterRepo := repositories.NewClusterRepository(dbClient)
+	instanceRepo := repositories.NewInstanceRepository(dbClient)
+	expenseRepo := repositories.NewExpenseRepository(dbClient)
+	eventRepo := repositories.NewEventRepository(dbClient)
+	actionRepo := repositories.NewActionRepository(dbClient)
 
 	// Initializing services
+	inventoryService := services.NewInventoryService(inventoryRepo)
 	accountService := services.NewAccountService(accountRepo)
 	clusterServiceOpts := services.ClusterServiceOptions{
 		AgentRequestTimeout: cfg.AgentRequestTimeout,
@@ -206,27 +210,31 @@ func main() {
 	overviewService := services.NewOverviewService(clusterRepo, instanceRepo, accountRepo)
 
 	// Initializing handlers
-	handlers := router.APIHandlers{
-		AccountHandler:     handlers.NewAccountHandler(accountService),
-		ClusterHandler:     handlers.NewClusterHandler(clusterService),
-		InstanceHandler:    handlers.NewInstanceHandler(instanceService),
-		ExpenseHandler:     handlers.NewExpenseHandler(expenseService),
-		EventHandler:       handlers.NewEventHandler(eventService),
-		ActionHandler:      handlers.NewActionHandler(actionService),
-		OverviewHandler:    handlers.NewOverviewHandler(overviewService),
-		HealthCheckHandler: handlers.NewHealthCheckHandler(db, logger),
+	handlers := APIHandlers{
+		InventoryHandler:   handlers.NewInventoryHandler(inventoryService, logger),
+		AccountHandler:     handlers.NewAccountHandler(accountService, logger),
+		ClusterHandler:     handlers.NewClusterHandler(clusterService, logger),
+		InstanceHandler:    handlers.NewInstanceHandler(instanceService, logger),
+		ExpenseHandler:     handlers.NewExpenseHandler(expenseService, logger),
+		EventHandler:       handlers.NewEventHandler(eventService, logger),
+		ActionHandler:      handlers.NewActionHandler(actionService, logger),
+		OverviewHandler:    handlers.NewOverviewHandler(overviewService, logger),
+		HealthCheckHandler: handlers.NewHealthCheckHandler(dbClient, logger),
 	}
 
 	// Setup router
 	engine := setupGin(logger)
-	router.Setup(engine, handlers)
+	Setup(engine, handlers)
+
+	// parsing cfg.DBURL for removing user:password when logging
+	dburl, _ := url.Parse(cfg.DBURL)
+	dbHost := dburl.Hostname() + ":" + dburl.Port()
 
 	logger.Info("ClusterIQ API server started",
 		zap.String("version", version),
 		zap.String("commit", commit),
 		zap.String("listenURL", cfg.ListenURL),
-		// TODO remove or mask dbURL
-		zap.String("dbURL", cfg.DBURL),
+		zap.String("dbURL", dbHost),
 		zap.String("agentURL", cfg.AgentURL),
 	)
 

@@ -6,15 +6,9 @@ import (
 )
 
 const (
-	// Regular expresion for extracting the Cluster Name configured by `openshift-installer` from AWS Tags
-	clusterNameRegexp = "kubernetes.io/cluster/(.*?)-.{5}$"
-	// Regular expresion for extracting the InfrastructureID configured by `openshift-installer` from AWS Tags
-	infraIDRegexp = "kubernetes.io/cluster/.*-(.{5}?)$"
-	// Regular expresion for extracting the ClusterID (ClusterName + InfraID) configured by `openshift-installer` from AWS Tags
-	clusterIDRegexp = "kubernetes.io/cluster/(.*)$"
-
-	UnknownClusterNameCode = "UNKNOWN-CLUSTER"
-	UnknownClusterIDCode   = "UNKNOWN-CLUSTER"
+	clusterNameRegexp = "kubernetes.io/cluster/(.*?)-.{5}$" // RegExp to get the Cluster Name configured by `openshift-installer` from Tags
+	infraIDRegexp     = "kubernetes.io/cluster/.*-(.{5}?)$" // RegExp to get the InfrastructureID configured by `openshift-installer` from Tags
+	clusterIDRegexp   = "kubernetes.io/cluster/(.*)$"       // RegExp to get the ClusterID (ClusterName + InfraID) configured by `openshift-installer` from Tags
 )
 
 // Tag model generic tags as a Key-Value object
@@ -50,7 +44,7 @@ func parseClusterName(key string) string {
 	res := re.FindAllStringSubmatch(key, 1)
 
 	// if there are no results, return empty string, if there are, return first match
-	if len(res) <= 0 {
+	if len(res) == 0 {
 		return UnknownClusterNameCode
 	}
 	return res[0][1]
@@ -62,7 +56,7 @@ func parseClusterID(key string) string {
 	res := re.FindAllStringSubmatch(key, 1)
 
 	// if there are no results, return empty string, if there are, return first match
-	if len(res) <= 0 {
+	if len(res) == 0 {
 		return UnknownClusterIDCode
 	}
 	return res[0][1]
@@ -74,7 +68,7 @@ func parseInfraID(key string) string {
 	res := re.FindAllStringSubmatch(key, 1)
 
 	// if there are no results, return empty string, if there are, return first match
-	if len(res) <= 0 {
+	if len(res) == 0 {
 		return ""
 	}
 	return res[0][1]

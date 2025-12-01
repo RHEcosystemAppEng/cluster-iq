@@ -15,7 +15,7 @@ const (
 	consoleProtocolPrefix = "https://"
 	// consoleLinkPrefix is the pre-defined hostname for the Openshift Console
 	consoleLinkPrefix      = "console-openshift-console.apps."
-	unknownConsoleLinkCode = "UNKNOWN-CONSOLE"
+	unknownConsoleLinkCode = ""
 )
 
 // generateConsoleLink attaches the consoleLinkPrefix to the baseDomain specified by args
@@ -27,7 +27,7 @@ func generateConsoleLink(baseDomain string) *string {
 // searchConsoleURLinDNSRecords looks for the console link on the record list
 func searchConsoleURLinDNSRecords(records []*route53.ResourceRecordSet, cluster *inventory.Cluster) *string {
 	for _, record := range records {
-		if strings.Contains(aws.StringValue(record.Name), cluster.Name) {
+		if strings.Contains(aws.StringValue(record.Name), cluster.ClusterName) {
 			return generateConsoleLink(*record.Name)
 		}
 	}
@@ -60,7 +60,7 @@ func (s *AWSStocker) FindOpenshiftConsoleURLs() error {
 		for _, hostedZone := range hostedZones {
 			// Checking if the current hosted zone belongs to the current cluster
 			if s.conn.Route53.ZoneBelongsToCluster(cluster, hostedZone) {
-				s.logger.Debug("Found Hosted Zone for Cluster", zap.String("account", s.Account.Name), zap.String("hosted_zone_id", *hostedZone.Zone.Name), zap.String("cluster_id", cluster.ID))
+				s.logger.Debug("Found Hosted Zone for Cluster", zap.String("account_id", s.Account.AccountID), zap.String("hosted_zone_id", *hostedZone.Zone.Name), zap.String("cluster_id", cluster.ClusterID))
 
 				s.Account.Clusters[i].ConsoleLink = s.getConsoleLinkOfCluster(cluster, hostedZone.Zone)
 			}

@@ -6,20 +6,24 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
 
 // ClusterService defines the interface for cluster-related business logic.
 type ClusterService interface {
-	List(ctx context.Context, options repositories.ListOptions) ([]inventory.Cluster, int, error)
-	Get(ctx context.Context, id string) (*inventory.Cluster, error)
+	List(ctx context.Context, options models.ListOptions) ([]db.ClusterDBResponse, int, error)
+	Get(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error)
+	GetInstances(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error)
 	GetSummary(ctx context.Context) (inventory.ClustersSummary, error)
 	PowerOn(ctx context.Context, clusterID string) error
 	PowerOff(ctx context.Context, clusterID string) error
 	Create(ctx context.Context, clusters []inventory.Cluster) error
 	Delete(ctx context.Context, clusterID string) error
-	GetTags(ctx context.Context, clusterID string) ([]inventory.Tag, error)
-	Update(ctx context.Context, cluster inventory.Cluster) error
+	GetTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error)
+	Update(ctx context.Context, cluster dto.ClusterDTORequest) error
 }
 
 var _ ClusterService = (*clusterServiceImpl)(nil)
@@ -45,13 +49,18 @@ func NewClusterService(repo repositories.ClusterRepository, agentClient clients.
 }
 
 // List retrieves a paginated list of clusters based on the provided options.
-func (s *clusterServiceImpl) List(ctx context.Context, options repositories.ListOptions) ([]inventory.Cluster, int, error) {
+func (s *clusterServiceImpl) List(ctx context.Context, options models.ListOptions) ([]db.ClusterDBResponse, int, error) {
 	return s.repo.ListClusters(ctx, options)
 }
 
 // Get retrieves a single cluster by its ID.
-func (s *clusterServiceImpl) Get(ctx context.Context, id string) (*inventory.Cluster, error) {
-	return s.repo.GetClusterByID(ctx, id)
+func (s *clusterServiceImpl) Get(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error) {
+	return s.repo.GetClusterByID(ctx, clusterID)
+}
+
+// Get retrieves a single cluster by its ID.
+func (s *clusterServiceImpl) GetInstances(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error) {
+	return s.repo.GetInstancesOnCluster(ctx, clusterID)
 }
 
 // GetSummary retrieves a summary of cluster counts by status.
@@ -65,19 +74,21 @@ func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string) erro
 	if err != nil {
 		return err
 	}
+
 	instances, err := s.repo.GetInstancesOnCluster(ctx, clusterID)
 	if err != nil {
 		return err
 	}
+
 	instanceIDs := make([]string, len(instances))
 	for i, inst := range instances {
-		instanceIDs[i] = inst.ID
+		instanceIDs[i] = inst.InstanceID
 	}
 
 	req := &clients.ClusterStatusChangeRequest{
-		AccountName:     cluster.AccountName,
+		AccountID:       cluster.AccountID,
 		Region:          cluster.Region,
-		ClusterID:       cluster.ID,
+		ClusterID:       cluster.ClusterID,
 		InstancesIdList: instanceIDs,
 	}
 
@@ -99,13 +110,13 @@ func (s *clusterServiceImpl) PowerOff(ctx context.Context, clusterID string) err
 	}
 	instanceIDs := make([]string, len(instances))
 	for i, inst := range instances {
-		instanceIDs[i] = inst.ID
+		instanceIDs[i] = inst.InstanceID
 	}
 
 	req := &clients.ClusterStatusChangeRequest{
-		AccountName:     cluster.AccountName,
+		AccountID:       cluster.AccountID,
 		Region:          cluster.Region,
-		ClusterID:       cluster.ID,
+		ClusterID:       cluster.ClusterID,
 		InstancesIdList: instanceIDs,
 	}
 
@@ -126,11 +137,11 @@ func (s *clusterServiceImpl) Delete(ctx context.Context, clusterID string) error
 }
 
 // GetTags retrieves all tags for a specific cluster.
-func (s *clusterServiceImpl) GetTags(ctx context.Context, clusterID string) ([]inventory.Tag, error) {
+func (s *clusterServiceImpl) GetTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error) {
 	return s.repo.GetClusterTags(ctx, clusterID)
 }
 
 // Update updates an existing cluster.
-func (s *clusterServiceImpl) Update(ctx context.Context, cluster inventory.Cluster) error {
+func (s *clusterServiceImpl) Update(ctx context.Context, cluster dto.ClusterDTORequest) error {
 	return s.repo.UpdateCluster(ctx, cluster)
 }

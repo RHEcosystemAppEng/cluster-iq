@@ -1,0 +1,37 @@
+package stocker
+
+import (
+	"fmt"
+
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"go.uber.org/zap"
+)
+
+// AzureStocker object to make stock on Azure
+type AzureStocker struct {
+	region  string
+	Account inventory.Account
+	logger  *zap.Logger
+}
+
+// NewAzureStocker create and returns a pointer to a new AzureStocker instance
+func NewAzureStocker(account inventory.Account, logger *zap.Logger) *AzureStocker {
+	st := AzureStocker{region: "default", logger: logger}
+	st.Account = *inventory.NewAccount(account.AccountID, account.AccountName, inventory.AzureProvider, account.User(), account.Password())
+	return &st
+}
+
+// MakeStock Scans Azure cloud accounts
+func (s AzureStocker) MakeStock() error {
+	return fmt.Errorf("AzureStocker.MakeStock not implemented")
+}
+
+// PrintStock prints by stdout the account object belongs to this stocker
+func (s AzureStocker) PrintStock() {
+	s.Account.PrintAccount()
+}
+
+// GetAccount resturns the scanned results on this stocker instance
+func (s AzureStocker) GetAccount() inventory.Account {
+	return s.Account
+}

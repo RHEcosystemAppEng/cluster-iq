@@ -91,11 +91,8 @@ func (i *InstantAgentService) Start() error {
 // - *pb.PowerOnClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
-	i.logger.Debug("Received PowerOnCluster gRPC Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
-
-	// PowerOn
 	i.logger.Warn("Powering On Cluster",
-		zap.String("account_name", req.AccountName),
+		zap.String("account_name", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
@@ -105,7 +102,7 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 	action := actions.NewInstantAction(
 		actions.PowerOnCluster,
 		*actions.NewActionTarget(
-			req.AccountName,
+			req.AccountId,
 			req.Region,
 			req.ClusterId,
 			req.InstancesIdList,
@@ -118,7 +115,7 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 
 	return &pb.PowerOnClusterResponse{
 		Error:   0,
-		Message: fmt.Sprintf(PowerOnClusterSuccessfully, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		Message: fmt.Sprintf(PowerOnClusterSuccessfully, req.ClusterId, req.AccountId, len(req.InstancesIdList)),
 	}, nil
 }
 
@@ -132,11 +129,8 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 // - *pb.PowerOffClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
-	i.logger.Debug("Received PowerOffCluster Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
-
-	// PowerOff
 	i.logger.Warn("Powering Off Cluster",
-		zap.String("account_name", req.AccountName),
+		zap.String("account_name", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
@@ -145,7 +139,7 @@ func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOf
 	action := actions.NewInstantAction(
 		actions.PowerOffCluster,
 		*actions.NewActionTarget(
-			req.AccountName,
+			req.AccountId,
 			req.Region,
 			req.ClusterId,
 			req.InstancesIdList,
@@ -158,6 +152,6 @@ func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOf
 
 	return &pb.PowerOffClusterResponse{
 		Error:   0,
-		Message: fmt.Sprintf(PowerOffClusterSuccessfully, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		Message: fmt.Sprintf(PowerOffClusterSuccessfully, req.ClusterId, req.AccountId, len(req.InstancesIdList)),
 	}, nil
 }

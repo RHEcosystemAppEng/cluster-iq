@@ -5,26 +5,36 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
-// AccountHandler handles HTTP requests for accounts.
+// AccountHandler connects HTTP endpoints with the AccountService.
 type AccountHandler struct {
 	service services.AccountService
+	logger  *zap.Logger
 }
 
-func NewAccountHandler(service services.AccountService) *AccountHandler {
-	return &AccountHandler{service: service}
+// NewAccountHandler builds a new AccountHandler with its dependencies.
+func NewAccountHandler(service services.AccountService, logger *zap.Logger) *AccountHandler {
+	return &AccountHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
+// accountFilterParams defines the supported filter parameters
 type accountFilterParams struct {
 	Provider string `form:"provider"`
 }
 
+// toRepoFilters translates bound query filters into repository filter keys.
 func (f *accountFilterParams) toRepoFilters() map[string]interface{} {
 	filters := make(map[string]interface{})
 	if f.Provider != "" {
@@ -33,33 +43,37 @@ func (f *accountFilterParams) toRepoFilters() map[string]interface{} {
 	return filters
 }
 
+// listAccountsRequest binds pagination and filter query params for List.
 type listAccountsRequest struct {
 	dto.PaginationRequest
 	Filters accountFilterParams `form:"inline"`
 }
 
-// List handles the request for obtaining the Account list.
+// List returns a paginated list of accounts.
 //
 //	@Summary		List accounts
-//	@Description	Returns a paginated list of accounts based on optional filters.
+//	@Description	Paginated retrieval of accounts with optional filters.
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			page		query		int		false	"Page number for pagination"	default(1)
-//	@Param			page_size	query		int		false	"Number of items per page"		default(10)
-//	@Param			provider	query		string	false	"Filter by cloud provider"		example(aws)
-//	@Success		200			{object}	dto.ListResponse[dto.Account]
-//	@Failure		400			{object}	dto.GenericErrorResponse
-//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			page_size	query		int		false	"Items per page"	default(10)
+//	@Param			provider	query		string	false	"Cloud provider"	example(aws)
+//	@Success		200			{object}	responsetypes.ListResponse[dto.AccountDTOResponse]
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts [get]
 func (h *AccountHandler) List(c *gin.Context) {
 	var req listAccountsRequest
+
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid query parameters: "+err.Error()))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid query parameters: " + err.Error(),
+		})
 		return
 	}
 
-	opts := repositories.ListOptions{
+	opts := models.ListOptions{
 		PageSize: req.PageSize,
 		Offset:   (req.Page - 1) * req.PageSize,
 		Filters:  req.Filters.toRepoFilters(),
@@ -67,111 +81,213 @@ func (h *AccountHandler) List(c *gin.Context) {
 
 	accounts, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve accounts"))
+		h.logger.Error("error listing accounts", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve accounts",
+		})
 		return
 	}
 
-	accountDTOs := mappers.ToAccountDTOList(accounts)
-	response := dto.NewListResponse(accountDTOs, total)
+	response := responsetypes.NewListResponse(db.ToAccountDTOResponseList(accounts), total)
+
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
 }
 
-// GetByName handles the request for obtaining a single account by its name.
+// GetByID retrieves a single account by ID.
 //
-//	@Summary		Get an account by name
-//	@Description	Returns a single account.
+//	@Summary		Get an account by ID
+//	@Description	Return a single account resource.
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			name	path		string	true	"Account Name"
-//	@Success		200		{object}	dto.Account
-//	@Failure		404		{object}	dto.GenericErrorResponse
-//	@Failure		500		{object}	dto.GenericErrorResponse
-//	@Router			/accounts/{name} [get]
-func (h *AccountHandler) GetByName(c *gin.Context) {
-	accountName := c.Param("name")
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		200	{object}	dto.AccountDTOResponse
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/accounts/{id} [get]
+//
+// NOTE: The handler reads path param "id". Ensure routing path uses {id}.
+func (h *AccountHandler) GetByID(c *gin.Context) {
+	accountID := c.Param("id")
 
-	account, err := h.service.GetByName(c.Request.Context(), accountName)
+	account, err := h.service.GetByID(c.Request.Context(), accountID)
 	if err != nil {
+		h.logger.Error("error getting an account", zap.String("account_id", accountID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Account not found"))
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Account not found",
+			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to retrieve account"))
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve account",
+		})
 		return
 	}
 
-	accountDTO := mappers.ToAccountDTO(account)
-	c.JSON(http.StatusOK, accountDTO)
+	c.JSON(http.StatusOK, account.ToAccountDTOResponse())
 }
 
-// Create handles the creation of new accounts.
+// GetAccountClustersByID lists clusters belonging to a given account ID.
+//
+//	@Summary		List clusters by account ID
+//	@Description	Return the clusters associated with the specified account.
+//	@Tags			Accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		200	{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/accounts/{id}/clusters [get]
+//
+// NOTE: Align the documented route with the actual router configuration.
+func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
+	accountID := c.Param("id")
+
+	clusters, err := h.service.GetAccountClustersByID(c.Request.Context(), accountID)
+	if err != nil {
+		h.logger.Error("error getting an account", zap.String("account_id", accountID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Account not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve account",
+		})
+		return
+	}
+
+	response := responsetypes.NewListResponse(db.ToClusterDTOResponseList(clusters), len(clusters))
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetExpenseUpdateInstances lists the instances for a specific account that needs expense update
+//
+//	@Summary		List expense update instances
+//	@Description	Return the list of instances for expense update for a specified account.
+//	@Tags			Accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		200	{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/accounts/{id}/expense_update_instances [get]
+//
+// NOTE: Align the documented route with the actual router configuration.
+func (h *AccountHandler) GetExpensesUpdateInstances(c *gin.Context) {
+	accountID := c.Param("id")
+
+	instances, err := h.service.GetExpenseUpdateInstances(c.Request.Context(), accountID)
+	if err != nil {
+		h.logger.Error("error getting expense update instances", zap.String("account_id", accountID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Account not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve account",
+		})
+		return
+	}
+
+	response := responsetypes.NewListResponse(db.ToInstanceDTOResponseList(instances), len(instances))
+
+	c.JSON(http.StatusOK, response)
+}
+
+// Create creates one or more accounts.
 //
 //	@Summary		Create accounts
-//	@Description	Creates one or more new accounts.
+//	@Description	Create one or multiple accounts from the request body.
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			accounts	body		[]dto.NewAccount	true	"Account or accounts to create"
-//	@Success		201			{object}	[]dto.Account
-//	@Failure		400			{object}	dto.GenericErrorResponse
-//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Param			accounts	body		[]dto.AccountDTORequest	true	"Accounts to create"
+//	@Success		201			{object}	responsetypes.PostResponse
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts [post]
 func (h *AccountHandler) Create(c *gin.Context) {
-	var newAccountsDTO []dto.NewAccount
+	var newAccountsDTO []dto.AccountDTORequest
+
 	if err := c.ShouldBindJSON(&newAccountsDTO); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
+		h.logger.Error("error processing received accounts", zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
 		return
 	}
 
-	accounts := mappers.ToAccountModels(newAccountsDTO)
-	if err := h.service.Create(c.Request.Context(), accounts); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create accounts: "+err.Error()))
+	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryAccountList(newAccountsDTO)); err != nil {
+		h.logger.Error("error creating accounts", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to create accounts: " + err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, mappers.ToAccountDTOList(accounts))
+	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+		Count:  len(newAccountsDTO),
+		Status: "OK"},
+	)
 }
 
-// Delete handles the deletion of an account.
+// Delete removes an account by ID.
 //
 //	@Summary		Delete an account
-//	@Description	Deletes an account by its name.
+//	@Description	Delete an account resource by its ID.
 //	@Tags			Accounts
 //	@Accept			json
-//	@Param			name	path		string	true	"Account Name"
-//	@Success		204		{object}	nil
-//	@Failure		404		{object}	dto.GenericErrorResponse
-//	@Failure		500		{object}	dto.GenericErrorResponse
-//	@Router			/accounts/{name} [delete]
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		204	{object}	nil
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/accounts/{id} [delete]
 func (h *AccountHandler) Delete(c *gin.Context) {
-	accountName := c.Param("name")
+	accountID := c.Param("id")
 
-	if err := h.service.Delete(c.Request.Context(), accountName); err != nil {
+	if err := h.service.Delete(c.Request.Context(), accountID); err != nil {
+		h.logger.Error("error deleting account", zap.String("account_id", accountID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.NewGenericErrorResponse("Account not found"))
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Account not found",
+			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to delete account: "+err.Error()))
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to delete account: " + err.Error(),
+		})
 		return
 	}
 
 	c.Status(http.StatusNoContent)
 }
 
-// Update handles the update of an existing account.
+// Update applies partial updates to an existing account.
 //
 //	@Summary		Update an account
-//	@Description	Updates an existing account by its name.
+//	@Description	Patch an existing account by ID.
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			name	path		string		true	"Account Name"
-//	@Param			account	body		dto.Account	true	"Updated account data"
+//	@Param			id		path		string					true	"Account ID"
+//	@Param			account	body		dto.AccountDTORequest	true	"Partial account payload"
 //	@Success		200		{object}	nil
 //	@Failure		501		{object}	nil	"Not Implemented"
-//	@Router			/accounts/{name} [patch]
+//	@Router			/accounts/{id} [patch]
 func (h *AccountHandler) Update(c *gin.Context) {
+	// TODO: Implement partial update semantics
 	c.PureJSON(http.StatusNotImplemented, nil)
 }

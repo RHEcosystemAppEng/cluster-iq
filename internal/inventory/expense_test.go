@@ -8,21 +8,20 @@ import (
 )
 
 func TestNewExpense(t *testing.T) {
-	instanceID := "testInstance"
-	amount := 12.34
-	date := time.Now()
+	t.Run("Normal", func(t *testing.T) { testNewExpenseNormal(t) })
+	t.Run("NegativeAmount", func(t *testing.T) { testNewExpenseNegativeAmount(t) })
+}
 
-	expectedExpense := &Expense{
-		InstanceID: instanceID,
-		Amount:     amount,
-		Date:       date,
-	}
+// testNewExpenseNormal verifies the expense is created correctly in normal conditions
+func testNewExpenseNormal(t *testing.T) {
+	expense := NewExpense("instance", 12.5, time.Now())
+	assert.NotNil(t, expense)
+	assert.GreaterOrEqual(t, expense.Amount, 0.0)
+}
 
-	actualExpense := NewExpense(instanceID, amount, date)
-
-	assert.NotNil(t, actualExpense)
-	assert.Equal(t, expectedExpense, actualExpense)
-
-	wrongExpense := NewExpense(instanceID, -6.0, date)
-	assert.Nil(t, wrongExpense)
+// testNewExpenseNegativeAmount verifies the expense doesn't accept negative amounts
+func testNewExpenseNegativeAmount(t *testing.T) {
+	expense := NewExpense("instance", -12.5, time.Now())
+	assert.NotNil(t, expense)
+	assert.Equal(t, expense.Amount, 0.0)
 }

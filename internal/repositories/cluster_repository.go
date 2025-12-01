@@ -6,33 +6,99 @@ import (
 	"errors"
 	"fmt"
 
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/jmoiron/sqlx"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
+)
+
+const (
+	// DB Table for clusters
+	ClustersTable = "clusters"
+	// View for getting clusters
+	SelectClustersFullView = "clusters_full_view"
+	// View for getting cluster tags
+	SelectClusterTags = "clusters_tags"
+	// Materialized view for getting clusters
+	SelectClustersFullMView = "m_clusters_full_view"
+	// InsertClustersQuery to insert or update new clusters
+	InsertClustersQuery = `
+		INSERT INTO clusters (
+			cluster_id,
+			cluster_name,
+			infra_id,
+			provider,
+			status,
+			region,
+			account_id,
+			console_link,
+			last_scan_ts,
+			created_at,
+			age,
+			owner
+		) VALUES (
+			:cluster_id,
+			:cluster_name,
+			:infra_id,
+			:provider,
+			:status,
+			:region,
+			(SELECT id FROM accounts WHERE account_id = :account_id),
+			:console_link,
+			:last_scan_ts,
+			:created_at,
+			:age,
+			:owner
+		) ON CONFLICT (id) DO UPDATE SET
+			status = EXCLUDED.status,
+			region = EXCLUDED.region,
+			console_link = EXCLUDED.console_link,
+			last_scan_ts = EXCLUDED.last_scan_ts,
+			created_at = EXCLUDED.created_at,
+			age = EXCLUDED.age,
+			owner = EXCLUDED.owner
+	`
 )
 
 var _ ClusterRepository = (*clusterRepositoryImpl)(nil)
 
 type ClusterRepository interface {
-	GetClusterByID(ctx context.Context, clusterID string) (*inventory.Cluster, error)
-	ListClusters(ctx context.Context, opts ListOptions) ([]inventory.Cluster, int, error)
-	GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error)
+	ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error)
+	GetClusterByID(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error)
 	GetClusterAccountName(ctx context.Context, clusterID string) (string, error)
 	GetClusterRegion(ctx context.Context, clusterID string) (string, error)
-	GetClusterTags(ctx context.Context, clusterID string) ([]inventory.Tag, error)
-	GetClustersOnAccount(ctx context.Context, accountName string) ([]inventory.Cluster, error)
-	GetInstancesOnCluster(ctx context.Context, clusterID string) ([]inventory.Instance, error)
-	DeleteCluster(ctx context.Context, id string) error
+	GetClusterTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error)
+	GetClustersOnAccount(ctx context.Context, accountName string) ([]db.ClusterDBResponse, error)
+	GetInstancesOnCluster(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error)
+	GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error)
 	CreateClusters(ctx context.Context, clusters []inventory.Cluster) error
-	UpdateCluster(ctx context.Context, cluster inventory.Cluster) error
+	UpdateCluster(ctx context.Context, cluster dto.ClusterDTORequest) error
 	UpdateClusterStatusByClusterID(ctx context.Context, status string, clusterID string) error
+	DeleteCluster(ctx context.Context, id string) error
 }
 
 type clusterRepositoryImpl struct {
-	db *sqlx.DB
+	db *dbclient.DBClient
 }
 
-func NewClusterRepository(db *sqlx.DB) ClusterRepository {
+func NewClusterRepository(db *dbclient.DBClient) ClusterRepository {
 	return &clusterRepositoryImpl{db: db}
+}
+
+// ListClusters retrieves all clusters from the database.
+//
+// Returns:
+// - A slice of inventory.Cluster objects.
+// - An error if the query fails.
+func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error) {
+	var clusters []db.ClusterDBResponse
+
+	if err := r.db.SelectWithContext(ctx, &clusters, SelectClustersFullMView, opts, "cluster_id", "*"); err != nil {
+		return clusters, 0, fmt.Errorf("failed to list clusters: %w", err)
+	}
+
+	return clusters, len(clusters), nil
 }
 
 // GetClusterByID retrieves a cluster's details by its unique identifier.
@@ -43,10 +109,18 @@ func NewClusterRepository(db *sqlx.DB) ClusterRepository {
 // Returns:
 // - A slice containing a single inventory.Cluster object.
 // - An error if the query fails or the cluster ID does not exist.
-func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID string) (*inventory.Cluster, error) {
-	var cluster inventory.Cluster
-	err := r.db.GetContext(ctx, &cluster, SelectClustersByIDQuery, clusterID)
-	if err != nil {
+func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error) {
+	var cluster db.ClusterDBResponse
+
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"cluster_id": clusterID,
+		},
+	}
+
+	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -55,48 +129,21 @@ func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID st
 	return &cluster, nil
 }
 
-// ListClusters retrieves all clusters from the database.
-//
-// Returns:
-// - A slice of inventory.Cluster objects.
-// - An error if the query fails.
-func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts ListOptions) ([]inventory.Cluster, int, error) {
-	var clusters []inventory.Cluster
-	baseQuery := SelectClustersQuery
-	countQuery := "SELECT COUNT(*) FROM clusters"
-
-	whereClauses, namedArgs := buildClusterWhereClauses(opts.Filters)
-
-	total, err := listQueryHelper(ctx, r.db, &clusters, baseQuery, countQuery, opts, whereClauses, namedArgs)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list clusters: %w", err)
-	}
-	return clusters, total, nil
-}
-
-// GetClustersOverview returns a summary of cluster statuses
-// It counts the number of clusters that are running, stopped or terminated.
-func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error) {
-	var countsDB inventory.ClustersSummary
-	err := r.db.GetContext(ctx, &countsDB, SelectClustersOverview)
-	if err != nil {
-		return inventory.ClustersSummary{}, err
-	}
-	return countsDB, nil
-}
-
-// GetClusterAccountName retrieves the account name associated with a specific cluster.
+// GetClusterAccountName retrieves the accountID associated with a specific cluster.
 //
 // Parameters:
 // - clusterID: The unique identifier of the cluster.
 //
 // Returns:
-// - A string representing the account name.
+// - A string representing the accountID.
 // - An error if the query fails or the cluster ID does not exist.
 func (r *clusterRepositoryImpl) GetClusterAccountName(ctx context.Context, clusterID string) (string, error) {
-	var accountName string
-	err := r.db.GetContext(ctx, &accountName, SelectClusterAccountNameQuery, clusterID)
-	return accountName, err
+	cluster, err := r.GetClusterByID(ctx, clusterID)
+	if err != nil {
+		return "", err
+	}
+
+	return cluster.AccountID, nil
 }
 
 // GetClusterRegion retrieves the region where a specific cluster is located.
@@ -108,9 +155,12 @@ func (r *clusterRepositoryImpl) GetClusterAccountName(ctx context.Context, clust
 // - A string representing the region of the cluster.
 // - An error if the query fails or the cluster ID does not exist.
 func (r *clusterRepositoryImpl) GetClusterRegion(ctx context.Context, clusterID string) (string, error) {
-	var region string
-	err := r.db.GetContext(ctx, &region, SelectClusterRegionQuery, clusterID)
-	return region, err
+	cluster, err := r.GetClusterByID(ctx, clusterID)
+	if err != nil {
+		return "", err
+	}
+
+	return cluster.Region, nil
 }
 
 // GetClusterTags retrieves the tags associated with a specific cluster.
@@ -121,23 +171,46 @@ func (r *clusterRepositoryImpl) GetClusterRegion(ctx context.Context, clusterID 
 // Returns:
 // - A slice of inventory.Tag objects representing the cluster's tags.
 // - An error if the query fails.
-func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID string) ([]inventory.Tag, error) {
-	var tags []inventory.Tag
-	err := r.db.SelectContext(ctx, &tags, SelectClusterTags, clusterID)
-	return tags, err
+func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error) {
+	var result []db.TagDBResponse
+
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"cluster_id": clusterID,
+		},
+	}
+
+	if err := r.db.SelectWithContext(ctx, &result, SelectClusterTags, opts, "cluster_id", "key, value"); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // GetClustersOnAccount retrieves all clusters associated with a specific account.
 //
 // Parameters:
-// - accountName: The name of the account whose clusters will be retrieved.
+// - accountName: The ID of the account whose clusters will be retrieved.
 //
 // Returns:
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
-func (r *clusterRepositoryImpl) GetClustersOnAccount(ctx context.Context, accountName string) ([]inventory.Cluster, error) {
-	var clusters []inventory.Cluster
-	err := r.db.SelectContext(ctx, &clusters, SelectClustersOnAccountQuery, accountName)
+func (r *clusterRepositoryImpl) GetClustersOnAccount(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error) {
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"account_id": accountID,
+		},
+	}
+
+	clusters, _, err := r.ListClusters(ctx, opts)
+
 	return clusters, err
 }
 
@@ -149,36 +222,46 @@ func (r *clusterRepositoryImpl) GetClustersOnAccount(ctx context.Context, accoun
 // Returns:
 // - A slice of inventory.Instance objects representing the instances in the cluster.
 // - An error if the query fails.
-func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clusterID string) ([]inventory.Instance, error) {
-	var instances []inventory.Instance
-	err := r.db.SelectContext(ctx, &instances, SelectInstancesOnClusterQuery, clusterID)
-	return instances, err
+func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error) {
+	var instances []db.InstanceDBResponse
+
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"cluster_id": clusterID,
+		},
+	}
+
+	var cluster db.ClusterDBResponse
+	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullMView, opts, "*"); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullView, opts, "cluster_id", "*"); err != nil {
+		return instances, fmt.Errorf("failed to list instances for cluster '%s': %w", clusterID, err)
+	}
+
+	return instances, nil
 }
 
-// DeleteCluster deletes a cluster from the database.
-//
-// Parameters:
-// - id: The id of the cluster to delete.
-//
-// Returns:
-// - An error if the database transaction fails.
-func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, id string) error {
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	// Defer a rollback in case anything fails.
-	defer func() { _ = tx.Rollback() }() // Rollback is a no-op if the transaction is already committed.
+// GetClustersOverview returns a summary of cluster statuses
+// It counts the number of clusters that are running, stopped or terminated.
+func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error) {
+	var countsDB inventory.ClustersSummary
 
-	_, err = tx.ExecContext(ctx, DeleteClusterQuery, id)
-	if err != nil {
-		return fmt.Errorf("failed to execute delete query: %w", err)
+	if err := r.db.GetWithContext(ctx, &countsDB, ClustersTable, models.ListOptions{},
+		"COUNT(CASE WHEN status = 'Running' THEN 1 END) AS running",
+		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
+		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",
+	); err != nil {
+		return countsDB, fmt.Errorf("failed to list clusters: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-	return nil
+	return countsDB, nil
 }
 
 // CreateClusters inserts a list of clusters into the database in a transaction.
@@ -189,37 +272,15 @@ func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, id string) er
 // Returns:
 // - An error if the transaction fails or the query encounters an issue.
 func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []inventory.Cluster) error {
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+	if err := r.db.InsertWithContext(ctx, InsertClustersQuery, clusters); err != nil {
+		return err
 	}
-	defer func() { _ = tx.Rollback() }()
-
-	stmt, err := tx.PrepareNamedContext(ctx, InsertClustersQuery)
-	if err != nil {
-		return fmt.Errorf("failed to prepare named statement: %w", err)
-	}
-	defer stmt.Close()
-
-	for _, cluster := range clusters {
-		if _, err := stmt.ExecContext(ctx, cluster); err != nil {
-			return fmt.Errorf("failed to execute statement for cluster %s: %w", cluster.ID, err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
 	return nil
 }
 
 // UpdateCluster updates an existing cluster's details in the database.
-func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, cluster inventory.Cluster) error {
-	_, err := r.db.NamedExecContext(ctx, UpdateClusterQuery, &cluster)
-	if err != nil {
-		return fmt.Errorf("failed to update cluster %s: %w", cluster.ID, err)
-	}
+func (r *clusterRepositoryImpl) UpdateCluster(_ context.Context, _ dto.ClusterDTORequest) error {
+	// TODO
 	return nil
 }
 
@@ -235,31 +296,29 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, cluster inven
 //
 // Returns:
 // - An error if the status is invalid, the update operation fails, or no rows are affected.
-func (r *clusterRepositoryImpl) UpdateClusterStatusByClusterID(ctx context.Context, status string, clusterID string) error {
-	_, err := r.db.ExecContext(ctx, UpdateStatusClusterByClusterIDQuery, status, clusterID)
-	return err
+func (r *clusterRepositoryImpl) UpdateClusterStatusByClusterID(_ context.Context, _ string, _ string) error {
+	// TODO
+	return nil
 }
 
-func buildClusterWhereClauses(filters map[string]interface{}) ([]string, map[string]interface{}) {
-	clauses := make([]string, 0, len(filters))
-	args := make(map[string]interface{})
-
-	for key, value := range filters {
-		switch key {
-		case "provider":
-			clauses = append(clauses, "provider = :provider")
-			args["provider"] = value
-		case "region":
-			clauses = append(clauses, "region = :region")
-			args["region"] = value
-		case "status":
-			clauses = append(clauses, "status = :status")
-			args["status"] = value
-		case "account_name":
-			clauses = append(clauses, "account_name = :account_name")
-			args["account_name"] = value
-		}
+// DeleteCluster deletes a cluster from the database.
+//
+// Parameters:
+// - id: The id of the cluster to delete.
+//
+// Returns:
+// - An error if the database transaction fails.
+func (r *clusterRepositoryImpl) DeleteCluster(ctx context.Context, clusterID string) error {
+	opts := models.ListOptions{
+		PageSize: 0,
+		Offset:   0,
+		Filters: map[string]interface{}{
+			"cluster_id": clusterID,
+		},
 	}
 
-	return clauses, args
+	if err := r.db.DeleteWithContext(ctx, ClustersTable, opts); err != nil {
+		return err
+	}
+	return nil
 }

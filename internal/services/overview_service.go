@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
 
@@ -63,7 +64,7 @@ func (s *overviewServiceImpl) GetOverview(ctx context.Context) (inventory.Overvi
 func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventory.ProvidersSummary, error) {
 	summary := inventory.ProvidersSummary{}
 	const maxAccounts = 1000 // Assuming we have less than 1000 accounts
-	opts := repositories.ListOptions{PageSize: maxAccounts, Offset: 0}
+	opts := models.ListOptions{PageSize: maxAccounts, Offset: 0}
 
 	accounts, _, err := s.accountRepo.ListAccounts(ctx, opts)
 	if err != nil {
@@ -83,6 +84,10 @@ func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventor
 			summary.GCP.AccountCount++
 		case inventory.AzureProvider:
 			summary.Azure.AccountCount++
+		case inventory.UnknownProvider:
+			continue
+		default:
+			continue
 		}
 	}
 
@@ -94,6 +99,10 @@ func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventor
 			summary.GCP.ClusterCount++
 		case inventory.AzureProvider:
 			summary.Azure.ClusterCount++
+		case inventory.UnknownProvider:
+			continue
+		default:
+			continue
 		}
 	}
 

@@ -4,27 +4,35 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/dto"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/mappers"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
-// ExpenseHandler handles HTTP requests for expenses.
+// ExpenseHandler exposes expense-related HTTP endpoints.
 type ExpenseHandler struct {
 	service services.ExpenseService
+	logger  *zap.Logger
 }
 
-func NewExpenseHandler(service services.ExpenseService) *ExpenseHandler {
-	return &ExpenseHandler{service: service}
+// NewExpenseHandler constructs an ExpenseHandler.
+func NewExpenseHandler(service services.ExpenseService, logger *zap.Logger) *ExpenseHandler {
+	return &ExpenseHandler{
+		service: service,
+		logger:  logger,
+	}
 }
 
+// expenseFilterParams defines the supported filter parameters
 type expenseFilterParams struct {
 	InstanceID string `form:"instance_id"`
 }
 
+// toRepoFilters converts bound query params into repository filters.
 func (f *expenseFilterParams) toRepoFilters() map[string]interface{} {
 	filters := make(map[string]interface{})
 	if f.InstanceID != "" {
@@ -33,62 +41,37 @@ func (f *expenseFilterParams) toRepoFilters() map[string]interface{} {
 	return filters
 }
 
+// listExpensesRequest contains pagination and filters for List.
 type listExpensesRequest struct {
 	dto.PaginationRequest
 	Filters expenseFilterParams `form:"inline"`
 }
 
-// Create handles the request to create new expense records.
+// List returns a paginated list of expenses.
 //
-//	@Summary		Create new expense records
-//	@Description	Adds one or more expense records to the database
+//	@Summary		List expenses
+//	@Description	Paginated retrieval with optional filters.
 //	@Tags			Expenses
 //	@Accept			json
 //	@Produce		json
-//	@Param			expenses	body		[]dto.CreateExpense	true	"A list of new expenses to create"
-//	@Success		201			{object}	nil
-//	@Failure		400			{object}	dto.GenericErrorResponse
-//	@Failure		500			{object}	dto.GenericErrorResponse
-//	@Router			/expenses [post]
-func (h *ExpenseHandler) Create(c *gin.Context) {
-	var expenseDTOs []dto.CreateExpense
-	if err := c.ShouldBindJSON(&expenseDTOs); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid request body: "+err.Error()))
-		return
-	}
-
-	expenses := make([]inventory.Expense, len(expenseDTOs))
-	for i, dto := range expenseDTOs {
-		expenses[i] = mappers.ToExpenseModel(dto)
-	}
-
-	if err := h.service.Create(c.Request.Context(), expenses); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to create expenses: "+err.Error()))
-		return
-	}
-
-	c.Status(http.StatusCreated)
-}
-
-// List handles the request to list all expenses.
-//
-//	@Summary		List all expenses
-//	@Description	Returns a paginated list of expenses
-//	@Tags			Expenses
-//	@Param			page		query		int		false	"Page number for pagination"	default(1)
-//	@Param			page_size	query		int		false	"Number of items per page"		default(10)
-//	@Param			instance_id	query		string	false	"Filter by instance ID"
-//	@Success		200			{object}	dto.ListResponse[dto.Expense]
-//	@Failure		500			{object}	dto.GenericErrorResponse
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			page_size	query		int		false	"Items per page"	default(10)
+//	@Param			instance_id	query		string	false	"Instance ID filter"
+//	@Success		200			{object}	responsetypes.ListResponse[dto.ExpenseDTOResponse]
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/expenses [get]
 func (h *ExpenseHandler) List(c *gin.Context) {
 	var req listExpensesRequest
+
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.NewGenericErrorResponse("Invalid query parameters: "+err.Error()))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid query parameters: " + err.Error(),
+		})
 		return
 	}
 
-	opts := repositories.ListOptions{
+	opts := models.ListOptions{
 		PageSize: req.PageSize,
 		Offset:   (req.Page - 1) * req.PageSize,
 		Filters:  req.Filters.toRepoFilters(),
@@ -96,12 +79,51 @@ func (h *ExpenseHandler) List(c *gin.Context) {
 
 	expenses, total, err := h.service.List(c.Request.Context(), opts)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.NewGenericErrorResponse("Failed to list expenses"))
+		h.logger.Error("error listing expenses", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to list expenses",
+		})
 		return
 	}
 
-	expenseDTOs := mappers.ToExpenseDTOList(expenses)
-	response := dto.NewListResponse(expenseDTOs, total)
+	response := responsetypes.NewListResponse(db.ToExpenseDTOResponseList(expenses), total)
+
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
+}
+
+// Create inserts one or more expense records.
+//
+//	@Summary		Create expenses
+//	@Description	Create one or multiple expense records.
+//	@Tags			Expenses
+//	@Accept			json
+//	@Produce		json
+//	@Param			expenses	body		[]dto.ExpenseDTORequest	true	"Expenses to create"
+//	@Success		201			{object}	responsetypes.PostResponse
+//	@Failure		400			{object}	responsetypes.GenericErrorResponse
+//	@Failure		500			{object}	responsetypes.GenericErrorResponse
+//	@Router			/expenses [post]
+func (h *ExpenseHandler) Create(c *gin.Context) {
+	var expenseDTOs []dto.ExpenseDTORequest
+
+	if err := c.ShouldBindJSON(&expenseDTOs); err != nil {
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryExpenseList(expenseDTOs)); err != nil {
+		h.logger.Error("error creating expense", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to create expenses: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+		Count:  len(expenseDTOs),
+		Status: "OK"},
+	)
 }

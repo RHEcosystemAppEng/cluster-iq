@@ -95,16 +95,16 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 // Returns:
 // - A pointer to a slice of ScheduledActions
 // - A pointer to a slice of CronAction
-func SplitActionsByType(actions []Action) ([]ScheduledAction, []CronAction) {
-	var schedActions []ScheduledAction
-	var cronActions []CronAction
+func SplitActionsByType(actions []Action) ([]*ScheduledAction, []*CronAction) {
+	var schedActions []*ScheduledAction
+	var cronActions []*CronAction
 
 	for _, action := range actions {
-		switch action.GetType() {
-		case ScheduledActionType: // Unmarshall as ScheduledAction
-			schedActions = append(schedActions, action.(ScheduledAction))
-		case CronActionType: // Unmarshall as CronAction
-			cronActions = append(cronActions, action.(CronAction))
+		switch value := action.(type) {
+		case *ScheduledAction: // Unmarshall as ScheduledAction
+			schedActions = append(schedActions, value)
+		case *CronAction: // Unmarshall as CronAction
+			cronActions = append(cronActions, value)
 		}
 	}
 

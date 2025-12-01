@@ -20,9 +20,9 @@ const (
 // ClusterStatusChangeRequest represents the request to the gRPC Agent for powering on/off clusters.
 // It includes details such as the account name, region, cluster ID, and the list of instance IDs associated with the cluster.
 type ClusterStatusChangeRequest struct {
-	AccountName string // The name of the account associated with the cluster.
-	Region      string // The AWS region where the cluster is located.
-	ClusterID   string // The unique identifier of the cluster.
+	AccountID string // The name of the account associated with the cluster.
+	Region    string // The AWS region where the cluster is located.
+	ClusterID string // The unique identifier of the cluster.
 	//revive:disable:var-naming
 	InstancesIdList []string //nolint:stylecheck // A list of instance IDs belonging to the cluster.
 }
@@ -75,7 +75,7 @@ func NewGRPCAgentClient(agentURL string, logger *zap.Logger) (*GRPCAgentClient, 
 func (c *GRPCAgentClient) PowerOffCluster(ctx context.Context, request *ClusterStatusChangeRequest) error {
 	// Creating PowerOffClusterRequest
 	rpcRequest := &pb.PowerOffClusterRequest{
-		AccountName:     request.AccountName,
+		AccountId:       request.AccountID,
 		Region:          request.Region,
 		ClusterId:       request.ClusterID,
 		InstancesIdList: request.InstancesIdList,
@@ -83,7 +83,7 @@ func (c *GRPCAgentClient) PowerOffCluster(ctx context.Context, request *ClusterS
 
 	// Logging the request details
 	c.logger.Info("Powering off Cluster",
-		zap.String("account_name", rpcRequest.AccountName),
+		zap.String("account_name", rpcRequest.AccountId),
 		zap.String("cluster_id", rpcRequest.ClusterId),
 		zap.String("region", rpcRequest.Region),
 		zap.Strings("instances", rpcRequest.InstancesIdList),
@@ -111,7 +111,7 @@ func (c *GRPCAgentClient) PowerOffCluster(ctx context.Context, request *ClusterS
 func (c *GRPCAgentClient) PowerOnCluster(ctx context.Context, request *ClusterStatusChangeRequest) error {
 	// Creating PowerOnClusterRequest
 	rpcRequest := &pb.PowerOnClusterRequest{
-		AccountName:     request.AccountName,
+		AccountId:       request.AccountID,
 		Region:          request.Region,
 		ClusterId:       request.ClusterID,
 		InstancesIdList: request.InstancesIdList,
@@ -119,7 +119,7 @@ func (c *GRPCAgentClient) PowerOnCluster(ctx context.Context, request *ClusterSt
 
 	// Logging the request details
 	c.logger.Info("Powering On Cluster",
-		zap.String("account_name", rpcRequest.AccountName),
+		zap.String("account_name", rpcRequest.AccountId),
 		zap.String("cluster_id", rpcRequest.ClusterId),
 		zap.String("region", rpcRequest.Region),
 		zap.Strings("instances", rpcRequest.InstancesIdList),
