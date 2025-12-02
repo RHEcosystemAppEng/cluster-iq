@@ -40,7 +40,7 @@ COPY . .
 RUN swag fmt && \
   cd ./cmd/api && \
   swag init --generalInfo ./server.go --parseDependency --output ./docs && \
-  cd /app 
+  cd /app
 
 # gRPC code generation
 RUN mkdir -p ./generated && \

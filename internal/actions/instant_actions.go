@@ -14,7 +14,7 @@ type InstantAction struct {
 //
 // Returns:
 // - A pointer to a newly created InstantAction instance.
-func NewInstantAction(ao ActionOperation, target ActionTarget, status string, requester string, description *string, enabled bool) *InstantAction {
+func NewInstantAction(ao ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool) *InstantAction {
 	return &InstantAction{
 		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
 	}

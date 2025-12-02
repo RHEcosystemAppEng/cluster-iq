@@ -6,6 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: Group by function and test
+// TODO: Include Asserts
+
 // TestNewTag verifies NewTag constructor assigns values correctly
 func TestNewTag(t *testing.T) {
 	key := "environment"

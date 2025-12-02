@@ -6,9 +6,9 @@ import "time"
 // It embeds BaseAction to inherit common action properties and includes a timestamp indicating when the action should be executed.
 type ScheduledAction struct {
 	// When specifies the scheduled time for the action execution.
-	When time.Time `db:"time" json:"time"`
+	When time.Time `db:"time"`
 
-	Type string `db:"type" json:"type"`
+	Type string `db:"type"`
 
 	BaseAction
 }
@@ -22,7 +22,7 @@ type ScheduledAction struct {
 //
 // Returns:
 // - A pointer to a newly created ScheduledAction instance.
-func NewScheduledAction(ao ActionOperation, target ActionTarget, status string, requester string, description *string, enabled bool, when time.Time) *ScheduledAction {
+func NewScheduledAction(ao ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool, when time.Time) *ScheduledAction {
 	return &ScheduledAction{
 		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
 		Type:       "scheduled_action",

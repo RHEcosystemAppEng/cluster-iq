@@ -205,7 +205,7 @@ func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
 			return !lastPage // Continue if there are more Reservations pages
 		})
 	if err != nil {
-		return nil, fmt.Errorf("Error getting EC2 instances reservations: %w", err)
+		return nil, fmt.Errorf("error getting EC2 instances reservations: %w", err)
 	}
 
 	// Converting EC2 instances to inventory.Instance
@@ -220,28 +220,28 @@ func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
 }
 
 // EC2InstanceToInventoryInstance converts an EC2.instance into an inventory.Instance
-func EC2InstanceToInventoryInstance(instance *ec2.Instance) *inventory.Instance {
+func EC2InstanceToInventoryInstance(ec2instance *ec2.Instance) *inventory.Instance {
 	// Getting Instance properties
-	id := *instance.InstanceId
-	tags := ConvertEC2TagtoTag(instance.Tags, id)
+	id := *ec2instance.InstanceId
+	tags := ConvertEC2TagtoTag(ec2instance.Tags, id)
 	name := inventory.GetInstanceNameFromTags(tags)
-	provider := inventory.AWSProvider
-	instanceType := *instance.InstanceType
-	availabilityZone := *instance.Placement.AvailabilityZone
-	status := inventory.AsInstanceStatus(*instance.State.Name)
-	clusterID := inventory.GetClusterIDFromTags(tags)
-	creationTimestamp := getInstanceCreationTimestamp(*instance)
-	return inventory.NewInstance(
+	instanceType := *ec2instance.InstanceType
+	availabilityZone := *ec2instance.Placement.AvailabilityZone
+	status := inventory.AsResourceStatus(*ec2instance.State.Name)
+	creationTimestamp := getInstanceCreationTimestamp(*ec2instance)
+
+	instance := inventory.NewInstance(
 		id,
 		name,
-		provider,
+		inventory.AWSProvider,
 		instanceType,
 		availabilityZone,
 		status,
-		clusterID,
 		tags,
 		creationTimestamp,
 	)
+
+	return instance
 }
 
 // getInstanceCreationTimestamp retrieves the creation timestamp of an EC2 instance.

@@ -1,179 +1,374 @@
-// test/integration/post_account_test.go
 package integration
 
 import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"os"
-	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
 
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 const (
-	APIBaseURL        = "http://localhost:8081/api/v1"
-	APIHealthcheckURL = APIBaseURL + "/healthcheck"
-	APIAccountsURL    = APIBaseURL + "/accounts"
+	APIAccountsURL = APIBaseURL + "/accounts"
 )
 
-type ClusterListResponse struct {
-	Count    int                 `json:"count"`
-	Clusters []inventory.Cluster `json:"clusters"`
-}
-
-type AccountListResponse struct {
-	Count    int                 `json:"count"`
-	Accounts []inventory.Account `json:"accounts"`
-}
-
-// loadTestData loads test data files from a JSON file
-func loadTestData(filename string) []byte {
-	path := filepath.Join("./data_test_files", filename)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-	return data
-}
-
-// waitForAPIReady tries to reach the API endpoint until it responds or times out
-func waitForAPIReady(t *testing.T) {
-	url := APIHealthcheckURL
-	t.Helper()
-	maxAttempts := 10
-	for i := 0; i < maxAttempts; i++ {
-		resp, err := http.Get(url)
-		if err == nil && resp.StatusCode < 500 {
-			return
-		}
-		time.Sleep(2 * time.Second)
-	}
-	t.Fatalf("API did not become ready at %s", url)
-}
-
-func TestPostAccount(t *testing.T) {
+func TestAPIAccounts(t *testing.T) {
 	waitForAPIReady(t)
 
-	// Loading test data
-	filename := "test_accounts_01.json"
-	payload := loadTestData(filename)
-	if payload == nil {
-		t.Fatalf("Error when loading %s test data file", filename)
+	if err := refreshInventory(); err != nil {
+		t.Fatal("Error refreshing inventory")
 	}
 
-	// Posting test data
-	resp, err := http.Post(APIAccountsURL, "application/json", bytes.NewBuffer(payload))
-	if err != nil {
-		t.Fatalf("Failed to make POST request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Check response code
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
-	}
+	t.Run("Test List Accounts", func(t *testing.T) { testListAccounts(t) })
+	t.Run("Test List Accounts with Pagination", func(t *testing.T) { testListAccountsWithPagination(t) })
+	t.Run("Test List Accounts By Provider", func(t *testing.T) { testListAccountsByProvider(t) })
+	t.Run("Test List Accounts By Provider Wrong", func(t *testing.T) { testListAccountsByWrongProvider(t) })
+	t.Run("Test Get Account By ID Success", func(t *testing.T) { testGetAccountByID_Exists(t) })
+	t.Run("Test Get Account By ID Not Found", func(t *testing.T) { testGetAccountByID_NoExists(t) })
+	t.Run("Test Get Account Clusters", func(t *testing.T) { testGetAccountClusters(t) })
+	t.Run("Test Post One Account", func(t *testing.T) { testPostOneAccount(t) })
+	t.Run("Test Post Multiple Accounts", func(t *testing.T) { testPostMultipleAccounts(t) })
+	t.Run("Test Post Wrong Accounts", func(t *testing.T) { testPostWrongAccount(t) })
+	t.Run("Test Patch Account", func(t *testing.T) { testPatchAccount(t) })
+	t.Run("Test Delete Account Success", func(t *testing.T) { testDeleteAccount_Exists(t) })
+	t.Run("Test Delete Account Not Found", func(t *testing.T) { testDeleteAccount_NoExists(t) })
 }
 
-func TestGetAccount(t *testing.T) {
-	waitForAPIReady(t)
+func testListAccounts(t *testing.T) {
+	expectedCount := 3
+	expectedHTTPCode := http.StatusOK
 
 	// Getting accounts data
 	resp, err := http.Get(APIAccountsURL)
 	if err != nil {
-		t.Fatalf("Failed to make POST request: %v", err)
+		t.Fatalf("Failed to make request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Check response code
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
-	}
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response AccountListResponse
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode GET response body: %v", err)
-	}
-
-	// Loading and decoding test file to compare
-	testData := loadTestData("test_accounts_01.json")
-	var accounts []inventory.Account
-	if err := json.Unmarshal(testData, &accounts); err != nil {
-		t.Fatalf("failed to unmarshal accounts JSON: %v", err)
+		t.Fatalf("Failed to decode response body: %v", err)
 	}
 
 	// Comparing data
-	if response.Count != len(accounts) {
-		t.Fatalf("Accounts arrays doesn't have same number of elements. Expected: %d, Have: %d", len(accounts), response.Count)
+	if response.Count != expectedCount {
+		t.Fatalf("Expected Count: '%d', got: '%d'", expectedCount, response.Count)
 	}
-	if !reflect.DeepEqual(accounts, response.Accounts) {
-		t.Errorf("Accounts arrays are not equal")
+
+	if len := len(response.Items); len != expectedCount {
+		t.Fatalf("Expected Items: '%d', got: '%d'", expectedCount, len)
 	}
 }
 
-func TestGetAccountByID(t *testing.T) {
-	waitForAPIReady(t)
+func testListAccountsWithPagination(t *testing.T) {
+	expectedCount := 2
+	expectedHTTPCode := http.StatusOK
 
 	// Getting accounts data
-	resp, err := http.Get(APIAccountsURL + "/test-account-001")
+	resp, err := http.Get(APIAccountsURL + "?page=1&page_size=2")
 	if err != nil {
-		t.Fatalf("Failed to make POST request: %v", err)
+		t.Fatalf("Failed to make request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Check response code
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
-	}
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
 	// Decode the JSON response
-	var response AccountListResponse
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode GET response body: %v", err)
+		t.Fatalf("Failed to decode response body: %v", err)
 	}
 
 	// Comparing data
-	if len(response.Accounts) != 1 {
-		t.Fatalf("Accounts arrays doesn't have same number of elements. Expected: %d, Have: %d", 1, response.Count)
+	if response.Count != expectedCount {
+		t.Fatalf("Expected Count: '%d', got: '%d'", expectedCount, response.Count)
+	}
+
+	if len := len(response.Items); len != expectedCount {
+		t.Fatalf("Expected Items: '%d', got: '%d'", expectedCount, len)
 	}
 }
 
-func TestDeleteAccount(t *testing.T) {
-	waitForAPIReady(t)
+func testListAccountsByProvider(t *testing.T) {
+	expectedCount := 1
+	expectedHTTPCode := http.StatusOK
 
-	// Preparing DELETE request
-	req, err := http.NewRequest(http.MethodDelete, APIAccountsURL+"/ACC-002", nil)
+	// Getting accounts data
+	resp, err := http.Get(APIAccountsURL + "?provider=AWS")
 	if err != nil {
-		t.Fatalf("Failed to create DELETE request: %v", err)
-	}
-
-	// Executing DELETE request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("Failed to execute DELETE request: %v", err)
+		t.Fatalf("Failed to make request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Check response code
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Comparing data
+	if response.Count != expectedCount {
+		t.Fatalf("Expected Count: '%d', got: '%d'", expectedCount, response.Count)
+	}
+
+	if len := len(response.Items); len != expectedCount {
+		t.Fatalf("Expected Items: '%d', got: '%d'", expectedCount, len)
 	}
 }
 
-func TestPatchAccount(t *testing.T) {
-	waitForAPIReady(t)
+func testListAccountsByWrongProvider(t *testing.T) {
+	expectedMsg := "Failed to retrieve accounts"
+	expectedHTTPCode := http.StatusInternalServerError
 
-	patchAccount := inventory.Account{
-		ID:           "ACC-003",
-		Name:         "test-account-003",
-		Provider:     "AWS",
-		ClusterCount: 4,
-		TotalCost:    50.67,
+	// Getting accounts data
+	resp, err := http.Get(APIAccountsURL + "?provider=ANYONE")
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response responsetypes.GenericErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	if response.Message != expectedMsg {
+		t.Fatalf("Expected Message: '%s', got: '%s'", expectedMsg, response.Message)
+	}
+}
+
+func testGetAccountByID_Exists(t *testing.T) {
+	expectedAccountID := "gcp-project-1"
+	expectedHTTPCode := http.StatusOK
+
+	// Getting Clusters data
+	resp, err := http.Get(APIAccountsURL + "/" + expectedAccountID)
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response dto.AccountDTOResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Comparing data
+	if response.AccountID != expectedAccountID {
+		t.Fatalf("Expected AccountID: '%s', got: '%s'", expectedAccountID, response.AccountID)
+	}
+}
+
+func testGetAccountByID_NoExists(t *testing.T) {
+	expectedMsg := "Account not found"
+	expectedHTTPCode := http.StatusNotFound
+
+	// Getting Clusters data
+	resp, err := http.Get(APIAccountsURL + "/" + "missing-account")
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response responsetypes.GenericErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Comparing data
+	if response.Message != expectedMsg {
+		t.Fatalf("Expected Message: '%s', got: '%s'", expectedMsg, response.Message)
+	}
+}
+
+func testGetAccountClusters(t *testing.T) {
+	expectedCount := 2
+	expectedHTTPCode := http.StatusOK
+	expectedAccountID := "subs-00000001"
+
+	// Getting accounts data
+	resp, err := http.Get(APIAccountsURL + "/" + expectedAccountID + "/clusters")
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response responsetypes.ListResponse[dto.AccountDTOResponse]
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Comparing data
+	if response.Count != expectedCount {
+		t.Fatalf("Expected Count: '%d', got: '%d'", expectedCount, response.Count)
+	}
+}
+
+func postAccounts(t *testing.T, accounts []dto.AccountDTORequest, expectedHTTPCode int) *http.Response {
+	b, err := json.Marshal(accounts)
+	if err != nil {
+		return nil
+	}
+
+	// Posting test data
+	resp, err := http.Post(APIAccountsURL, "application/json", bytes.NewBuffer(b))
+	if err != nil {
+		t.Fatalf("Failed to make POST request: %v", err)
+	}
+
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	return resp
+}
+
+func testPostOneAccount(t *testing.T) {
+	expectedHTTPCode := http.StatusCreated
+	expectedMsg := "OK"
+	expectedCount := 1
+
+	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
+	payload := []dto.AccountDTORequest{
+		{
+			AccountID:   "ACC-001",
+			AccountName: "test-account-001",
+			Provider:    "AWS",
+			LastScanTS:  ts,
+			CreatedAt:   ts,
+		},
+	}
+
+	// Posting test data
+	resp := postAccounts(t, payload, expectedHTTPCode)
+	defer resp.Body.Close()
+
+	// Decode the JSON response
+	var response responsetypes.PostResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Checks
+	if response.Count != expectedCount {
+		t.Fatalf("Expected Count: '%d', got '%d'", expectedCount, response.Count)
+	}
+
+	if response.Status != expectedMsg {
+		t.Fatalf("Expected Status: '%s', got: '%s'", expectedMsg, response.Status)
+	}
+}
+
+func testPostMultipleAccounts(t *testing.T) {
+	expectedHTTPCode := http.StatusCreated
+	expectedMsg := "OK"
+	expectedCount := 2
+
+	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
+	payload := []dto.AccountDTORequest{
+		{
+			AccountID:   "ACC-002",
+			AccountName: "test-account-002",
+			Provider:    "GCP",
+			LastScanTS:  ts,
+			CreatedAt:   ts,
+		},
+		{
+			AccountID:   "ACC-003",
+			AccountName: "test-account-003",
+			Provider:    "Azure",
+			LastScanTS:  ts,
+			CreatedAt:   ts,
+		},
+	}
+
+	// Posting test data
+	resp := postAccounts(t, payload, expectedHTTPCode)
+	defer resp.Body.Close()
+
+	// Decode the JSON response
+	var response responsetypes.PostResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Checks
+	if response.Count != expectedCount {
+		t.Fatalf("Expected Count: '%d', got '%d'", expectedCount, response.Count)
+	}
+
+	if response.Status != expectedMsg {
+		t.Fatalf("Expected Status: '%s', got: '%s'", expectedMsg, response.Status)
+	}
+}
+
+func testPostWrongAccount(t *testing.T) {
+	expectedHTTPCode := http.StatusInternalServerError
+	expectedMsg := "Failed to create accounts: named-exec INSERT error: pq: invalid input value for enum cloud_provider: \"Provider\""
+
+	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
+	payload := []dto.AccountDTORequest{
+		{
+			AccountID:   "ACC-004",
+			AccountName: "test-account-002",
+			Provider:    "Provider",
+			LastScanTS:  ts,
+			CreatedAt:   ts,
+		},
+	}
+
+	// Posting test data
+	resp := postAccounts(t, payload, expectedHTTPCode)
+	defer resp.Body.Close()
+
+	// Decode the JSON response
+	var response responsetypes.GenericErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Checks
+	if response.Message != expectedMsg {
+		t.Fatalf("Expected Status: '%s', got: '%s'", expectedMsg, response.Message)
+	}
+}
+
+func testPatchAccount(t *testing.T) {
+	expectedHTTPCode := http.StatusNotImplemented
+
+	patchAccount := dto.AccountDTORequest{
+		AccountID:   "ACC-001",
+		AccountName: "test-account-003",
+		Provider:    inventory.AWSProvider,
+		LastScanTS:  time.Now(),
 	}
 
 	patchBody, err := json.Marshal(patchAccount)
@@ -184,46 +379,61 @@ func TestPatchAccount(t *testing.T) {
 	// Preparing PATCH request
 	req, err := http.NewRequest(http.MethodPatch, APIAccountsURL+"/ACC-003", bytes.NewBuffer(patchBody))
 	if err != nil {
-		t.Fatalf("Failed to create PATCH request: %v", err)
+		t.Fatalf("Failed to create request: %v", err)
 	}
 
 	// Executing PATCH request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("Failed to execute PATCH request: %v", err)
+		t.Fatalf("Failed to execute request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Check response code
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
-	}
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 }
 
-func TestGetAccountClusters(t *testing.T) {
-	waitForAPIReady(t)
+func testDeleteAccount_Exists(t *testing.T) {
+	expectedHTTPCode := http.StatusNoContent
 
-	// Getting accounts data
-	resp, err := http.Get(APIAccountsURL + "/test-account-001/clusters")
+	// Preparing DELETE request
+	accountID := "ACC-001"
+	req, err := http.NewRequest(http.MethodDelete, APIAccountsURL+"/"+accountID, nil)
 	if err != nil {
-		t.Fatalf("Failed to make POST request: %v", err)
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	// Executing DELETE request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Check response code
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+}
+
+func testDeleteAccount_NoExists(t *testing.T) {
+	expectedHTTPCode := http.StatusNoContent
+
+	// Preparing DELETE request
+	accountID := "missing"
+	req, err := http.NewRequest(http.MethodDelete, APIAccountsURL+"/"+accountID, nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	// Decode the JSON response
-	var response ClusterListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("failed to decode GET response body: %v", err)
+	// Executing DELETE request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
 	}
+	defer resp.Body.Close()
 
-	// Comparing data
-	if len(response.Clusters) != 0 {
-		t.Fatalf("Accounts arrays doesn't have same number of elements. Expected: %d, Have: %d", 0, response.Count)
-	}
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 }

@@ -1,22 +1,23 @@
-// Package main is the entry point for the ClusterIQ API server.
-// It initializes the API server, sets up routes, and handles server lifecycle events.
 package main
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/middleware"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/middleware"
-	sqlclient "github.com/RHEcosystemAppEng/cluster-iq/internal/sql_client"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -41,90 +42,49 @@ var (
 
 // APIServer represents the API server, including configuration, logger, router, and clients for gRPC and SQL.
 type APIServer struct {
-	cfg          *config.APIServerConfig // Configuration for the API server
-	logger       *zap.Logger             // Logger instance
-	router       *gin.Engine             // Gin router for handling HTTP requests
-	server       *http.Server            // HTTP server instance
-	grpc         *APIGRPCClient          // gRPC client for communication with external services
-	sql          *sqlclient.SQLClient    // SQL client for database operations
-	eventService *events.EventService    // Service for handling audit logs
+	logger *zap.Logger  // Logger instance
+	server *http.Server // HTTP server instance
+	// eventService *events.EventService    // Service for handling audit logs
 }
 
 // NewAPIServer initializes a new instance of the APIServer.
-// It configures the Gin router, HTTP server, gRPC client, and SQL client.
+// It configures the Gin router and HTTP server.
 //
 // Parameters:
-// - cfg: Configuration object for the API server.
+// - listenAddr: Listen address.
 // - logger: Logger instance for logging.
 //
 // Returns:
 // - Pointer to the newly created APIServer.
-func NewAPIServer(cfg *config.APIServerConfig, logger *zap.Logger) (*APIServer, error) {
-	// Configuring GIN engine
-	engine := setupGin(logger)
-
-	// Creating gRPC client
-	gRPCClient, err := NewAPIGRPCClient(cfg.AgentURL, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gRPC client: %w", err)
-	}
-
-	// Creating DB client
-	sqlCli, err := sqlclient.NewSQLClient(cfg.DBURL, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create SQL client: %w", err)
-	}
-
-	// Creating Event Service
-	eventService := events.NewEventService(sqlCli, logger)
-
-	// Creating APIServer
-	apiServer := &APIServer{
-		cfg:    cfg,
+func NewAPIServer(listenAddr string, logger *zap.Logger, engine *gin.Engine) *APIServer {
+	return &APIServer{
 		logger: logger,
-		router: engine,
 		server: &http.Server{
-			Addr:    cfg.ListenURL,
+			Addr:    listenAddr,
 			Handler: engine,
 		},
-		grpc:         gRPCClient,
-		sql:          sqlCli,
-		eventService: eventService,
 	}
-
-	// Initialize routes
-	router := NewRouter(apiServer)
-	router.SetupRoutes()
-
-	return apiServer, nil
 }
 
 func setupGin(logger *zap.Logger) *gin.Engine {
 	// TODO. Configure via env vars
 	gin.SetMode(gin.ReleaseMode)
-	router := gin.New()
+	rtr := gin.New()
 	// Configure default middleware
-	router.Use()
-	router.Use(middleware.SetCommonHeaders())
+	rtr.Use()
+	rtr.Use(middleware.SetCommonHeaders())
 	// Configure Gin to use Zap
-	router.Use(ginzap.GinzapWithConfig(logger, &ginzap.Config{
+	rtr.Use(ginzap.GinzapWithConfig(logger, &ginzap.Config{
 		TimeFormat: time.RFC3339,
 		UTC:        true,
 		SkipPaths:  []string{"/api/v1/healthcheck"},
 	}))
-	router.Use(gin.Recovery())
-	return router
+	rtr.Use(gin.Recovery())
+	return rtr
 }
 
 // Start starts the HTTP server in a goroutine
 func (a *APIServer) Start() error {
-	a.logger.Info("==================== Starting ClusterIQ API ====================",
-		zap.String("version", version),
-		zap.String("commit", commit),
-		zap.String("api_url", a.cfg.ListenURL),
-		zap.String("db_url", a.cfg.DBURL),
-		zap.String("agent_url", a.cfg.AgentURL))
-
 	// Start API
 	go func() {
 		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -132,7 +92,6 @@ func (a *APIServer) Start() error {
 			os.Exit(1)
 		}
 	}()
-	a.logger.Info("API Ready to serve")
 	return nil
 }
 
@@ -182,7 +141,7 @@ func (a APIServer) signalHandler(signal os.Signal) error {
 }
 
 //	@title			ClusterIQ API
-//	@version		0.3
+//	@version		0.5
 //	@description	This is the API of the ClusterIQ cloud inventory software
 //	@termsOfService	http://swagger.io/terms/
 
@@ -202,26 +161,86 @@ func (a APIServer) signalHandler(signal os.Signal) error {
 func main() {
 	// Initialize logging configuration
 	logger := ciqLogger.NewLogger()
-
-	// Ignore Logger sync error
 	defer func() { _ = logger.Sync() }()
 
 	// Loading APIServer config
 	cfg, err := config.LoadAPIServerConfig()
 	if err != nil {
-		logger.Error("Error loading APIServer config", zap.Error(err))
-		return
+		logger.Fatal("Error loading APIServer config", zap.Error(err))
 	}
+	logger.Info("Configuration loaded successfully")
+
+	// Initialize database connection
+	dbClient, err := dbclient.NewDBClient(cfg.DBURL, logger)
+	if err != nil {
+		logger.Fatal("Could not establish database connection", zap.Error(err))
+	}
+	defer func() {
+		if err := dbClient.Close(); err != nil {
+			logger.Error("error closing dbclient", zap.Error(err))
+		}
+	}()
+
+	// Initializing gRPC AgentClient
+	agentClient, err := clients.NewAPIGRPCClient(cfg.AgentURL, logger)
+	if err != nil {
+		logger.Fatal("Failed to create gRPC client", zap.Error(err))
+	}
+
+	// Initializing repositories
+	inventoryRepo := repositories.NewInventoryRepository(dbClient)
+	accountRepo := repositories.NewAccountRepository(dbClient)
+	clusterRepo := repositories.NewClusterRepository(dbClient)
+	instanceRepo := repositories.NewInstanceRepository(dbClient)
+	expenseRepo := repositories.NewExpenseRepository(dbClient)
+	eventRepo := repositories.NewEventRepository(dbClient)
+	actionRepo := repositories.NewActionRepository(dbClient)
+
+	// Initializing services
+	inventoryService := services.NewInventoryService(inventoryRepo)
+	accountService := services.NewAccountService(accountRepo)
+	clusterServiceOpts := services.ClusterServiceOptions{
+		AgentRequestTimeout: cfg.AgentRequestTimeout,
+	}
+	clusterService := services.NewClusterService(clusterRepo, agentClient, clusterServiceOpts)
+	instanceService := services.NewInstanceService(instanceRepo)
+	expenseService := services.NewExpenseService(expenseRepo)
+	eventService := services.NewEventService(eventRepo)
+	actionService := services.NewActionService(actionRepo)
+	overviewService := services.NewOverviewService(clusterRepo, instanceRepo, accountRepo)
+
+	// Initializing handlers
+	handlers := APIHandlers{
+		InventoryHandler:   handlers.NewInventoryHandler(inventoryService, logger),
+		AccountHandler:     handlers.NewAccountHandler(accountService, logger),
+		ClusterHandler:     handlers.NewClusterHandler(clusterService, logger),
+		InstanceHandler:    handlers.NewInstanceHandler(instanceService, logger),
+		ExpenseHandler:     handlers.NewExpenseHandler(expenseService, logger),
+		EventHandler:       handlers.NewEventHandler(eventService, logger),
+		ActionHandler:      handlers.NewActionHandler(actionService, logger),
+		OverviewHandler:    handlers.NewOverviewHandler(overviewService, logger),
+		HealthCheckHandler: handlers.NewHealthCheckHandler(dbClient, logger),
+	}
+
+	// Setup router
+	engine := setupGin(logger)
+	Setup(engine, handlers)
+
+	// parsing cfg.DBURL for removing user:password when logging
+	dburl, _ := url.Parse(cfg.DBURL)
+	dbHost := dburl.Hostname() + ":" + dburl.Port()
+
+	logger.Info("ClusterIQ API server started",
+		zap.String("version", version),
+		zap.String("commit", commit),
+		zap.String("listenURL", cfg.ListenURL),
+		zap.String("dbURL", dbHost),
+		zap.String("agentURL", cfg.AgentURL),
+	)
 
 	// Initializing APIServer instance
-	api, err := NewAPIServer(cfg, logger)
-	if err != nil {
-		logger.Fatal("Error creating API server", zap.Error(err))
-		return
-	}
-
+	api := NewAPIServer(cfg.ListenURL, logger, engine)
 	if err := api.Run(); err != nil {
 		logger.Fatal("Error running API server", zap.Error(err))
-		return
 	}
 }
