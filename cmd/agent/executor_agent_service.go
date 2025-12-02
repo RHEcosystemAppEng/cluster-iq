@@ -216,11 +216,11 @@ func (e *ExecutorAgentService) Start() error {
 
 		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
-			actionStatus = "Failed"
+			actionStatus = string(actions.StatusFailed)
 			tracker.Failed()
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
-			actionStatus = "Success"
+			actionStatus = string(actions.StatusCompleted)
 			tracker.Success()
 		}
 

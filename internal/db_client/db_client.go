@@ -116,6 +116,45 @@ func (d *DBClient) Select(dest interface{}, table string, opts models.ListOption
 	return d.SelectWithContext(context.TODO(), dest, table, opts, orderColumn, columns...)
 }
 
+func (d *DBClient) InsertWithReturnWithContext(ctx context.Context, query string, data interface{}) (int64, error) {
+	builder := d.NewInsertBuilder().Query(query).Data(data)
+
+	tx, err := d.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return -1, err
+	}
+
+	// Rollback defer func
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				d.logger.Error("failed to Rollback INSERT")
+			}
+		}
+	}()
+
+	var returnedValue int64
+	stmt, err := tx.NamedQuery(builder.query, builder.data)
+	if err != nil {
+		return -1, fmt.Errorf("named-exec INSERT error: %w", err)
+	}
+	defer stmt.Close()
+
+	if stmt.Next() {
+		if err := stmt.Scan(&returnedValue); err != nil {
+			return -1, fmt.Errorf("Scan INSERT return value error %w", err)
+		}
+	} else {
+		return -1, fmt.Errorf("INSERT did not return any value")
+	}
+
+	if err := tx.Commit(); err != nil {
+		return -1, fmt.Errorf("commit INSERT error: %w", err)
+	}
+
+	return returnedValue, nil
+}
+
 func (d *DBClient) InsertWithContext(ctx context.Context, query string, data interface{}) error {
 	builder := d.NewInsertBuilder().Query(query).Data(data)
 
