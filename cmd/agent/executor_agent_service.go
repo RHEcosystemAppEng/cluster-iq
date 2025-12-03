@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -15,6 +16,7 @@ import (
 	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	eventservice "github.com/RHEcosystemAppEng/cluster-iq/internal/events/event_service"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"go.uber.org/zap"
 )
 
@@ -26,6 +28,7 @@ type ExecutorAgentService struct {
 	actionsChannel <-chan actions.Action
 	client         http.Client                // HTTP Client for retrieving the schedule from API
 	eventService   *eventservice.EventService // Service for handling audit logs
+	actionRepo     repositories.ActionRepository
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
@@ -53,8 +56,8 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 		return nil
 	}
 
-	// Creating Event Service
 	eventService := eventservice.NewEventService(db, logger)
+	actionRepo := repositories.NewActionRepository(db)
 
 	eas := ExecutorAgentService{
 		cfg:            cfg,
@@ -66,6 +69,7 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 		},
 		client:       client,
 		eventService: eventService,
+		actionRepo:   actionRepo,
 	}
 
 	// Reading credentials file and creating executors per account
@@ -178,7 +182,6 @@ func (e *ExecutorAgentService) GetExecutor(accountID string) *cexec.CloudExecuto
 func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
 	var actionStatus string
-	var triggeredBy string
 
 	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
@@ -188,11 +191,16 @@ func (e *ExecutorAgentService) Start() error {
 			zap.Any("requester", newAction.GetRequester()),
 		)
 
+		// InstantActions are not registered in the DB when are transmited by gRPC,
+		// so, if the incoming action is InstantAction type, it's registered into the DB for tracking
 		_, isInstantAction := newAction.(*actions.InstantAction)
 		if isInstantAction {
-			triggeredBy = newAction.GetRequester()
-		} else {
-			triggeredBy = "ClusterIQ ScheduleAgentService"
+			actionID, err := e.actionRepo.CreateAction(context.TODO(), newAction)
+			if err != nil {
+				e.logger.Error("Error registering InstantAction", zap.Error(err))
+				continue
+			}
+			newAction.(*actions.InstantAction).ID = strconv.FormatInt(actionID, 10)
 		}
 
 		// Initialize event tracker
@@ -203,7 +211,7 @@ func (e *ExecutorAgentService) Start() error {
 			ResourceType: inventory.ClusterResourceType,
 			Result:       eventservice.ResultPending,
 			Severity:     eventservice.SeverityInfo,
-			TriggeredBy:  triggeredBy,
+			TriggeredBy:  newAction.GetRequester(),
 		})
 
 		exec := e.GetExecutor(newAction.GetTarget().AccountID)
@@ -224,11 +232,9 @@ func (e *ExecutorAgentService) Start() error {
 			tracker.Success()
 		}
 
-		// Skip DB status update for instant actions
-		if !isInstantAction {
-			if err := e.updateActionStatus(newAction.GetID(), actionStatus); err != nil {
-				return err
-			}
+		if err := e.updateActionStatus(newAction.GetID(), actionStatus); err != nil {
+			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			continue
 		}
 	}
 

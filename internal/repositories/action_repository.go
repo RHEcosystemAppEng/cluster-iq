@@ -33,6 +33,24 @@ const (
 			enabled = false
 		WHERE id = $1
 	`
+	// InsertAction inserts a new action returning the ID
+	InsertActionsQuery = `
+		INSERT INTO schedule (
+			type,
+			time,
+			operation,
+			target,
+			status,
+			enabled
+		) VALUES (
+			:type,
+			(SELECT now()),
+			:operation,
+			(SELECT id FROM clusters WHERE cluster_id = :target.cluster_id),
+			:status,
+			:enabled
+		) RETURNING id
+	`
 	// InsertScheduledActionQuery inserts new scheduled actions on the DB
 	InsertScheduledActionsQuery = `
 		INSERT INTO schedule (
@@ -80,6 +98,7 @@ type ActionRepository interface {
 	Enable(ctx context.Context, actionID string) error
 	Disable(ctx context.Context, actionID string) error
 	Create(ctx context.Context, newActions []actions.Action) error
+	CreateAction(ctx context.Context, action actions.Action) (int64, error)
 	Delete(ctx context.Context, actionID string) error
 }
 
@@ -192,6 +211,17 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 
 	// Commit the transaction
 	return tx.Commit()
+}
+
+// AddEvent inserts a new audit event into the database and returns the event ID.
+func (r *actionRepositoryImpl) CreateAction(ctx context.Context, action actions.Action) (int64, error) {
+	var returnedValue int64
+	returnedValue, err := r.db.InsertWithReturnWithContext(ctx, InsertActionsQuery, action)
+	if err != nil {
+		return -1, err
+	}
+
+	return returnedValue, nil
 }
 
 // Delete removes an actions.ScheduledAction action from the DB based on its ID
