@@ -104,6 +104,7 @@ func setupActionRoutes(group *gin.RouterGroup, handler *handlers.ActionHandler) 
 		schedule.GET("/:id", handler.Get)
 		schedule.POST("", handler.Create)
 		schedule.PATCH("/:id/enable", handler.Enable)
+		schedule.PATCH("/", handler.Update)
 		schedule.PATCH("/:id/disable", handler.Disable)
 		schedule.DELETE("/:id", handler.Delete)
 	}

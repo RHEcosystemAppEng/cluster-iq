@@ -181,7 +181,6 @@ func (e *ExecutorAgentService) GetExecutor(accountID string) *cexec.CloudExecuto
 
 func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
-	var actionStatus string
 
 	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
@@ -222,17 +221,23 @@ func (e *ExecutorAgentService) Start() error {
 
 		executor := *exec
 
+		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
+		if err := e.updateActionStatus(newAction); err != nil {
+			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			continue
+		}
+
 		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
-			actionStatus = string(actions.StatusFailed)
+			newAction.(actions.MutableAction).SetStatus(actions.StatusFailed)
 			tracker.Failed()
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
-			actionStatus = string(actions.StatusCompleted)
+			newAction.(actions.MutableAction).SetStatus(actions.StatusCompleted)
 			tracker.Success()
 		}
 
-		if err := e.updateActionStatus(newAction.GetID(), actionStatus); err != nil {
+		if err := e.updateActionStatus(newAction); err != nil {
 			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
 			continue
 		}
@@ -241,25 +246,6 @@ func (e *ExecutorAgentService) Start() error {
 	return nil
 }
 
-func (e *ExecutorAgentService) updateActionStatus(actionID, status string) error {
-	url := fmt.Sprintf("%s%s/%s/status", e.cfg.APIURL, APIScheduleActionsPath, actionID)
-	// Prepare API request for updating action status
-	request, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, url, nil)
-	if err != nil {
-		return err
-	}
-
-	// Adding query parameter for the status
-	q := request.URL.Query()
-	q.Add("status", status)
-
-	// Assign query parameters to request
-	request.URL.RawQuery = q.Encode()
-
-	// Performing API request
-	if _, err := e.client.Do(request); err != nil {
-		return err
-	}
-
-	return nil
+func (e *ExecutorAgentService) updateActionStatus(action actions.Action) error {
+	return e.actionRepo.Update(context.Background(), action)
 }

@@ -73,3 +73,11 @@ func (i InstantAction) GetDescription() *string { return i.Description }
 func (i InstantAction) GetType() ActionType {
 	return InstantActionType
 }
+
+// SetStatus updates the action status
+//
+// Parameters:
+// - New ActionStatus
+func (i *InstantAction) SetStatus(status ActionStatus) {
+	i.Status = status
+}

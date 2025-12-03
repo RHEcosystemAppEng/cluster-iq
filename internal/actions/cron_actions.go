@@ -88,3 +88,11 @@ func (c CronAction) GetType() ActionType {
 func (c CronAction) GetCronExpression() string {
 	return c.Expression
 }
+
+// SetStatus updates the action status
+//
+// Parameters:
+// - New ActionStatus
+func (c *CronAction) SetStatus(status ActionStatus) {
+	c.Status = status
+}

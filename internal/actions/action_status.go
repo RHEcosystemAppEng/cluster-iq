@@ -7,4 +7,5 @@ const (
 	StatusRunning   ActionStatus = "Running"
 	StatusFailed    ActionStatus = "Failed"
 	StatusCompleted ActionStatus = "Completed"
+	StatusUnknown   ActionStatus = "Unknown"
 )

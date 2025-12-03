@@ -87,6 +87,13 @@ const (
 			:enabled
 		)
 	`
+	// UpdateActionQuery updates a single action on the DB
+	UpdateActionQuery = `
+		UPDATE schedule
+		SET
+			status = :status
+		WHERE id = :id
+	`
 )
 
 var _ ActionRepository = (*actionRepositoryImpl)(nil)
@@ -100,6 +107,7 @@ type ActionRepository interface {
 	Create(ctx context.Context, newActions []actions.Action) error
 	CreateAction(ctx context.Context, action actions.Action) (int64, error)
 	Delete(ctx context.Context, actionID string) error
+	Update(ctx context.Context, action actions.Action) error
 }
 
 type actionRepositoryImpl struct {
@@ -243,5 +251,24 @@ func (r *actionRepositoryImpl) Delete(ctx context.Context, actionID string) erro
 	if err := r.db.DeleteWithContext(ctx, ScheduleTable, opts); err != nil {
 		return err
 	}
+	return nil
+}
+
+// Update updates an actions.Action action from the DB based on its ID
+//
+// Parameters:
+//   - An action with an exisiting ID to be updated
+//
+// Returns:
+//   - An error if the delete query fails
+func (r *actionRepositoryImpl) Update(ctx context.Context, action actions.Action) error {
+	if _, err := r.GetByID(ctx, action.GetID()); err != nil {
+		return err
+	}
+
+	if err := r.db.NamedUpdateWithContext(ctx, UpdateActionQuery, action); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -26,10 +26,6 @@ func (b BaseAction) GetActionOperation() ActionOperation {
 	return b.Operation
 }
 
-// SetStatus updates the action status
-//
-// Parameters:
-// - New ActionStatus
 func (b *BaseAction) SetStatus(status ActionStatus) {
 	b.Status = status
 }

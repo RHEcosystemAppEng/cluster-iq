@@ -81,3 +81,11 @@ func (s ScheduledAction) GetDescription() *string { return s.Description }
 func (s ScheduledAction) GetType() ActionType {
 	return ScheduledActionType
 }
+
+// SetStatus updates the action status
+//
+// Parameters:
+// - New ActionStatus
+func (s *ScheduledAction) SetStatus(status ActionStatus) {
+	s.Status = status
+}
