@@ -5,9 +5,7 @@ package actions
 type CronAction struct {
 	// When specifies the scheduled time for the action execution.
 	Expression string `db:"cron_exp"`
-
-	Type string `db:"type"`
-
+	Type       string `db:"type"`
 	BaseAction
 }
 
@@ -23,7 +21,7 @@ type CronAction struct {
 func NewCronAction(actionOperation ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool, cronExpression string) *CronAction {
 	return &CronAction{
 		BaseAction: *NewBaseAction(actionOperation, target, status, requester, description, enabled),
-		Type:       "cron_action",
+		Type:       CronActionType,
 		Expression: cronExpression,
 	}
 }

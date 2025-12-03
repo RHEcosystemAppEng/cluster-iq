@@ -25,7 +25,7 @@ type ScheduledAction struct {
 func NewScheduledAction(ao ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool, when time.Time) *ScheduledAction {
 	return &ScheduledAction{
 		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
-		Type:       "scheduled_action",
+		Type:       ScheduledActionType,
 		When:       when,
 	}
 }

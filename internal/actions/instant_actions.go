@@ -3,6 +3,7 @@ package actions
 // InstantAction represents an immediate action that can be executed without additional delays or dependencies.
 // It embeds BaseAction to inherit common action properties.
 type InstantAction struct {
+	Type string `db:"type"`
 	BaseAction
 }
 
@@ -16,6 +17,7 @@ type InstantAction struct {
 // - A pointer to a newly created InstantAction instance.
 func NewInstantAction(ao ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool) *InstantAction {
 	return &InstantAction{
+		Type:       InstantActionType,
 		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
 	}
 }
