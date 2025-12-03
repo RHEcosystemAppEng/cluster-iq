@@ -27,7 +27,7 @@ type APIGRPCClient struct {
 	// Client is the gRPC client used to communicate with the Agent service.
 	Client pb.AgentServiceClient
 	// CTX is the context used for gRPC operations.
-	CTX context.Context
+	ctx context.Context
 	// Cancel is the function to cancel the gRPC context.
 	Cancel context.CancelFunc
 	// logger is used for logging gRPC operations and errors.
@@ -54,7 +54,7 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 
 	return &APIGRPCClient{
 		Client: pb.NewAgentServiceClient(conn),
-		CTX:    ctx,
+		ctx:    ctx,
 		Cancel: cancel,
 		logger: logger,
 	}, nil
@@ -140,7 +140,7 @@ func (a APIGRPCClient) PowerOnCluster(ctx context.Context, action *actions.Insta
 	)
 
 	// Sending the PowerOnCluster request
-	resp, err := a.Client.PowerOnCluster(context.Background(), rpcRequest)
+	resp, err := a.Client.PowerOnCluster(ctx, rpcRequest)
 	if err != nil {
 		return err
 	}

@@ -134,18 +134,22 @@ func (d *DBClient) InsertWithReturnWithContext(ctx context.Context, query string
 	}()
 
 	var returnedValue int64
-	stmt, err := tx.NamedQuery(builder.query, builder.data)
+	rows, err := tx.NamedQuery(builder.query, builder.data)
 	if err != nil {
 		return -1, fmt.Errorf("named-exec INSERT error: %w", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			d.logger.Error("failed to close rows after insert")
+		}
+	}()
 
-	if stmt.Next() {
-		if err := stmt.Scan(&returnedValue); err != nil {
-			return -1, fmt.Errorf("Scan INSERT return value error %w", err)
+	if rows.Next() {
+		if err := rows.Scan(&returnedValue); err != nil {
+			return -1, fmt.Errorf("scan INSERT return value error %w", err)
 		}
 	} else {
-		return -1, fmt.Errorf("INSERT did not return any value")
+		return -1, fmt.Errorf("sql INSERT did not return any value")
 	}
 
 	if err := tx.Commit(); err != nil {

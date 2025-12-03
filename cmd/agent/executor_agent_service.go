@@ -190,7 +190,7 @@ func (e *ExecutorAgentService) Start() error {
 			zap.Any("requester", newAction.GetRequester()),
 		)
 
-		// InstantActions are not registered in the DB when are transmited by gRPC,
+		// InstantActions are not registered in the DB when are transmitted by gRPC,
 		// so, if the incoming action is InstantAction type, it's registered into the DB for tracking
 		_, isInstantAction := newAction.(*actions.InstantAction)
 		if isInstantAction {
