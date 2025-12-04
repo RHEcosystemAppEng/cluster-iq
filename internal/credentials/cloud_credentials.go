@@ -29,7 +29,7 @@ func ReadCloudAccounts(credsFile string) ([]AccountConfig, error) {
 	for _, section := range cfg.Sections() {
 		account := AccountConfig{
 			ID:             section.Name(),
-			Name:           section.Key("name").String(),
+			Name:           section.Key("name").MustString(section.Name()), // If `name` is empty, the id is used as replacement
 			Provider:       inventory.GetProvider(section.Key("provider").String()),
 			User:           section.Key("user").String(),
 			Key:            section.Key("key").String(),

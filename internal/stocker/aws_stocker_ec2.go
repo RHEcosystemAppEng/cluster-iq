@@ -12,7 +12,10 @@ func (s *AWSStocker) processRegion(region string) error {
 	if err := s.conn.SetRegion(region); err != nil {
 		return err
 	}
-	s.logger.Info("Scraping region", zap.String("account", s.Account.AccountName), zap.String("region", s.conn.GetRegion()))
+	s.logger.Info("Scraping region",
+		zap.String("account_id", s.Account.AccountID),
+		zap.String("region", s.conn.GetRegion()),
+	)
 
 	instances, err := s.conn.EC2.GetInstances()
 	if err != nil {
@@ -33,7 +36,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 		clusterName := inventory.GetClusterNameFromTags(instance.Tags)
 		if s.skipNoOpenShiftInstances && clusterName == inventory.UnknownClusterNameCode {
 			s.logger.Debug("Skipping instance because it's not associated to any cluster",
-				zap.String("account", s.Account.AccountName),
+				zap.String("account_id", s.Account.AccountID),
 				zap.String("instance_name", instance.InstanceName),
 				zap.String("region", instance.AvailabilityZone))
 			continue
@@ -50,11 +53,17 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			unknownConsoleLinkCode,
 			inventory.GetOwnerFromTags(instance.Tags),
 		)
+
+		// The only potential error is if the cluster already exists on the account. Skiping it
 		_ = s.Account.AddCluster(cluster)
 
 		// Adding the instance to the Cluster
 		if err := s.Account.Clusters[cluster.ClusterID].AddInstance(&instance); err != nil {
-			s.logger.Error("error adding instance to cluster", zap.String("instance", instance.InstanceID), zap.String("cluster", cluster.ClusterID))
+			s.logger.Error("error adding instance to cluster",
+				zap.String("account_id", s.Account.AccountID),
+				zap.String("cluster", cluster.ClusterID),
+				zap.String("instance", instance.InstanceID),
+			)
 		}
 	}
 }
