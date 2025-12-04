@@ -11,11 +11,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const (
-	// grpcTimeoutSeconds defines the timeout in seconds for gRPC operations.
-	grpcTimeoutSeconds = 10
-)
-
 var (
 	DefaultInstantActionDescription = "InstantAction"
 )
