@@ -3,6 +3,7 @@ package actions
 // InstantAction represents an immediate action that can be executed without additional delays or dependencies.
 // It embeds BaseAction to inherit common action properties.
 type InstantAction struct {
+	Type string `db:"type"`
 	BaseAction
 }
 
@@ -14,9 +15,10 @@ type InstantAction struct {
 //
 // Returns:
 // - A pointer to a newly created InstantAction instance.
-func NewInstantAction(ao ActionOperation, target ActionTarget, status string, enabled bool) *InstantAction {
+func NewInstantAction(ao ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool) *InstantAction {
 	return &InstantAction{
-		BaseAction: *NewBaseAction(ao, target, status, enabled),
+		Type:       InstantActionType,
+		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
 	}
 }
 
@@ -52,10 +54,30 @@ func (i InstantAction) GetID() string {
 	return i.ID
 }
 
+// GetRequester returns the action requester
+//
+// Returns:
+// - A string representing action requester
+func (i InstantAction) GetRequester() string { return i.Requester }
+
+// GetDescription returns the action description
+//
+// Returns:
+// - A string representing action description
+func (i InstantAction) GetDescription() *string { return i.Description }
+
 // GetType returns InstantActionType
 //
 // Returns:
 // - ActionType
 func (i InstantAction) GetType() ActionType {
 	return InstantActionType
+}
+
+// SetStatus updates the action status
+//
+// Parameters:
+// - New ActionStatus
+func (i *InstantAction) SetStatus(status ActionStatus) {
+	i.Status = status
 }
