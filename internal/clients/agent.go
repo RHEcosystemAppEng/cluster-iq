@@ -3,7 +3,6 @@ package clients
 import (
 	"context"
 	"fmt"
-	"time"
 
 	pb "github.com/RHEcosystemAppEng/cluster-iq/generated/agent"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -26,10 +25,6 @@ var (
 type APIGRPCClient struct {
 	// Client is the gRPC client used to communicate with the Agent service.
 	Client pb.AgentServiceClient
-	// CTX is the context used for gRPC operations.
-	ctx context.Context
-	// Cancel is the function to cancel the gRPC context.
-	Cancel context.CancelFunc
 	// logger is used for logging gRPC operations and errors.
 	logger *zap.Logger
 }
@@ -50,12 +45,9 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), grpcTimeoutSeconds*time.Second)
 
 	return &APIGRPCClient{
 		Client: pb.NewAgentServiceClient(conn),
-		ctx:    ctx,
-		Cancel: cancel,
 		logger: logger,
 	}, nil
 }
