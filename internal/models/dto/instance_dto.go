@@ -8,13 +8,13 @@ import (
 
 // TODO: comments
 type InstanceDTORequest struct {
-	InstanceID        string                   `json:"instanceID"`
+	InstanceID        string                   `json:"instanceId"`
 	InstanceName      string                   `json:"instanceName"`
 	InstanceType      string                   `json:"instanceType"`
 	Provider          inventory.Provider       `json:"provider"`
 	AvailabilityZone  string                   `json:"availabilityZone"`
 	Status            inventory.ResourceStatus `json:"status"`
-	ClusterID         string                   `json:"clusterID"`
+	ClusterID         string                   `json:"clusterId"`
 	LastScanTimestamp time.Time                `json:"lastScanTimestamp"`
 	CreatedAt         time.Time                `json:"createdAt"`
 	Age               int                      `json:"age"`
@@ -77,13 +77,13 @@ func ToInstanceDTORequestList(instances []inventory.Instance) *[]InstanceDTORequ
 
 // TODO: comments
 type InstanceDTOResponse struct {
-	InstanceID            string                   `json:"instanceID"`
+	InstanceID            string                   `json:"instanceId"`
 	InstanceName          string                   `json:"instanceName"`
 	InstanceType          string                   `json:"instanceType"`
 	Provider              inventory.Provider       `json:"provider"`
 	AvailabilityZone      string                   `json:"availabilityZone"`
 	Status                inventory.ResourceStatus `json:"status"`
-	ClusterID             string                   `json:"clusterID"`
+	ClusterID             string                   `json:"clusterId"`
 	ClusterName           string                   `json:"clusterName"`
 	LastScanTimestamp     time.Time                `json:"lastScanTimestamp"`
 	CreatedAt             time.Time                `json:"creationTimestamp"`

@@ -49,6 +49,6 @@ type ClusterEventDTOResponse struct {
 // SystemEvent represents a system-level event, extending a cluster event with account details.
 type SystemEventDTOResponse struct {
 	ClusterEventDTOResponse
-	AccountID string `json:"accountID"`
+	AccountID string `json:"accountId"`
 	Provider  string `json:"provider"`
 } // @name SystemEventResponse

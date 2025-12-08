@@ -8,7 +8,7 @@ import (
 
 // CreateExpense represents the data transfer object for creating a new expense.
 type ExpenseDTORequest struct {
-	InstanceID string    `json:"instanceID"`
+	InstanceID string    `json:"instanceId"`
 	Amount     float64   `json:"amount"`
 	Date       time.Time `json:"date"`
 } // @name ExpenseRequest
@@ -50,7 +50,7 @@ func ToExpenseDTORequestList(expenses []inventory.Expense) *[]ExpenseDTORequest 
 
 // Expense represents the data transfer object for an expense.
 type ExpenseDTOResponse struct {
-	InstanceID string    `json:"instanceID"`
+	InstanceID string    `json:"instanceId"`
 	Amount     float64   `json:"amount"`
 	Date       time.Time `json:"date"`
 } // @name ExpenseResponse

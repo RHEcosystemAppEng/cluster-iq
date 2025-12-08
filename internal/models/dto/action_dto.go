@@ -12,13 +12,13 @@ type ActionDTORequest struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`
-	CronExp   string    `json:"cron_exp"`
+	CronExp   string    `json:"cronExpression"`
 	Operation string    `json:"operation"`
 	Status    string    `json:"status"`
 	Enabled   bool      `json:"enabled"`
-	ClusterID string    `json:"cluster_id"`
+	ClusterID string    `json:"clusterId"`
 	Region    string    `json:"region"`
-	AccountID string    `json:"account_id"`
+	AccountID string    `json:"accountId"`
 	Instances []string  `json:"instances"`
 } // @name ActionRequest
 
@@ -75,13 +75,13 @@ type ActionDTOResponse struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`
-	CronExp   string    `json:"cron_exp"`
+	CronExp   string    `json:"cronExpression"`
 	Operation string    `json:"operation"`
 	Status    string    `json:"status"`
 	Enabled   bool      `json:"enabled"`
-	ClusterID string    `json:"cluster_id"`
+	ClusterID string    `json:"clusterId"`
 	Region    string    `json:"region"`
-	AccountID string    `json:"account_id"`
+	AccountID string    `json:"accountId"`
 	Instances []string  `json:"instances"`
 } // @name ActionResponse
 

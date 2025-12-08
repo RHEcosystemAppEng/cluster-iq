@@ -8,7 +8,7 @@ import (
 
 // AccountDTORequest represents the data needed to create a new account.
 type AccountDTORequest struct {
-	AccountID         string             `json:"accountID"`
+	AccountID         string             `json:"accountId"`
 	AccountName       string             `json:"accountName"`
 	Provider          inventory.Provider `json:"provider"`
 	LastScanTimestamp time.Time          `json:"lastScanTimestamp"`
@@ -50,7 +50,7 @@ func ToAccountDTORequest(account inventory.Account) *AccountDTORequest {
 
 // AccountDTOResponse represents the data transfer object for an account.
 type AccountDTOResponse struct {
-	AccountID             string             `json:"accountID"`
+	AccountID             string             `json:"accountId"`
 	AccountName           string             `json:"accountName"`
 	Provider              inventory.Provider `json:"provider"`
 	LastScanTimestamp     time.Time          `json:"lastScanTimestamp"`

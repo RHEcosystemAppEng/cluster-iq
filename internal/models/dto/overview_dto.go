@@ -37,8 +37,8 @@ type ProvidersSummary struct {
 
 // ProviderDetails contains the account and cluster counts for a specific provider.
 type ProviderDetails struct {
-	AccountCount int `json:"account_count"`
-	ClusterCount int `json:"cluster_count"`
+	AccountCount int `json:"accountCount"`
+	ClusterCount int `json:"clusterCount"`
 } // @name ProviderDetails
 
 // Scanner provides information about the last inventory scan.

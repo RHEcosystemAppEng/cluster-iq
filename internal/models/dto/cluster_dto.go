@@ -8,13 +8,13 @@ import (
 
 // Cluster is the object to store Openshift Clusters and its properties
 type ClusterDTORequest struct {
-	ClusterID         string                   `json:"clusterID"`
+	ClusterID         string                   `json:"clusterId"`
 	ClusterName       string                   `json:"clusterName"`
-	InfraID           string                   `json:"infraID"`
+	InfraID           string                   `json:"infraId"`
 	Provider          inventory.Provider       `json:"provider"`
 	Status            inventory.ResourceStatus `json:"status"`
 	Region            string                   `json:"region"`
-	AccountID         string                   `json:"accountID"`
+	AccountID         string                   `json:"accountId"`
 	ConsoleLink       string                   `json:"consoleLink"`
 	LastScanTimestamp time.Time                `json:"lastScanTimestamp"`
 	CreatedAt         time.Time                `json:"createdAt"`
@@ -77,13 +77,13 @@ func ToClusterDTORequestList(clusters []inventory.Cluster) *[]ClusterDTORequest 
 
 // TODO: comments
 type ClusterDTOResponse struct {
-	ClusterID             string                   `json:"clusterID"`
+	ClusterID             string                   `json:"clusterId"`
 	ClusterName           string                   `json:"clusterName"`
-	InfraID               string                   `json:"infra_id"`
+	InfraID               string                   `json:"infraId"`
 	Provider              inventory.Provider       `json:"provider"`
 	Status                inventory.ResourceStatus `json:"status"`
 	Region                string                   `json:"region"`
-	AccountID             string                   `json:"accountID"`
+	AccountID             string                   `json:"accountId"`
 	ConsoleLink           string                   `json:"consoleLink"`
 	InstanceCount         int                      `json:"instanceCount"`
 	LastScanTimestamp     time.Time                `json:"lastScanTimestamp"`
