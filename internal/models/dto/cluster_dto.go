@@ -8,18 +8,18 @@ import (
 
 // Cluster is the object to store Openshift Clusters and its properties
 type ClusterDTORequest struct {
-	ClusterID   string                   `json:"clusterID"`
-	ClusterName string                   `json:"clusterName"`
-	InfraID     string                   `json:"infraID"`
-	Provider    inventory.Provider       `json:"provider"`
-	Status      inventory.ResourceStatus `json:"status"`
-	Region      string                   `json:"region"`
-	AccountID   string                   `json:"accountID"`
-	ConsoleLink string                   `json:"consoleLink"`
-	LastScanTS  time.Time                `json:"lastScanTimestamp"`
-	CreatedAt   time.Time                `json:"createdAt"`
-	Age         int                      `json:"age"`
-	Owner       string                   `json:"owner"`
+	ClusterID         string                   `json:"clusterID"`
+	ClusterName       string                   `json:"clusterName"`
+	InfraID           string                   `json:"infraID"`
+	Provider          inventory.Provider       `json:"provider"`
+	Status            inventory.ResourceStatus `json:"status"`
+	Region            string                   `json:"region"`
+	AccountID         string                   `json:"accountID"`
+	ConsoleLink       string                   `json:"consoleLink"`
+	LastScanTimestamp time.Time                `json:"lastScanTimestamp"`
+	CreatedAt         time.Time                `json:"createdAt"`
+	Age               int                      `json:"age"`
+	Owner             string                   `json:"owner"`
 } // @name ClusterRequest
 
 func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
@@ -32,7 +32,7 @@ func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 		c.Owner,
 	)
 
-	cluster.LastScanTS = c.LastScanTS
+	cluster.LastScanTS = c.LastScanTimestamp
 	cluster.CreatedAt = c.CreatedAt
 	cluster.Status = c.Status
 	cluster.AccountID = c.AccountID
@@ -51,18 +51,18 @@ func ToInventoryClusterList(dtos []ClusterDTORequest) *[]inventory.Cluster {
 
 func ToClusterDTORequest(cluster inventory.Cluster) *ClusterDTORequest {
 	return &ClusterDTORequest{
-		ClusterID:   cluster.ClusterID,
-		ClusterName: cluster.ClusterName,
-		InfraID:     cluster.InfraID,
-		Provider:    cluster.Provider,
-		Status:      cluster.Status,
-		Region:      cluster.Region,
-		AccountID:   cluster.AccountID,
-		ConsoleLink: cluster.ConsoleLink,
-		LastScanTS:  cluster.LastScanTS,
-		CreatedAt:   cluster.CreatedAt,
-		Age:         cluster.Age,
-		Owner:       cluster.Owner,
+		ClusterID:         cluster.ClusterID,
+		ClusterName:       cluster.ClusterName,
+		InfraID:           cluster.InfraID,
+		Provider:          cluster.Provider,
+		Status:            cluster.Status,
+		Region:            cluster.Region,
+		AccountID:         cluster.AccountID,
+		ConsoleLink:       cluster.ConsoleLink,
+		LastScanTimestamp: cluster.LastScanTS,
+		CreatedAt:         cluster.CreatedAt,
+		Age:               cluster.Age,
+		Owner:             cluster.Owner,
 	}
 }
 
@@ -86,7 +86,7 @@ type ClusterDTOResponse struct {
 	AccountID             string                   `json:"accountID"`
 	ConsoleLink           string                   `json:"consoleLink"`
 	InstanceCount         int                      `json:"instanceCount"`
-	LastScanTS            time.Time                `json:"lastScanTimestamp"`
+	LastScanTimestamp     time.Time                `json:"lastScanTimestamp"`
 	CreatedAt             time.Time                `json:"createdAt"`
 	Age                   int                      `json:"age"`
 	Owner                 string                   `json:"owner"`

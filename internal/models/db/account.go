@@ -12,7 +12,7 @@ type AccountDBResponse struct {
 	AccountID             string             `db:"account_id"`
 	AccountName           string             `db:"account_name"`
 	Provider              inventory.Provider `db:"provider"`
-	LastScanTS            time.Time          `db:"last_scan_ts"`
+	LastScanTimestamp     time.Time          `db:"last_scan_ts"`
 	CreatedAt             time.Time          `db:"created_at"`
 	ClusterCount          int                `db:"cluster_count"`
 	TotalCost             float64            `db:"total_cost"`
@@ -27,7 +27,7 @@ func (a AccountDBResponse) ToAccountDTOResponse() *dto.AccountDTOResponse {
 		AccountID:             a.AccountID,
 		AccountName:           a.AccountName,
 		Provider:              a.Provider,
-		LastScanTS:            a.LastScanTS,
+		LastScanTimestamp:     a.LastScanTimestamp,
 		CreatedAt:             a.CreatedAt,
 		ClusterCount:          a.ClusterCount,
 		TotalCost:             a.TotalCost,

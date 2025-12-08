@@ -55,7 +55,7 @@ type InstanceDBResponse struct {
 	Status                inventory.ResourceStatus `db:"status"`
 	ClusterID             string                   `db:"cluster_id"`
 	ClusterName           string                   `db:"cluster_name"`
-	LastScanTS            time.Time                `db:"last_scan_ts"`
+	LastScanTimestamp     time.Time                `db:"last_scan_ts"`
 	CreatedAt             time.Time                `db:"created_at"`
 	Age                   int                      `db:"age"`
 	TotalCost             float64                  `db:"total_cost"`
@@ -80,7 +80,7 @@ func (i InstanceDBResponse) ToInstanceDTOResponse() *dto.InstanceDTOResponse {
 		AvailabilityZone:      i.AvailabilityZone,
 		ClusterID:             i.ClusterID,
 		ClusterName:           i.ClusterName,
-		LastScanTS:            i.LastScanTS,
+		LastScanTimestamp:     i.LastScanTimestamp,
 		CreatedAt:             i.CreatedAt,
 		Age:                   i.Age,
 		TotalCost:             i.TotalCost,

@@ -8,11 +8,11 @@ import (
 
 // AccountDTORequest represents the data needed to create a new account.
 type AccountDTORequest struct {
-	AccountID   string             `json:"accountID"`
-	AccountName string             `json:"accountName"`
-	Provider    inventory.Provider `json:"provider"`
-	LastScanTS  time.Time          `json:"lastScanTS"`
-	CreatedAt   time.Time          `json:"createdAt"`
+	AccountID         string             `json:"accountID"`
+	AccountName       string             `json:"accountName"`
+	Provider          inventory.Provider `json:"provider"`
+	LastScanTimestamp time.Time          `json:"lastScanTimestamp"`
+	CreatedAt         time.Time          `json:"createdAt"`
 } // @name AccountRequest
 
 // TODO: comments
@@ -25,7 +25,7 @@ func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
 		"",
 	)
 
-	account.LastScanTS = a.LastScanTS
+	account.LastScanTS = a.LastScanTimestamp
 	return account
 }
 
@@ -40,11 +40,11 @@ func ToInventoryAccountList(dtos []AccountDTORequest) *[]inventory.Account {
 
 func ToAccountDTORequest(account inventory.Account) *AccountDTORequest {
 	return &AccountDTORequest{
-		AccountID:   account.AccountID,
-		AccountName: account.AccountName,
-		Provider:    account.Provider,
-		LastScanTS:  account.LastScanTS,
-		CreatedAt:   account.CreatedAt,
+		AccountID:         account.AccountID,
+		AccountName:       account.AccountName,
+		Provider:          account.Provider,
+		LastScanTimestamp: account.LastScanTS,
+		CreatedAt:         account.CreatedAt,
 	}
 }
 
@@ -53,7 +53,7 @@ type AccountDTOResponse struct {
 	AccountID             string             `json:"accountID"`
 	AccountName           string             `json:"accountName"`
 	Provider              inventory.Provider `json:"provider"`
-	LastScanTS            time.Time          `json:"lastScanTS"`
+	LastScanTimestamp     time.Time          `json:"lastScanTimestamp"`
 	CreatedAt             time.Time          `json:"createdAt"`
 	ClusterCount          int                `json:"clusterCount"`
 	TotalCost             float64            `json:"totalCost"`

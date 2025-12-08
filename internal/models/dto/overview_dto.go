@@ -43,7 +43,7 @@ type ProviderDetails struct {
 
 // Scanner provides information about the last inventory scan.
 type Scanner struct {
-	LastScanTimestamp time.Time `json:"last_scan_timestamp"`
+	LastScanTimestamp time.Time `json:"lastScanTimestamp"`
 } // @name Scanner
 
 // ToOverviewSummaryDTO converts an inventory OverviewSummary to a DTO.
