@@ -20,7 +20,7 @@ type ActionDTORequest struct {
 	Region    string    `json:"region"`
 	AccountID string    `json:"account_id"`
 	Instances []string  `json:"instances"`
-}
+} // @name ActionRequest
 
 func (a ActionDTORequest) ToModelAction() actions.Action {
 	actionOp := actions.ActionOperation(a.Operation)
@@ -83,7 +83,7 @@ type ActionDTOResponse struct {
 	Region    string    `json:"region"`
 	AccountID string    `json:"account_id"`
 	Instances []string  `json:"instances"`
-}
+} // @name ActionResponse
 
 // ToModelAction converts ActionDTOResponse to actions.Action
 func (a ActionDTOResponse) ToModelAction() actions.Action {
@@ -99,7 +99,7 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 		ID:        a.ID,
 		Operation: actionOp,
 		Target:    target,
-		Status:    a.Status,
+		Status:    actions.ActionStatus(a.Status),
 		Enabled:   a.Enabled,
 	}
 

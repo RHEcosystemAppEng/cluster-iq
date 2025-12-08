@@ -8,7 +8,7 @@ import (
 type TagDTORequest struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
-}
+} // @name TagRequest
 
 // TODO: comments
 func (t TagDTORequest) ToInventoryTag() *inventory.Tag {
@@ -49,4 +49,4 @@ type TagDTOResponse struct {
 	Key        string `json:"key"`
 	Value      string `json:"value"`
 	InstanceID string `json:"instanceID,omitempty"`
-}
+} // @name TagResponse

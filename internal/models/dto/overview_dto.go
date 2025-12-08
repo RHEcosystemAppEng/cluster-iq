@@ -12,39 +12,39 @@ type OverviewSummary struct {
 	Instances InstancesSummary `json:"instances"`
 	Providers ProvidersSummary `json:"providers"`
 	Scanner   Scanner          `json:"scanner"`
-}
+} // @name OverviewSummary
 
 // ClusterSummary provides a summary of cluster counts by status.
 type ClusterSummary struct {
 	Running  int `json:"running"`
 	Stopped  int `json:"stopped"`
 	Archived int `json:"archived"`
-}
+} // @name ClusterSummary
 
 // InstancesSummary provides a summary of instance counts by status.
 type InstancesSummary struct {
 	Running  int `json:"running"`
 	Stopped  int `json:"stopped"`
 	Archived int `json:"archived"`
-}
+} // @name InstancesSummary
 
 // ProvidersSummary provides a summary of provider-specific data.
 type ProvidersSummary struct {
 	AWS   ProviderDetails `json:"aws"`
 	GCP   ProviderDetails `json:"gcp"`
 	Azure ProviderDetails `json:"azure"`
-}
+} // @name ProvidersSummary
 
 // ProviderDetails contains the account and cluster counts for a specific provider.
 type ProviderDetails struct {
 	AccountCount int `json:"account_count"`
 	ClusterCount int `json:"cluster_count"`
-}
+} // @name ProviderDetails
 
 // Scanner provides information about the last inventory scan.
 type Scanner struct {
 	LastScanTimestamp time.Time `json:"last_scan_timestamp"`
-}
+} // @name Scanner
 
 // ToOverviewSummaryDTO converts an inventory OverviewSummary to a DTO.
 func ToOverviewSummaryDTO(model inventory.OverviewSummary) OverviewSummary {

@@ -26,7 +26,7 @@ func NewHealthCheckHandler(db *dbclient.DBClient, logger *zap.Logger) *HealthChe
 type healthCheckResponse struct {
 	APIHealth bool `json:"api_health"`
 	DBHealth  bool `json:"db_health"`
-}
+} // @name HealthCheckResponse
 
 // Check returns current API and database health.
 //

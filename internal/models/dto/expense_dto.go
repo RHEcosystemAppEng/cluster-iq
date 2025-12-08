@@ -11,7 +11,7 @@ type ExpenseDTORequest struct {
 	InstanceID string    `json:"instanceID"`
 	Amount     float64   `json:"amount"`
 	Date       time.Time `json:"date"`
-}
+} // @name ExpenseRequest
 
 // TODO: comments
 func (e ExpenseDTORequest) ToInventoryExpense() *inventory.Expense {
@@ -53,4 +53,4 @@ type ExpenseDTOResponse struct {
 	InstanceID string    `json:"instanceID"`
 	Amount     float64   `json:"amount"`
 	Date       time.Time `json:"date"`
-}
+} // @name ExpenseResponse

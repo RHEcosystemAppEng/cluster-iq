@@ -57,7 +57,7 @@ type listExpensesRequest struct {
 //	@Param			page		query		int		false	"Page number"		default(1)
 //	@Param			page_size	query		int		false	"Items per page"	default(10)
 //	@Param			instance_id	query		string	false	"Instance ID filter"
-//	@Success		200			{object}	responsetypes.ListResponse[dto.ExpenseDTOResponse]
+//	@Success		200			{object}	dto.ExpenseListResponse
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/expenses [get]
@@ -124,6 +124,7 @@ func (h *ExpenseHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, responsetypes.PostResponse{
 		Count:  len(expenseDTOs),
-		Status: "OK"},
+		Status: "OK",
+	},
 	)
 }

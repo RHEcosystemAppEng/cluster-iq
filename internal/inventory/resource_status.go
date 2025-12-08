@@ -3,7 +3,7 @@ package inventory
 import "strings"
 
 // ResourceStatus defines the status of the instance
-type ResourceStatus string
+type ResourceStatus string // @name ResourceStatus
 
 const (
 	// Running Instance status

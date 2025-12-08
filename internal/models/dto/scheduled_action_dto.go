@@ -8,7 +8,7 @@ type ActionTarget struct {
 	Region      string   `json:"region"`
 	ClusterID   string   `json:"clusterID"`
 	Instances   []string `json:"instances"`
-}
+} // @name ActionTarget
 
 // ScheduledAction represents the data transfer object for a scheduled action.
 // This DTO handles both scheduled actions (with time) and cron actions (with cronExp).
@@ -21,4 +21,4 @@ type ScheduledAction struct {
 	Enabled   bool         `json:"enabled"`
 	Time      *time.Time   `json:"time,omitempty"`    // for scheduled_action
 	CronExp   *string      `json:"cronExp,omitempty"` // for cron_action
-}
+} // @name ScheduledAction

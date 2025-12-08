@@ -58,8 +58,8 @@ type listAccountsRequest struct {
 //	@Produce		json
 //	@Param			page		query		int		false	"Page number"		default(1)
 //	@Param			page_size	query		int		false	"Items per page"	default(10)
-//	@Param			provider	query		string	false	"Cloud provider"	example(aws)
-//	@Success		200			{object}	responsetypes.ListResponse[dto.AccountDTOResponse]
+//	@Param			provider	query		string	false	"Cloud provider"
+//	@Success		200			{object}	dto.AccountListResponse
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts [get]
@@ -138,7 +138,7 @@ func (h *AccountHandler) GetByID(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Account ID"
-//	@Success		200	{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
+//	@Success		200	{object}	dto.ClusterListResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id}/clusters [get]
@@ -176,7 +176,7 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Account ID"
-//	@Success		200	{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
+//	@Success		200	{object}	dto.InstanceListResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id}/expense_update_instances [get]
@@ -239,7 +239,8 @@ func (h *AccountHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, responsetypes.PostResponse{
 		Count:  len(newAccountsDTO),
-		Status: "OK"},
+		Status: "OK",
+	},
 	)
 }
 

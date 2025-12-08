@@ -20,7 +20,7 @@ type ClusterDTORequest struct {
 	CreatedAt   time.Time                `json:"createdAt"`
 	Age         int                      `json:"age"`
 	Owner       string                   `json:"owner"`
-}
+} // @name ClusterRequest
 
 func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 	cluster := inventory.NewCluster(
@@ -94,4 +94,4 @@ type ClusterDTOResponse struct {
 	Last15DaysCost        float64                  `json:"last15DaysCost"`
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
-}
+} // @name ClusterResponse

@@ -20,7 +20,7 @@ type InstanceDTORequest struct {
 	Age              int                      `json:"age"`
 	Owner            string                   `json:"owner"`
 	Tags             []TagDTORequest          `json:"tags"`
-}
+} // @name InstanceRequest
 
 func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
 	instance := inventory.NewInstance(
@@ -94,7 +94,7 @@ type InstanceDTOResponse struct {
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
 	Tags                  []TagDTOResponse         `json:"tags"`
-}
+} // @name InstanceResponse
 
 func (i *InstanceDTOResponse) ToInventoryInstance() *inventory.Instance {
 	return &inventory.Instance{

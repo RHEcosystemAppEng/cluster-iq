@@ -13,7 +13,7 @@ type AccountDTORequest struct {
 	Provider    inventory.Provider `json:"provider"`
 	LastScanTS  time.Time          `json:"lastScanTS"`
 	CreatedAt   time.Time          `json:"createdAt"`
-}
+} // @name AccountRequest
 
 // TODO: comments
 func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
@@ -60,4 +60,4 @@ type AccountDTOResponse struct {
 	Last15DaysCost        float64            `json:"last15DaysCost"`
 	LastMonthCost         float64            `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64            `json:"currentMonthSoFarCost"`
-}
+} // @name AccountResponse
