@@ -99,7 +99,7 @@ func NewInstanceRepository(db *dbclient.DBClient) InstanceRepository {
 func (r *instanceRepositoryImpl) ListInstances(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error) {
 	var instances []db.InstanceDBResponse
 
-	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullMView, opts, "instance_id", "instance_id"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullMView, opts, "instance_id", "*"); err != nil {
 		return instances, 0, fmt.Errorf("failed to list instances: %w", err)
 	}
 
