@@ -33,6 +33,24 @@ const (
 			enabled = false
 		WHERE id = $1
 	`
+	// InsertAction inserts a new action returning the ID
+	InsertActionsQuery = `
+		INSERT INTO schedule (
+			type,
+			time,
+			operation,
+			target,
+			status,
+			enabled
+		) VALUES (
+			:type,
+			(SELECT now()),
+			:operation,
+			(SELECT id FROM clusters WHERE cluster_id = :target.cluster_id),
+			:status,
+			:enabled
+		) RETURNING id
+	`
 	// InsertScheduledActionQuery inserts new scheduled actions on the DB
 	InsertScheduledActionsQuery = `
 		INSERT INTO schedule (
@@ -69,6 +87,13 @@ const (
 			:enabled
 		)
 	`
+	// UpdateActionQuery updates a single action on the DB
+	UpdateActionQuery = `
+		UPDATE schedule
+		SET
+			status = :status
+		WHERE id = :id
+	`
 )
 
 var _ ActionRepository = (*actionRepositoryImpl)(nil)
@@ -80,7 +105,9 @@ type ActionRepository interface {
 	Enable(ctx context.Context, actionID string) error
 	Disable(ctx context.Context, actionID string) error
 	Create(ctx context.Context, newActions []actions.Action) error
+	CreateAction(ctx context.Context, action actions.Action) (int64, error)
 	Delete(ctx context.Context, actionID string) error
+	Update(ctx context.Context, action actions.Action) error
 }
 
 type actionRepositoryImpl struct {
@@ -194,6 +221,17 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 	return tx.Commit()
 }
 
+// AddEvent inserts a new audit event into the database and returns the event ID.
+func (r *actionRepositoryImpl) CreateAction(ctx context.Context, action actions.Action) (int64, error) {
+	var returnedValue int64
+	returnedValue, err := r.db.InsertWithReturnWithContext(ctx, InsertActionsQuery, action)
+	if err != nil {
+		return -1, err
+	}
+
+	return returnedValue, nil
+}
+
 // Delete removes an actions.ScheduledAction action from the DB based on its ID
 //
 // Parameters:
@@ -213,5 +251,24 @@ func (r *actionRepositoryImpl) Delete(ctx context.Context, actionID string) erro
 	if err := r.db.DeleteWithContext(ctx, ScheduleTable, opts); err != nil {
 		return err
 	}
+	return nil
+}
+
+// Update updates an actions.Action action from the DB based on its ID
+//
+// Parameters:
+//   - An action with an exisiting ID to be updated
+//
+// Returns:
+//   - An error if the delete query fails
+func (r *actionRepositoryImpl) Update(ctx context.Context, action actions.Action) error {
+	if _, err := r.GetByID(ctx, action.GetID()); err != nil {
+		return err
+	}
+
+	if err := r.db.NamedUpdateWithContext(ctx, UpdateActionQuery, action); err != nil {
+		return err
+	}
+
 	return nil
 }

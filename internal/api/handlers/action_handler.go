@@ -256,3 +256,40 @@ func (h *ActionHandler) Delete(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// Update applies partial updates to an existing actions.
+//
+//	@Summary		Update an actions
+//	@Description	Patch an existing actions by ID.
+//	@Tags			Actions
+//	@Accept			json
+//	@Produce		json
+//	@Param			action	body		dto.ActionDTORequest	true	"Partial action payload"
+//	@Success		200		{object}	nil
+//	@Failure		400		{object}	responsetypes.GenericErrorResponse
+//	@Failure		500		{object}	responsetypes.GenericErrorResponse
+//	@Router			/actions/ [patch]
+func (h *ActionHandler) Update(c *gin.Context) {
+	var actionDTO dto.ActionDTORequest
+
+	if err := c.ShouldBindJSON(&actionDTO); err != nil {
+		h.logger.Error("error processing received actions", zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Update(c.Request.Context(), actionDTO.ToModelAction()); err != nil {
+		h.logger.Error("error creating actions", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to create actions: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+		Count:  1,
+		Status: "OK"},
+	)
+}

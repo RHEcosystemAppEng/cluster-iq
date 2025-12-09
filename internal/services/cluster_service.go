@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
@@ -30,7 +31,7 @@ var _ ClusterService = (*clusterServiceImpl)(nil)
 
 type clusterServiceImpl struct {
 	repo                repositories.ClusterRepository
-	agentClient         clients.AgentClient
+	agentClient         *clients.APIGRPCClient
 	agentRequestTimeout time.Duration
 }
 
@@ -40,7 +41,7 @@ type ClusterServiceOptions struct {
 }
 
 // NewClusterService creates a new instance of ClusterService.
-func NewClusterService(repo repositories.ClusterRepository, agentClient clients.AgentClient, opts ClusterServiceOptions) ClusterService {
+func NewClusterService(repo repositories.ClusterRepository, agentClient *clients.APIGRPCClient, opts ClusterServiceOptions) ClusterService {
 	return &clusterServiceImpl{
 		repo:                repo,
 		agentClient:         agentClient,
@@ -74,28 +75,28 @@ func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string) erro
 	if err != nil {
 		return err
 	}
-
 	instances, err := s.repo.GetInstancesOnCluster(ctx, clusterID)
 	if err != nil {
 		return err
 	}
-
 	instanceIDs := make([]string, len(instances))
 	for i, inst := range instances {
 		instanceIDs[i] = inst.InstanceID
 	}
 
-	req := &clients.ClusterStatusChangeRequest{
-		AccountID:       cluster.AccountID,
-		Region:          cluster.Region,
-		ClusterID:       cluster.ClusterID,
-		InstancesIdList: instanceIDs,
-	}
+	description := "triggered by user request"
+	action := actions.NewPowerOnClusterAction(
+		*actions.NewActionTarget(
+			cluster.AccountID,
+			cluster.Region,
+			cluster.ClusterID,
+			instanceIDs,
+		),
+		"cluster-iq-API", // TODO: include username who created this request
+		&description,
+	)
 
-	ctx, cancel := context.WithTimeout(ctx, s.agentRequestTimeout)
-	defer cancel()
-
-	return s.agentClient.PowerOnCluster(ctx, req)
+	return s.agentClient.PowerOnCluster(ctx, action)
 }
 
 // PowerOff sends a request to power off a cluster.
@@ -113,17 +114,19 @@ func (s *clusterServiceImpl) PowerOff(ctx context.Context, clusterID string) err
 		instanceIDs[i] = inst.InstanceID
 	}
 
-	req := &clients.ClusterStatusChangeRequest{
-		AccountID:       cluster.AccountID,
-		Region:          cluster.Region,
-		ClusterID:       cluster.ClusterID,
-		InstancesIdList: instanceIDs,
-	}
+	description := "triggered by user request"
+	action := actions.NewPowerOffClusterAction(
+		*actions.NewActionTarget(
+			cluster.AccountID,
+			cluster.Region,
+			cluster.ClusterID,
+			instanceIDs,
+		),
+		"cluster-iq-API", // TODO: include username who created this request
+		&description,
+	)
 
-	ctx, cancel := context.WithTimeout(ctx, s.agentRequestTimeout)
-	defer cancel()
-
-	return s.agentClient.PowerOffCluster(ctx, req)
+	return s.agentClient.PowerOffCluster(ctx, action)
 }
 
 // Create creates new clusters.

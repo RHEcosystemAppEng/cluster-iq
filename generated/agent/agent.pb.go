@@ -7,10 +7,11 @@
 package agent
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -27,6 +28,8 @@ type PowerOnClusterRequest struct {
 	Region          string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`
 	ClusterId       string                 `protobuf:"bytes,3,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	InstancesIdList []string               `protobuf:"bytes,4,rep,name=instances_id_list,json=instancesIdList,proto3" json:"instances_id_list,omitempty"`
+	Requester       string                 `protobuf:"bytes,5,opt,name=requester,proto3" json:"requester,omitempty"`
+	Description     string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -89,10 +92,24 @@ func (x *PowerOnClusterRequest) GetInstancesIdList() []string {
 	return nil
 }
 
+func (x *PowerOnClusterRequest) GetRequester() string {
+	if x != nil {
+		return x.Requester
+	}
+	return ""
+}
+
+func (x *PowerOnClusterRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 // Message for answering to PowerOnClusterRequests
 type PowerOnClusterResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// if error != 0, there was an error during the action. If error == 0, the request was sucessfully completed
+	// if error != 0, there was an error during the action. If error == 0, the request was successfully completed
 	Error int32 `protobuf:"varint,1,opt,name=error,proto3" json:"error,omitempty"`
 	// message with additional info
 	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
@@ -151,6 +168,8 @@ type PowerOffClusterRequest struct {
 	Region          string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`
 	ClusterId       string                 `protobuf:"bytes,3,opt,name=cluster_id,json=clusterId,proto3" json:"cluster_id,omitempty"`
 	InstancesIdList []string               `protobuf:"bytes,4,rep,name=instances_id_list,json=instancesIdList,proto3" json:"instances_id_list,omitempty"`
+	Requester       string                 `protobuf:"bytes,5,opt,name=requester,proto3" json:"requester,omitempty"`
+	Description     string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -213,10 +232,24 @@ func (x *PowerOffClusterRequest) GetInstancesIdList() []string {
 	return nil
 }
 
+func (x *PowerOffClusterRequest) GetRequester() string {
+	if x != nil {
+		return x.Requester
+	}
+	return ""
+}
+
+func (x *PowerOffClusterRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 // Message for answering to PowerOffClusterRequests
 type PowerOffClusterResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// if error != 0, there was an error during the action. If error == 0, the request was sucessfully completed
+	// if error != 0, there was an error during the action. If error == 0, the request was successfully completed
 	Error int32 `protobuf:"varint,1,opt,name=error,proto3" json:"error,omitempty"`
 	// message with additional info
 	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
