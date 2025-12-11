@@ -7,13 +7,13 @@ import (
 
 // Account defines an infrastructure provider account
 type Account struct {
-	// AccountID is the internal account ID used by its provider. Depending on the provider, it's called different:
+	// AccountID is the internal account ID used by its provider. Depending on the provider, it's named differently:
 	// AWS: AccountID
 	// Azure: SubscriptionID
 	// GCP: ProjectID
 	AccountID string `db:"account_id"`
 
-	// AccountName is the named assinged by the cloud provider to the account, or an alias configured by the user.
+	// AccountName is the name assigned by the cloud provider to the account, or an alias configured by the user.
 	// The account will be identified by the AccountID, not by the AccountName.
 	AccountName string `db:"account_name"`
 
@@ -26,21 +26,28 @@ type Account struct {
 	// CreatedAt is the timestamp when the account was created (from the inventory point of view, not from the provider).
 	CreatedAt time.Time `db:"created_at"`
 
-	// In-memory fields (no saved on DB)
+	// In-memory fields (no saved in the DB)
 	// ===========================================================================
 
 	// Clusters is the list of clusters deployed on this account indexed by ClusterID.
 	Clusters map[string]*Cluster
 
-	// billingEnabled determines if billing stockers are enabled or not for this account when scanning
+	// billingEnabled determines if billing scanners are enabled or not for this account when scanning.
 	billingEnabled bool
 
-	user     string
+	// Account user
+	user string
+
+	// Account password
 	password string
 }
 
 // NewAccount create a new Could Provider account to store its instances.
-func NewAccount(accountID string, accountName string, provider Provider, user string, password string) *Account {
+func NewAccount(accountID string, accountName string, provider Provider, user string, password string) (*Account, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("accountID cannot be empty")
+	}
+
 	return &Account{
 		AccountID:   accountID,
 		AccountName: accountName,
@@ -50,19 +57,21 @@ func NewAccount(accountID string, accountName string, provider Provider, user st
 		CreatedAt:   time.Now(),
 		user:        user,
 		password:    password,
-	}
+	}, nil
 }
 
-func (a Account) User() string {
+// User returns the account's username
+func (a *Account) User() string {
 	return a.user
 }
 
-func (a Account) Password() string {
+// Password returns the account's password
+func (a *Account) Password() string {
 	return a.password
 }
 
 // IsClusterInAccount checks if a cluster is already in the account
-func (a Account) IsClusterInAccount(clusterID string) bool {
+func (a *Account) IsClusterInAccount(clusterID string) bool {
 	_, ok := a.Clusters[clusterID]
 	return ok
 }
@@ -70,7 +79,7 @@ func (a Account) IsClusterInAccount(clusterID string) bool {
 // AddCluster adds a cluster to the stock
 func (a *Account) AddCluster(cluster *Cluster) error {
 	if a.IsClusterInAccount(cluster.ClusterID) {
-		return fmt.Errorf("Cluster '%s[%s]' already exists on Account %s", cluster.ClusterName, cluster.ClusterID, a.AccountName)
+		return fmt.Errorf("cluster '%s[%s]' already exists on Account %s", cluster.ClusterName, cluster.ClusterID, a.AccountName)
 	}
 
 	// Assign reference to owner account
@@ -85,7 +94,7 @@ func (a *Account) AddCluster(cluster *Cluster) error {
 // DeleteCluster checks if the cluster exists in the account, and if so, removes it from the clusters map
 func (a *Account) DeleteCluster(clusterID string) error {
 	if !a.IsClusterInAccount(clusterID) {
-		return fmt.Errorf("failed to delete cluster. Cluster (%s) not found in account", clusterID)
+		return fmt.Errorf("failed to delete cluster: cluster %s not found in account", clusterID)
 	}
 
 	// Removing reference to owner account
@@ -108,7 +117,7 @@ func (a *Account) DisableBilling() {
 }
 
 // IsBillingEnabled returns a boolean value based on if the billing module is enabled or not
-func (a Account) IsBillingEnabled() bool {
+func (a *Account) IsBillingEnabled() bool {
 	return a.billingEnabled
 }
 

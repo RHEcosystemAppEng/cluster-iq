@@ -125,14 +125,18 @@ func (e *ExecutorAgentService) createExecutors() error {
 		switch account.Provider {
 		case inventory.AWSProvider: // AWS
 			e.logger.Info("Creating Executor for AWS account", zap.String("account_name", account.Name))
+			account, err := inventory.NewAccount(account.ID, account.Name, account.Provider, account.User, account.Key)
+			if err != nil {
+				return err
+			}
 			exec := cexec.NewAWSExecutor(
-				inventory.NewAccount("", account.ID, account.Provider, account.User, account.Key),
+				account,
 				e.actionsChannel,
 				logger,
 			)
-			err := e.AddExecutor(exec)
+			err = e.AddExecutor(exec)
 			if err != nil {
-				e.logger.Error("Cannot create an AWSEexecutor for account", zap.String("account_name", account.Name), zap.Error(err))
+				e.logger.Error("Cannot create an AWSEexecutor for account", zap.String("account_name", account.AccountName), zap.Error(err))
 				return err
 			}
 

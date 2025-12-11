@@ -17,13 +17,16 @@ type AccountDTORequest struct {
 
 // TODO: comments
 func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
-	account := inventory.NewAccount(
+	account, err := inventory.NewAccount(
 		a.AccountID,
 		a.AccountName,
 		a.Provider,
 		"",
 		"",
 	)
+	if err != nil {
+		return nil
+	}
 
 	account.LastScanTS = a.LastScanTS
 	return account
