@@ -1,8 +1,14 @@
 package inventory
 
 import (
+	"errors"
 	"fmt"
 	"time"
+)
+
+const (
+	// Error when creating an account wihout ID
+	ErrorMissingAccountIDCreation = "error creating account: missing Account ID"
 )
 
 // Account defines an infrastructure provider account
@@ -45,7 +51,7 @@ type Account struct {
 // NewAccount create a new Could Provider account to store its instances.
 func NewAccount(accountID string, accountName string, provider Provider, user string, password string) (*Account, error) {
 	if accountID == "" {
-		return nil, fmt.Errorf("accountID cannot be empty")
+		return nil, errors.New(ErrorMissingAccountIDCreation)
 	}
 
 	return &Account{

@@ -8,11 +8,11 @@ import (
 
 // TestNewAccount verifies the Account creation.
 func TestNewAccount(t *testing.T) {
-	t.Run("Create Account", func(t *testing.T) { testCreateAccount(t) })
-	t.Run("Create Account without accountID", func(t *testing.T) { testCreateAccountWithoutAccountID(t) })
+	t.Run("New Account", func(t *testing.T) { testNewAccount(t) })
+	t.Run("New Account without accountID", func(t *testing.T) { testNewAccountWithoutAccountID(t) })
 }
 
-func testCreateAccount(t *testing.T) {
+func testNewAccount(t *testing.T) {
 	accountID := "0000-11A"
 	accountName := "testAccount"
 	provider := AWSProvider
@@ -36,7 +36,7 @@ func testCreateAccount(t *testing.T) {
 	assert.NotZero(t, account.CreatedAt)
 }
 
-func testCreateAccountWithoutAccountID(t *testing.T) {
+func testNewAccountWithoutAccountID(t *testing.T) {
 	accountID := ""
 	accountName := "testAccount"
 	provider := AWSProvider
@@ -157,7 +157,7 @@ func testDeleteMissingCluster(t *testing.T) {
 }
 
 // TestEnableBilling verifies that EnableBilling sets billingEnabled to true.
-func TestEnableBilling(t *testing.T) {
+func TestBillingFlag(t *testing.T) {
 	t.Run("Enable Billing", func(t *testing.T) { testEnableBilling(t) })
 	t.Run("Disable Billing", func(t *testing.T) { testDisableBilling(t) })
 }
