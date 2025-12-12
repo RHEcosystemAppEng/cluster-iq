@@ -6,9 +6,13 @@ import (
 	"time"
 )
 
-const (
+var (
 	// Error when creating an account wihout ID
-	ErrorMissingAccountIDCreation = "error creating account: missing Account ID"
+	errorMissingAccountIDCreation = errors.New("cannot to create an Account without AccountID")
+	// Error when adding a cluster that already belongs to the account
+	errorAddingClusterToAccount = errors.New("cannot add cluster to account")
+	// Error when deleting a cluster that doesn't belong to the account
+	errorDeletingClusterFromAccount = errors.New("cannot delete cluster from account")
 )
 
 // Account defines an infrastructure provider account
@@ -51,7 +55,7 @@ type Account struct {
 // NewAccount create a new Could Provider account to store its instances.
 func NewAccount(accountID string, accountName string, provider Provider, user string, password string) (*Account, error) {
 	if accountID == "" {
-		return nil, errors.New(ErrorMissingAccountIDCreation)
+		return nil, fmt.Errorf("%w: accountName: %s", errorMissingAccountIDCreation, accountName)
 	}
 
 	return &Account{
@@ -85,7 +89,7 @@ func (a *Account) IsClusterInAccount(clusterID string) bool {
 // AddCluster adds a cluster to the stock
 func (a *Account) AddCluster(cluster *Cluster) error {
 	if a.IsClusterInAccount(cluster.ClusterID) {
-		return fmt.Errorf("cluster '%s[%s]' already exists on Account %s", cluster.ClusterName, cluster.ClusterID, a.AccountName)
+		return fmt.Errorf("%w: Cluster %s already exists in Account %s", errorAddingClusterToAccount, cluster.ClusterID, a.AccountID)
 	}
 
 	// Assign reference to owner account
@@ -100,7 +104,7 @@ func (a *Account) AddCluster(cluster *Cluster) error {
 // DeleteCluster checks if the cluster exists in the account, and if so, removes it from the clusters map
 func (a *Account) DeleteCluster(clusterID string) error {
 	if !a.IsClusterInAccount(clusterID) {
-		return fmt.Errorf("failed to delete cluster: cluster %s not found in account", clusterID)
+		return fmt.Errorf("%w: Cluster %s doesn't exists in Account %s", errorDeletingClusterFromAccount, clusterID, a.AccountID)
 	}
 
 	// Removing reference to owner account

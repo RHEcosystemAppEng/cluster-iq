@@ -86,7 +86,8 @@ func testAddCluster(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
 
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	cluster, err := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	assert.Nil(t, err)
 	assert.NotNil(t, cluster)
 
 	// Adding cluster
@@ -102,7 +103,8 @@ func testAddRepeatedCluster(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
 
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	cluster, err := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	assert.Nil(t, err)
 	assert.NotNil(t, cluster)
 
 	// Adding cluster
@@ -129,7 +131,8 @@ func testDeleteCluster(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
 
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	cluster, err := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	assert.Nil(t, err)
 	assert.NotNil(t, cluster)
 
 	// Adding cluster before removing
@@ -148,7 +151,8 @@ func testDeleteMissingCluster(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
 
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	cluster, err := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	assert.Nil(t, err)
 	assert.NotNil(t, cluster)
 
 	// Adding cluster again
@@ -184,25 +188,46 @@ func testDisableBilling(t *testing.T) {
 
 // TestIsBillingEnabled verifies that IsBillingEnabled returns the correct boolean value.
 func TestIsBillingEnabled(t *testing.T) {
-	t.Run("isBillingEnabled", func(t *testing.T) { testIsBillingEnabled(t) })
+	t.Run("isBillingEnabled True", func(t *testing.T) { testIsBillingEnabled_True(t) })
+	t.Run("isBillingEnabled False", func(t *testing.T) { testIsBillingEnabled_False(t) })
 }
 
-func testIsBillingEnabled(t *testing.T) {
+func testIsBillingEnabled_True(t *testing.T) {
+	account := Account{}
+
+	account.billingEnabled = true
+	assert.True(t, account.IsBillingEnabled())
+
+}
+
+func testIsBillingEnabled_False(t *testing.T) {
 	account := Account{}
 
 	account.billingEnabled = false
-	assert.Equal(t, account.billingEnabled, account.IsBillingEnabled())
-
-	account.billingEnabled = true
-	assert.Equal(t, account.billingEnabled, account.IsBillingEnabled())
-
+	assert.False(t, account.billingEnabled, account.IsBillingEnabled())
 }
 
 func TestPrintAccount(t *testing.T) {
-	account, _ := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
-	account.PrintAccount()
+	t.Run("Print Account ", func(t *testing.T) { testPrintAccount(t) })
+	t.Run("Print Account No clusters", func(t *testing.T) { testPrintAccount_NoClusters(t) })
+}
 
-	cluster := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+func testPrintAccount_NoClusters(t *testing.T) {
+	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
+	assert.Nil(t, err)
+	assert.NotNil(t, account)
+
+	account.PrintAccount()
+}
+
+func testPrintAccount(t *testing.T) {
+	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
+	assert.Nil(t, err)
+	assert.NotNil(t, account)
+
+	cluster, err := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
+	assert.Nil(t, err)
 	account.AddCluster(cluster)
+
 	account.PrintAccount()
 }
