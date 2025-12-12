@@ -95,13 +95,17 @@ func (s *Scanner) readCloudProviderAccounts() error {
 
 	// Read INI file content.
 	for _, accountConfig := range accountConfigs {
-		newAccount := inventory.NewAccount(
+		newAccount, err := inventory.NewAccount(
 			accountConfig.ID,
 			accountConfig.Name,
 			accountConfig.Provider,
 			accountConfig.User,
 			accountConfig.Key,
 		)
+		if err != nil {
+			return err
+		}
+
 		// Getting billing enabled flag from config
 		if accountConfig.BillingEnabled {
 			newAccount.EnableBilling()

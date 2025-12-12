@@ -17,7 +17,7 @@ type GCPStocker struct {
 // NewGCPStocker create and returns a pointer to a new GCPStocker instance
 func NewGCPStocker(account inventory.Account, logger *zap.Logger) *GCPStocker {
 	st := GCPStocker{region: "default", logger: logger}
-	st.Account = *inventory.NewAccount(account.AccountID, account.AccountName, inventory.GCPProvider, account.User(), account.Password())
+	st.Account = account
 	return &st
 }
 
