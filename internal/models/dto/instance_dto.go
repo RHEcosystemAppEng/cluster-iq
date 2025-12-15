@@ -23,7 +23,7 @@ type InstanceDTORequest struct {
 }
 
 func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
-	instance := inventory.NewInstance(
+	instance, err := inventory.NewInstance(
 		i.InstanceID,
 		i.InstanceName,
 		i.Provider,
@@ -33,6 +33,10 @@ func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
 		*ToInventoryTagList(i.Tags),
 		i.CreatedAt,
 	)
+	if err != nil {
+		// TODO: Propagate error
+		return nil
+	}
 
 	instance.LastScanTS = i.LastScanTS
 	instance.ClusterID = i.ClusterID

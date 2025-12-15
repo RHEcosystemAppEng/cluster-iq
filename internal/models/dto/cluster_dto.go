@@ -23,7 +23,7 @@ type ClusterDTORequest struct {
 }
 
 func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
-	cluster := inventory.NewCluster(
+	cluster, err := inventory.NewCluster(
 		c.ClusterName,
 		c.InfraID,
 		c.Provider,
@@ -31,6 +31,10 @@ func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 		c.ConsoleLink,
 		c.Owner,
 	)
+	if err != nil {
+		// TODO: Propagate error
+		return nil
+	}
 
 	cluster.LastScanTS = c.LastScanTS
 	cluster.CreatedAt = c.CreatedAt

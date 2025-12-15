@@ -25,6 +25,7 @@ func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
 		"",
 	)
 	if err != nil {
+		// TODO: Propagate error
 		return nil
 	}
 

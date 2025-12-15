@@ -212,7 +212,11 @@ func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
 	var instances []inventory.Instance
 	for _, reser := range reservations {
 		for _, instance := range reser.Instances {
-			instances = append(instances, *EC2InstanceToInventoryInstance(instance))
+			// TODO: Should the loop break in case or error, or continue?
+			newInstance, err := EC2InstanceToInventoryInstance(instance)
+			if err == nil {
+				instances = append(instances, *newInstance)
+			}
 		}
 	}
 
@@ -220,7 +224,7 @@ func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
 }
 
 // EC2InstanceToInventoryInstance converts an EC2.instance into an inventory.Instance
-func EC2InstanceToInventoryInstance(ec2instance *ec2.Instance) *inventory.Instance {
+func EC2InstanceToInventoryInstance(ec2instance *ec2.Instance) (*inventory.Instance, error) {
 	// Getting Instance properties
 	id := *ec2instance.InstanceId
 	tags := ConvertEC2TagtoTag(ec2instance.Tags, id)
@@ -230,7 +234,7 @@ func EC2InstanceToInventoryInstance(ec2instance *ec2.Instance) *inventory.Instan
 	status := inventory.AsResourceStatus(*ec2instance.State.Name)
 	creationTimestamp := getInstanceCreationTimestamp(*ec2instance)
 
-	instance := inventory.NewInstance(
+	instance, err := inventory.NewInstance(
 		id,
 		name,
 		inventory.AWSProvider,
@@ -240,8 +244,11 @@ func EC2InstanceToInventoryInstance(ec2instance *ec2.Instance) *inventory.Instan
 		tags,
 		creationTimestamp,
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	return instance
+	return instance, nil
 }
 
 // getInstanceCreationTimestamp retrieves the creation timestamp of an EC2 instance.
