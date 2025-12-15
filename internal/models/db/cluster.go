@@ -40,6 +40,7 @@ func (c ClusterDBResponse) ToClusterDTOResponse() *dto.ClusterDTOResponse {
 		Status:                c.Status,
 		Region:                c.Region,
 		AccountID:             c.AccountID,
+		AccountName:           c.AccountName,
 		ConsoleLink:           c.ConsoleLink,
 		InstanceCount:         c.InstanceCount,
 		LastScanTimestamp:     c.LastScanTimestamp,

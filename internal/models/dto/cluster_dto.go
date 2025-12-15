@@ -84,6 +84,7 @@ type ClusterDTOResponse struct {
 	Status                inventory.ResourceStatus `json:"status"`
 	Region                string                   `json:"region"`
 	AccountID             string                   `json:"accountId"`
+	AccountName           string                   `json:"accountName"`
 	ConsoleLink           string                   `json:"consoleLink"`
 	InstanceCount         int                      `json:"instanceCount"`
 	LastScanTimestamp     time.Time                `json:"lastScanTimestamp"`
