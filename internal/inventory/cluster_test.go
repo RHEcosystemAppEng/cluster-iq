@@ -9,12 +9,12 @@ import (
 
 // TestNewCluster tests creation of a new Cluster using NewCluster
 func TestNewCluster(t *testing.T) {
-	t.Run("New Cluster", func(t *testing.T) { testNewCluster(t) })
+	t.Run("New Cluster", func(t *testing.T) { testNewCluster_Correct(t) })
 	t.Run("New Cluster without ClusterName", func(t *testing.T) { testNewCluster_WithoutClusterName(t) })
 	t.Run("New Cluster without InfraID", func(t *testing.T) { testNewCluster_WithoutInfraID(t) })
 }
 
-func testNewCluster(t *testing.T) {
+func testNewCluster_Correct(t *testing.T) {
 	name := "testCluster"
 	infraID := "ABCDEF0123"
 	provider := AWSProvider
@@ -130,11 +130,11 @@ func testIsClusterRunning_Terminated(t *testing.T) {
 
 // TestUpdate tests the Update function including Age and Status updates
 func TestUpdate(t *testing.T) {
-	t.Run("UpdateAge", func(t *testing.T) { testUpdate(t) })
+	t.Run("UpdateAge", func(t *testing.T) { testUpdate_Correct(t) })
 	t.Run("UpdateAge Lower New Age", func(t *testing.T) { testUpdate_NewerAge(t) })
 }
 
-func testUpdate(t *testing.T) {
+func testUpdate_Correct(t *testing.T) {
 	cluster, err := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "https://console", "user")
 	assert.NotNil(t, cluster)
 	assert.Nil(t, err)
@@ -163,11 +163,11 @@ func testUpdate_NewerAge(t *testing.T) {
 
 // TestUpdateAge tests UpdateAge function
 func TestUpdateAge(t *testing.T) {
-	t.Run("UpdateAge", func(t *testing.T) { testUpdateAge(t) })
+	t.Run("UpdateAge", func(t *testing.T) { testUpdateAge_Correct(t) })
 	t.Run("UpdateAge Lower New Age", func(t *testing.T) { testUpdateAge_NewerAge(t) })
 }
 
-func testUpdateAge(t *testing.T) {
+func testUpdateAge_Correct(t *testing.T) {
 	cluster, err := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "https://console", "user")
 	assert.NotNil(t, cluster)
 	assert.Nil(t, err)
@@ -262,10 +262,10 @@ func testUpdateStatus_NoInstancesRunning(t *testing.T) {
 
 // TestAddInstance tests the AddInstance function including repeated instances
 func TestAddInstance(t *testing.T) {
-	t.Run("Add Instance", func(t *testing.T) { testAddInstance(t) })
+	t.Run("Add Instance", func(t *testing.T) { testAddInstance_Correct(t) })
 	t.Run("Add Instance twice", func(t *testing.T) { testAddInstance_Twice(t) })
 }
-func testAddInstance(t *testing.T) {
+func testAddInstance_Correct(t *testing.T) {
 	cluster, err := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "https://console", "user")
 	assert.Nil(t, err)
 	assert.NotNil(t, cluster)
@@ -304,11 +304,11 @@ func testAddInstance_Twice(t *testing.T) {
 
 // TestDeleteInstance tests the DeleteInstance function including missing instances
 func TestDeleteInstance(t *testing.T) {
-	t.Run("Delete Instance", func(t *testing.T) { testDeleteInstance(t) })
+	t.Run("Delete Instance", func(t *testing.T) { testDeleteInstance_Correct(t) })
 	t.Run("Delete missing Instance", func(t *testing.T) { testDeleteInstance_MissingInstance(t) })
 }
 
-func testDeleteInstance(t *testing.T) {
+func testDeleteInstance_Correct(t *testing.T) {
 	cluster, err := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "https://console", "user")
 	assert.NotNil(t, cluster)
 	assert.Nil(t, err)

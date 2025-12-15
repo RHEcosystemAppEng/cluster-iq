@@ -8,56 +8,121 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: Group by function and test
-// TODO: Include Asserts
-
 // TestNewInstance verifies that NewInstance returns a correctly initialized instance
 func TestNewInstance(t *testing.T) {
-	id := "0000-11A"
-	name := "testAccount"
-	var provider Provider = UnknownProvider
-	instanceType := "t2.micro"
-	availabilityZone := "us-west-1a"
-	status := Terminated
-	clusterID := "testCluster"
-	tags := []Tag{}
-	expenses := []Expense{}
-	createdAt := time.Now()
-
-	expectedInstance := &Instance{
-		InstanceID:       id,
-		InstanceName:     name,
-		Provider:         provider,
-		InstanceType:     instanceType,
-		AvailabilityZone: availabilityZone,
-		Status:           status,
-		ClusterID:        clusterID,
-		LastScanTS:       createdAt,
-		CreatedAt:        createdAt,
-		Tags:             tags,
-		Expenses:         expenses,
-	}
-
-	actualInstance := NewInstance(id, name, provider, instanceType, availabilityZone, status, tags, createdAt)
-
-	assert.NotNil(t, actualInstance)
-	assert.Zero(t, actualInstance.LastScanTS)
-
-	expectedInstance.ClusterID = actualInstance.ClusterID
-	expectedInstance.Age = actualInstance.Age
-	expectedInstance.LastScanTS = actualInstance.LastScanTS
-	expectedInstance.CreatedAt = actualInstance.CreatedAt
-	assert.Equal(t, expectedInstance, actualInstance)
+	t.Run("New Instance", func(t *testing.T) { testNewInstance_Correct(t) })
+	t.Run("New Instance without InstanceID", func(t *testing.T) { testNewInstance_WithoutInstanceID(t) })
 }
 
-// TestAddTag verifies that a new tag is appended to the tag list
+func testNewInstance_Correct(t *testing.T) {
+	id := "id-012345X"
+	name := "test-instance"
+	provider := AWSProvider
+	instanceType := "vm.small"
+	az := "north-eu-1"
+	status := Running
+	tags := []Tag{}
+	tz := time.Now()
+
+	instance, err := NewInstance(id, name, provider, instanceType, az, status, tags, tz)
+
+	// Basic check
+	assert.Nil(t, err)
+	assert.NotNil(t, instance)
+
+	// Parameters Check
+	assert.Equal(t, instance.InstanceID, id)
+	assert.Equal(t, instance.InstanceName, name)
+	assert.Equal(t, instance.Provider, provider)
+	assert.Equal(t, instance.InstanceType, instanceType)
+	assert.Equal(t, instance.AvailabilityZone, az)
+	assert.Equal(t, instance.Status, status)
+	assert.Equal(t, instance.ClusterID, "")
+	assert.NotZero(t, instance.LastScanTS)
+	assert.Equal(t, instance.CreatedAt, tz)
+	assert.Equal(t, instance.Age, 1)
+	assert.Equal(t, instance.Tags, tags)
+	assert.NotNil(t, instance.Expenses)
+}
+
+func testNewInstance_WithoutInstanceID(t *testing.T) {
+	id := ""
+	name := "test-instance"
+	provider := AWSProvider
+	instanceType := "vm.small"
+	az := "north-eu-1"
+	status := Running
+	tags := []Tag{}
+	tz := time.Now()
+
+	instance, err := NewInstance(id, name, provider, instanceType, az, status, tags, tz)
+
+	// Basic check
+	assert.Nil(t, instance)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, ErrMissingInstanceIDCreation.Error())
+}
+
+// TestAddTag tests the tag adding operation to an Instance
 func TestAddTag(t *testing.T) {
+	t.Run("Adding Tag", func(t *testing.T) { testAddTag_Correct(t) })
+	t.Run("Adding Keyless Tag", func(t *testing.T) { testAddTag_WithoutKey(t) })
+}
+
+func testAddTag_Correct(t *testing.T) {
 	i := Instance{}
 	tag := Tag{Key: "env", Value: "prod"}
-	i.AddTag(tag)
-	if len(i.Tags) != 1 || i.Tags[0] != tag {
-		t.Errorf("tag was not added correctly")
-	}
+
+	assert.Zero(t, len(i.Tags))
+
+	err := i.AddTag(tag)
+	assert.Nil(t, err)
+
+	assert.Equal(t, len(i.Tags), 1)
+	assert.Contains(t, i.Tags, tag)
+}
+
+func testAddTag_WithoutKey(t *testing.T) {
+	i := Instance{}
+	tag := Tag{Key: "", Value: "value"}
+
+	assert.Zero(t, len(i.Tags))
+
+	err := i.AddTag(tag)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, ErrAddingTagWithoutKey.Error())
+	assert.Zero(t, len(i.Tags))
+}
+
+// TestAddExpense tests the Expense adding operation to an Instance
+func TestAddExpense(t *testing.T) {
+	t.Run("Adding Expense", func(t *testing.T) { testAddExpense_Correct(t) })
+	t.Run("Adding Expense with negative amount", func(t *testing.T) { testAddExpense_WithNegativeAmount(t) })
+}
+
+func testAddExpense_Correct(t *testing.T) {
+	i := Instance{InstanceID: "id-012345X"}
+	expense := Expense{InstanceID: "id-00000X", Amount: 2.4, Date: time.Now()}
+
+	assert.Zero(t, len(i.Expenses))
+
+	err := i.AddExpense(&expense)
+	assert.Nil(t, err)
+
+	assert.Equal(t, len(i.Expenses), 1)
+	assert.Contains(t, i.Expenses, expense)
+}
+
+func testAddExpense_WithNegativeAmount(t *testing.T) {
+	i := Instance{InstanceID: "id-012345X"}
+	expense := Expense{InstanceID: "id-00000X", Amount: -2.4, Date: time.Now()}
+
+	assert.Zero(t, len(i.Expenses))
+
+	err := i.AddExpense(&expense)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, ErrAddingExpenseWithWrongAmount.Error())
+	assert.Zero(t, len(i.Tags))
 }
 
 // TestInstance_String verifies String method returns expected format

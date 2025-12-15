@@ -8,11 +8,11 @@ import (
 
 // TestNewAccount verifies the Account creation.
 func TestNewAccount(t *testing.T) {
-	t.Run("New Account", func(t *testing.T) { testNewAccount(t) })
+	t.Run("New Account", func(t *testing.T) { testNewAccount_Correct(t) })
 	t.Run("New Account without accountID", func(t *testing.T) { testNewAccountWithoutAccountID(t) })
 }
 
-func testNewAccount(t *testing.T) {
+func testNewAccount_Correct(t *testing.T) {
 	accountID := "0000-11A"
 	accountName := "testAccount"
 	provider := AWSProvider
@@ -77,11 +77,11 @@ func testPassword(t *testing.T) {
 
 // TestAddCluster for inventory.Account.AddCluster
 func TestAddCluster(t *testing.T) {
-	t.Run("Add Cluster", func(t *testing.T) { testAddCluster(t) })
-	t.Run("Add repeated Cluster", func(t *testing.T) { testAddRepeatedCluster(t) })
+	t.Run("Add Cluster", func(t *testing.T) { testAddCluster_Correct(t) })
+	t.Run("Add repeated Cluster", func(t *testing.T) { testAddCluster_Repeated(t) })
 }
 
-func testAddCluster(t *testing.T) {
+func testAddCluster_Correct(t *testing.T) {
 	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
@@ -98,7 +98,7 @@ func testAddCluster(t *testing.T) {
 	assert.Equal(t, len(account.Clusters), 1)
 }
 
-func testAddRepeatedCluster(t *testing.T) {
+func testAddCluster_Repeated(t *testing.T) {
 	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
@@ -122,11 +122,11 @@ func testAddRepeatedCluster(t *testing.T) {
 
 // TestDeleteCluster for inventory.Account.AddCluster
 func TestDeleteCluster(t *testing.T) {
-	t.Run("Delete Cluster", func(t *testing.T) { testDeleteCluster(t) })
-	t.Run("Delete missing Cluster", func(t *testing.T) { testDeleteMissingCluster(t) })
+	t.Run("Delete Cluster", func(t *testing.T) { testDeleteCluster_Correct(t) })
+	t.Run("Delete missing Cluster", func(t *testing.T) { testDeleteCluster_MissingCluster(t) })
 }
 
-func testDeleteCluster(t *testing.T) {
+func testDeleteCluster_Correct(t *testing.T) {
 	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
@@ -146,7 +146,7 @@ func testDeleteCluster(t *testing.T) {
 	assert.Equal(t, len(account.Clusters), 0)
 }
 
-func testDeleteMissingCluster(t *testing.T) {
+func testDeleteCluster_MissingCluster(t *testing.T) {
 	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
@@ -208,19 +208,11 @@ func testIsBillingEnabled_False(t *testing.T) {
 }
 
 func TestPrintAccount(t *testing.T) {
-	t.Run("Print Account ", func(t *testing.T) { testPrintAccount(t) })
+	t.Run("Print Account ", func(t *testing.T) { testPrintAccount_Correct(t) })
 	t.Run("Print Account No clusters", func(t *testing.T) { testPrintAccount_NoClusters(t) })
 }
 
-func testPrintAccount_NoClusters(t *testing.T) {
-	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
-	assert.Nil(t, err)
-	assert.NotNil(t, account)
-
-	account.PrintAccount()
-}
-
-func testPrintAccount(t *testing.T) {
+func testPrintAccount_Correct(t *testing.T) {
 	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
 	assert.Nil(t, err)
 	assert.NotNil(t, account)
@@ -228,6 +220,14 @@ func testPrintAccount(t *testing.T) {
 	cluster, err := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
 	assert.Nil(t, err)
 	account.AddCluster(cluster)
+
+	account.PrintAccount()
+}
+
+func testPrintAccount_NoClusters(t *testing.T) {
+	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
+	assert.Nil(t, err)
+	assert.NotNil(t, account)
 
 	account.PrintAccount()
 }

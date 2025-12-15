@@ -8,9 +8,18 @@ import (
 
 // Errors for Instances
 var (
-	ErrInstanceTotalCostLessZero = errors.New("TotalCost of an instance cannot be less than zero")
-	ErrInstanceDailyCostLessZero = errors.New("DailyCost of an instance cannot be less than zero")
-	ErrInstanceAgeLessZero       = errors.New("cannot recalculate costs if instance's age is 0")
+	// Error when creating a new Instance without an InstanceID
+	ErrMissingInstanceIDCreation = errors.New("cannot create an Instance without InstanceID")
+	// Error when the total cost of an instance is less than 0
+	ErrInstanceTotalCostLessZero = errors.New("total cost of an instance cannot be less than 0.0")
+	// Error when the instance daily cost is less than 0
+	ErrInstanceDailyCostLessZero = errors.New("daily cost of an instance cannot be less than 0.0")
+	// Error when the calculated Age for an instance is less than 0
+	ErrInstanceAgeLessZero = errors.New("instance age cannot be less than 0")
+	// Error when adding a tag without Key to an Instance
+	ErrAddingTagWithoutKey = errors.New("cannot add keyless tags")
+	// Error when adding expenses without a valid amount to an instance
+	ErrAddingExpenseWithWrongAmount = errors.New("cannot add an expense with negative amount")
 )
 
 // Instance model a cloud provider instance
@@ -56,7 +65,11 @@ type Instance struct {
 }
 
 // NewInstance returns a new Instance object
-func NewInstance(instanceID string, instanceName string, provider Provider, instanceType string, availabilityZone string, status ResourceStatus, tags []Tag, creationTimestamp time.Time) *Instance {
+func NewInstance(instanceID string, instanceName string, provider Provider, instanceType string, availabilityZone string, status ResourceStatus, tags []Tag, creationTimestamp time.Time) (*Instance, error) {
+	if instanceID == "" {
+		return nil, ErrMissingInstanceIDCreation
+	}
+
 	now := time.Now()
 	age := calculateAge(creationTimestamp, now)
 
@@ -73,16 +86,29 @@ func NewInstance(instanceID string, instanceName string, provider Provider, inst
 		Age:              age,
 		Tags:             tags,
 		Expenses:         make([]Expense, 0),
-	}
+	}, nil
 }
 
 // AddTag adds a tag to an instance
-func (i *Instance) AddTag(tag Tag) {
+func (i *Instance) AddTag(tag Tag) error {
+	if tag.Key == "" {
+		return ErrAddingTagWithoutKey
+	}
 	i.Tags = append(i.Tags, tag)
+
+	return nil
 }
 
-func (i *Instance) AddExpense(expense Expense) {
-	i.Expenses = append(i.Expenses, expense)
+func (i *Instance) AddExpense(expense *Expense) error {
+	if expense.Amount < 0 {
+		return ErrAddingExpenseWithWrongAmount
+	}
+
+	// Asigning the new instanceID and adding to the list
+	expense.InstanceID = i.InstanceID
+	i.Expenses = append(i.Expenses, *expense)
+
+	return nil
 }
 
 // String as ToString func
