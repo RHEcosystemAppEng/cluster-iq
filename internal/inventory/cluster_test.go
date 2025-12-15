@@ -94,7 +94,7 @@ func testIsClusterStopped_Terminated(t *testing.T) {
 	assert.False(t, cluster.IsClusterStopped())
 }
 
-// TestIsClusterStopped tests the IsClusterRunning function
+// TestIsClusterRunning tests the IsClusterRunning function
 func TestIsClusterRunning(t *testing.T) {
 	t.Run("Cluster Running", func(t *testing.T) { testIsClusterRunning_Running(t) })
 	t.Run("Cluster Stopped", func(t *testing.T) { testIsClusterRunning_Stopped(t) })
@@ -351,7 +351,7 @@ func TestGenerateClusterID(t *testing.T) {
 	assert.Equal(t, "test-infra", generateClusterID("test", "infra"))
 }
 
-// TestGenerateClusterID tests PrintCluster function for 100% coverage
+// TestPrintCluster tests PrintCluster function for 100% coverage
 func TestPrintCluster(t *testing.T) {
 	c, _ := NewCluster("name", "infra", AWSProvider, "region", "link", "owner")
 	c.PrintCluster()

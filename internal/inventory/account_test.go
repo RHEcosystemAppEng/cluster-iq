@@ -62,7 +62,7 @@ func testUser(t *testing.T) {
 	assert.Equal(t, account.user, account.User())
 }
 
-// TestUser verifies the Password returned by the getter function
+// TestPassword verifies the Password returned by the getter function
 func TestPassword(t *testing.T) {
 	t.Run("Password", func(t *testing.T) { testPassword(t) })
 }
