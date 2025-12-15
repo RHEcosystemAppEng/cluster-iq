@@ -6,83 +6,87 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	accountName = "Test-Account"
-	userName    = "John Doe"
-	password    = "secret"
-)
-
-// TODO: Group by function and test
-// TODO: Include Asserts
-// TODO: Comments
-
 func TestNewInventory(t *testing.T) {
-	accounts := make(map[string]*Account)
+	t.Run("Correct", func(t *testing.T) { testNewInventory_Correct(t) })
+}
 
-	expectedInventory := &Inventory{
-		Accounts: accounts,
-	}
+func testNewInventory_Correct(t *testing.T) {
+	inv := NewInventory()
 
-	actualInventory := NewInventory()
-	assert.NotNil(t, actualInventory)
-
-	expectedInventory.CreatedAt = actualInventory.CreatedAt
-	assert.Equal(t, expectedInventory, actualInventory)
+	assert.NotNil(t, inv)
+	assert.NotNil(t, inv.Accounts)
+	assert.NotZero(t, inv.CreatedAt)
 }
 
 func TestIsAccountOnInventory(t *testing.T) {
+	t.Run("Yes", func(t *testing.T) { testIsAccountOnInventory_Yes(t) })
+	t.Run("No", func(t *testing.T) { testIsAccountOnInventory_No(t) })
+}
+
+func testIsAccountOnInventory_Yes(t *testing.T) {
 	inv := *NewInventory()
 	account := Account{
-		AccountName: accountName,
-		Provider:    UnknownProvider,
-		Clusters:    make(map[string]*Cluster),
-		user:        userName,
-		password:    password,
+		AccountID:   "id-account",
+		AccountName: "testAccount",
 	}
 
-	inv.AddAccount(&account)
+	err := inv.AddAccount(&account)
+	assert.Nil(t, err)
 
-	// Lookup an existing Account
-	if !inv.IsAccountInInventory(account) {
-		t.Errorf("Can't found existing account. Account: %v", account.AccountName)
+	assert.True(t, inv.IsAccountInInventory(account))
+}
+
+func testIsAccountOnInventory_No(t *testing.T) {
+	inv := *NewInventory()
+	account := Account{
+		AccountID:   "id-account",
+		AccountName: "testAccount",
 	}
+
+	assert.False(t, inv.IsAccountInInventory(account))
 }
 
 func TestAddAccount(t *testing.T) {
-	var err error
-	inv := NewInventory()
-	acc := Account{
-		AccountName: accountName,
-		Provider:    UnknownProvider,
-		Clusters:    make(map[string]*Cluster),
-		user:        userName,
-		password:    password,
+	t.Run("Add Account", func(t *testing.T) { testAddAccount_Correct(t) })
+	t.Run("Add repeated Account", func(t *testing.T) { testAddAccount_Repeated(t) })
+}
+
+func testAddAccount_Correct(t *testing.T) {
+	inv := *NewInventory()
+	account := Account{
+		AccountID:   "id-account",
+		AccountName: "testAccount",
 	}
 
-	// Normal Account Add
-	err = inv.AddAccount(&acc)
-	if err != nil {
-		t.Error("Can't add Account to Inventory", err)
+	err := inv.AddAccount(&account)
+	assert.Nil(t, err)
+	assert.Equal(t, len(inv.Accounts), 1)
+	assert.Equal(t, *(inv.Accounts[account.AccountID]), account)
+}
+
+func testAddAccount_Repeated(t *testing.T) {
+	inv := *NewInventory()
+	account := Account{
+		AccountID:   "id-account",
+		AccountName: "testAccount",
 	}
 
-	// Repeated Account Add
-	err = inv.AddAccount(&acc)
-	if err == nil {
-		t.Error("Duplicated insertion didn't return any error")
-	}
+	err := inv.AddAccount(&account)
+	assert.Nil(t, err)
+
+	err = inv.AddAccount(&account)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, ErrorAddingAccountToInventory.Error())
 }
 
 func TestPrintInventory(t *testing.T) {
 	inv := NewInventory()
 	acc := Account{
-		AccountName: accountName,
+		AccountID:   "id-account",
+		AccountName: "testAccount",
 		Provider:    UnknownProvider,
-		Clusters:    make(map[string]*Cluster),
-		user:        userName,
-		password:    password,
 	}
 
-	// Normal Account Add
 	inv.AddAccount(&acc)
 
 	inv.PrintInventory()
