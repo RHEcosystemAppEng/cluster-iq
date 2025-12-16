@@ -84,6 +84,12 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 				return nil, err
 			}
 			resultActions = append(resultActions, a)
+		case InstantActionType:
+			var a InstantAction
+			if err := json.Unmarshal(action, &a); err != nil {
+				return nil, err
+			}
+			resultActions = append(resultActions, a)
 		default:
 			return nil, fmt.Errorf("%w: %s", ErrorUnknownActionType, r.Type)
 		}
