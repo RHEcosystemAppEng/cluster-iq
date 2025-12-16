@@ -17,6 +17,7 @@ type ActionService interface {
 	Enable(ctx context.Context, actionID string) error
 	Disable(ctx context.Context, actionID string) error
 	Delete(ctx context.Context, actionID string) error
+	Update(ctx context.Context, action actions.Action) error
 }
 
 var _ ActionService = (*actionServiceImpl)(nil)
@@ -60,4 +61,9 @@ func (s *actionServiceImpl) Disable(ctx context.Context, actionID string) error 
 // Delete removes a scheduled action by its ID.
 func (s *actionServiceImpl) Delete(ctx context.Context, actionID string) error {
 	return s.repo.Delete(ctx, actionID)
+}
+
+// Update updates an action.
+func (s *actionServiceImpl) Update(ctx context.Context, action actions.Action) error {
+	return s.repo.Update(ctx, action)
 }

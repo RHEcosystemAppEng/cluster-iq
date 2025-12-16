@@ -19,21 +19,22 @@ func testNewInstantAction_Correct(t *testing.T) {
 		ClusterID: "cluster-1",
 		Instances: []string{"i-1"},
 	}
-	status := "Pending"
+	requester := "someone"
+	description := "description"
+	status := StatusRunning
 	enabled := true
 
-	action := NewInstantAction(operation, target, status, enabled)
+	action := NewInstantAction(operation, target, status, requester, &description, enabled)
 
 	// Basic check
 	assert.NotNil(t, action)
 
 	// Parameters check
-	expectedID := target.AccountID + target.ClusterID + string(operation)
-	assert.Equal(t, expectedID, action.ID)
 	assert.Equal(t, operation, action.Operation)
 	assert.Equal(t, target, action.Target)
 	assert.Equal(t, status, action.Status)
 	assert.Equal(t, enabled, action.Enabled)
+	assert.Equal(t, InstantActionType, action.GetType())
 }
 
 // TestGetActionOperation verifies the ActionOperation returned by the getter function.
@@ -105,6 +106,47 @@ func testInstantAction_GetID(t *testing.T) {
 	assert.Equal(t, "id-123", action.GetID())
 }
 
+// TestInstantAction_GetRequester verifies GetRequester returns the correct requester.
+func TestInstantAction_GetRequester(t *testing.T) {
+	t.Run("GetRequester returns requester", func(t *testing.T) {
+		testInstantAction_GetRequester_Correct(t)
+	})
+}
+
+func testInstantAction_GetRequester_Correct(t *testing.T) {
+	requester := "scheduler"
+
+	action := InstantAction{
+		BaseAction: BaseAction{
+			Requester: requester,
+		},
+	}
+
+	assert.Equal(t, requester, action.GetRequester())
+}
+
+// TestInstantAction_GetDescription verifies GetDescription returns the correct description.
+func TestInstantAction_GetDescription(t *testing.T) {
+	t.Run("GetDescription returns description", func(t *testing.T) {
+		testInstantAction_GetDescription_Correct(t)
+	})
+}
+
+func testInstantAction_GetDescription_Correct(t *testing.T) {
+	desc := "nightly shutdown"
+
+	action := InstantAction{
+		BaseAction: BaseAction{
+			Description: &desc,
+		},
+	}
+
+	result := action.GetDescription()
+
+	assert.NotNil(t, result)
+	assert.Equal(t, desc, *result)
+}
+
 // TestGetType verifies the ActionType returned by the getter function.
 func TestInstantAction_GetType(t *testing.T) {
 	t.Run("GetType", func(t *testing.T) { testInstantAction_GetType(t) })
@@ -114,4 +156,25 @@ func testInstantAction_GetType(t *testing.T) {
 	action := InstantAction{}
 
 	assert.Equal(t, InstantActionType, action.GetType())
+}
+
+// TestInstantAction_SetStatus verifies that SetStatus updates the action status.
+func TestInstantAction_SetStatus(t *testing.T) {
+	t.Run("SetStatus updates status correctly", func(t *testing.T) {
+		testInstantAction_SetStatus_Correct(t)
+	})
+}
+
+func testInstantAction_SetStatus_Correct(t *testing.T) {
+	action := InstantAction{
+		BaseAction: BaseAction{
+			Status: StatusPending,
+		},
+	}
+
+	assert.Equal(t, StatusPending, action.Status)
+
+	action.SetStatus(StatusCompleted)
+
+	assert.Equal(t, StatusCompleted, action.Status)
 }

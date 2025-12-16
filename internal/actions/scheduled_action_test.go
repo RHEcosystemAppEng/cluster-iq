@@ -20,23 +20,23 @@ func testNewScheduledAction_Correct(t *testing.T) {
 		ClusterID: "cluster-1",
 		Instances: []string{"i-1", "i-2"},
 	}
-	status := "Pending"
+	requester := "someone"
+	description := "description"
+	status := StatusRunning
 	enabled := true
 	when := time.Now().Add(1 * time.Hour)
 
-	action := NewScheduledAction(operation, target, status, enabled, when)
+	action := NewScheduledAction(operation, target, status, requester, &description, enabled, when)
 
 	// Basic check
 	assert.NotNil(t, action)
 
 	// Parameters check
-	expectedID := target.AccountID + target.ClusterID + string(operation)
-	assert.Equal(t, expectedID, action.ID)
 	assert.Equal(t, operation, action.Operation)
 	assert.Equal(t, target, action.Target)
 	assert.Equal(t, status, action.Status)
 	assert.Equal(t, enabled, action.Enabled)
-	assert.Equal(t, "scheduled_action", action.Type)
+	assert.Equal(t, ScheduledActionType, action.GetType())
 	assert.Equal(t, when, action.When)
 }
 
@@ -109,6 +109,47 @@ func testScheduledAction_GetID(t *testing.T) {
 	assert.Equal(t, "id-123", action.GetID())
 }
 
+// TestScheduledAction_GetRequester verifies GetRequester returns the correct requester.
+func TestScheduledAction_GetRequester(t *testing.T) {
+	t.Run("GetRequester returns requester", func(t *testing.T) {
+		testScheduledAction_GetRequester_Correct(t)
+	})
+}
+
+func testScheduledAction_GetRequester_Correct(t *testing.T) {
+	requester := "scheduler"
+
+	action := ScheduledAction{
+		BaseAction: BaseAction{
+			Requester: requester,
+		},
+	}
+
+	assert.Equal(t, requester, action.GetRequester())
+}
+
+// TestScheduledAction_GetDescription verifies GetDescription returns the correct description.
+func TestScheduledAction_GetDescription(t *testing.T) {
+	t.Run("GetDescription returns description", func(t *testing.T) {
+		testScheduledAction_GetDescription_Correct(t)
+	})
+}
+
+func testScheduledAction_GetDescription_Correct(t *testing.T) {
+	desc := "nightly shutdown"
+
+	action := ScheduledAction{
+		BaseAction: BaseAction{
+			Description: &desc,
+		},
+	}
+
+	result := action.GetDescription()
+
+	assert.NotNil(t, result)
+	assert.Equal(t, desc, *result)
+}
+
 // TestGetType verifies the ActionType returned by the getter function.
 func TestScheduledAction_GetType(t *testing.T) {
 	t.Run("GetType", func(t *testing.T) { testScheduledAction_GetType(t) })
@@ -118,4 +159,25 @@ func testScheduledAction_GetType(t *testing.T) {
 	action := ScheduledAction{}
 
 	assert.Equal(t, ScheduledActionType, action.GetType())
+}
+
+// TestScheduledAction_SetStatus verifies that SetStatus updates the action status.
+func TestScheduledAction_SetStatus(t *testing.T) {
+	t.Run("SetStatus updates status correctly", func(t *testing.T) {
+		testScheduledAction_SetStatus_Correct(t)
+	})
+}
+
+func testScheduledAction_SetStatus_Correct(t *testing.T) {
+	action := ScheduledAction{
+		BaseAction: BaseAction{
+			Status: StatusPending,
+		},
+	}
+
+	assert.Equal(t, StatusPending, action.Status)
+
+	action.SetStatus(StatusCompleted)
+
+	assert.Equal(t, StatusCompleted, action.Status)
 }

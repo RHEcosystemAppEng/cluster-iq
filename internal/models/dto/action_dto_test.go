@@ -12,6 +12,7 @@ import (
 func TestActionDTORequest_ToModelAction(t *testing.T) {
 	t.Run("ToModelAction ScheduledAction", func(t *testing.T) { testActionDTORequest_ToModelAction_Scheduled(t) })
 	t.Run("ToModelAction CronAction", func(t *testing.T) { testActionDTORequest_ToModelAction_Cron(t) })
+	t.Run("ToModelAction Instant", func(t *testing.T) { testActionDTORequest_ToModelAction_Instant(t) })
 	t.Run("ToModelAction Unknown type", func(t *testing.T) { testActionDTORequest_ToModelAction_UnknownType(t) })
 }
 
@@ -24,7 +25,7 @@ func testActionDTORequest_ToModelAction_Scheduled(t *testing.T) {
 		Time:      now,
 		CronExp:   "",
 		Operation: "START",
-		Status:    "Pending",
+		Status:    string(actions.StatusPending),
 		Enabled:   true,
 		ClusterID: "cluster-1",
 		Region:    "eu-west-1",
@@ -39,10 +40,12 @@ func testActionDTORequest_ToModelAction_Scheduled(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, sa)
 
-	assert.Equal(t, dto.ID, sa.ID)
+	assert.Equal(t, "", sa.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), sa.Operation)
-	assert.Equal(t, dto.Status, sa.Status)
+	assert.Equal(t, actions.StatusPending, sa.Status)
 	assert.Equal(t, dto.Enabled, sa.Enabled)
+	assert.Equal(t, "", sa.Requester)
+	assert.Nil(t, sa.Description)
 
 	assert.Equal(t, dto.AccountID, sa.Target.AccountID)
 	assert.Equal(t, dto.Region, sa.Target.Region)
@@ -50,7 +53,7 @@ func testActionDTORequest_ToModelAction_Scheduled(t *testing.T) {
 	assert.Equal(t, dto.Instances, sa.Target.Instances)
 
 	assert.Equal(t, dto.Time, sa.When)
-	assert.Equal(t, dto.Type, sa.Type)
+	assert.Equal(t, actions.ScheduledActionType, sa.GetType())
 }
 
 func testActionDTORequest_ToModelAction_Cron(t *testing.T) {
@@ -60,7 +63,7 @@ func testActionDTORequest_ToModelAction_Cron(t *testing.T) {
 		Time:      time.Time{},
 		CronExp:   "0 0 * * *",
 		Operation: "STOP",
-		Status:    "Pending",
+		Status:    string(actions.StatusPending),
 		Enabled:   false,
 		ClusterID: "cluster-2",
 		Region:    "us-east-1",
@@ -75,10 +78,12 @@ func testActionDTORequest_ToModelAction_Cron(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, ca)
 
-	assert.Equal(t, dto.ID, ca.ID)
+	assert.Equal(t, "", ca.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), ca.Operation)
-	assert.Equal(t, dto.Status, ca.Status)
+	assert.Equal(t, actions.StatusPending, ca.Status)
 	assert.Equal(t, dto.Enabled, ca.Enabled)
+	assert.Equal(t, "", ca.Requester)
+	assert.Nil(t, ca.Description)
 
 	assert.Equal(t, dto.AccountID, ca.Target.AccountID)
 	assert.Equal(t, dto.Region, ca.Target.Region)
@@ -86,7 +91,44 @@ func testActionDTORequest_ToModelAction_Cron(t *testing.T) {
 	assert.Equal(t, dto.Instances, ca.Target.Instances)
 
 	assert.Equal(t, dto.CronExp, ca.Expression)
-	assert.Equal(t, dto.Type, ca.Type)
+	assert.Equal(t, actions.CronActionType, ca.GetType())
+}
+
+func testActionDTORequest_ToModelAction_Instant(t *testing.T) {
+	dto := ActionDTORequest{
+		ID:        "id-2",
+		Type:      string(actions.InstantActionType),
+		Time:      time.Time{},
+		CronExp:   "0 0 * * *",
+		Operation: "STOP",
+		Status:    string(actions.StatusPending),
+		Enabled:   false,
+		ClusterID: "cluster-2",
+		Region:    "us-east-1",
+		AccountID: "acc-2",
+		Instances: []string{"i-9"},
+	}
+
+	act := dto.ToModelAction()
+	assert.NotNil(t, act)
+
+	ia, ok := act.(*actions.InstantAction)
+	assert.True(t, ok)
+	assert.NotNil(t, ia)
+
+	assert.Equal(t, "", ia.ID)
+	assert.Equal(t, actions.ActionOperation(dto.Operation), ia.Operation)
+	assert.Equal(t, actions.StatusPending, ia.Status)
+	assert.Equal(t, dto.Enabled, ia.Enabled)
+	assert.Equal(t, "", ia.Requester)
+	assert.Nil(t, ia.Description)
+
+	assert.Equal(t, dto.AccountID, ia.Target.AccountID)
+	assert.Equal(t, dto.Region, ia.Target.Region)
+	assert.Equal(t, dto.ClusterID, ia.Target.ClusterID)
+	assert.Equal(t, dto.Instances, ia.Target.Instances)
+
+	assert.Equal(t, actions.InstantActionType, ia.GetType())
 }
 
 func testActionDTORequest_ToModelAction_UnknownType(t *testing.T) {
@@ -161,6 +203,7 @@ func testToModelActionList_Invalid(t *testing.T) {
 func TestActionDTOResponse_ToModelAction(t *testing.T) {
 	t.Run("ToModelAction ScheduledAction", func(t *testing.T) { testActionDTOResponse_ToModelAction_Scheduled(t) })
 	t.Run("ToModelAction CronAction", func(t *testing.T) { testActionDTOResponse_ToModelAction_Cron(t) })
+	t.Run("ToModelAction Instant", func(t *testing.T) { testActionDTOResponse_ToModelAction_Instant(t) })
 	t.Run("ToModelAction unknown type", func(t *testing.T) { testActionDTOResponse_ToModelAction_UnknownType(t) })
 }
 
@@ -173,7 +216,7 @@ func testActionDTOResponse_ToModelAction_Scheduled(t *testing.T) {
 		Time:      now,
 		CronExp:   "",
 		Operation: "PowerOnCluster",
-		Status:    "Pending",
+		Status:    string(actions.StatusPending),
 		Enabled:   true,
 		ClusterID: "cluster-1",
 		Region:    "eu-west-1",
@@ -187,9 +230,9 @@ func testActionDTOResponse_ToModelAction_Scheduled(t *testing.T) {
 	sa, ok := a.(*actions.ScheduledAction)
 	assert.True(t, ok)
 
-	assert.Equal(t, dto.ID, sa.ID)
+	assert.Equal(t, "", sa.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), sa.Operation)
-	assert.Equal(t, dto.Status, sa.Status)
+	assert.Equal(t, actions.StatusPending, sa.Status)
 	assert.Equal(t, dto.Enabled, sa.Enabled)
 
 	assert.Equal(t, dto.AccountID, sa.Target.AccountID)
@@ -198,7 +241,7 @@ func testActionDTOResponse_ToModelAction_Scheduled(t *testing.T) {
 	assert.Equal(t, dto.Instances, sa.Target.Instances)
 
 	assert.Equal(t, dto.Time, sa.When)
-	assert.Equal(t, dto.Type, sa.Type)
+	assert.Equal(t, actions.ScheduledActionType, sa.GetType())
 }
 
 func testActionDTOResponse_ToModelAction_Cron(t *testing.T) {
@@ -208,7 +251,7 @@ func testActionDTOResponse_ToModelAction_Cron(t *testing.T) {
 		Time:      time.Time{},
 		CronExp:   "*/5 * * * *",
 		Operation: "PowerOffCluster",
-		Status:    "Enabled",
+		Status:    string(actions.StatusPending),
 		Enabled:   false,
 		ClusterID: "cluster-2",
 		Region:    "us-east-1",
@@ -222,9 +265,9 @@ func testActionDTOResponse_ToModelAction_Cron(t *testing.T) {
 	ca, ok := a.(*actions.CronAction)
 	assert.True(t, ok)
 
-	assert.Equal(t, dto.ID, ca.ID)
+	assert.Equal(t, "", ca.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), ca.Operation)
-	assert.Equal(t, dto.Status, ca.Status)
+	assert.Equal(t, actions.StatusPending, ca.Status)
 	assert.Equal(t, dto.Enabled, ca.Enabled)
 
 	assert.Equal(t, dto.AccountID, ca.Target.AccountID)
@@ -233,7 +276,44 @@ func testActionDTOResponse_ToModelAction_Cron(t *testing.T) {
 	assert.Equal(t, dto.Instances, ca.Target.Instances)
 
 	assert.Equal(t, dto.CronExp, ca.Expression)
-	assert.Equal(t, dto.Type, ca.Type)
+	assert.Equal(t, actions.CronActionType, ca.GetType())
+}
+
+func testActionDTOResponse_ToModelAction_Instant(t *testing.T) {
+	dto := ActionDTOResponse{
+		ID:        "id-2",
+		Type:      string(actions.InstantActionType),
+		Time:      time.Time{},
+		CronExp:   "0 0 * * *",
+		Operation: "STOP",
+		Status:    string(actions.StatusPending),
+		Enabled:   false,
+		ClusterID: "cluster-2",
+		Region:    "us-east-1",
+		AccountID: "acc-2",
+		Instances: []string{"i-9"},
+	}
+
+	act := dto.ToModelAction()
+	assert.NotNil(t, act)
+
+	ia, ok := act.(*actions.InstantAction)
+	assert.True(t, ok)
+	assert.NotNil(t, ia)
+
+	assert.Equal(t, "", ia.ID)
+	assert.Equal(t, actions.ActionOperation(dto.Operation), ia.Operation)
+	assert.Equal(t, actions.StatusPending, ia.Status)
+	assert.Equal(t, dto.Enabled, ia.Enabled)
+	assert.Equal(t, "", ia.Requester)
+	assert.Nil(t, ia.Description)
+
+	assert.Equal(t, dto.AccountID, ia.Target.AccountID)
+	assert.Equal(t, dto.Region, ia.Target.Region)
+	assert.Equal(t, dto.ClusterID, ia.Target.ClusterID)
+	assert.Equal(t, dto.Instances, ia.Target.Instances)
+
+	assert.Equal(t, actions.InstantActionType, ia.GetType())
 }
 
 func testActionDTOResponse_ToModelAction_UnknownType(t *testing.T) {

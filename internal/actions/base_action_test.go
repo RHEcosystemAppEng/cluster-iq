@@ -19,17 +19,17 @@ func testNewBaseAction_Correct(t *testing.T) {
 		ClusterID: "cluster-1",
 		Instances: []string{"i-1"},
 	}
-	status := "Pending"
+	requester := "someone"
+	description := "description"
+	status := StatusRunning
 	enabled := true
 
-	action := NewBaseAction(operation, target, status, enabled)
+	action := NewBaseAction(operation, target, status, requester, &description, enabled)
 
 	// Basic check
 	assert.NotNil(t, action)
 
 	// Parameters check
-	expectedID := target.AccountID + target.ClusterID + string(operation)
-	assert.Equal(t, expectedID, action.ID)
 	assert.Equal(t, operation, action.Operation)
 	assert.Equal(t, target, action.Target)
 	assert.Equal(t, status, action.Status)
@@ -48,4 +48,23 @@ func testGetActionOperation(t *testing.T) {
 	}
 
 	assert.Equal(t, operation, action.GetActionOperation())
+}
+
+// TestBaseAction_SetStatus verifies that SetStatus updates the action status.
+func TestBaseAction_SetStatus(t *testing.T) {
+	t.Run("SetStatus updates status correctly", func(t *testing.T) {
+		testBaseAction_SetStatus_Correct(t)
+	})
+}
+
+func testBaseAction_SetStatus_Correct(t *testing.T) {
+	action := BaseAction{
+		Status: StatusPending,
+	}
+
+	assert.Equal(t, StatusPending, action.Status)
+
+	action.SetStatus(StatusCompleted)
+
+	assert.Equal(t, StatusCompleted, action.Status)
 }

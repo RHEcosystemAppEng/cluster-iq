@@ -63,6 +63,7 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 	}
 	// TODO Fix replace TODO context by request's context
 	eventID, err := e.repo.CreateEvent(context.TODO(), event)
+	e.logger.Debug("Tracking new event", zap.Int64("event_id", eventID))
 	if err != nil {
 		e.logger.Error("Failed to log event", zap.Error(err))
 		return 0, err

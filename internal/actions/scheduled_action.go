@@ -7,7 +7,6 @@ import "time"
 type ScheduledAction struct {
 	// When specifies the scheduled time for the action execution.
 	When time.Time `db:"time"`
-	Type string    `db:"type"`
 	BaseAction
 }
 
@@ -20,10 +19,9 @@ type ScheduledAction struct {
 //
 // Returns:
 // - A pointer to a newly created ScheduledAction instance.
-func NewScheduledAction(ao ActionOperation, target ActionTarget, status string, enabled bool, when time.Time) *ScheduledAction {
+func NewScheduledAction(ao ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool, when time.Time) *ScheduledAction {
 	return &ScheduledAction{
-		BaseAction: *NewBaseAction(ao, target, status, enabled),
-		Type:       "scheduled_action",
+		BaseAction: *NewBaseAction(ao, target, status, requester, description, enabled),
 		When:       when,
 	}
 }
@@ -60,10 +58,30 @@ func (s ScheduledAction) GetID() string {
 	return s.ID
 }
 
+// GetRequester returns the action requester
+//
+// Returns:
+// - A string representing action requester
+func (s ScheduledAction) GetRequester() string { return s.Requester }
+
+// GetDescription returns the action description
+//
+// Returns:
+// - A string representing action description
+func (s ScheduledAction) GetDescription() *string { return s.Description }
+
 // GetType returns ScheduledActionType
 //
 // Returns:
 // - ActionType
 func (s ScheduledAction) GetType() ActionType {
 	return ScheduledActionType
+}
+
+// SetStatus updates the action status
+//
+// Parameters:
+// - New ActionStatus
+func (s *ScheduledAction) SetStatus(status ActionStatus) {
+	s.Status = status
 }

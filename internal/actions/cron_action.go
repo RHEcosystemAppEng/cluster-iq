@@ -5,7 +5,6 @@ package actions
 type CronAction struct {
 	// When specifies the scheduled time for the action execution.
 	Expression string `db:"cron_exp"`
-	Type       string `db:"type"`
 	BaseAction
 }
 
@@ -18,10 +17,9 @@ type CronAction struct {
 //
 // Returns:
 // - A pointer to a newly created CronAction instance.
-func NewCronAction(actionOperation ActionOperation, target ActionTarget, status string, enabled bool, cronExpression string) *CronAction {
+func NewCronAction(actionOperation ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool, cronExpression string) *CronAction {
 	return &CronAction{
-		BaseAction: *NewBaseAction(actionOperation, target, status, enabled),
-		Type:       "cron_action",
+		BaseAction: *NewBaseAction(actionOperation, target, status, requester, description, enabled),
 		Expression: cronExpression,
 	}
 }
@@ -30,39 +28,54 @@ func NewCronAction(actionOperation ActionOperation, target ActionTarget, status 
 //
 // Returns:
 // - An ActionOperation representing the action type (e.g., PowerOnCluster, PowerOffCluster).
-func (s CronAction) GetActionOperation() ActionOperation {
-	return s.Operation
+func (c CronAction) GetActionOperation() ActionOperation {
+	return c.Operation
 }
 
 // GetRegion returns the cloud region where the action is scheduled to execute.
 //
 // Returns:
 // - A string representing the cloud region.
-func (s CronAction) GetRegion() string {
-	return s.Target.GetRegion()
+func (c CronAction) GetRegion() string {
+	return c.Target.GetRegion()
 }
 
 // GetTarget returns the target resource of the scheduled action.
 //
 // Returns:
 // - An ActionTarget representing the target cluster and instances affected by the action.
-func (s CronAction) GetTarget() ActionTarget {
-	return s.Target
+func (c CronAction) GetTarget() ActionTarget {
+	return c.Target
 }
 
 // GetID returns a unique identifier for the scheduled action.
 //
 // Returns:
 // - A string representing the unique action ID.
-func (s CronAction) GetID() string {
-	return s.ID
+func (c CronAction) GetID() string {
+	return c.ID
 }
 
-// GetType returns CronActionType
+// GetRequester returns the action requester
 //
 // Returns:
+// - A string representing action requester
+func (c CronAction) GetRequester() string {
+	return c.Requester
+}
+
+// GetDescription returns the action description
+//
+// Returns:
+// - A string representing action description
+func (c CronAction) GetDescription() *string {
+	return c.Description
+}
+
+// GetType returnc CronActionType
+// Returns:
 // - ActionType
-func (s CronAction) GetType() ActionType {
+func (c CronAction) GetType() ActionType {
 	return CronActionType
 }
 
@@ -70,6 +83,14 @@ func (s CronAction) GetType() ActionType {
 //
 // Returns:
 // - A string representing the cron expression
-func (s CronAction) GetCronExpression() string {
-	return s.Expression
+func (c CronAction) GetCronExpression() string {
+	return c.Expression
+}
+
+// SetStatus updates the action status
+//
+// Parameters:
+// - New ActionStatus
+func (c *CronAction) SetStatus(status ActionStatus) {
+	c.Status = status
 }

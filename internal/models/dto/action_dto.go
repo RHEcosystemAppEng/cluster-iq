@@ -23,7 +23,6 @@ type ActionDTORequest struct {
 }
 
 func (a ActionDTORequest) ToModelAction() actions.Action {
-	actionOp := actions.ActionOperation(a.Operation)
 	target := actions.ActionTarget{
 		AccountID: a.AccountID,
 		Region:    a.Region,
@@ -31,27 +30,36 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 		Instances: a.Instances,
 	}
 
-	baseAction := actions.BaseAction{
-		ID:        a.ID,
-		Operation: actionOp,
-		Target:    target,
-		Status:    a.Status,
-		Enabled:   a.Enabled,
-	}
-
-	switch a.Type {
-	case string(actions.ScheduledActionType):
-		return &actions.ScheduledAction{
-			BaseAction: baseAction,
-			When:       a.Time,
-			Type:       a.Type,
-		}
-	case string(actions.CronActionType):
-		return &actions.CronAction{
-			BaseAction: baseAction,
-			Expression: a.CronExp,
-			Type:       a.Type,
-		}
+	switch actions.ActionType(a.Type) {
+	case actions.ScheduledActionType:
+		return actions.NewScheduledAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.Time,
+		)
+	case actions.CronActionType:
+		return actions.NewCronAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.CronExp,
+		)
+	case actions.InstantActionType:
+		return actions.NewInstantAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+		)
 	default:
 		return nil
 	}
@@ -87,7 +95,6 @@ type ActionDTOResponse struct {
 
 // ToModelAction converts ActionDTOResponse to actions.Action
 func (a ActionDTOResponse) ToModelAction() actions.Action {
-	actionOp := actions.ActionOperation(a.Operation)
 	target := actions.ActionTarget{
 		AccountID: a.AccountID,
 		Region:    a.Region,
@@ -95,27 +102,36 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 		Instances: a.Instances,
 	}
 
-	baseAction := actions.BaseAction{
-		ID:        a.ID,
-		Operation: actionOp,
-		Target:    target,
-		Status:    a.Status,
-		Enabled:   a.Enabled,
-	}
-
-	switch a.Type {
-	case string(actions.ScheduledActionType):
-		return &actions.ScheduledAction{
-			BaseAction: baseAction,
-			When:       a.Time,
-			Type:       a.Type,
-		}
-	case string(actions.CronActionType):
-		return &actions.CronAction{
-			BaseAction: baseAction,
-			Expression: a.CronExp,
-			Type:       a.Type,
-		}
+	switch actions.ActionType(a.Type) {
+	case actions.ScheduledActionType:
+		return actions.NewScheduledAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.Time,
+		)
+	case actions.CronActionType:
+		return actions.NewCronAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.CronExp,
+		)
+	case actions.InstantActionType:
+		return actions.NewInstantAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+		)
 	default:
 		return nil
 	}
