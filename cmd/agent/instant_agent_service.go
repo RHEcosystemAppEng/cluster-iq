@@ -96,6 +96,7 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
+		zap.String("requester", req.Requester),
 		zap.Int("instances_num", len(req.InstancesIdList)),
 	)
 
@@ -108,6 +109,8 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 			req.InstancesIdList,
 		),
 		"Pending",
+		req.Requester,
+		&req.Description,
 		true,
 	)
 
@@ -134,6 +137,7 @@ func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOf
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
+		zap.String("requester", req.Requester),
 		zap.Int("instances_num", len(req.InstancesIdList)))
 
 	action := actions.NewInstantAction(
@@ -145,6 +149,8 @@ func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOf
 			req.InstancesIdList,
 		),
 		"Pending",
+		req.Requester,
+		&req.Description,
 		true,
 	)
 

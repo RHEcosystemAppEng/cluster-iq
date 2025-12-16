@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -15,6 +16,7 @@ import (
 	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	eventservice "github.com/RHEcosystemAppEng/cluster-iq/internal/events/event_service"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"go.uber.org/zap"
 )
 
@@ -26,6 +28,7 @@ type ExecutorAgentService struct {
 	actionsChannel <-chan actions.Action
 	client         http.Client                // HTTP Client for retrieving the schedule from API
 	eventService   *eventservice.EventService // Service for handling audit logs
+	actionRepo     repositories.ActionRepository
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
@@ -53,8 +56,8 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 		return nil
 	}
 
-	// Creating Event Service
 	eventService := eventservice.NewEventService(db, logger)
+	actionRepo := repositories.NewActionRepository(db)
 
 	eas := ExecutorAgentService{
 		cfg:            cfg,
@@ -66,6 +69,7 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 		},
 		client:       client,
 		eventService: eventService,
+		actionRepo:   actionRepo,
 	}
 
 	// Reading credentials file and creating executors per account
@@ -177,33 +181,36 @@ func (e *ExecutorAgentService) GetExecutor(accountID string) *cexec.CloudExecuto
 
 func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
-	var actionStatus string
 
 	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
-		e.logger.Debug("New action arrived to ExecutorAgentService",
+		e.logger.Debug("New action received by ExecutorAgentService",
 			zap.Any("action", newAction.GetActionOperation()),
 			zap.Any("target", newAction.GetTarget()),
+			zap.Any("requester", newAction.GetRequester()),
 		)
 
+		// InstantActions are not registered in the DB when are transmitted by gRPC,
+		// so, if the incoming action is InstantAction type, it's registered into the DB for tracking
 		_, isInstantAction := newAction.(*actions.InstantAction)
-
-		// Set description based on action type
-		description := "ScheduledAction(" + newAction.GetID() + ")"
 		if isInstantAction {
-			description = "InstantAction"
+			actionID, err := e.actionRepo.CreateAction(context.TODO(), newAction)
+			if err != nil {
+				e.logger.Error("Error registering InstantAction", zap.Error(err))
+				continue
+			}
+			newAction.(*actions.InstantAction).ID = strconv.FormatInt(actionID, 10)
 		}
 
 		// Initialize event tracker
 		tracker := e.eventService.StartTracking(&eventservice.EventOptions{
 			Action:       newAction.GetActionOperation(),
-			Description:  &description,
+			Description:  newAction.GetDescription(),
 			ResourceID:   newAction.GetTarget().ClusterID,
 			ResourceType: inventory.ClusterResourceType,
 			Result:       eventservice.ResultPending,
 			Severity:     eventservice.SeverityInfo,
-			// TODO. Rethink
-			TriggeredBy: "ClusterIQ Agent",
+			TriggeredBy:  newAction.GetRequester(),
 		})
 
 		exec := e.GetExecutor(newAction.GetTarget().AccountID)
@@ -214,46 +221,31 @@ func (e *ExecutorAgentService) Start() error {
 
 		executor := *exec
 
+		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
+		if err := e.updateActionStatus(newAction); err != nil {
+			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			continue
+		}
+
 		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
-			actionStatus = "Failed"
+			newAction.(actions.MutableAction).SetStatus(actions.StatusFailed)
 			tracker.Failed()
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
-			actionStatus = "Success"
+			newAction.(actions.MutableAction).SetStatus(actions.StatusCompleted)
 			tracker.Success()
 		}
 
-		// Skip DB status update for instant actions
-		if !isInstantAction {
-			if err := e.updateActionStatus(newAction.GetID(), actionStatus); err != nil {
-				return err
-			}
+		if err := e.updateActionStatus(newAction); err != nil {
+			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			continue
 		}
 	}
 
 	return nil
 }
 
-func (e *ExecutorAgentService) updateActionStatus(actionID, status string) error {
-	url := fmt.Sprintf("%s%s/%s/status", e.cfg.APIURL, APIScheduleActionsPath, actionID)
-	// Prepare API request for updating action status
-	request, err := http.NewRequestWithContext(context.Background(), http.MethodPatch, url, nil)
-	if err != nil {
-		return err
-	}
-
-	// Adding query parameter for the status
-	q := request.URL.Query()
-	q.Add("status", status)
-
-	// Assign query parameters to request
-	request.URL.RawQuery = q.Encode()
-
-	// Performing API request
-	if _, err := e.client.Do(request); err != nil {
-		return err
-	}
-
-	return nil
+func (e *ExecutorAgentService) updateActionStatus(action actions.Action) error {
+	return e.actionRepo.Update(context.Background(), action)
 }

@@ -40,8 +40,8 @@ CREATE TYPE ACTION_TYPE AS ENUM (
 CREATE TYPE ACTION_STATUS AS ENUM (
   'Pending',
   'Running',
-  'Success',
   'Failed',
+  'Completed',
   'Unknown'
 );
 
@@ -337,6 +337,7 @@ SELECT
   c.region,
   a.account_id,
   a.account_name,
+  c.console_link,
   c.last_scan_ts,
   c.created_at,
   c.age,

@@ -103,11 +103,13 @@ func (r *eventRepositoryImpl) ListClusterEvents(ctx context.Context, opts models
 
 // AddEvent inserts a new audit event into the database and returns the event ID.
 func (r *eventRepositoryImpl) CreateEvent(ctx context.Context, event events.Event) (int64, error) {
-	if err := r.db.InsertWithContext(ctx, InsertEventQuery, event); err != nil {
+	var returnedValue int64
+	returnedValue, err := r.db.InsertWithReturnWithContext(ctx, InsertEventQuery, event)
+	if err != nil {
 		return -1, err
 	}
 
-	return 0, nil
+	return returnedValue, nil
 }
 
 // UpdateEventStatus updates the result status of an audit event.

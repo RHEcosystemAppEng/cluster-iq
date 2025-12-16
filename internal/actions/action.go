@@ -33,11 +33,32 @@ type Action interface {
 	// - A string representing the unique action ID.
 	GetID() string
 
+	// GetRequester returns the action requester
+	//
+	// Returns:
+	// - A string representing action requester
+	GetRequester() string
+
+	// GetDescription returns the action description
+	//
+	// Returns:
+	// - A string representing action description
+	GetDescription() *string
+
 	// GetType returns the action type
 	//
 	// Returns:
 	// - A string representing action type
 	GetType() ActionType
+}
+
+type MutableAction interface {
+	Action
+	// SetStatus updates the action status
+	//
+	// Parameters:
+	// - New ActionStatus
+	SetStatus(status ActionStatus)
 }
 
 // DecodeActions received a http response body as a []byte for decoding the
