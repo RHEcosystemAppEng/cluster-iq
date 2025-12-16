@@ -9,12 +9,43 @@ import (
 
 // TestDecodeActions verifies DecodeActions unmarshals actions by type and handles errors.
 func TestDecodeActions(t *testing.T) {
+	t.Run("Decode InstantAction", func(t *testing.T) { testDecodeActions_InstantAction(t) })
 	t.Run("Decode ScheduledAction", func(t *testing.T) { testDecodeActions_ScheduledAction(t) })
 	t.Run("Decode CronAction", func(t *testing.T) { testDecodeActions_CronAction(t) })
 	t.Run("Decode Mixed actions", func(t *testing.T) { testDecodeActions_Mixed(t) })
+	t.Run("Decode empty slice", func(t *testing.T) { testDecodeActions_EmptySlice(t) })
 	t.Run("Decode invalid JSON", func(t *testing.T) { testDecodeActions_InvalidJSON(t) })
 	t.Run("Decode missing type", func(t *testing.T) { testDecodeActions_MissingType(t) })
 	t.Run("Decode unknown type", func(t *testing.T) { testDecodeActions_UnknownType(t) })
+	t.Run("Decode InstantAction invalid payload", func(t *testing.T) { testDecodeActions_InstantAction_InvalidPayload(t) })
+	t.Run("Decode ScheduledAction invalid payload", func(t *testing.T) { testDecodeActions_ScheduledAction_InvalidPayload(t) })
+	t.Run("Decode CronAction invalid payload", func(t *testing.T) { testDecodeActions_CronAction_InvalidPayload(t) })
+
+}
+func testDecodeActions_InstantAction(t *testing.T) {
+	raw := []json.RawMessage{
+		json.RawMessage([]byte("{\"type\":\"" + InstantActionType + "\"}")),
+	}
+
+	actions, err := DecodeActions(raw)
+	assert.NoError(t, err)
+	assert.NotNil(t, actions)
+	assert.Len(t, *actions, 1)
+
+	_, ok := (*actions)[0].(InstantAction)
+	assert.True(t, ok)
+
+	raw = []json.RawMessage{
+		json.RawMessage([]byte("{\"type\":\"" + InstantActionType + "\", \"time\":\"abcd\"}")),
+	}
+
+	actions, err = DecodeActions(raw)
+	assert.NoError(t, err)
+	assert.NotNil(t, actions)
+	assert.Len(t, *actions, 1)
+
+	_, ok = (*actions)[0].(InstantAction)
+	assert.True(t, ok)
 }
 
 func testDecodeActions_ScheduledAction(t *testing.T) {
@@ -72,6 +103,15 @@ func testDecodeActions_Mixed(t *testing.T) {
 	_, ok1 := (*actions)[1].(CronAction)
 	assert.True(t, ok0)
 	assert.True(t, ok1)
+}
+
+func testDecodeActions_EmptySlice(t *testing.T) {
+	raw := []json.RawMessage{}
+
+	actions, err := DecodeActions(raw)
+	assert.NoError(t, err)
+	assert.NotNil(t, actions)
+	assert.Len(t, *actions, 0)
 }
 
 func testDecodeActions_InvalidJSON(t *testing.T) {
@@ -153,4 +193,34 @@ func testSplitActionsByType_Mixed(t *testing.T) {
 	assert.Len(t, sched, 1)
 	assert.Len(t, cron, 0)
 	assert.Same(t, s1, sched[0])
+}
+
+func testDecodeActions_InstantAction_InvalidPayload(t *testing.T) {
+	raw := []json.RawMessage{
+		json.RawMessage([]byte("{\"type\":\"" + InstantActionType + "\",\"enabled\":\"nope\"}")),
+	}
+
+	actions, err := DecodeActions(raw)
+	assert.Error(t, err)
+	assert.Nil(t, actions)
+}
+
+func testDecodeActions_ScheduledAction_InvalidPayload(t *testing.T) {
+	raw := []json.RawMessage{
+		json.RawMessage([]byte("{\"type\":\"" + ScheduledActionType + "\",\"enabled\":\"nope\"}")),
+	}
+
+	actions, err := DecodeActions(raw)
+	assert.Error(t, err)
+	assert.Nil(t, actions)
+}
+
+func testDecodeActions_CronAction_InvalidPayload(t *testing.T) {
+	raw := []json.RawMessage{
+		json.RawMessage([]byte("{\"type\":\"" + CronActionType + "\",\"enabled\":\"nope\"}")),
+	}
+
+	actions, err := DecodeActions(raw)
+	assert.Error(t, err)
+	assert.Nil(t, actions)
 }

@@ -7,9 +7,7 @@ import "time"
 type ScheduledAction struct {
 	// When specifies the scheduled time for the action execution.
 	When time.Time `db:"time"`
-
-	Type string `db:"type"`
-
+	Type string    `db:"type"`
 	BaseAction
 }
 

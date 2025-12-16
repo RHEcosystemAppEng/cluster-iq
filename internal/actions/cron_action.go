@@ -5,9 +5,7 @@ package actions
 type CronAction struct {
 	// When specifies the scheduled time for the action execution.
 	Expression string `db:"cron_exp"`
-
-	Type string `db:"type"`
-
+	Type       string `db:"type"`
 	BaseAction
 }
 
