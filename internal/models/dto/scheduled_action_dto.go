@@ -19,6 +19,6 @@ type ScheduledAction struct {
 	Target    ActionTarget `json:"target"`
 	Status    string       `json:"status"`
 	Enabled   bool         `json:"enabled"`
-	Time      *time.Time   `json:"time,omitempty"`    // for scheduled_action
+	Time      *time.Time   `json:"time,omitempty"`           // for scheduled_action
 	CronExp   *string      `json:"cronExpression,omitempty"` // for cron_action
 } // @name ScheduledAction
