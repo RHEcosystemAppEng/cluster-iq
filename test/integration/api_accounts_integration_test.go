@@ -259,11 +259,11 @@ func testPostOneAccount(t *testing.T) {
 	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
 	payload := []dto.AccountDTORequest{
 		{
-			AccountID:   "ACC-001",
-			AccountName: "test-account-001",
-			Provider:    "AWS",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
+			AccountID:         "ACC-001",
+			AccountName:       "test-account-001",
+			Provider:          "AWS",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
 		},
 	}
 
@@ -295,18 +295,18 @@ func testPostMultipleAccounts(t *testing.T) {
 	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
 	payload := []dto.AccountDTORequest{
 		{
-			AccountID:   "ACC-002",
-			AccountName: "test-account-002",
-			Provider:    "GCP",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
+			AccountID:         "ACC-002",
+			AccountName:       "test-account-002",
+			Provider:          "GCP",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
 		},
 		{
-			AccountID:   "ACC-003",
-			AccountName: "test-account-003",
-			Provider:    "Azure",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
+			AccountID:         "ACC-003",
+			AccountName:       "test-account-003",
+			Provider:          "Azure",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
 		},
 	}
 
@@ -337,11 +337,11 @@ func testPostWrongAccount(t *testing.T) {
 	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
 	payload := []dto.AccountDTORequest{
 		{
-			AccountID:   "ACC-004",
-			AccountName: "test-account-002",
-			Provider:    "Provider",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
+			AccountID:         "ACC-004",
+			AccountName:       "test-account-002",
+			Provider:          "Provider",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
 		},
 	}
 
@@ -365,10 +365,10 @@ func testPatchAccount(t *testing.T) {
 	expectedHTTPCode := http.StatusNotImplemented
 
 	patchAccount := dto.AccountDTORequest{
-		AccountID:   "ACC-001",
-		AccountName: "test-account-003",
-		Provider:    inventory.AWSProvider,
-		LastScanTS:  time.Now(),
+		AccountID:         "ACC-001",
+		AccountName:       "test-account-003",
+		Provider:          inventory.AWSProvider,
+		LastScanTimestamp: time.Now(),
 	}
 
 	patchBody, err := json.Marshal(patchAccount)
