@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -82,4 +83,53 @@ type ActionDTOResponse struct {
 	Region    string    `json:"region"`
 	AccountID string    `json:"account_id"`
 	Instances []string  `json:"instances"`
+}
+
+// ToModelAction converts ActionDTOResponse to actions.Action
+func (a ActionDTOResponse) ToModelAction() actions.Action {
+	actionOp := actions.ActionOperation(a.Operation)
+	target := actions.ActionTarget{
+		AccountID: a.AccountID,
+		Region:    a.Region,
+		ClusterID: a.ClusterID,
+		Instances: a.Instances,
+	}
+
+	baseAction := actions.BaseAction{
+		ID:        a.ID,
+		Operation: actionOp,
+		Target:    target,
+		Status:    a.Status,
+		Enabled:   a.Enabled,
+	}
+
+	switch a.Type {
+	case string(actions.ScheduledActionType):
+		return &actions.ScheduledAction{
+			BaseAction: baseAction,
+			When:       a.Time,
+			Type:       a.Type,
+		}
+	case string(actions.CronActionType):
+		return &actions.CronAction{
+			BaseAction: baseAction,
+			Expression: a.CronExp,
+			Type:       a.Type,
+		}
+	default:
+		return nil
+	}
+}
+
+// ToModelActionList converts a slice of ActionDTOResponse to a slice of actions.Action
+func ToModelActionListFromResponse(dtos []ActionDTOResponse) ([]actions.Action, error) {
+	resultActions := make([]actions.Action, 0, len(dtos))
+	for _, dto := range dtos {
+		action := dto.ToModelAction()
+		if action == nil {
+			return nil, fmt.Errorf("unknown action type: %s", dto.Type)
+		}
+		resultActions = append(resultActions, action)
+	}
+	return resultActions, nil
 }
