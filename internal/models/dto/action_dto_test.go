@@ -156,3 +156,152 @@ func testToModelActionList_Invalid(t *testing.T) {
 	list := ToModelActionList(dtos)
 	assert.Nil(t, list)
 }
+
+// TestActionDTOResponse_ToModelAction verifies ActionDTOResponse conversion to actions.Action.
+func TestActionDTOResponse_ToModelAction(t *testing.T) {
+	t.Run("ToModelAction ScheduledAction", func(t *testing.T) { testActionDTOResponse_ToModelAction_Scheduled(t) })
+	t.Run("ToModelAction CronAction", func(t *testing.T) { testActionDTOResponse_ToModelAction_Cron(t) })
+	t.Run("ToModelAction unknown type", func(t *testing.T) { testActionDTOResponse_ToModelAction_UnknownType(t) })
+}
+
+func testActionDTOResponse_ToModelAction_Scheduled(t *testing.T) {
+	now := time.Now().UTC()
+
+	dto := ActionDTOResponse{
+		ID:        "id-1",
+		Type:      string(actions.ScheduledActionType),
+		Time:      now,
+		CronExp:   "",
+		Operation: "PowerOnCluster",
+		Status:    "Pending",
+		Enabled:   true,
+		ClusterID: "cluster-1",
+		Region:    "eu-west-1",
+		AccountID: "acc-1",
+		Instances: []string{"i-1", "i-2"},
+	}
+
+	a := dto.ToModelAction()
+	assert.NotNil(t, a)
+
+	sa, ok := a.(*actions.ScheduledAction)
+	assert.True(t, ok)
+
+	assert.Equal(t, dto.ID, sa.ID)
+	assert.Equal(t, actions.ActionOperation(dto.Operation), sa.Operation)
+	assert.Equal(t, dto.Status, sa.Status)
+	assert.Equal(t, dto.Enabled, sa.Enabled)
+
+	assert.Equal(t, dto.AccountID, sa.Target.AccountID)
+	assert.Equal(t, dto.Region, sa.Target.Region)
+	assert.Equal(t, dto.ClusterID, sa.Target.ClusterID)
+	assert.Equal(t, dto.Instances, sa.Target.Instances)
+
+	assert.Equal(t, dto.Time, sa.When)
+	assert.Equal(t, dto.Type, sa.Type)
+}
+
+func testActionDTOResponse_ToModelAction_Cron(t *testing.T) {
+	dto := ActionDTOResponse{
+		ID:        "id-2",
+		Type:      string(actions.CronActionType),
+		Time:      time.Time{},
+		CronExp:   "*/5 * * * *",
+		Operation: "PowerOffCluster",
+		Status:    "Enabled",
+		Enabled:   false,
+		ClusterID: "cluster-2",
+		Region:    "us-east-1",
+		AccountID: "acc-2",
+		Instances: []string{"i-9"},
+	}
+
+	a := dto.ToModelAction()
+	assert.NotNil(t, a)
+
+	ca, ok := a.(*actions.CronAction)
+	assert.True(t, ok)
+
+	assert.Equal(t, dto.ID, ca.ID)
+	assert.Equal(t, actions.ActionOperation(dto.Operation), ca.Operation)
+	assert.Equal(t, dto.Status, ca.Status)
+	assert.Equal(t, dto.Enabled, ca.Enabled)
+
+	assert.Equal(t, dto.AccountID, ca.Target.AccountID)
+	assert.Equal(t, dto.Region, ca.Target.Region)
+	assert.Equal(t, dto.ClusterID, ca.Target.ClusterID)
+	assert.Equal(t, dto.Instances, ca.Target.Instances)
+
+	assert.Equal(t, dto.CronExp, ca.Expression)
+	assert.Equal(t, dto.Type, ca.Type)
+}
+
+func testActionDTOResponse_ToModelAction_UnknownType(t *testing.T) {
+	dto := ActionDTOResponse{
+		ID:   "id-x",
+		Type: "unknown_type",
+	}
+
+	a := dto.ToModelAction()
+	assert.Nil(t, a)
+}
+
+// TestToModelActionListFromResponse verifies list conversion and error handling.
+func TestToModelActionListFromResponse(t *testing.T) {
+	t.Run("ToModelActionListFromResponse OK", func(t *testing.T) { testToModelActionListFromResponse_OK(t) })
+	t.Run("ToModelActionListFromResponse unknown type", func(t *testing.T) { testToModelActionListFromResponse_UnknownType(t) })
+}
+
+func testToModelActionListFromResponse_OK(t *testing.T) {
+	now := time.Now().UTC()
+
+	dtos := []ActionDTOResponse{
+		{
+			ID:        "id-1",
+			Type:      string(actions.ScheduledActionType),
+			Time:      now,
+			Operation: "PowerOnCluster",
+			Status:    "Pending",
+			Enabled:   true,
+			ClusterID: "cluster-1",
+			Region:    "eu-west-1",
+			AccountID: "acc-1",
+			Instances: []string{"i-1"},
+		},
+		{
+			ID:        "id-2",
+			Type:      string(actions.CronActionType),
+			CronExp:   "0 0 * * *",
+			Operation: "PowerOffCluster",
+			Status:    "Pending",
+			Enabled:   false,
+			ClusterID: "cluster-2",
+			Region:    "us-east-1",
+			AccountID: "acc-2",
+			Instances: []string{"i-2"},
+		},
+	}
+
+	actionsList, err := ToModelActionListFromResponse(dtos)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, actionsList)
+	assert.Len(t, actionsList, 2)
+
+	_, ok0 := actionsList[0].(*actions.ScheduledAction)
+	_, ok1 := actionsList[1].(*actions.CronAction)
+	assert.True(t, ok0)
+	assert.True(t, ok1)
+}
+
+func testToModelActionListFromResponse_UnknownType(t *testing.T) {
+	dtos := []ActionDTOResponse{
+		{ID: "id-1", Type: "unknown_type"},
+	}
+
+	actionsList, err := ToModelActionListFromResponse(dtos)
+
+	assert.Error(t, err)
+	assert.Nil(t, actionsList)
+	assert.ErrorContains(t, err, "unknown action type: unknown_type")
+}
