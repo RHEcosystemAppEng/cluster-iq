@@ -196,7 +196,7 @@ swagger-editor: ## Open web editor for modifying Swagger docs
 
 swagger-doc: ## Generate Swagger documentation for ClusterIQ API
 	@echo "### [Generating Swagger Docs] ###"
-	@$(SWAGGER) fmt
+	@$(SWAGGER) fmt --exclude ./internal
 	@$(SWAGGER) init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
 
 

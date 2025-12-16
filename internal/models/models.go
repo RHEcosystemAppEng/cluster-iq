@@ -117,7 +117,7 @@ func FromDBScheduledActionToScheduledAction(action DBScheduledAction) *actions.S
 		action.Instances,
 	)
 
-	scheduledAction := actions.NewScheduledAction(action.Operation, target, action.Status, action.Enable, action.Timestamp.Time)
+	scheduledAction := actions.NewScheduledAction(action.Operation, target, actions.ActionStatus(action.Status), "", nil, action.Enable, action.Timestamp.Time)
 	scheduledAction.ID = action.ID
 	return scheduledAction
 }
@@ -137,7 +137,7 @@ func FromDBScheduledActionToCronAction(action DBScheduledAction) *actions.CronAc
 		action.Instances,
 	)
 
-	cronAction := actions.NewCronAction(action.Operation, target, action.Status, action.Enable, action.CronExpression.String)
+	cronAction := actions.NewCronAction(action.Operation, target, actions.ActionStatus(action.Status), "", nil, action.Enable, action.CronExpression.String)
 	cronAction.ID = action.ID
 	return cronAction
 }
