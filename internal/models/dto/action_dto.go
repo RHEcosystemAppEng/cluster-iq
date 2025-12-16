@@ -99,7 +99,7 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 		ID:        a.ID,
 		Operation: actionOp,
 		Target:    target,
-		Status:    a.Status,
+		Status:    actions.ActionStatus(a.Status),
 		Enabled:   a.Enabled,
 	}
 
