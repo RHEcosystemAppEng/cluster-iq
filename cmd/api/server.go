@@ -182,7 +182,7 @@ func main() {
 	}()
 
 	// Initializing gRPC AgentClient
-	agentClient, err := clients.NewGRPCAgentClient(cfg.AgentURL, logger)
+	agentClient, err := clients.NewAPIGRPCClient(cfg.AgentURL, logger)
 	if err != nil {
 		logger.Fatal("Failed to create gRPC client", zap.Error(err))
 	}

@@ -40,8 +40,8 @@ CREATE TYPE ACTION_TYPE AS ENUM (
 CREATE TYPE ACTION_STATUS AS ENUM (
   'Pending',
   'Running',
-  'Success',
   'Failed',
+  'Completed',
   'Unknown'
 );
 

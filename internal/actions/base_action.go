@@ -2,23 +2,34 @@ package actions
 
 // BaseAction defines the common parameters that every action has
 type BaseAction struct {
-	ID        string          `db:"id"`
-	Operation ActionOperation `db:"operation"`
-	Target    ActionTarget    `db:"target"`
-	Status    string          `db:"status"`
-	Enabled   bool            `db:"enabled"`
+	ID          string          `db:"id" json:"id"`
+	Operation   ActionOperation `db:"operation" json:"operation"`
+	Target      ActionTarget    `db:"target" json:"target"`
+	Status      ActionStatus    `db:"status" json:"status"`
+	Requester   string          `db:"requester" json:"requester"`
+	Description *string         `db:"description" json:"description"`
+	Enabled     bool            `db:"enabled" json:"enabled"`
 }
 
-func NewBaseAction(ao ActionOperation, target ActionTarget, status string, enabled bool) *BaseAction {
+func NewBaseAction(ao ActionOperation, target ActionTarget, status ActionStatus, requester string, description *string, enabled bool) *BaseAction {
 	return &BaseAction{
-		ID:        target.AccountID + target.ClusterID + string(ao),
-		Operation: ao,
-		Target:    target,
-		Status:    status,
-		Enabled:   enabled,
+		Operation:   ao,
+		Target:      target,
+		Status:      status,
+		Requester:   requester,
+		Description: description,
+		Enabled:     enabled,
 	}
 }
 
 func (b BaseAction) GetActionOperation() ActionOperation {
 	return b.Operation
+}
+
+// SetStatus updates the action status
+//
+// Parameters:
+// - New ActionStatus
+func (b *BaseAction) SetStatus(status ActionStatus) {
+	b.Status = status
 }
