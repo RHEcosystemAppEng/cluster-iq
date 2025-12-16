@@ -149,7 +149,7 @@ go-setup-tests:
 
 go-unit-tests: ## Runs go unit tests
 go-unit-tests: go-setup-tests
-	@$(GO) test -race ./internal/inventory ./internal/actions ./internal/events/event_service -coverprofile $(TEST_DIR)/cover-unit-tests.out
+	@$(GO) test -race ./internal/inventory ./internal/actions ./internal/events/event_service ./internal/models -coverprofile $(TEST_DIR)/cover-unit-tests.out
 
 go-coverage-unit-tests: ## Calculates unit tests coverage percentage
 go-coverage-unit-tests: go-setup-tests go-unit-tests
