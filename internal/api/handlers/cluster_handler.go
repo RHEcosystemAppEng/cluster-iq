@@ -70,11 +70,11 @@ type listClustersRequest struct {
 //	@Produce		json
 //	@Param			page		query		int		false	"Page number"		default(1)
 //	@Param			page_size	query		int		false	"Items per page"	default(10)
-//	@Param			status		query		string	false	"Cluster status"	example(Running)
-//	@Param			provider	query		string	false	"Cloud provider"	example(aws)
-//	@Param			region		query		string	false	"Provider region"	example(us-east-1)
+//	@Param			status		query		string	false	"Cluster status"
+//	@Param			provider	query		string	false	"Cloud provider"
+//	@Param			region		query		string	false	"Provider region"
 //	@Param			account		query		string	false	"Account name"
-//	@Success		200			{object}	responsetypes.ListResponse[dto.ClusterDTOResponse]
+//	@Success		200			{object}	dto.ClusterListResponse
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters [get]
@@ -210,7 +210,8 @@ func (h *ClusterHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, responsetypes.PostResponse{
 		Count:  len(newClusterDTOs),
-		Status: "OK"},
+		Status: "OK",
+	},
 	)
 }
 

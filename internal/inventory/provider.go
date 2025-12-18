@@ -3,7 +3,7 @@ package inventory
 import "strings"
 
 // Provider defines the different values for the supported cloud/infrastructure providers
-type Provider string
+type Provider string // @name Provider
 
 const (
 	// AWSProvider - Amazon Web Services Cloud Provider

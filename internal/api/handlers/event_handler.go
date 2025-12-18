@@ -76,7 +76,7 @@ type listSystemEventsRequest struct {
 //	@Param			resource_type	query		string	false	"Resource type"
 //	@Param			result			query		string	false	"Result"
 //	@Param			severity		query		string	false	"Severity"
-//	@Success		200				{object}	responsetypes.ListResponse[dto.SystemEventDTOResponse]
+//	@Success		200				{object}	dto.SystemEventListResponse
 //	@Failure		400				{object}	responsetypes.GenericErrorResponse
 //	@Failure		500				{object}	responsetypes.GenericErrorResponse
 //	@Router			/events [get]
@@ -146,7 +146,8 @@ func (h *EventHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, responsetypes.PostResponse{
 		Count:  1,
-		Status: "OK"},
+		Status: "OK",
+	},
 	)
 }
 
@@ -160,7 +161,7 @@ func (h *EventHandler) Create(c *gin.Context) {
 //	@Param			id			path		string	true	"Cluster ID"
 //	@Param			page		query		int		false	"Page number"		default(1)
 //	@Param			page_size	query		int		false	"Items per page"	default(10)
-//	@Success		200			{object}	responsetypes.ListResponse[dto.ClusterEventDTOResponse]
+//	@Success		200			{object}	dto.ClusterEventListResponse
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/events [get]
@@ -232,6 +233,7 @@ func (h *EventHandler) Update(c *gin.Context) {
 
 	c.JSON(http.StatusOK, responsetypes.PostResponse{
 		Count:  1,
-		Status: "OK"},
+		Status: "OK",
+	},
 	)
 }

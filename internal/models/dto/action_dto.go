@@ -12,15 +12,15 @@ type ActionDTORequest struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`
-	CronExp   string    `json:"cron_exp"`
+	CronExp   string    `json:"cronExpression"`
 	Operation string    `json:"operation"`
 	Status    string    `json:"status"`
 	Enabled   bool      `json:"enabled"`
-	ClusterID string    `json:"cluster_id"`
+	ClusterID string    `json:"clusterId"`
 	Region    string    `json:"region"`
-	AccountID string    `json:"account_id"`
+	AccountID string    `json:"accountId"`
 	Instances []string  `json:"instances"`
-}
+} // @name ActionRequest
 
 func (a ActionDTORequest) ToModelAction() actions.Action {
 	actionOp := actions.ActionOperation(a.Operation)
@@ -75,15 +75,15 @@ type ActionDTOResponse struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`
-	CronExp   string    `json:"cron_exp"`
+	CronExp   string    `json:"cronExpression"`
 	Operation string    `json:"operation"`
 	Status    string    `json:"status"`
 	Enabled   bool      `json:"enabled"`
-	ClusterID string    `json:"cluster_id"`
+	ClusterID string    `json:"clusterId"`
 	Region    string    `json:"region"`
-	AccountID string    `json:"account_id"`
+	AccountID string    `json:"accountId"`
 	Instances []string  `json:"instances"`
-}
+} // @name ActionResponse
 
 // ToModelAction converts ActionDTOResponse to actions.Action
 func (a ActionDTOResponse) ToModelAction() actions.Action {
@@ -99,7 +99,7 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 		ID:        a.ID,
 		Operation: actionOp,
 		Target:    target,
-		Status:    a.Status,
+		Status:    actions.ActionStatus(a.Status),
 		Enabled:   a.Enabled,
 	}
 

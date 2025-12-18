@@ -19,7 +19,7 @@ type ClusterDBResponse struct {
 	AccountID             string                   `db:"account_id"`
 	AccountName           string                   `db:"account_name"`
 	ConsoleLink           string                   `db:"console_link"`
-	LastScanTS            time.Time                `db:"last_scan_ts"`
+	LastScanTimestamp     time.Time                `db:"last_scan_ts"`
 	CreatedAt             time.Time                `db:"created_at"`
 	Age                   int                      `db:"age"`
 	Owner                 string                   `db:"owner"`
@@ -40,9 +40,10 @@ func (c ClusterDBResponse) ToClusterDTOResponse() *dto.ClusterDTOResponse {
 		Status:                c.Status,
 		Region:                c.Region,
 		AccountID:             c.AccountID,
+		AccountName:           c.AccountName,
 		ConsoleLink:           c.ConsoleLink,
 		InstanceCount:         c.InstanceCount,
-		LastScanTS:            c.LastScanTS,
+		LastScanTimestamp:     c.LastScanTimestamp,
 		CreatedAt:             c.CreatedAt,
 		Age:                   c.Age,
 		Owner:                 c.Owner,

@@ -17,7 +17,7 @@ type EventDTORequest struct {
 	Severity       string    `json:"severity"`
 	TriggeredBy    string    `json:"triggeredBy"`
 	Description    *string   `json:"description,omitempty"`
-}
+} // @name EventRequest
 
 func (e EventDTORequest) ToModelEvent() *events.Event {
 	return &events.Event{
@@ -31,7 +31,7 @@ func (e EventDTORequest) ToModelEvent() *events.Event {
 		Severity:       e.Severity,
 		TriggeredBy:    e.TriggeredBy,
 	}
-}
+} // @name EventResponse
 
 // ClusterEvent represents a generic cluster event
 type ClusterEventDTOResponse struct {
@@ -44,11 +44,11 @@ type ClusterEventDTOResponse struct {
 	Severity       string    `json:"severity"`
 	TriggeredBy    string    `json:"triggeredBy"`
 	Description    *string   `json:"description,omitempty"`
-}
+} // @name ClusterEventResponse
 
 // SystemEvent represents a system-level event, extending a cluster event with account details.
 type SystemEventDTOResponse struct {
 	ClusterEventDTOResponse
-	AccountID string `json:"accountID"`
+	AccountID string `json:"accountId"`
 	Provider  string `json:"provider"`
-}
+} // @name SystemEventResponse
