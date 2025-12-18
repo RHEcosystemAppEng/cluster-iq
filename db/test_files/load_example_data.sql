@@ -244,7 +244,7 @@ SELECT
   (ARRAY['scan','PowerOnCluster','PowerOffCluster','RestartCluster','Terminate'])[1 + floor(random()*5)],
   (1 + floor(random()*20))::int AS resource_id,
   CASE WHEN random() < 0.6 THEN 'instance' ELSE 'cluster' END AS resource_type,
-  (ARRAY['success','failure','partial'])[1 + floor(random()*3)] AS result,
+  (ARRAY['Pending','Running','Failed','Success','Unknown'])[1 + floor(random()*5)]::ACTION_STATUS AS result,
   'auto-generated dev event' AS description,
   (ARRAY['info','warning','error','notice'])[1 + floor(random()*4)] AS severity
 FROM generate_series(1,12);
