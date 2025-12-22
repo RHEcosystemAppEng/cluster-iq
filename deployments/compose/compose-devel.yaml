@@ -10,8 +10,8 @@ services:
     container_name: api
     restart: always
     depends_on:
-      init-pgsql:
-        condition: service_completed_successfully
+      pgsql:
+        condition: service_started
     ports:
       - 8081:8080
     environment:
@@ -103,6 +103,9 @@ services:
         fi
 
         echo "Done!"
+        sleep 10
+        date
+        sleep 3
       '
     environment:
       CIQ_DB_PRELOAD_DATA: "true"
@@ -112,6 +115,6 @@ services:
       - ./../../db/test_files/load_example_data.sql:/load_example_data.sql:ro,Z
     depends_on:
       pgsql:
-        condition: service_healthy
+        condition: service_started
     networks:
       - cluster_iq

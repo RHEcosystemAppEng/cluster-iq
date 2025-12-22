@@ -233,7 +233,7 @@ func (e *ExecutorAgentService) Start() error {
 			tracker.Failed()
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
-			newAction.(actions.MutableAction).SetStatus(actions.StatusCompleted)
+			newAction.(actions.MutableAction).SetStatus(actions.StatusSuccess)
 			tracker.Success()
 		}
 

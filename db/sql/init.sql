@@ -41,7 +41,7 @@ CREATE TYPE ACTION_STATUS AS ENUM (
   'Pending',
   'Running',
   'Failed',
-  'Completed',
+  'Success',
   'Unknown'
 );
 
@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS events (
   action                  TEXT NOT NULL,
   resource_id             INTEGER,
   resource_type           TEXT NOT NULL,
-  result                  TEXT NOT NULL,
+  result                  ACTION_STATUS NOT NULL,
   description             TEXT NULL,
   severity                TEXT DEFAULT 'info'::TEXT NOT NULL,
   CONSTRAINT events_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
@@ -567,7 +567,7 @@ SELECT
   ev.event_timestamp,
   ev.triggered_by,
   ev.action,
-  ev.resource_id,
+  COALESCE(c.cluster_id, i.instance_id) AS resource_name,
   ev.resource_type,
   ev.result,
   ev.description,
@@ -575,6 +575,8 @@ SELECT
   acc.account_id,
   acc.provider
 FROM events ev
+LEFT JOIN clusters  c ON ev.resource_type = 'cluster'  AND c.id = ev.resource_id
+LEFT JOIN instances i ON ev.resource_type = 'instance' AND i.id = ev.resource_id
 LEFT JOIN accounts acc ON acc.id = (
   CASE
     WHEN ev.resource_type = 'cluster'

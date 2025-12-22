@@ -35,15 +35,15 @@ func (e EventDTORequest) ToModelEvent() *events.Event {
 
 // ClusterEvent represents a generic cluster event
 type ClusterEventDTOResponse struct {
-	ID             int64     `json:"id"`
-	Action         string    `json:"action"`
-	ResourceID     string    `json:"resourceId"`
-	ResourceType   string    `json:"resourceType"`
-	EventTimestamp time.Time `json:"timestamp"`
-	Result         string    `json:"result"`
-	Severity       string    `json:"severity"`
-	TriggeredBy    string    `json:"triggeredBy"`
-	Description    *string   `json:"description,omitempty"`
+	ID             int64                `json:"id"`
+	Action         string               `json:"action"`
+	ResourceName   string               `json:"resourceName"`
+	ResourceType   string               `json:"resourceType"`
+	EventTimestamp time.Time            `json:"timestamp"`
+	Result         actions.ActionStatus `json:"result"`
+	Severity       string               `json:"severity"`
+	TriggeredBy    string               `json:"triggeredBy"`
+	Description    *string              `json:"description,omitempty"`
 } // @name ClusterEventResponse
 
 // SystemEvent represents a system-level event, extending a cluster event with account details.

@@ -3,19 +3,20 @@ package db
 import (
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 type ClusterEventDBResponse struct {
-	ID             int64     `db:"id"`
-	EventTimestamp time.Time `db:"event_timestamp"`
-	TriggeredBy    string    `db:"triggered_by"`
-	Action         string    `db:"action"`
-	ResourceID     string    `db:"resource_id"`
-	ResourceType   string    `db:"resource_type"`
-	Result         string    `db:"result"`
-	Description    *string   `db:"description,omitempty"`
-	Severity       string    `db:"severity"`
+	ID             int64                `db:"id"`
+	EventTimestamp time.Time            `db:"event_timestamp"`
+	TriggeredBy    string               `db:"triggered_by"`
+	Action         string               `db:"action"`
+	ResourceName   string               `db:"resource_name"`
+	ResourceType   string               `db:"resource_type"`
+	Result         actions.ActionStatus `db:"result"`
+	Description    *string              `db:"description,omitempty"`
+	Severity       string               `db:"severity"`
 }
 
 func (c ClusterEventDBResponse) ToClusterEventDTOResponse() *dto.ClusterEventDTOResponse {
@@ -24,7 +25,7 @@ func (c ClusterEventDBResponse) ToClusterEventDTOResponse() *dto.ClusterEventDTO
 		EventTimestamp: c.EventTimestamp,
 		TriggeredBy:    c.TriggeredBy,
 		Action:         c.Action,
-		ResourceID:     c.ResourceID,
+		ResourceName:   c.ResourceName,
 		ResourceType:   c.ResourceType,
 		Result:         c.Result,
 		Description:    c.Description,
