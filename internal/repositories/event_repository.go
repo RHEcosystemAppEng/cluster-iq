@@ -92,7 +92,8 @@ func (r *eventRepositoryImpl) ListClusterEvents(ctx context.Context, opts models
 		return events, 0, fmt.Errorf("failed to get cluster internal id: %w", err)
 	}
 
-	opts.Filters["resource_id"] = id
+	opts.Filters["resource_name"] = id
+	delete(opts.Filters, "resource_id")
 
 	if err := r.db.SelectWithContext(ctx, &events, SelectClusterEventsView, opts, "event_timestamp", "*"); err != nil {
 		return events, 0, fmt.Errorf("failed to list cluster events: %w", err)

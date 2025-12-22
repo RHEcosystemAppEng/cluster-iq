@@ -548,16 +548,17 @@ $$;
 -- View for Cluster Events
 CREATE VIEW cluster_events AS
 SELECT
-  id,
+  events.id,
   event_timestamp,
   triggered_by,
   action,
-  resource_id,
+  c.cluster_id AS resource_name,
   resource_type,
   result,
   description,
   severity
 FROM events
+LEFT JOIN clusters  c ON events.resource_type = 'cluster'  AND c.id = events.resource_id
 ORDER BY event_timestamp DESC;
 
 -- View for System Events
