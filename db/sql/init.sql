@@ -25,8 +25,8 @@ CREATE TYPE RESOURCE_TYPE AS ENUM (
 
 -- Supported values of Action Operations
 CREATE TYPE ACTION_OPERATION AS ENUM (
-  'PowerOnCluster',
-  'PowerOffCluster'
+  'PowerOn',
+  'PowerOff'
 );
 
 -- Supported values of action types

@@ -78,7 +78,7 @@ local-build-scanner: ## Build the scanner binary
 local-build-agent: ## Build the agent binary
 	@echo "### [Building Agent] ###"
 	@[ ! -d $(GENERATED_DIR) ] && { mkdir $(GENERATED_DIR); } || { exit 0; }
-	@protoc --go_out=$(GENERATED_DIR) --go-grpc_out=$(GENERATED_DIR) $(AGENT_PROTO_PATH)
+	@$(PROTOC) --go_out=$(GENERATED_DIR) --go-grpc_out=$(GENERATED_DIR) $(AGENT_PROTO_PATH)
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -o $(BIN_DIR)/agent/agent $(LDFLAGS) ./cmd/agent
 
 

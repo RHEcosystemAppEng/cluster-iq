@@ -52,10 +52,10 @@ func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 	}
 
 	switch a := action.GetActionOperation(); a {
-	case actions.PowerOnCluster:
+	case actions.PowerOn:
 		return e.PowerOnCluster(target.GetInstances())
 
-	case actions.PowerOffCluster:
+	case actions.PowerOff:
 		return e.PowerOffCluster(target.GetInstances())
 
 	default: // No registered ActionOperation

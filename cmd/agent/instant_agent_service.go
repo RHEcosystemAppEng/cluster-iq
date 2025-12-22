@@ -100,18 +100,15 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 		zap.Int("instances_num", len(req.InstancesIdList)),
 	)
 
-	action := actions.NewInstantAction(
-		actions.PowerOnCluster,
+	action := actions.NewPowerOnClusterAction(
 		*actions.NewActionTarget(
 			req.AccountId,
 			req.Region,
 			req.ClusterId,
 			req.InstancesIdList,
 		),
-		"Pending",
 		req.Requester,
 		&req.Description,
-		true,
 	)
 
 	i.actionsChannel <- action
@@ -140,18 +137,15 @@ func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOf
 		zap.String("requester", req.Requester),
 		zap.Int("instances_num", len(req.InstancesIdList)))
 
-	action := actions.NewInstantAction(
-		actions.PowerOffCluster,
+	action := actions.NewPowerOnClusterAction(
 		*actions.NewActionTarget(
 			req.AccountId,
 			req.Region,
 			req.ClusterId,
 			req.InstancesIdList,
 		),
-		"Pending",
 		req.Requester,
 		&req.Description,
-		true,
 	)
 
 	i.actionsChannel <- action
