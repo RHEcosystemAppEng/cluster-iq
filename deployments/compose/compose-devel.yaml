@@ -8,7 +8,7 @@ services:
   api:
     image: quay.io/ecosystem-appeng/cluster-iq-api:latest
     container_name: api
-    restart: always
+    restart: "always"
     depends_on:
       pgsql:
         condition: service_started
@@ -42,6 +42,7 @@ services:
   agent:
     image: quay.io/ecosystem-appeng/cluster-iq-agent:latest
     container_name: agent
+    restart: "always"
     depends_on:
       api:
         condition: service_started
@@ -62,7 +63,7 @@ services:
   pgsql:
     image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
     container_name: pgsql
-    restart: always
+    restart: "always"
     ports:
       - 5432:5432
     environment:

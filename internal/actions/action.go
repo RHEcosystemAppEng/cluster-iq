@@ -2,7 +2,12 @@ package actions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+)
+
+var (
+	ErrorUnknownActionType = errors.New("unknown ActionType")
 )
 
 // Action defines the interface for cloud actions that can be executed.
@@ -78,7 +83,7 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 
 		// Auxiliar struct for getting the action type
 		var r struct {
-			Type string `json:"type"`
+			Type ActionType `json:"type"`
 		}
 
 		// Unmarshalling action type
@@ -100,8 +105,14 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 				return nil, err
 			}
 			resultActions = append(resultActions, a)
+		case InstantActionType:
+			var a InstantAction
+			if err := json.Unmarshal(action, &a); err != nil {
+				return nil, err
+			}
+			resultActions = append(resultActions, a)
 		default:
-			return nil, fmt.Errorf("unknown ActionType: %s", r.Type)
+			return nil, fmt.Errorf("%w: %s", ErrorUnknownActionType, r.Type)
 		}
 	}
 

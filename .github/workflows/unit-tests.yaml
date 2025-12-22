@@ -19,4 +19,4 @@ jobs:
 
       - name: Run Go Unit Tests
         run: |
-          make go-unit-tests
+          make go-coverage-unit-tests

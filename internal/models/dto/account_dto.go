@@ -17,15 +17,19 @@ type AccountDTORequest struct {
 
 // TODO: comments
 func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
-	account := inventory.NewAccount(
+	account, err := inventory.NewAccount(
 		a.AccountID,
 		a.AccountName,
 		a.Provider,
 		"",
 		"",
 	)
+	if err != nil {
+		// TODO: Propagate error
+		return nil
+	}
 
-	account.LastScanTS = a.LastScanTimestamp
+	account.LastScanTimestamp = a.LastScanTimestamp
 	return account
 }
 
@@ -43,7 +47,7 @@ func ToAccountDTORequest(account inventory.Account) *AccountDTORequest {
 		AccountID:         account.AccountID,
 		AccountName:       account.AccountName,
 		Provider:          account.Provider,
-		LastScanTimestamp: account.LastScanTS,
+		LastScanTimestamp: account.LastScanTimestamp,
 		CreatedAt:         account.CreatedAt,
 	}
 }

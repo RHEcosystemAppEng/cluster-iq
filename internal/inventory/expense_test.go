@@ -14,14 +14,18 @@ func TestNewExpense(t *testing.T) {
 
 // testNewExpenseNormal verifies the expense is created correctly in normal conditions
 func testNewExpenseNormal(t *testing.T) {
-	expense := NewExpense("instance", 12.5, time.Now())
+	amount := 12.5
+	expense := NewExpense("instance", amount, time.Now())
+
 	assert.NotNil(t, expense)
-	assert.GreaterOrEqual(t, expense.Amount, 0.0)
+	assert.Equal(t, expense.Amount, 12.5)
 }
 
 // testNewExpenseNegativeAmount verifies the expense doesn't accept negative amounts
 func testNewExpenseNegativeAmount(t *testing.T) {
-	expense := NewExpense("instance", -12.5, time.Now())
+	amount := -12.5
+	expense := NewExpense("instance", amount, time.Now())
+
 	assert.NotNil(t, expense)
 	assert.Equal(t, expense.Amount, 0.0)
 }

@@ -66,7 +66,7 @@ func (s *AWSStocker) MakeStock() error {
 		return err
 	}
 
-	s.Account.LastScanTS = time.Now()
+	s.Account.LastScanTimestamp = time.Now()
 
 	return nil
 }

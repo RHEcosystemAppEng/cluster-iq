@@ -3,7 +3,7 @@ package actions
 // InstantAction represents an immediate action that can be executed without additional delays or dependencies.
 // It embeds BaseAction to inherit common action properties.
 type InstantAction struct {
-	Type string `db:"type"`
+	Type ActionType `db:"type"`
 	BaseAction
 }
 
