@@ -501,7 +501,7 @@ SELECT
 	s.enabled,
 	c.id AS cluster_id,
 	c.region,
-	c.account_id,
+	a.account_id,
 	COALESCE(
 		array_agg(DISTINCT i.instance_id ORDER BY i.instance_id),
 		'{}'
@@ -510,7 +510,8 @@ FROM
 	schedule s
 JOIN clusters c ON c.id = s.target
 LEFT JOIN instances i ON i.cluster_id = c.id
-GROUP BY s.id, c.id
+JOIN accounts a ON c.account_id = a.id
+GROUP BY a.account_id, s.id, c.id
 ORDER BY s.id;
 
 
