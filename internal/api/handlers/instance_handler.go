@@ -64,7 +64,7 @@ type listInstancesRequest struct {
 //	@Param			page_size	query		int		false	"Items per page"	default(10)
 //	@Param			cluster_id	query		string	false	"Cluster ID filter"
 //	@Param			status		query		string	false	"Instance status filter"
-//	@Success		200			{object}	responsetypes.ListResponse[dto.InstanceDTOResponse]
+//	@Success		200			{object}	dto.InstanceListResponse
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
 //	@Router			/instances [get]
@@ -165,6 +165,7 @@ func (h *InstanceHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, responsetypes.PostResponse{
 		Count:  len(newInstanceDTOs),
-		Status: "OK"},
+		Status: "OK",
+	},
 	)
 }

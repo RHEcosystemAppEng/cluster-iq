@@ -24,9 +24,9 @@ func NewHealthCheckHandler(db *dbclient.DBClient, logger *zap.Logger) *HealthChe
 
 // healthCheckResponse defines the response output format for the healthcheck endpoint
 type healthCheckResponse struct {
-	APIHealth bool `json:"api_health"`
-	DBHealth  bool `json:"db_health"`
-}
+	APIHealth bool `json:"apiHealth"`
+	DBHealth  bool `json:"dbHealth"`
+} // @name HealthCheckResponse
 
 // Check returns current API and database health.
 //
