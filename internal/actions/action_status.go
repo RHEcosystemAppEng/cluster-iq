@@ -1,6 +1,6 @@
 package actions
 
-type ActionStatus string
+type ActionStatus string // @name ActionStatus
 
 const (
 	StatusPending ActionStatus = "Pending"
