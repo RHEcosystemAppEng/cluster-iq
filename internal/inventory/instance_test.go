@@ -38,7 +38,7 @@ func testNewInstance_Correct(t *testing.T) {
 	assert.Equal(t, instance.AvailabilityZone, az)
 	assert.Equal(t, instance.Status, status)
 	assert.Equal(t, instance.ClusterID, "")
-	assert.NotZero(t, instance.LastScanTS)
+	assert.NotZero(t, instance.LastScanTimestamp)
 	assert.Equal(t, instance.CreatedAt, tz)
 	assert.Equal(t, instance.Age, 1)
 	assert.Equal(t, instance.Tags, tags)

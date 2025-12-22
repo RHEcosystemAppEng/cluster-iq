@@ -38,7 +38,7 @@ func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
 		return nil
 	}
 
-	instance.LastScanTS = i.LastScanTimestamp
+	instance.LastScanTimestamp = i.LastScanTimestamp
 	instance.ClusterID = i.ClusterID
 
 	return instance
@@ -62,7 +62,7 @@ func ToInstanceDTORequest(instance inventory.Instance) *InstanceDTORequest {
 		AvailabilityZone:  instance.AvailabilityZone,
 		Status:            instance.Status,
 		ClusterID:         instance.ClusterID,
-		LastScanTimestamp: instance.LastScanTS,
+		LastScanTimestamp: instance.LastScanTimestamp,
 		CreatedAt:         instance.CreatedAt,
 		Age:               instance.Age,
 		Owner:             inventory.GetOwnerFromTags(instance.Tags),
@@ -102,15 +102,15 @@ type InstanceDTOResponse struct {
 
 func (i *InstanceDTOResponse) ToInventoryInstance() *inventory.Instance {
 	return &inventory.Instance{
-		InstanceID:       i.InstanceID,
-		InstanceName:     i.InstanceName,
-		InstanceType:     i.InstanceType,
-		Provider:         i.Provider,
-		AvailabilityZone: i.AvailabilityZone,
-		Status:           i.Status,
-		ClusterID:        i.ClusterID,
-		LastScanTS:       i.LastScanTimestamp,
-		CreatedAt:        i.CreatedAt,
-		Age:              i.Age,
+		InstanceID:        i.InstanceID,
+		InstanceName:      i.InstanceName,
+		InstanceType:      i.InstanceType,
+		Provider:          i.Provider,
+		AvailabilityZone:  i.AvailabilityZone,
+		Status:            i.Status,
+		ClusterID:         i.ClusterID,
+		LastScanTimestamp: i.LastScanTimestamp,
+		CreatedAt:         i.CreatedAt,
+		Age:               i.Age,
 	}
 }

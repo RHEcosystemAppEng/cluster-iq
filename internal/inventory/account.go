@@ -30,8 +30,8 @@ type Account struct {
 	// Provider identifies the cloud/infrastructure provider.
 	Provider Provider `db:"provider"`
 
-	// LastScanTS is the timestamp when the account was scanned for the last time.
-	LastScanTS time.Time `db:"last_scan_ts"`
+	// LastScanTimestamp is the timestamp when the account was scanned for the last time.
+	LastScanTimestamp time.Time `db:"last_scan_ts"`
 
 	// CreatedAt is the timestamp when the account was created (from the inventory point of view, not from the provider).
 	CreatedAt time.Time `db:"created_at"`
@@ -59,14 +59,14 @@ func NewAccount(accountID string, accountName string, provider Provider, user st
 	}
 
 	return &Account{
-		AccountID:   accountID,
-		AccountName: accountName,
-		Provider:    provider,
-		Clusters:    make(map[string]*Cluster),
-		LastScanTS:  time.Time{},
-		CreatedAt:   time.Now(),
-		user:        user,
-		password:    password,
+		AccountID:         accountID,
+		AccountName:       accountName,
+		Provider:          provider,
+		Clusters:          make(map[string]*Cluster),
+		LastScanTimestamp: time.Time{},
+		CreatedAt:         time.Now(),
+		user:              user,
+		password:          password,
 	}, nil
 }
 

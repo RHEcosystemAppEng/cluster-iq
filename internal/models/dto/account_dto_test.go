@@ -18,11 +18,11 @@ func testAccountDTORequest_ToInventoryAccount_Correct(t *testing.T) {
 	now := time.Now()
 
 	dto := AccountDTORequest{
-		AccountID:   "acc-1",
-		AccountName: "test-account",
-		Provider:    inventory.AWSProvider,
-		LastScanTS:  now,
-		CreatedAt:   now.Add(-time.Hour),
+		AccountID:         "acc-1",
+		AccountName:       "test-account",
+		Provider:          inventory.AWSProvider,
+		LastScanTimestamp: now,
+		CreatedAt:         now.Add(-time.Hour),
 	}
 
 	account := dto.ToInventoryAccount()
@@ -31,7 +31,7 @@ func testAccountDTORequest_ToInventoryAccount_Correct(t *testing.T) {
 	assert.Equal(t, dto.AccountID, account.AccountID)
 	assert.Equal(t, dto.AccountName, account.AccountName)
 	assert.Equal(t, dto.Provider, account.Provider)
-	assert.Equal(t, dto.LastScanTS, account.LastScanTS)
+	assert.Equal(t, dto.LastScanTimestamp, account.LastScanTimestamp)
 }
 
 func testAccountDTORequest_ToInventoryAccount_Invalid(t *testing.T) {
@@ -55,16 +55,16 @@ func testToInventoryAccountList_Correct(t *testing.T) {
 
 	dtos := []AccountDTORequest{
 		{
-			AccountID:   "acc-1",
-			AccountName: "account-1",
-			Provider:    inventory.AWSProvider,
-			LastScanTS:  now,
+			AccountID:         "acc-1",
+			AccountName:       "account-1",
+			Provider:          inventory.AWSProvider,
+			LastScanTimestamp: now,
 		},
 		{
-			AccountID:   "acc-2",
-			AccountName: "account-2",
-			Provider:    inventory.AWSProvider,
-			LastScanTS:  now.Add(-time.Hour),
+			AccountID:         "acc-2",
+			AccountName:       "account-2",
+			Provider:          inventory.AWSProvider,
+			LastScanTimestamp: now.Add(-time.Hour),
 		},
 	}
 
@@ -86,11 +86,11 @@ func testToAccountDTORequest_Correct(t *testing.T) {
 	now := time.Now()
 
 	account := inventory.Account{
-		AccountID:   "acc-1",
-		AccountName: "account-1",
-		Provider:    inventory.AWSProvider,
-		LastScanTS:  now,
-		CreatedAt:   now.Add(-time.Hour),
+		AccountID:         "acc-1",
+		AccountName:       "account-1",
+		Provider:          inventory.AWSProvider,
+		LastScanTimestamp: now,
+		CreatedAt:         now.Add(-time.Hour),
 	}
 
 	dto := ToAccountDTORequest(account)
@@ -99,6 +99,6 @@ func testToAccountDTORequest_Correct(t *testing.T) {
 	assert.Equal(t, account.AccountID, dto.AccountID)
 	assert.Equal(t, account.AccountName, dto.AccountName)
 	assert.Equal(t, account.Provider, dto.Provider)
-	assert.Equal(t, account.LastScanTS, dto.LastScanTS)
+	assert.Equal(t, account.LastScanTimestamp, dto.LastScanTimestamp)
 	assert.Equal(t, account.CreatedAt, dto.CreatedAt)
 }

@@ -125,7 +125,7 @@ func testInstanceDBResponse_ToInstanceDTOResponse_Correct(t *testing.T) {
 		Status:                inventory.Running,
 		ClusterID:             "cluster-1",
 		ClusterName:           "cluster-name",
-		LastScanTS:            now,
+		LastScanTimestamp:     now,
 		CreatedAt:             now.Add(-time.Hour),
 		Age:                   5,
 		TotalCost:             123.45,
@@ -149,7 +149,7 @@ func testInstanceDBResponse_ToInstanceDTOResponse_Correct(t *testing.T) {
 	assert.Equal(t, model.Status, dto.Status)
 	assert.Equal(t, model.ClusterID, dto.ClusterID)
 	assert.Equal(t, model.ClusterName, dto.ClusterName)
-	assert.Equal(t, model.LastScanTS, dto.LastScanTS)
+	assert.Equal(t, model.LastScanTimestamp, dto.LastScanTimestamp)
 	assert.Equal(t, model.CreatedAt, dto.CreatedAt)
 	assert.Equal(t, model.Age, dto.Age)
 	assert.Equal(t, model.TotalCost, dto.TotalCost)
@@ -174,18 +174,18 @@ func testToInstanceDTOResponseList_Correct(t *testing.T) {
 
 	models := []InstanceDBResponse{
 		{
-			InstanceID:   "i-1",
-			InstanceName: "n1",
-			Provider:     inventory.AWSProvider,
-			LastScanTS:   now,
-			CreatedAt:    now.Add(-time.Hour),
+			InstanceID:        "i-1",
+			InstanceName:      "n1",
+			Provider:          inventory.AWSProvider,
+			LastScanTimestamp: now,
+			CreatedAt:         now.Add(-time.Hour),
 		},
 		{
-			InstanceID:   "i-2",
-			InstanceName: "n2",
-			Provider:     inventory.AWSProvider,
-			LastScanTS:   now.Add(-time.Minute),
-			CreatedAt:    now.Add(-2 * time.Hour),
+			InstanceID:        "i-2",
+			InstanceName:      "n2",
+			Provider:          inventory.AWSProvider,
+			LastScanTimestamp: now.Add(-time.Minute),
+			CreatedAt:         now.Add(-2 * time.Hour),
 		},
 	}
 

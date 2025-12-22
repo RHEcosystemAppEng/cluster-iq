@@ -37,7 +37,7 @@ func testNewCluster_Correct(t *testing.T) {
 	assert.Equal(t, cluster.Region, region)
 	assert.Equal(t, cluster.AccountID, "")
 	assert.Equal(t, cluster.ConsoleLink, consoleLink)
-	assert.False(t, cluster.LastScanTS.IsZero())
+	assert.False(t, cluster.LastScanTimestamp.IsZero())
 	assert.False(t, cluster.CreatedAt.IsZero())
 	assert.Zero(t, cluster.Age)
 	assert.Equal(t, cluster.Owner, owner)

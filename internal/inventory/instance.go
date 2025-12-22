@@ -45,8 +45,8 @@ type Instance struct {
 	// ClusterID which the instance is part of
 	ClusterID string `db:"cluster_id"`
 
-	// LastScanTS is the timestamp when the instance was scanned for the last time.
-	LastScanTS time.Time `db:"last_scan_ts"`
+	// LastScanTimestamp is the timestamp when the instance was scanned for the last time.
+	LastScanTimestamp time.Time `db:"last_scan_ts"`
 
 	// CreatedAt is the timestamp when the instance was created (from the inventory point of view, not from the provider).
 	CreatedAt time.Time `db:"created_at"`
@@ -74,18 +74,18 @@ func NewInstance(instanceID string, instanceName string, provider Provider, inst
 	age := calculateAge(creationTimestamp, now)
 
 	return &Instance{
-		InstanceID:       instanceID,
-		InstanceName:     instanceName,
-		Provider:         provider,
-		InstanceType:     instanceType,
-		AvailabilityZone: availabilityZone,
-		Status:           status,
-		ClusterID:        "",
-		LastScanTS:       now,
-		CreatedAt:        creationTimestamp,
-		Age:              age,
-		Tags:             tags,
-		Expenses:         make([]Expense, 0),
+		InstanceID:        instanceID,
+		InstanceName:      instanceName,
+		Provider:          provider,
+		InstanceType:      instanceType,
+		AvailabilityZone:  availabilityZone,
+		Status:            status,
+		ClusterID:         "",
+		LastScanTimestamp: now,
+		CreatedAt:         creationTimestamp,
+		Age:               age,
+		Tags:              tags,
+		Expenses:          make([]Expense, 0),
 	}, nil
 }
 

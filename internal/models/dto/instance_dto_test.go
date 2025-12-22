@@ -20,17 +20,17 @@ func testInstanceDTORequest_ToInventoryInstance_Correct(t *testing.T) {
 	lastScan := now.Add(-30 * time.Minute)
 
 	dto := InstanceDTORequest{
-		InstanceID:       "i-123",
-		InstanceName:     "node-1",
-		InstanceType:     "t3.large",
-		Provider:         inventory.AWSProvider,
-		AvailabilityZone: "eu-west-1a",
-		Status:           inventory.Running,
-		ClusterID:        "cluster-1",
-		LastScanTS:       lastScan,
-		CreatedAt:        createdAt,
-		Age:              999,             // not applied by ToInventoryInstance (computed by inventory.NewInstance)
-		Owner:            "ignored-owner", // ToInventoryInstance doesn't use Owner
+		InstanceID:        "i-123",
+		InstanceName:      "node-1",
+		InstanceType:      "t3.large",
+		Provider:          inventory.AWSProvider,
+		AvailabilityZone:  "eu-west-1a",
+		Status:            inventory.Running,
+		ClusterID:         "cluster-1",
+		LastScanTimestamp: lastScan,
+		CreatedAt:         createdAt,
+		Age:               999,             // not applied by ToInventoryInstance (computed by inventory.NewInstance)
+		Owner:             "ignored-owner", // ToInventoryInstance doesn't use Owner
 		Tags: []TagDTORequest{
 			{Key: "Owner", Value: "team-a"},
 			{Key: "env", Value: "prod"},
@@ -55,7 +55,7 @@ func testInstanceDTORequest_ToInventoryInstance_Correct(t *testing.T) {
 	assert.Equal(t, "team-a", instance.Tags[0].Value)
 	assert.Equal(t, "", instance.Tags[0].InstanceID)
 
-	assert.Equal(t, lastScan, instance.LastScanTS)
+	assert.Equal(t, lastScan, instance.LastScanTimestamp)
 	assert.Equal(t, createdAt, instance.CreatedAt)
 }
 
@@ -85,28 +85,28 @@ func testToInventoryInstanceList_Correct(t *testing.T) {
 
 	dtos := []InstanceDTORequest{
 		{
-			InstanceID:       "i-1",
-			InstanceName:     "n1",
-			InstanceType:     "t3.small",
-			Provider:         inventory.AWSProvider,
-			AvailabilityZone: "eu-west-1a",
-			Status:           inventory.Running,
-			ClusterID:        "c1",
-			LastScanTS:       now,
-			CreatedAt:        now.Add(-time.Hour),
-			Tags:             []TagDTORequest{{Key: "env", Value: "dev"}},
+			InstanceID:        "i-1",
+			InstanceName:      "n1",
+			InstanceType:      "t3.small",
+			Provider:          inventory.AWSProvider,
+			AvailabilityZone:  "eu-west-1a",
+			Status:            inventory.Running,
+			ClusterID:         "c1",
+			LastScanTimestamp: now,
+			CreatedAt:         now.Add(-time.Hour),
+			Tags:              []TagDTORequest{{Key: "env", Value: "dev"}},
 		},
 		{
-			InstanceID:       "i-2",
-			InstanceName:     "n2",
-			InstanceType:     "t3.medium",
-			Provider:         inventory.AWSProvider,
-			AvailabilityZone: "eu-west-1b",
-			Status:           inventory.Stopped,
-			ClusterID:        "c2",
-			LastScanTS:       now.Add(-time.Minute),
-			CreatedAt:        now.Add(-2 * time.Hour),
-			Tags:             []TagDTORequest{{Key: "env", Value: "prod"}},
+			InstanceID:        "i-2",
+			InstanceName:      "n2",
+			InstanceType:      "t3.medium",
+			Provider:          inventory.AWSProvider,
+			AvailabilityZone:  "eu-west-1b",
+			Status:            inventory.Stopped,
+			ClusterID:         "c2",
+			LastScanTimestamp: now.Add(-time.Minute),
+			CreatedAt:         now.Add(-2 * time.Hour),
+			Tags:              []TagDTORequest{{Key: "env", Value: "prod"}},
 		},
 	}
 
@@ -127,16 +127,16 @@ func testToInstanceDTORequest_Correct(t *testing.T) {
 	now := time.Now().UTC()
 
 	instance := inventory.Instance{
-		InstanceID:       "i-123",
-		InstanceName:     "node-1",
-		InstanceType:     "t3.large",
-		Provider:         inventory.AWSProvider,
-		AvailabilityZone: "eu-west-1a",
-		Status:           inventory.Running,
-		ClusterID:        "cluster-1",
-		LastScanTS:       now,
-		CreatedAt:        now.Add(-time.Hour),
-		Age:              10,
+		InstanceID:        "i-123",
+		InstanceName:      "node-1",
+		InstanceType:      "t3.large",
+		Provider:          inventory.AWSProvider,
+		AvailabilityZone:  "eu-west-1a",
+		Status:            inventory.Running,
+		ClusterID:         "cluster-1",
+		LastScanTimestamp: now,
+		CreatedAt:         now.Add(-time.Hour),
+		Age:               10,
 		Tags: []inventory.Tag{
 			{Key: "Owner", Value: "team-a"},
 			{Key: "env", Value: "prod"},
@@ -153,7 +153,7 @@ func testToInstanceDTORequest_Correct(t *testing.T) {
 	assert.Equal(t, instance.AvailabilityZone, dto.AvailabilityZone)
 	assert.Equal(t, instance.Status, dto.Status)
 	assert.Equal(t, instance.ClusterID, dto.ClusterID)
-	assert.Equal(t, instance.LastScanTS, dto.LastScanTS)
+	assert.Equal(t, instance.LastScanTimestamp, dto.LastScanTimestamp)
 	assert.Equal(t, instance.CreatedAt, dto.CreatedAt)
 	assert.Equal(t, instance.Age, dto.Age)
 
@@ -194,16 +194,16 @@ func testInstanceDTOResponse_ToInventoryInstance_Correct(t *testing.T) {
 	now := time.Now().UTC()
 
 	dto := &InstanceDTOResponse{
-		InstanceID:       "i-123",
-		InstanceName:     "node-1",
-		InstanceType:     "t3.large",
-		Provider:         inventory.AWSProvider,
-		AvailabilityZone: "eu-west-1a",
-		Status:           inventory.Running,
-		ClusterID:        "cluster-1",
-		LastScanTS:       now,
-		CreatedAt:        now.Add(-time.Hour),
-		Age:              5,
+		InstanceID:        "i-123",
+		InstanceName:      "node-1",
+		InstanceType:      "t3.large",
+		Provider:          inventory.AWSProvider,
+		AvailabilityZone:  "eu-west-1a",
+		Status:            inventory.Running,
+		ClusterID:         "cluster-1",
+		LastScanTimestamp: now,
+		CreatedAt:         now.Add(-time.Hour),
+		Age:               5,
 	}
 
 	instance := dto.ToInventoryInstance()
@@ -216,7 +216,7 @@ func testInstanceDTOResponse_ToInventoryInstance_Correct(t *testing.T) {
 	assert.Equal(t, dto.AvailabilityZone, instance.AvailabilityZone)
 	assert.Equal(t, dto.Status, instance.Status)
 	assert.Equal(t, dto.ClusterID, instance.ClusterID)
-	assert.Equal(t, dto.LastScanTS, instance.LastScanTS)
+	assert.Equal(t, dto.LastScanTimestamp, instance.LastScanTimestamp)
 	assert.Equal(t, dto.CreatedAt, instance.CreatedAt)
 	assert.Equal(t, dto.Age, instance.Age)
 }

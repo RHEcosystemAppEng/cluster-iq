@@ -22,7 +22,7 @@ func testAccountDBResponse_ToAccountDTOResponse_Correct(t *testing.T) {
 		AccountID:             "acc-1",
 		AccountName:           "test-account",
 		Provider:              inventory.AWSProvider,
-		LastScanTS:            now,
+		LastScanTimestamp:     now,
 		CreatedAt:             now.Add(-time.Hour),
 		ClusterCount:          3,
 		TotalCost:             123.45,
@@ -37,7 +37,7 @@ func testAccountDBResponse_ToAccountDTOResponse_Correct(t *testing.T) {
 	assert.Equal(t, model.AccountID, dto.AccountID)
 	assert.Equal(t, model.AccountName, dto.AccountName)
 	assert.Equal(t, model.Provider, dto.Provider)
-	assert.Equal(t, model.LastScanTS, dto.LastScanTS)
+	assert.Equal(t, model.LastScanTimestamp, dto.LastScanTimestamp)
 	assert.Equal(t, model.CreatedAt, dto.CreatedAt)
 	assert.Equal(t, model.ClusterCount, dto.ClusterCount)
 	assert.Equal(t, model.TotalCost, dto.TotalCost)
@@ -58,20 +58,20 @@ func testToAccountDTOResponseList_Correct(t *testing.T) {
 
 	models := []AccountDBResponse{
 		{
-			AccountID:    "acc-1",
-			AccountName:  "account-1",
-			Provider:     inventory.AWSProvider,
-			LastScanTS:   now,
-			CreatedAt:    now.Add(-time.Hour),
-			ClusterCount: 1,
+			AccountID:         "acc-1",
+			AccountName:       "account-1",
+			Provider:          inventory.AWSProvider,
+			LastScanTimestamp: now,
+			CreatedAt:         now.Add(-time.Hour),
+			ClusterCount:      1,
 		},
 		{
-			AccountID:    "acc-2",
-			AccountName:  "account-2",
-			Provider:     inventory.AWSProvider,
-			LastScanTS:   now.Add(-time.Minute),
-			CreatedAt:    now.Add(-2 * time.Hour),
-			ClusterCount: 2,
+			AccountID:         "acc-2",
+			AccountName:       "account-2",
+			Provider:          inventory.AWSProvider,
+			LastScanTimestamp: now.Add(-time.Minute),
+			CreatedAt:         now.Add(-2 * time.Hour),
+			ClusterCount:      2,
 		},
 	}
 

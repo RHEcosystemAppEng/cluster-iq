@@ -28,7 +28,7 @@ func testClusterDBResponse_ToClusterDTOResponse_Correct(t *testing.T) {
 		AccountID:             "acc-1",
 		AccountName:           "account-1",
 		ConsoleLink:           "https://console",
-		LastScanTS:            now,
+		LastScanTimestamp:     now,
 		CreatedAt:             now.Add(-time.Hour),
 		Age:                   42,
 		Owner:                 "team-a",
@@ -51,7 +51,7 @@ func testClusterDBResponse_ToClusterDTOResponse_Correct(t *testing.T) {
 	assert.Equal(t, model.AccountID, dto.AccountID)
 	assert.Equal(t, model.ConsoleLink, dto.ConsoleLink)
 	assert.Equal(t, model.InstanceCount, dto.InstanceCount)
-	assert.Equal(t, model.LastScanTS, dto.LastScanTS)
+	assert.Equal(t, model.LastScanTimestamp, dto.LastScanTimestamp)
 	assert.Equal(t, model.CreatedAt, dto.CreatedAt)
 	assert.Equal(t, model.Age, dto.Age)
 	assert.Equal(t, model.Owner, dto.Owner)
@@ -73,30 +73,30 @@ func testToClusterDTOResponseList_Correct(t *testing.T) {
 
 	models := []ClusterDBResponse{
 		{
-			ClusterID:     "c1",
-			ClusterName:   "cluster-1",
-			InfraID:       "AAAAA",
-			Provider:      inventory.AWSProvider,
-			Status:        inventory.Running,
-			Region:        "eu-west-1",
-			AccountID:     "acc-1",
-			ConsoleLink:   "https://console-1",
-			LastScanTS:    now,
-			CreatedAt:     now.Add(-time.Hour),
-			InstanceCount: 1,
+			ClusterID:         "c1",
+			ClusterName:       "cluster-1",
+			InfraID:           "AAAAA",
+			Provider:          inventory.AWSProvider,
+			Status:            inventory.Running,
+			Region:            "eu-west-1",
+			AccountID:         "acc-1",
+			ConsoleLink:       "https://console-1",
+			LastScanTimestamp: now,
+			CreatedAt:         now.Add(-time.Hour),
+			InstanceCount:     1,
 		},
 		{
-			ClusterID:     "c2",
-			ClusterName:   "cluster-2",
-			InfraID:       "BBBBB",
-			Provider:      inventory.AWSProvider,
-			Status:        inventory.Stopped,
-			Region:        "us-east-1",
-			AccountID:     "acc-2",
-			ConsoleLink:   "https://console-2",
-			LastScanTS:    now.Add(-time.Minute),
-			CreatedAt:     now.Add(-2 * time.Hour),
-			InstanceCount: 2,
+			ClusterID:         "c2",
+			ClusterName:       "cluster-2",
+			InfraID:           "BBBBB",
+			Provider:          inventory.AWSProvider,
+			Status:            inventory.Stopped,
+			Region:            "us-east-1",
+			AccountID:         "acc-2",
+			ConsoleLink:       "https://console-2",
+			LastScanTimestamp: now.Add(-time.Minute),
+			CreatedAt:         now.Add(-2 * time.Hour),
+			InstanceCount:     2,
 		},
 	}
 

@@ -32,7 +32,7 @@ func testNewAccount_Correct(t *testing.T) {
 	assert.Equal(t, user, account.user)
 	assert.Equal(t, password, account.password)
 	assert.NotNil(t, account.Clusters)
-	assert.Zero(t, account.LastScanTS)
+	assert.Zero(t, account.LastScanTimestamp)
 	assert.NotZero(t, account.CreatedAt)
 }
 

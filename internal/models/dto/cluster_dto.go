@@ -36,7 +36,7 @@ func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 		return nil
 	}
 
-	cluster.LastScanTS = c.LastScanTimestamp
+	cluster.LastScanTimestamp = c.LastScanTimestamp
 	cluster.CreatedAt = c.CreatedAt
 	cluster.Status = c.Status
 	cluster.AccountID = c.AccountID
@@ -63,7 +63,7 @@ func ToClusterDTORequest(cluster inventory.Cluster) *ClusterDTORequest {
 		Region:            cluster.Region,
 		AccountID:         cluster.AccountID,
 		ConsoleLink:       cluster.ConsoleLink,
-		LastScanTimestamp: cluster.LastScanTS,
+		LastScanTimestamp: cluster.LastScanTimestamp,
 		CreatedAt:         cluster.CreatedAt,
 		Age:               cluster.Age,
 		Owner:             cluster.Owner,

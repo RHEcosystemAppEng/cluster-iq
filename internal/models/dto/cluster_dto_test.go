@@ -18,18 +18,18 @@ func testClusterDTORequest_ToInventoryCluster_Correct(t *testing.T) {
 	now := time.Now().UTC()
 
 	dto := ClusterDTORequest{
-		ClusterID:   "cluster-ignored", // NewCluster generates ClusterID; DTO's ClusterID is not used in ToInventoryCluster
-		ClusterName: "testCluster",
-		InfraID:     "ABCDE",
-		Provider:    inventory.AWSProvider,
-		Status:      inventory.Running,
-		Region:      "eu-west-1",
-		AccountID:   "acc-1",
-		ConsoleLink: "https://console",
-		LastScanTS:  now,
-		CreatedAt:   now.Add(-2 * time.Hour),
-		Age:         123, // not applied by ToInventoryCluster
-		Owner:       "owner",
+		ClusterID:         "cluster-ignored", // NewCluster generates ClusterID; DTO's ClusterID is not used in ToInventoryCluster
+		ClusterName:       "testCluster",
+		InfraID:           "ABCDE",
+		Provider:          inventory.AWSProvider,
+		Status:            inventory.Running,
+		Region:            "eu-west-1",
+		AccountID:         "acc-1",
+		ConsoleLink:       "https://console",
+		LastScanTimestamp: now,
+		CreatedAt:         now.Add(-2 * time.Hour),
+		Age:               123, // not applied by ToInventoryCluster
+		Owner:             "owner",
 	}
 
 	cluster := dto.ToInventoryCluster()
@@ -43,7 +43,7 @@ func testClusterDTORequest_ToInventoryCluster_Correct(t *testing.T) {
 	assert.Equal(t, dto.ConsoleLink, cluster.ConsoleLink)
 	assert.Equal(t, dto.Owner, cluster.Owner)
 
-	assert.Equal(t, dto.LastScanTS, cluster.LastScanTS)
+	assert.Equal(t, dto.LastScanTimestamp, cluster.LastScanTimestamp)
 	assert.Equal(t, dto.CreatedAt, cluster.CreatedAt)
 	assert.Equal(t, dto.Status, cluster.Status)
 	assert.Equal(t, dto.AccountID, cluster.AccountID)
@@ -75,28 +75,28 @@ func testToInventoryClusterList_Correct(t *testing.T) {
 
 	dtos := []ClusterDTORequest{
 		{
-			ClusterName: "c1",
-			InfraID:     "AAAAA",
-			Provider:    inventory.AWSProvider,
-			Status:      inventory.Running,
-			Region:      "eu-west-1",
-			AccountID:   "acc-1",
-			ConsoleLink: "https://console-1",
-			LastScanTS:  now,
-			CreatedAt:   now.Add(-time.Hour),
-			Owner:       "owner-1",
+			ClusterName:       "c1",
+			InfraID:           "AAAAA",
+			Provider:          inventory.AWSProvider,
+			Status:            inventory.Running,
+			Region:            "eu-west-1",
+			AccountID:         "acc-1",
+			ConsoleLink:       "https://console-1",
+			LastScanTimestamp: now,
+			CreatedAt:         now.Add(-time.Hour),
+			Owner:             "owner-1",
 		},
 		{
-			ClusterName: "c2",
-			InfraID:     "BBBBB",
-			Provider:    inventory.AWSProvider,
-			Status:      inventory.Stopped,
-			Region:      "us-east-1",
-			AccountID:   "acc-2",
-			ConsoleLink: "https://console-2",
-			LastScanTS:  now.Add(-2 * time.Hour),
-			CreatedAt:   now.Add(-3 * time.Hour),
-			Owner:       "owner-2",
+			ClusterName:       "c2",
+			InfraID:           "BBBBB",
+			Provider:          inventory.AWSProvider,
+			Status:            inventory.Stopped,
+			Region:            "us-east-1",
+			AccountID:         "acc-2",
+			ConsoleLink:       "https://console-2",
+			LastScanTimestamp: now.Add(-2 * time.Hour),
+			CreatedAt:         now.Add(-3 * time.Hour),
+			Owner:             "owner-2",
 		},
 	}
 
@@ -118,18 +118,18 @@ func testToClusterDTORequest_Correct(t *testing.T) {
 	now := time.Now().UTC()
 
 	cluster := inventory.Cluster{
-		ClusterID:   "cluster-1",
-		ClusterName: "name-1",
-		InfraID:     "ABCDE",
-		Provider:    inventory.AWSProvider,
-		Status:      inventory.Running,
-		Region:      "eu-west-1",
-		AccountID:   "acc-1",
-		ConsoleLink: "https://console",
-		LastScanTS:  now,
-		CreatedAt:   now.Add(-time.Hour),
-		Age:         77,
-		Owner:       "owner",
+		ClusterID:         "cluster-1",
+		ClusterName:       "name-1",
+		InfraID:           "ABCDE",
+		Provider:          inventory.AWSProvider,
+		Status:            inventory.Running,
+		Region:            "eu-west-1",
+		AccountID:         "acc-1",
+		ConsoleLink:       "https://console",
+		LastScanTimestamp: now,
+		CreatedAt:         now.Add(-time.Hour),
+		Age:               77,
+		Owner:             "owner",
 	}
 
 	dto := ToClusterDTORequest(cluster)
@@ -143,7 +143,7 @@ func testToClusterDTORequest_Correct(t *testing.T) {
 	assert.Equal(t, cluster.Region, dto.Region)
 	assert.Equal(t, cluster.AccountID, dto.AccountID)
 	assert.Equal(t, cluster.ConsoleLink, dto.ConsoleLink)
-	assert.Equal(t, cluster.LastScanTS, dto.LastScanTS)
+	assert.Equal(t, cluster.LastScanTimestamp, dto.LastScanTimestamp)
 	assert.Equal(t, cluster.CreatedAt, dto.CreatedAt)
 	assert.Equal(t, cluster.Age, dto.Age)
 	assert.Equal(t, cluster.Owner, dto.Owner)
