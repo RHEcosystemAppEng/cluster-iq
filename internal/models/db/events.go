@@ -12,7 +12,7 @@ type ClusterEventDBResponse struct {
 	EventTimestamp time.Time            `db:"event_timestamp"`
 	TriggeredBy    string               `db:"triggered_by"`
 	Action         string               `db:"action"`
-	ResourceName   string               `db:"resource_name"`
+	ResourceID     string               `db:"resource_id"`
 	ResourceType   string               `db:"resource_type"`
 	Result         actions.ActionStatus `db:"result"`
 	Description    *string              `db:"description,omitempty"`
@@ -25,7 +25,7 @@ func (c ClusterEventDBResponse) ToClusterEventDTOResponse() *dto.ClusterEventDTO
 		EventTimestamp: c.EventTimestamp,
 		TriggeredBy:    c.TriggeredBy,
 		Action:         c.Action,
-		ResourceName:   c.ResourceName,
+		ResourceID:     c.ResourceID,
 		ResourceType:   c.ResourceType,
 		Result:         c.Result,
 		Description:    c.Description,

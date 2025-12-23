@@ -145,7 +145,7 @@ func testUpdateEvent(t *testing.T) {
 		ResourceID:     "aws-cluster-2-aws-infra-2",
 		ResourceType:   "cluster",
 		EventTimestamp: time.Now(),
-		Result:         "OK-Updated",
+		Result:         "Success",
 		Severity:       "info",
 		TriggeredBy:    "tester",
 		Description:    nil,
