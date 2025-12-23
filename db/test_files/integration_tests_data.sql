@@ -76,11 +76,11 @@ INSERT INTO events (event_timestamp, triggered_by, action, resource_id, resource
 
 
 INSERT INTO schedule (type, time, operation, target, status, enabled) VALUES
-  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOffCluster', 1, 'Pending', 't'),
-  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOffCluster', 4, 'Pending', 'f');
+  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOff', 1, 'Pending', 't'),
+  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOn', 4, 'Pending', 'f');
 
 INSERT INTO schedule (type, cron_exp, operation, target, status, enabled) VALUES
-  ('scheduled_action', '30 */12 * 6 *', 'PowerOffCluster', 2, 'Pending', 'f');
+  ('scheduled_action', '30 */12 * 6 *', 'PowerOff', 2, 'Pending', 'f');
 
 
 COMMIT;
