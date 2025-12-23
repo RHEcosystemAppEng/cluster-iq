@@ -10,7 +10,7 @@ type InstantAction struct {
 // NewInstantAction creates and initializes a new InstantAction.
 //
 // Parameters:
-// - ao: The operation of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
+// - ao: The operation of action to be performed (e.g., PowerOn, PowerOff).
 // - target: The target resource (cluster and instances) affected by the action.
 //
 // Returns:
@@ -25,7 +25,7 @@ func NewInstantAction(ao ActionOperation, target ActionTarget, status ActionStat
 // GetActionOperation returns the type of action being performed.
 //
 // Returns:
-// - An ActionOperation representing the action type (e.g., PowerOnCluster, PowerOffCluster).
+// - An ActionOperation representing the action type (e.g., PowerOn, PowerOff).
 func (i InstantAction) GetActionOperation() ActionOperation {
 	return i.Operation
 }

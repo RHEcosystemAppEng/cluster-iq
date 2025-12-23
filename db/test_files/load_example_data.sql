@@ -210,7 +210,7 @@ SELECT
     'scheduled_action'::ACTION_TYPE,
     now() + (g * interval '1 day') AS time,
     NULL,
-    (ARRAY['PowerOnCluster','PowerOffCluster'])[1 + (random()*1)::int]::ACTION_OPERATION,
+    (ARRAY['PowerOn','PowerOff'])[1 + (random()*1)::int]::ACTION_OPERATION,
     c.id AS target,
     'Pending'::ACTION_STATUS,
     (random() > 0.5) AS enabled
@@ -225,7 +225,7 @@ SELECT
     'cron_action'::ACTION_TYPE,
     NULL,
 		(ARRAY['0 6 * * *', '0 0 * * 0', '*/30 * * * *'])[g] AS cron_exp,
-    (ARRAY['PowerOnCluster','PowerOffCluster'])[1 + (random()*1)::int]::ACTION_OPERATION,
+    (ARRAY['PowerOn','PowerOff'])[1 + (random()*1)::int]::ACTION_OPERATION,
     c.id AS target,
     'Pending'::ACTION_STATUS,
     (random() > 0.5) AS enabled
@@ -241,13 +241,13 @@ INSERT INTO events (
 SELECT
   now() - (random() * interval '10 days') AS event_timestamp,
   (ARRAY['scanner','agent','api','scheduler','user'])[1 + floor(random()*5)],
-  (ARRAY['scan','PowerOnCluster','PowerOffCluster','RestartCluster','Terminate'])[1 + floor(random()*5)],
+  (ARRAY['scan','PowerOn','PowerOff','RestartCluster','Terminate'])[1 + floor(random()*5)],
   (1 + floor(random()*20))::int AS resource_id,
   CASE WHEN random() < 0.6 THEN 'instance' ELSE 'cluster' END AS resource_type,
   (ARRAY['Pending','Running','Failed','Success','Unknown'])[1 + floor(random()*5)]::ACTION_STATUS AS result,
   'auto-generated dev event' AS description,
   (ARRAY['info','warning','error','notice'])[1 + floor(random()*4)] AS severity
-FROM generate_series(1,12);
+FROM generate_series(1,15);
 
 
 COMMIT;

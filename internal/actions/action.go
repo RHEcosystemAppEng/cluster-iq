@@ -17,7 +17,7 @@ type Action interface {
 	// GetActionOperation returns the type of action being performed.
 	//
 	// Returns:
-	// - An ActionOperation indicating the action type (e.g., PowerOnCluster, PowerOffCluster).
+	// - An ActionOperation indicating the action type (e.g., PowerOn, PowerOff).
 	GetActionOperation() ActionOperation
 
 	// GetRegion returns the cloud region where the action is executed.

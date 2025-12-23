@@ -24,7 +24,7 @@ func testNewPowerOnClusterAction_Correct(t *testing.T) {
 	a := NewPowerOnClusterAction(target, requester, &desc)
 
 	assert.NotNil(t, a)
-	assert.Equal(t, PowerOnCluster, a.GetActionOperation())
+	assert.Equal(t, PowerOn, a.GetActionOperation())
 	assert.Equal(t, target, a.GetTarget())
 	assert.Equal(t, target.Region, a.GetRegion())
 	assert.Equal(t, StatusPending, a.Status)
@@ -51,7 +51,7 @@ func testNewPowerOffClusterAction_Correct(t *testing.T) {
 	a := NewPowerOffClusterAction(target, requester, &desc)
 
 	assert.NotNil(t, a)
-	assert.Equal(t, PowerOffCluster, a.GetActionOperation())
+	assert.Equal(t, PowerOff, a.GetActionOperation())
 	assert.Equal(t, target, a.GetTarget())
 	assert.Equal(t, target.Region, a.GetRegion())
 	assert.Equal(t, StatusPending, a.Status)

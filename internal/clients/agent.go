@@ -52,9 +52,9 @@ func (a APIGRPCClient) ProcessInstantAction(action *actions.InstantAction) error
 		action.Description = &DefaultInstantActionDescription
 	}
 	switch action.Operation {
-	case actions.PowerOffCluster:
+	case actions.PowerOff:
 		return a.PowerOffCluster(context.Background(), action)
-	case actions.PowerOnCluster:
+	case actions.PowerOn:
 		return a.PowerOnCluster(context.Background(), action)
 	default:
 		return fmt.Errorf("received InstantAction with unknown Operation")

@@ -13,7 +13,7 @@ type ScheduledAction struct {
 // NewScheduledAction creates and initializes a new ScheduledAction.
 //
 // Parameters:
-// - actionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
+// - actionOperation: The type of action to be performed (e.g., PowerOn, PowerOff).
 // - target: The target resource (cluster and instances) affected by the action.
 // - when: The scheduled time for executing the action.
 //
@@ -29,7 +29,7 @@ func NewScheduledAction(ao ActionOperation, target ActionTarget, status ActionSt
 // GetActionOperation returns the type of action being performed.
 //
 // Returns:
-// - An ActionOperation representing the action type (e.g., PowerOnCluster, PowerOffCluster).
+// - An ActionOperation representing the action type (e.g., PowerOn, PowerOff).
 func (s ScheduledAction) GetActionOperation() ActionOperation {
 	return s.Operation
 }

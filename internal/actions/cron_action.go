@@ -11,7 +11,7 @@ type CronAction struct {
 // NewCronAction creates and initializes a new CronAction.
 //
 // Parameters:
-// - actionOperation: The type of action to be performed (e.g., PowerOnCluster, PowerOffCluster).
+// - actionOperation: The type of action to be performed (e.g., PowerOn, PowerOff).
 // - target: The target resource (cluster and instances) affected by the action.
 // - when: The scheduled time for executing the action.
 //
@@ -27,7 +27,7 @@ func NewCronAction(actionOperation ActionOperation, target ActionTarget, status 
 // GetActionOperation returns the type of action being performed.
 //
 // Returns:
-// - An ActionOperation representing the action type (e.g., PowerOnCluster, PowerOffCluster).
+// - An ActionOperation representing the action type (e.g., PowerOn, PowerOff).
 func (c CronAction) GetActionOperation() ActionOperation {
 	return c.Operation
 }

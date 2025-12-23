@@ -22,16 +22,17 @@ func TestAPIActions(t *testing.T) {
 		t.Fatal("Error refreshing inventory")
 	}
 
-	t.Run("Test List Actions", func(t *testing.T) { testListActions(t) })
-	t.Run("Test List Actions with Pagination", func(t *testing.T) { testListActionsWithPagination(t) })
-	t.Run("Test Get Actions By ID Success", func(t *testing.T) { testGetActionByID_Exists(t) })
-	t.Run("Test Get Actions By ID Not Found", func(t *testing.T) { testGetActionByID_NoExists(t) })
-	t.Run("Test Post One Action", func(t *testing.T) { testPostOneAction(t) })
-	t.Run("Test Post Multiple Action", func(t *testing.T) { testPostMultipleActions(t) })
-	t.Run("Test Post Wrong Action", func(t *testing.T) { testPostWrongAction(t) })
-	t.Run("Test Enable Action", func(t *testing.T) { testEnableAction(t) })
-	t.Run("Test Disable Action", func(t *testing.T) { testDisableAction(t) })
-	t.Run("Test Delete Action", func(t *testing.T) { testDeleteAction_NoExists(t) })
+	t.Run("List Actions", func(t *testing.T) { testListActions(t) })
+	t.Run("List Actions with Pagination", func(t *testing.T) { testListActionsWithPagination(t) })
+	t.Run("Get Actions By ID Success", func(t *testing.T) { testGetActionByID_Exists(t) })
+	t.Run("Get Actions By ID Not Found", func(t *testing.T) { testGetActionByID_NoExists(t) })
+	t.Run("Post One Action", func(t *testing.T) { testPostOneAction(t) })
+	t.Run("Post Multiple Action", func(t *testing.T) { testPostMultipleActions(t) })
+	t.Run("Post Wrong Action", func(t *testing.T) { testPostWrongAction(t) })
+	t.Run("Enable Action", func(t *testing.T) { testEnableAction(t) })
+	t.Run("Disable Action", func(t *testing.T) { testDisableAction(t) })
+	t.Run("Delete existing Action", func(t *testing.T) { testDeleteAction_Exists(t) })
+	t.Run("Delete no existing Action", func(t *testing.T) { testDeleteAction_NoExists(t) })
 }
 
 func testListActions(t *testing.T) {
@@ -173,7 +174,7 @@ func testPostOneAction(t *testing.T) {
 		{
 			Type:      "scheduled_action",
 			Time:      ts,
-			Operation: "PowerOnCluster",
+			Operation: "PowerOn",
 			Status:    "Pending",
 			Enabled:   false,
 			ClusterID: "3",
@@ -213,7 +214,7 @@ func testPostMultipleActions(t *testing.T) {
 		{
 			Type:      "cron_action",
 			CronExp:   "45 */12 * 7 *",
-			Operation: "PowerOnCluster",
+			Operation: "PowerOn",
 			Status:    "Pending",
 			Enabled:   false,
 			ClusterID: "4",
@@ -224,7 +225,7 @@ func testPostMultipleActions(t *testing.T) {
 		{
 			Type:      "scheduled_action",
 			Time:      ts,
-			Operation: "PowerOnCluster",
+			Operation: "PowerOn",
 			Status:    "Pending",
 			Enabled:   false,
 			ClusterID: "3",
