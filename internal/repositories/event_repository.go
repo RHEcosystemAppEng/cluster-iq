@@ -82,18 +82,6 @@ func (r *eventRepositoryImpl) ListSystemEvents(ctx context.Context, opts models.
 // ListClusterEvents retrieves events for a specific resource (like a cluster).
 func (r *eventRepositoryImpl) ListClusterEvents(ctx context.Context, opts models.ListOptions) ([]db.ClusterEventDBResponse, int, error) {
 	var events []db.ClusterEventDBResponse
-	var id int
-
-	if err := r.db.GetWithContext(ctx, &id, ClustersTable, models.ListOptions{
-		PageSize: 0,
-		Offset:   0,
-		Filters:  map[string]interface{}{"cluster_id": opts.Filters["resource_id"]},
-	}, "id"); err != nil {
-		return events, 0, fmt.Errorf("failed to get cluster internal id: %w", err)
-	}
-
-	opts.Filters["resource_name"] = id
-	delete(opts.Filters, "resource_id")
 
 	if err := r.db.SelectWithContext(ctx, &events, SelectClusterEventsView, opts, "event_timestamp", "*"); err != nil {
 		return events, 0, fmt.Errorf("failed to list cluster events: %w", err)

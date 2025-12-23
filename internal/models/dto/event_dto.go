@@ -37,7 +37,7 @@ func (e EventDTORequest) ToModelEvent() *events.Event {
 type ClusterEventDTOResponse struct {
 	ID             int64                `json:"id"`
 	Action         string               `json:"action"`
-	ResourceName   string               `json:"resourceName"`
+	ResourceID     string               `json:"resourceId"`
 	ResourceType   string               `json:"resourceType"`
 	EventTimestamp time.Time            `json:"timestamp"`
 	Result         actions.ActionStatus `json:"result"`

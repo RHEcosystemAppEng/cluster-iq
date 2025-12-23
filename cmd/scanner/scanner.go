@@ -125,7 +125,7 @@ func (s *Scanner) createStockers() error {
 	for _, account := range s.inventory.Accounts {
 		switch account.Provider {
 		case inventory.AWSProvider:
-			s.logger.Info("Processing AWS account", zap.String("account_name", account.AccountName))
+			s.logger.Info("Processing AWS account", zap.String("account_id", account.AccountID), zap.String("account_name", account.AccountName))
 
 			// AWS API Stoker
 			awsStocker, err := stocker.NewAWSStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger)
@@ -139,7 +139,7 @@ func (s *Scanner) createStockers() error {
 
 			// AWS Billing API Stoker
 			if account.IsBillingEnabled() {
-				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account_name", account.AccountName))
+				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account_id", account.AccountID), zap.String("account_name", account.AccountName))
 				instancesToScan, err := s.getInstancesForBillingUpdate(account.AccountID)
 				if err != nil {
 					s.logger.Error("Failed to retrieve the list of instances required for billing information from AWS Cost Explorer.",
@@ -151,25 +151,29 @@ func (s *Scanner) createStockers() error {
 			}
 		case inventory.GCPProvider:
 			s.logger.Warn("Failed to scan GCP account",
-				zap.String("account", account.AccountName),
+				zap.String("account_id", account.AccountID),
+				zap.String("account_name", account.AccountName),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when GCP Stocker is implemented
 			// gcpStocker = stocker.NewGCPStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
 		case inventory.AzureProvider:
 			s.logger.Warn("Failed to scan Azure account",
-				zap.String("account", account.AccountName),
+				zap.String("account_id", account.AccountID),
+				zap.String("account_name", account.AccountName),
 				zap.String("reason", "not implemented"),
 			)
 			// TODO: Uncomment line below when Azure Stocker is implemented
 			// azureStocker = stocker.NewAzureStocker(account, s.cfg.SkipNoOpenShiftInstances, s.logger))
 		case inventory.UnknownProvider:
 			s.logger.Warn("Unknown cloud provider, skipping account",
-				zap.String("account", account.AccountName),
+				zap.String("account_id", account.AccountID),
+				zap.String("account_name", account.AccountName),
 				zap.String("provider", string(account.Provider)))
 		default:
 			s.logger.Warn("Unsupported cloud provider, skipping account",
-				zap.String("account", account.AccountName),
+				zap.String("account_id", account.AccountID),
+				zap.String("account_name", account.AccountName),
 				zap.String("provider", string(account.Provider)))
 		}
 	}
@@ -188,7 +192,7 @@ func (s *Scanner) createStockers() error {
 	if s.logger.Core().Enabled(zap.DebugLevel) {
 		s.logger.Debug("Total Stockers created", zap.Int("count", len(s.stockers)))
 		for i, stocker := range s.stockers {
-			s.logger.Debug("Stocker", zap.Int("id", i), zap.String("name", stocker.GetAccount().AccountName))
+			s.logger.Debug("Stocker", zap.Int("id", i), zap.String("account_id", stocker.GetAccount().AccountID), zap.String("account_name", stocker.GetAccount().AccountName))
 		}
 	}
 
@@ -253,14 +257,14 @@ func (s *Scanner) startStockers() error {
 
 // postNewAccount posts into the API an account, its clusters, instances and expenses
 func (s *Scanner) postNewAccount(account inventory.Account) error {
-	s.logger.Debug("Posting new Account", zap.String("account", account.AccountName))
+	s.logger.Debug("Posting new Account", zap.String("account_id", account.AccountID), zap.String("account_name", account.AccountName))
 
 	// Converting to Array because API handler assumes a list of accounts
 	var accounts []dto.AccountDTORequest
 	accounts = append(accounts, *dto.ToAccountDTORequest(account))
 	b, err := json.Marshal(accounts)
 	if err != nil {
-		s.logger.Error("Failed to marshal account", zap.String("account", account.AccountName), zap.Error(err))
+		s.logger.Error("Failed to marshal account", zap.String("account_id", account.AccountID), zap.String("account_name", account.AccountName), zap.Error(err))
 		return err
 	}
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -127,7 +128,7 @@ func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 	assert.Equal(t, "START", dto.Action)
 	assert.Equal(t, "cluster-10", dto.ResourceID)
 	assert.Equal(t, "cluster", dto.ResourceType)
-	assert.Equal(t, "Pending", dto.Result)
+	assert.Equal(t, actions.StatusPending, dto.Result)
 	assert.Equal(t, &desc, dto.Description)
 	assert.Equal(t, "Warning", dto.Severity)
 	assert.Equal(t, "acc-1", dto.AccountID)
