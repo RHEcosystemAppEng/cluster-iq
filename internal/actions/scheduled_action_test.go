@@ -177,7 +177,7 @@ func testScheduledAction_SetStatus_Correct(t *testing.T) {
 
 	assert.Equal(t, StatusPending, action.Status)
 
-	action.SetStatus(StatusCompleted)
+	action.SetStatus(StatusSuccess)
 
-	assert.Equal(t, StatusCompleted, action.Status)
+	assert.Equal(t, StatusSuccess, action.Status)
 }

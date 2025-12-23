@@ -61,7 +61,7 @@ const (
 			status,
 			enabled
 		) VALUES (
-			:type,
+			'scheduled_action',
 			:time,
 			:operation,
 			:target.cluster_id,
@@ -79,7 +79,7 @@ const (
 			status,
 			enabled
 		) VALUES (
-			:type,
+			'cron_action',
 			:cron_exp,
 			:operation,
 			:target.cluster_id,

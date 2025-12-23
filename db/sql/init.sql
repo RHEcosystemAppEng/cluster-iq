@@ -548,16 +548,18 @@ $$;
 -- View for Cluster Events
 CREATE VIEW cluster_events AS
 SELECT
-  id,
-  event_timestamp,
-  triggered_by,
-  action,
-  resource_id,
-  resource_type,
-  result,
-  description,
-  severity
-FROM events
+  ev.id,
+  ev.event_timestamp,
+  ev.triggered_by,
+  ev.action,
+  COALESCE(c.cluster_id, i.instance_id) AS resource_id,
+  ev.resource_type,
+  ev.result,
+  ev.description,
+  ev.severity
+FROM events ev
+LEFT JOIN clusters  c ON ev.resource_type = 'cluster'  AND c.id = ev.resource_id
+LEFT JOIN instances i ON ev.resource_type = 'instance' AND i.id = ev.resource_id
 ORDER BY event_timestamp DESC;
 
 -- View for System Events
@@ -567,7 +569,7 @@ SELECT
   ev.event_timestamp,
   ev.triggered_by,
   ev.action,
-  COALESCE(c.cluster_id, i.instance_id) AS resource_name,
+  COALESCE(c.cluster_id, i.instance_id) AS resource_id,
   ev.resource_type,
   ev.result,
   ev.description,

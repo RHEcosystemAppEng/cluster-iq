@@ -71,7 +71,7 @@ INSERT INTO expenses (instance_id, date, amount) VALUES
 
 
 INSERT INTO events (event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity) VALUES
-  ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '1', 'cluster', 'OK', 'integration test event', 'info'),
+  ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '1', 'cluster', 'Success', 'integration test event', 'info'),
   ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '10', 'instance', 'Pending', 'integration test event', 'critical');
 
 
