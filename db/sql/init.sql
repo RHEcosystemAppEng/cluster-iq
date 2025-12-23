@@ -499,7 +499,7 @@ SELECT
 	s.operation,
 	s.status,
 	s.enabled,
-	c.id AS cluster_id,
+	c.cluster_id,
 	c.region,
 	a.account_id,
 	COALESCE(
