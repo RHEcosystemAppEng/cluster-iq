@@ -12,18 +12,17 @@ type ActionDTORequest struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`
-	CronExp   string    `json:"cron_exp"`
+	CronExp   string    `json:"cronExpression"`
 	Operation string    `json:"operation"`
 	Status    string    `json:"status"`
 	Enabled   bool      `json:"enabled"`
-	ClusterID string    `json:"cluster_id"`
+	ClusterID string    `json:"clusterId"`
 	Region    string    `json:"region"`
-	AccountID string    `json:"account_id"`
+	AccountID string    `json:"accountId"`
 	Instances []string  `json:"instances"`
-}
+} // @name ActionRequest
 
 func (a ActionDTORequest) ToModelAction() actions.Action {
-	actionOp := actions.ActionOperation(a.Operation)
 	target := actions.ActionTarget{
 		AccountID: a.AccountID,
 		Region:    a.Region,
@@ -31,27 +30,36 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 		Instances: a.Instances,
 	}
 
-	baseAction := actions.BaseAction{
-		ID:        a.ID,
-		Operation: actionOp,
-		Target:    target,
-		Status:    actions.ActionStatus(a.Status),
-		Enabled:   a.Enabled,
-	}
-
-	switch a.Type {
-	case string(actions.ScheduledActionType):
-		return &actions.ScheduledAction{
-			BaseAction: baseAction,
-			When:       a.Time,
-			Type:       a.Type,
-		}
-	case string(actions.CronActionType):
-		return &actions.CronAction{
-			BaseAction: baseAction,
-			Expression: a.CronExp,
-			Type:       a.Type,
-		}
+	switch actions.ActionType(a.Type) {
+	case actions.ScheduledActionType:
+		return actions.NewScheduledAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.Time,
+		)
+	case actions.CronActionType:
+		return actions.NewCronAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.CronExp,
+		)
+	case actions.InstantActionType:
+		return actions.NewInstantAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+		)
 	default:
 		return nil
 	}
@@ -75,19 +83,18 @@ type ActionDTOResponse struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`
-	CronExp   string    `json:"cron_exp"`
+	CronExp   string    `json:"cronExpression"`
 	Operation string    `json:"operation"`
 	Status    string    `json:"status"`
 	Enabled   bool      `json:"enabled"`
-	ClusterID string    `json:"cluster_id"`
+	ClusterID string    `json:"clusterId"`
 	Region    string    `json:"region"`
-	AccountID string    `json:"account_id"`
+	AccountID string    `json:"accountId"`
 	Instances []string  `json:"instances"`
-}
+} // @name ActionResponse
 
 // ToModelAction converts ActionDTOResponse to actions.Action
 func (a ActionDTOResponse) ToModelAction() actions.Action {
-	actionOp := actions.ActionOperation(a.Operation)
 	target := actions.ActionTarget{
 		AccountID: a.AccountID,
 		Region:    a.Region,
@@ -95,27 +102,36 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 		Instances: a.Instances,
 	}
 
-	baseAction := actions.BaseAction{
-		ID:        a.ID,
-		Operation: actionOp,
-		Target:    target,
-		Status:    actions.ActionStatus(a.Status),
-		Enabled:   a.Enabled,
-	}
-
-	switch a.Type {
-	case string(actions.ScheduledActionType):
-		return &actions.ScheduledAction{
-			BaseAction: baseAction,
-			When:       a.Time,
-			Type:       a.Type,
-		}
-	case string(actions.CronActionType):
-		return &actions.CronAction{
-			BaseAction: baseAction,
-			Expression: a.CronExp,
-			Type:       a.Type,
-		}
+	switch actions.ActionType(a.Type) {
+	case actions.ScheduledActionType:
+		return actions.NewScheduledAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.Time,
+		)
+	case actions.CronActionType:
+		return actions.NewCronAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+			a.CronExp,
+		)
+	case actions.InstantActionType:
+		return actions.NewInstantAction(
+			actions.ActionOperation(a.Operation),
+			target,
+			actions.ActionStatus(a.Status),
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
+			a.Enabled,
+		)
 	default:
 		return nil
 	}

@@ -1,7 +1,9 @@
 // Configuration structures for ClusterIQ Agent and AgentServices
 package config
 
-import env "github.com/caarlos0/env/v11"
+import (
+	env "github.com/caarlos0/env/v11"
+)
 
 // ExecutorAgentServiceConfig contains the config parameters for the ExecutorAgentService
 type ExecutorAgentServiceConfig struct {
@@ -27,18 +29,22 @@ type ScheduleAgentServiceConfig struct {
 
 // AgentConfig defines the config parameters for the ClusterIQ Agent
 type AgentConfig struct {
-	ExecutorAgentServiceConfig
-	ScheduleAgentServiceConfig
-	InstantAgentServiceConfig
+	Eascfg   ExecutorAgentServiceConfig
+	Sascfg   ScheduleAgentServiceConfig
+	Iascfg   InstantAgentServiceConfig
 	LogLevel string `env:"CIQ_LOG_LEVEL,required"`
 }
 
 // LoadAgentConfig evaluates and return the AgentConfig object
 func LoadAgentConfig() (*AgentConfig, error) {
+	var err error
 	cfg := &AgentConfig{}
-	err := env.Parse(cfg)
+
+	// Loading AgentConfig
+	err = env.Parse(cfg)
 	if err != nil {
 		return nil, err
 	}
+
 	return cfg, nil
 }

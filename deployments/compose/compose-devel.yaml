@@ -8,10 +8,10 @@ services:
   api:
     image: quay.io/ecosystem-appeng/cluster-iq-api:latest
     container_name: api
-    restart: always
+    restart: "always"
     depends_on:
-      init-pgsql:
-        condition: service_completed_successfully
+      pgsql:
+        condition: service_started
     ports:
       - 8081:8080
     environment:
@@ -42,7 +42,7 @@ services:
   agent:
     image: quay.io/ecosystem-appeng/cluster-iq-agent:latest
     container_name: agent
-    restart: always
+    restart: "always"
     depends_on:
       api:
         condition: service_started
@@ -63,7 +63,7 @@ services:
   pgsql:
     image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
     container_name: pgsql
-    restart: always
+    restart: "always"
     ports:
       - 5432:5432
     environment:
@@ -114,5 +114,8 @@ services:
       - ./../../db/sql/init.sql:/init.sql:ro,Z
       - ./../../db/sql/cron.sql:/cron.sql:ro,Z
       - ./../../db/test_files/load_example_data.sql:/load_example_data.sql:ro,Z
+    depends_on:
+      pgsql:
+        condition: service_started
     networks:
       - cluster_iq

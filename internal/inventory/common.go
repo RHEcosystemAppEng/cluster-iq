@@ -12,9 +12,10 @@ const (
 // instead. This is because when calculating daily_cost, if the instance has age
 // 0, it will throw a 'divide by zero' error
 func calculateAge(initTimestamp time.Time, finalTimestamp time.Time) int {
-	age := int(finalTimestamp.Sub(initTimestamp) / (time.Hour * HoursPerDay))
+	age := int(finalTimestamp.Sub(initTimestamp).Hours() / HoursPerDay)
 	if age == 0 {
 		return 1
 	}
+
 	return age
 }

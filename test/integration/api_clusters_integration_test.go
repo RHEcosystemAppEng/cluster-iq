@@ -383,18 +383,18 @@ func testPostOneCluster(t *testing.T) {
 	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
 	payload := []dto.ClusterDTORequest{
 		{
-			ClusterID:   "test-cluster-infra-1234",
-			ClusterName: "test-cluster",
-			InfraID:     "infra-1234",
-			Provider:    "AWS",
-			Status:      "Running",
-			Region:      "us-west-2",
-			AccountID:   "111111111111",
-			ConsoleLink: "http://test-cluster.domain",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
-			Age:         1,
-			Owner:       "John Doe",
+			ClusterID:         "test-cluster-infra-1234",
+			ClusterName:       "test-cluster",
+			InfraID:           "infra-1234",
+			Provider:          "AWS",
+			Status:            "Running",
+			Region:            "us-west-2",
+			AccountID:         "111111111111",
+			ConsoleLink:       "http://test-cluster.domain",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
+			Age:               1,
+			Owner:             "John Doe",
 		},
 	}
 
@@ -426,32 +426,32 @@ func testPostMultipleClusters(t *testing.T) {
 	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
 	payload := []dto.ClusterDTORequest{
 		{
-			ClusterID:   "test-cluster-infra-2345",
-			ClusterName: "test-cluster",
-			InfraID:     "infra-1234",
-			Provider:    "Azure",
-			Status:      "Running",
-			Region:      "us-west-2",
-			AccountID:   "subs-00000001",
-			ConsoleLink: "http://test-cluster.domain",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
-			Age:         1,
-			Owner:       "John Doe",
+			ClusterID:         "test-cluster-infra-2345",
+			ClusterName:       "test-cluster",
+			InfraID:           "infra-1234",
+			Provider:          "Azure",
+			Status:            "Running",
+			Region:            "us-west-2",
+			AccountID:         "subs-00000001",
+			ConsoleLink:       "http://test-cluster.domain",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
+			Age:               1,
+			Owner:             "John Doe",
 		},
 		{
-			ClusterID:   "test-cluster-infra-3456",
-			ClusterName: "test-cluster",
-			InfraID:     "infra-1234",
-			Provider:    "GCP",
-			Status:      "Running",
-			Region:      "us-west-2",
-			AccountID:   "gcp-project-1",
-			ConsoleLink: "http://test-cluster.domain",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
-			Age:         1,
-			Owner:       "John Doe",
+			ClusterID:         "test-cluster-infra-3456",
+			ClusterName:       "test-cluster",
+			InfraID:           "infra-1234",
+			Provider:          "GCP",
+			Status:            "Running",
+			Region:            "us-west-2",
+			AccountID:         "gcp-project-1",
+			ConsoleLink:       "http://test-cluster.domain",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
+			Age:               1,
+			Owner:             "John Doe",
 		},
 	}
 
@@ -482,18 +482,18 @@ func testPostWrongCluster(t *testing.T) {
 	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
 	payload := []dto.ClusterDTORequest{
 		{
-			ClusterID:   "test-cluster-infra-1234",
-			ClusterName: "test-cluster",
-			InfraID:     "infra-1234",
-			Provider:    "Provider",
-			Status:      "Running",
-			Region:      "us-west-2",
-			AccountID:   "111111111111",
-			ConsoleLink: "http://test-cluster.domain",
-			LastScanTS:  ts,
-			CreatedAt:   ts,
-			Age:         1,
-			Owner:       "John Doe",
+			ClusterID:         "test-cluster-infra-1234",
+			ClusterName:       "test-cluster",
+			InfraID:           "infra-1234",
+			Provider:          "Provider",
+			Status:            "Running",
+			Region:            "us-west-2",
+			AccountID:         "111111111111",
+			ConsoleLink:       "http://test-cluster.domain",
+			LastScanTimestamp: ts,
+			CreatedAt:         ts,
+			Age:               1,
+			Owner:             "John Doe",
 		},
 	}
 
@@ -517,10 +517,10 @@ func testPatchCluster(t *testing.T) {
 	expectedHTTPCode := http.StatusNotImplemented
 
 	patchCluster := dto.ClusterDTORequest{
-		ClusterID:   "test-cluster-infra-2345",
-		ClusterName: "test-Cluster-003",
-		Provider:    inventory.AWSProvider,
-		LastScanTS:  time.Now(),
+		ClusterID:         "test-cluster-infra-2345",
+		ClusterName:       "test-Cluster-003",
+		Provider:          inventory.AWSProvider,
+		LastScanTimestamp: time.Now(),
 	}
 
 	patchBody, err := json.Marshal(patchCluster)

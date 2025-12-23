@@ -146,7 +146,18 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 					return err
 				}
 
-				instance.AddExpense(*inventory.NewExpense(instance.InstanceID, amount, expenseDate))
+				expense := inventory.NewExpense(instance.InstanceID, amount, expenseDate)
+				if expense == nil {
+					s.logger.Error("error creating expense during billing scan. Check if amount is lower than 0.0")
+					continue
+				}
+				if err := instance.AddExpense(expense); err != nil {
+					s.logger.Error("error when adding an expense to an instance",
+						zap.String("instance_id", instance.InstanceID),
+						zap.Error(err),
+					)
+					continue
+				}
 			}
 		}
 	}

@@ -1,14 +1,30 @@
 package inventory
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 )
 
 const (
+	// Unknown Cluster Name code
 	UnknownClusterNameCode = "NO_CLUSTER"
-	UnknownClusterIDCode   = "UNKNOWN_CLUSTER_ID"
+	// Unknown Cluster ID code
+	UnknownClusterIDCode = "UNKNOWN_CLUSTER_ID"
+)
+
+var (
+	// Error when creating a cluster without ClusterName
+	ErrorMissingClusterNameCreation = errors.New("cannot create a Cluster without ClusterName")
+	// Error when creating a cluster without InfraID
+	ErrorMissingClusterInfraIDCreation = errors.New("cannot create a Cluster without InfraID")
+	// Error when calculating new cluster Age
+	ErrorNewClusterAge = errors.New("new cluster age cannot be less than previous value")
+	// Error when trying to remove an instance that doesn't belong to the cluster
+	ErrorAddingInstanceToCluster = errors.New("cannot add instance to cluster")
+	// Error when adding an instance already existing to a cluster
+	ErrorDeleteInstanceFromCluster = errors.New("cannot delete instance to cluster")
 )
 
 // Cluster is the object to store Openshift Clusters and its properties
@@ -38,8 +54,8 @@ type Cluster struct {
 	// Openshift Console URL. Might not be accessible if its protected.
 	ConsoleLink string `db:"console_link"`
 
-	// LastScanTS is the timestamp when the cluster was scanned for the last time.
-	LastScanTS time.Time `db:"last_scan_ts"`
+	// LastScanTimestamp is the timestamp when the cluster was scanned for the last time.
+	LastScanTimestamp time.Time `db:"last_scan_ts"`
 
 	// CreatedAt is the timestamp when the cluster was created (from the inventory point of view, not from the provider).
 	CreatedAt time.Time `db:"created_at"`
@@ -58,28 +74,31 @@ type Cluster struct {
 }
 
 // NewCluster creates a new cluster instance
-func NewCluster(clusterName string, infraID string, provider Provider, region string, consoleLink string, owner string) *Cluster {
+func NewCluster(clusterName string, infraID string, provider Provider, region string, consoleLink string, owner string) (*Cluster, error) {
 	if clusterName == "" {
-		return nil
+		return nil, ErrorMissingClusterNameCreation
+	}
+	if infraID == "" {
+		return nil, ErrorMissingClusterInfraIDCreation
 	}
 
 	now := time.Now()
 
 	return &Cluster{
-		ClusterID:   generateClusterID(clusterName, infraID),
-		ClusterName: clusterName,
-		InfraID:     infraID,
-		Provider:    provider,
-		Status:      Running,
-		Region:      region,
-		AccountID:   "",
-		ConsoleLink: consoleLink,
-		LastScanTS:  now,
-		CreatedAt:   now,
-		Age:         0,
-		Owner:       owner,
-		Instances:   make([]Instance, 0),
-	}
+		ClusterID:         generateClusterID(clusterName, infraID),
+		ClusterName:       clusterName,
+		InfraID:           infraID,
+		Provider:          provider,
+		Status:            Stopped,
+		Region:            region,
+		AccountID:         "",
+		ConsoleLink:       consoleLink,
+		LastScanTimestamp: now,
+		CreatedAt:         now,
+		Age:               0,
+		Owner:             owner,
+		Instances:         make([]Instance, 0),
+	}, nil
 }
 
 // IsClusterStopped checks if the Cluster is Stopped
@@ -94,13 +113,11 @@ func (c Cluster) IsClusterRunning() bool {
 
 // UpdateClusterInfo as a update function wrapper
 func (c *Cluster) Update() error {
-	var err error
-
 	// Update Cluster Status
 	c.UpdateStatus()
 
 	// Update Cluster Age and CreatedAt
-	if err = c.UpdateAge(); err != nil {
+	if err := c.UpdateAge(); err != nil {
 		return err
 	}
 
@@ -118,9 +135,9 @@ func (c *Cluster) UpdateAge() error {
 	c.CreatedAt = creationTS
 
 	// Calculating Age in days since the cluster was created until last scraping
-	newAge := calculateAge(c.CreatedAt, c.LastScanTS)
+	newAge := calculateAge(c.CreatedAt, c.LastScanTimestamp)
 	if c.Age > newAge && c.Age != 0 {
-		return fmt.Errorf("new cluster age is lower than previous value. Current age: %d, New estimated age: %d", c.Age, newAge)
+		return fmt.Errorf("%s. Current age: %d, New estimated age: %d", ErrorNewClusterAge, c.Age, newAge)
 	}
 
 	c.Age = newAge
@@ -137,7 +154,6 @@ func (c *Cluster) UpdateAge() error {
 func (c *Cluster) UpdateStatus() {
 	instanceCount := len(c.Instances)
 
-	// TODO. Possible edge case
 	if instanceCount == 0 {
 		c.Status = Terminated
 		return
@@ -152,8 +168,6 @@ func (c *Cluster) UpdateStatus() {
 		case Terminated:
 			terminatedCount++
 		case Stopped:
-			continue
-		default:
 			continue
 		}
 	}
@@ -175,7 +189,7 @@ func (c Cluster) IsInstanceInCluster(instance *Instance) bool {
 // AddInstance add a new instance to a cluster
 func (c *Cluster) AddInstance(instance *Instance) error {
 	if c.IsInstanceInCluster(instance) {
-		return fmt.Errorf("Instance '%s[%s]' already exists in Cluster %s", instance.ClusterID, instance.InstanceID, c.ClusterName)
+		return fmt.Errorf("%w: Instance %s already exists in Cluster %s", ErrorAddingInstanceToCluster, instance.InstanceID, c.ClusterID)
 	}
 
 	// Setting cluster 'created_at' as old as the oldest instance
@@ -197,7 +211,7 @@ func (c *Cluster) DeleteInstance(instanceName string) error {
 		}
 	}
 
-	return fmt.Errorf("failed to delete Instance(%s) from Cluster(%s). Instance not found", instanceName, c.ClusterName)
+	return fmt.Errorf("%w: instance %s doesn't exist in Cluster %s", ErrorDeleteInstanceFromCluster, instanceName, c.ClusterID)
 }
 
 func (c Cluster) InstancesCount() int {

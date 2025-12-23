@@ -26,7 +26,6 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
-
 	ciqLogger "github.com/RHEcosystemAppEng/cluster-iq/internal/logger"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -76,20 +75,20 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) (*Agent, error) {
 	ch = make(chan actions.Action)
 
 	// Creating InstantAgentService (gRPC)
-	ias := NewInstantAgentService(&cfg.InstantAgentServiceConfig, ch, &wg, logger)
+	ias := NewInstantAgentService(&cfg.Iascfg, ch, &wg, logger)
 	if ias == nil {
 		return nil, fmt.Errorf("cannot create InstantAgentService")
 
 	}
 
 	// Creating ScheduleAgentService (scheduled actions)
-	sas := NewScheduleAgentService(&cfg.ScheduleAgentServiceConfig, ch, &wg, logger)
+	sas := NewScheduleAgentService(&cfg.Sascfg, ch, &wg, logger)
 	if sas == nil {
 		return nil, fmt.Errorf("cannot create CronAgentService")
 	}
 
 	// Creating ExecutorAgentService (executing actions)
-	eas := NewExecutorAgentService(&cfg.ExecutorAgentServiceConfig, ch, &wg, logger)
+	eas := NewExecutorAgentService(&cfg.Eascfg, ch, &wg, logger)
 	if eas == nil {
 		return nil, fmt.Errorf("cannot create ExecutorAgentService")
 	}

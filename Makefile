@@ -149,7 +149,10 @@ go-setup-tests:
 
 go-unit-tests: ## Runs go unit tests
 go-unit-tests: go-setup-tests
-	@$(GO) test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out | sed -e 's/PASS/\x1b[32mPASS\x1b[0m/' -e 's/FAIL/\x1b[31mFAIL\x1b[0m/' -e 's/RUN/\x1b[33mRUN\x1b[0m/'
+	@$(GO) test -race ./internal/inventory ./internal/actions ./internal/events/event_service ./internal/models/dto ./internal/models/db ./internal/config ./internal/credentials -coverprofile $(TEST_DIR)/cover-unit-tests.out
+
+go-coverage-unit-tests: ## Calculates unit tests coverage percentage
+go-coverage-unit-tests: go-setup-tests go-unit-tests
 	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
 
 go-integration-tests: ## Runs the Integration tests for this project
@@ -163,7 +166,7 @@ go-integration-tests: go-setup-tests
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
 
 go-tests: ## Runs every test
-go-tests: go-unit-tests go-integration-tests
+go-tests: go-unit-tests go-coverage-unit-tests go-integration-tests
 
 lint: ## Runs go linter tools against the whole project
 	@$(GO_LINTER) run
@@ -196,7 +199,7 @@ swagger-editor: ## Open web editor for modifying Swagger docs
 
 swagger-doc: ## Generate Swagger documentation for ClusterIQ API
 	@echo "### [Generating Swagger Docs] ###"
-	@$(SWAGGER) fmt
+	@$(SWAGGER) fmt --exclude ./internal
 	@$(SWAGGER) init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
 
 
