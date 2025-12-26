@@ -587,7 +587,8 @@ LEFT JOIN accounts acc ON acc.id = (
     WHEN ev.resource_type = 'instance'
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = ev.resource_id))
   END
-);
+)
+ORDER BY ev.event_timestamp DESC;
 
 
 

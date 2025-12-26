@@ -11,7 +11,7 @@ type CloudExecutor interface {
 	// ProcessAction receives and action and process it depending on its type
 	ProcessAction(action actions.Action) error
 	// GetAccountName returns accounts name
-	GetAccountName() string
+	GetAccountID() string
 	// SetRegion configure the cloud provider client for using a specific region
 	SetRegion(string) error
 }
