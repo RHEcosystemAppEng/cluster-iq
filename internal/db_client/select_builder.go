@@ -65,7 +65,7 @@ func (b *SelectBuilder) Build() (string, []interface{}, error) {
 	}
 
 	if b.orderBy != "" {
-		query += " ORDER BY " + b.orderBy
+		query += " ORDER BY " + b.orderBy + " DESC"
 	}
 
 	if isPaginating {
