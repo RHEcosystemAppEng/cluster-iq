@@ -59,13 +59,15 @@ const (
 			operation,
 			target,
 			status,
+			description,
 			enabled
 		) VALUES (
 			'scheduled_action',
 			:time,
 			:operation,
-			:target.cluster_id,
+			(SELECT id FROM clusters WHERE cluster_id=:target.cluster_id),
 			:status,
+			:description,
 			:enabled
 		)
 	`
@@ -77,13 +79,15 @@ const (
 			operation,
 			target,
 			status,
+			description,
 			enabled
 		) VALUES (
 			'cron_action',
 			:cron_exp,
 			:operation,
-			:target.cluster_id,
+			(SELECT id FROM clusters WHERE cluster_id=:target.cluster_id),
 			:status,
+			:description,
 			:enabled
 		)
 	`
@@ -263,6 +267,7 @@ func (r *actionRepositoryImpl) Delete(ctx context.Context, actionID string) erro
 //   - An error if the delete query fails
 func (r *actionRepositoryImpl) Update(ctx context.Context, action actions.Action) error {
 	if _, err := r.GetByID(ctx, action.GetID()); err != nil {
+		// TODO include err message explaining the action for update doesn't exist
 		return err
 	}
 
