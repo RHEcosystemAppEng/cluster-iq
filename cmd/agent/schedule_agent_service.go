@@ -273,8 +273,6 @@ func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error
 	}
 	defer response.Body.Close()
 
-	defer response.Body.Close()
-
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("error fetching ScheduleActions list from API")
 	}
