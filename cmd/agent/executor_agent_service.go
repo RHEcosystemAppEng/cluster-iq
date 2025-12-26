@@ -109,7 +109,7 @@ func (e *ExecutorAgentService) AddExecutor(exec cexec.CloudExecutor) error {
 		return fmt.Errorf("cannot add a nil Executor")
 	}
 
-	e.executors[exec.GetAccountName()] = exec
+	e.executors[exec.GetAccountID()] = exec
 
 	return nil
 }
@@ -194,8 +194,8 @@ func (e *ExecutorAgentService) Start() error {
 			zap.Any("requester", newAction.GetRequester()),
 		)
 
-		// InstantActions are not registered in the DB when are transmitted by gRPC,
-		// so, if the incoming action is InstantAction type, it's registered into the DB for tracking
+		// InstantActions are not registered in the 'schedule' DB Table when are transmitted by gRPC,
+		// so, if the incoming action is InstantAction type, it's registered into the 'events' DB for tracking
 		_, isInstantAction := newAction.(*actions.InstantAction)
 		if isInstantAction {
 			actionID, err := e.actionRepo.CreateAction(context.TODO(), newAction)
