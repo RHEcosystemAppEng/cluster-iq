@@ -29,7 +29,7 @@ func testNewCluster_Correct(t *testing.T) {
 	assert.NotNil(t, cluster)
 
 	// Parameters Check
-	assert.Equal(t, cluster.ClusterID, generateClusterID(cluster.ClusterName, cluster.InfraID))
+	assert.Equal(t, cluster.ClusterID, GenerateClusterID(cluster.ClusterName, cluster.InfraID))
 	assert.Equal(t, cluster.ClusterName, name)
 	assert.Equal(t, cluster.InfraID, infraID)
 	assert.Equal(t, cluster.Provider, provider)
@@ -265,6 +265,7 @@ func TestAddInstance(t *testing.T) {
 	t.Run("Add Instance", func(t *testing.T) { testAddInstance_Correct(t) })
 	t.Run("Add Instance twice", func(t *testing.T) { testAddInstance_Twice(t) })
 }
+
 func testAddInstance_Correct(t *testing.T) {
 	cluster, err := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "https://console", "user")
 	assert.Nil(t, err)
@@ -348,7 +349,7 @@ func testInstancesCount(t *testing.T) {
 
 // TestGenerateClusterID tests GenerateClusterID function for 100% coverage
 func TestGenerateClusterID(t *testing.T) {
-	assert.Equal(t, "test-infra", generateClusterID("test", "infra"))
+	assert.Equal(t, "test-infra", GenerateClusterID("test", "infra"))
 }
 
 // TestPrintCluster tests PrintCluster function for 100% coverage

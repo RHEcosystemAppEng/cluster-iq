@@ -85,7 +85,7 @@ func NewCluster(clusterName string, infraID string, provider Provider, region st
 	now := time.Now()
 
 	return &Cluster{
-		ClusterID:         generateClusterID(clusterName, infraID),
+		ClusterID:         GenerateClusterID(clusterName, infraID),
 		ClusterName:       clusterName,
 		InfraID:           infraID,
 		Provider:          provider,
@@ -219,7 +219,7 @@ func (c Cluster) InstancesCount() int {
 }
 
 // Obtain the required parameters for generate a ClusterID. If any key parameter is missing, it will return a non-nil error
-func generateClusterID(name string, infraID string) string {
+func GenerateClusterID(name string, infraID string) string {
 	return name + "-" + infraID
 }
 
