@@ -12,11 +12,11 @@ import (
 )
 
 // goverter:converter
-// goverter:extend ConvertTime
-// goverter:extend ConvertNullTime
-// goverter:extend ConvertNullString
-// goverter:extend ConvertStringArray
-// goverter:extend ConvertTagDBResponses
+// goverter:extend Time
+// goverter:extend NullTime
+// goverter:extend NullString
+// goverter:extend StringArray
+// goverter:extend TagDBResponsesToDTO
 // goverter:output:file ./generated.go
 type Converter interface {
 	// Account
@@ -53,34 +53,34 @@ type Converter interface {
 	ToInstanceDTOs(src []db.InstanceDBResponse) []dto.InstanceDTOResponse
 }
 
-// ConvertTime handles time.Time conversion
-func ConvertTime(t time.Time) time.Time {
+// Time handles time.Time conversion
+func Time(t time.Time) time.Time {
 	return t
 }
 
-// ConvertNullTime handles sql.NullTime to time.Time conversion
-func ConvertNullTime(t sql.NullTime) time.Time {
+// NullTime handles sql.NullTime to time.Time conversion
+func NullTime(t sql.NullTime) time.Time {
 	if t.Valid {
 		return t.Time
 	}
 	return time.Time{}
 }
 
-// ConvertNullString handles sql.NullString to string conversion
-func ConvertNullString(s sql.NullString) string {
+// NullString handles sql.NullString to string conversion
+func NullString(s sql.NullString) string {
 	if s.Valid {
 		return s.String
 	}
 	return ""
 }
 
-// ConvertStringArray handles pq.StringArray to []string conversion
-func ConvertStringArray(arr pq.StringArray) []string {
+// StringArray handles pq.StringArray to []string conversion
+func StringArray(arr pq.StringArray) []string {
 	return arr
 }
 
-// ConvertTagDBResponses handles db.TagDBResponses to []dto.TagDTOResponse conversion
-func ConvertTagDBResponses(src db.TagDBResponses) []dto.TagDTOResponse {
+// TagDBResponsesToDTO handles db.TagDBResponses to []dto.TagDTOResponse conversion
+func TagDBResponsesToDTO(src db.TagDBResponses) []dto.TagDTOResponse {
 	if len(src) == 0 {
 		return nil
 	}

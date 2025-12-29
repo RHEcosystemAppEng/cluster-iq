@@ -17,8 +17,8 @@ func (c *ConverterImpl) ToAccountDTO(source db.AccountDBResponse) dto.AccountDTO
 	dtoAccountDTOResponse.AccountID = source.AccountID
 	dtoAccountDTOResponse.AccountName = source.AccountName
 	dtoAccountDTOResponse.Provider = inventory.Provider(source.Provider)
-	dtoAccountDTOResponse.LastScanTimestamp = ConvertTime(source.LastScanTimestamp)
-	dtoAccountDTOResponse.CreatedAt = ConvertTime(source.CreatedAt)
+	dtoAccountDTOResponse.LastScanTimestamp = Time(source.LastScanTimestamp)
+	dtoAccountDTOResponse.CreatedAt = Time(source.CreatedAt)
 	dtoAccountDTOResponse.ClusterCount = source.ClusterCount
 	dtoAccountDTOResponse.TotalCost = source.TotalCost
 	dtoAccountDTOResponse.Last15DaysCost = source.Last15DaysCost
@@ -40,15 +40,15 @@ func (c *ConverterImpl) ToActionDTO(source db.ActionDBResponse) dto.ActionDTORes
 	var dtoActionDTOResponse dto.ActionDTOResponse
 	dtoActionDTOResponse.ID = source.ID
 	dtoActionDTOResponse.Type = source.Type
-	dtoActionDTOResponse.Time = ConvertNullTime(source.Time)
-	dtoActionDTOResponse.CronExp = ConvertNullString(source.CronExp)
+	dtoActionDTOResponse.Time = NullTime(source.Time)
+	dtoActionDTOResponse.CronExp = NullString(source.CronExp)
 	dtoActionDTOResponse.Operation = source.Operation
 	dtoActionDTOResponse.Status = source.Status
 	dtoActionDTOResponse.Enabled = source.Enabled
 	dtoActionDTOResponse.ClusterID = source.ClusterID
 	dtoActionDTOResponse.Region = source.Region
 	dtoActionDTOResponse.AccountID = source.AccountID
-	dtoActionDTOResponse.Instances = ConvertStringArray(source.Instances)
+	dtoActionDTOResponse.Instances = StringArray(source.Instances)
 	return dtoActionDTOResponse
 }
 func (c *ConverterImpl) ToActionDTOs(source []db.ActionDBResponse) []dto.ActionDTOResponse {
@@ -73,8 +73,8 @@ func (c *ConverterImpl) ToClusterDTO(source db.ClusterDBResponse) dto.ClusterDTO
 	dtoClusterDTOResponse.AccountName = source.AccountName
 	dtoClusterDTOResponse.ConsoleLink = source.ConsoleLink
 	dtoClusterDTOResponse.InstanceCount = source.InstanceCount
-	dtoClusterDTOResponse.LastScanTimestamp = ConvertTime(source.LastScanTimestamp)
-	dtoClusterDTOResponse.CreatedAt = ConvertTime(source.CreatedAt)
+	dtoClusterDTOResponse.LastScanTimestamp = Time(source.LastScanTimestamp)
+	dtoClusterDTOResponse.CreatedAt = Time(source.CreatedAt)
 	dtoClusterDTOResponse.Age = source.Age
 	dtoClusterDTOResponse.Owner = source.Owner
 	dtoClusterDTOResponse.TotalCost = source.TotalCost
@@ -99,7 +99,7 @@ func (c *ConverterImpl) ToClusterEventDTO(source db.ClusterEventDBResponse) dto.
 	dtoClusterEventDTOResponse.Action = source.Action
 	dtoClusterEventDTOResponse.ResourceID = source.ResourceID
 	dtoClusterEventDTOResponse.ResourceType = source.ResourceType
-	dtoClusterEventDTOResponse.EventTimestamp = ConvertTime(source.EventTimestamp)
+	dtoClusterEventDTOResponse.EventTimestamp = Time(source.EventTimestamp)
 	dtoClusterEventDTOResponse.Result = actions.ActionStatus(source.Result)
 	dtoClusterEventDTOResponse.Severity = source.Severity
 	dtoClusterEventDTOResponse.TriggeredBy = source.TriggeredBy
@@ -123,7 +123,7 @@ func (c *ConverterImpl) ToExpenseDTO(source db.ExpenseDBResponse) dto.ExpenseDTO
 	var dtoExpenseDTOResponse dto.ExpenseDTOResponse
 	dtoExpenseDTOResponse.InstanceID = source.InstanceID
 	dtoExpenseDTOResponse.Amount = source.Amount
-	dtoExpenseDTOResponse.Date = ConvertTime(source.Date)
+	dtoExpenseDTOResponse.Date = Time(source.Date)
 	return dtoExpenseDTOResponse
 }
 func (c *ConverterImpl) ToExpenseDTOs(source []db.ExpenseDBResponse) []dto.ExpenseDTOResponse {
@@ -146,14 +146,14 @@ func (c *ConverterImpl) ToInstanceDTO(source db.InstanceDBResponse) dto.Instance
 	dtoInstanceDTOResponse.Status = inventory.ResourceStatus(source.Status)
 	dtoInstanceDTOResponse.ClusterID = source.ClusterID
 	dtoInstanceDTOResponse.ClusterName = source.ClusterName
-	dtoInstanceDTOResponse.LastScanTimestamp = ConvertTime(source.LastScanTimestamp)
-	dtoInstanceDTOResponse.CreatedAt = ConvertTime(source.CreatedAt)
+	dtoInstanceDTOResponse.LastScanTimestamp = Time(source.LastScanTimestamp)
+	dtoInstanceDTOResponse.CreatedAt = Time(source.CreatedAt)
 	dtoInstanceDTOResponse.Age = source.Age
 	dtoInstanceDTOResponse.TotalCost = source.TotalCost
 	dtoInstanceDTOResponse.Last15DaysCost = source.Last15DaysCost
 	dtoInstanceDTOResponse.LastMonthCost = source.LastMonthCost
 	dtoInstanceDTOResponse.CurrentMonthSoFarCost = source.CurrentMonthSoFarCost
-	dtoInstanceDTOResponse.Tags = ConvertTagDBResponses(source.Tags)
+	dtoInstanceDTOResponse.Tags = TagDBResponsesToDTO(source.Tags)
 	return dtoInstanceDTOResponse
 }
 func (c *ConverterImpl) ToInstanceDTOs(source []db.InstanceDBResponse) []dto.InstanceDTOResponse {
