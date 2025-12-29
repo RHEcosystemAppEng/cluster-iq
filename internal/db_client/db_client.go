@@ -86,6 +86,11 @@ func (d *DBClient) Get(dest interface{}, table string, opts models.ListOptions, 
 	return d.GetWithContext(context.TODO(), dest, table, opts, columns...)
 }
 
+// QueryRowContext executes a raw SQL query and scans the result into dest.
+func (d *DBClient) QueryRowContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+	return d.db.GetContext(ctx, dest, query, args...)
+}
+
 func (d *DBClient) SelectWithContext(ctx context.Context, dest interface{}, table string, opts models.ListOptions, orderColumn string, columns ...string) error {
 	builder := d.NewSelectBuilder(columns...).From(table)
 
