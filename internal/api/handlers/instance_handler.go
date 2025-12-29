@@ -7,7 +7,7 @@ import (
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -93,7 +93,7 @@ func (h *InstanceHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToInstanceDTOResponseList(instances), total)
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToInstanceDTOs(instances), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -130,7 +130,7 @@ func (h *InstanceHandler) Get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, instance.ToInstanceDTOResponse())
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToInstanceDTO(instance))
 }
 
 // Create inserts one or more instances.
