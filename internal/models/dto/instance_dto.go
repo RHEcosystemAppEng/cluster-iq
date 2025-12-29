@@ -6,7 +6,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
-// TODO: comments
+// InstanceDTORequest represents the data needed to create or update an instance.
 type InstanceDTORequest struct {
 	InstanceID        string                   `json:"instanceId"`
 	InstanceName      string                   `json:"instanceName"`
@@ -79,7 +79,8 @@ func ToInstanceDTORequestList(instances []inventory.Instance) *[]InstanceDTORequ
 	return &instanceList
 }
 
-// TODO: comments
+// InstanceDTOResponse represents the data transfer object for an instance response,
+// containing instance details with cost and tag information.
 type InstanceDTOResponse struct {
 	InstanceID            string                   `json:"instanceId"`
 	InstanceName          string                   `json:"instanceName"`
@@ -92,12 +93,11 @@ type InstanceDTOResponse struct {
 	LastScanTimestamp     time.Time                `json:"lastScanTimestamp"`
 	CreatedAt             time.Time                `json:"creationTimestamp"`
 	Age                   int                      `json:"age"`
-	Owner                 string                   `json:"owner"`
 	TotalCost             float64                  `json:"totalCost"`
 	Last15DaysCost        float64                  `json:"last15DaysCost"`
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
-	Tags                  []TagDTOResponse         `json:"tags"`
+	Tags                  []TagDTOResponse         `json:"tags,omitempty"`
 } // @name InstanceResponse
 
 func (i *InstanceDTOResponse) ToInventoryInstance() *inventory.Instance {

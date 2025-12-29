@@ -7,6 +7,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 )
 
+// EventDTORequest represents the data needed to create or update an event.
 type EventDTORequest struct {
 	ID             int64     `json:"id"`
 	Action         string    `json:"action"`

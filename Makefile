@@ -67,7 +67,11 @@ local-clean:
 
 local-build: local-build-scanner local-build-api local-build-agent ## Build all local binaries
 
-local-build-api: swagger-doc ## Build the API binary
+generate-converters: ## Generate goverter converters (DB to DTO)
+	@echo "### [Generating converters] ###"
+	@$(GO) generate ./internal/models/convert
+
+local-build-api: generate-converters swagger-doc ## Build the API binary
 	@echo "### [Building API] ###"
 	@$(GO) build -o $(BIN_DIR)/api/api $(LDFLAGS) ./cmd/api/
 
@@ -89,7 +93,7 @@ clean: ## Remove the container images
 
 build: ## Build all container images
 build: build-api build-scanner build-agent build-pgsql
-build-api: ## Build the API container image
+build-api: generate-converters ## Build the API container image
 	@echo "### [Building API container image] ###"
 	@$(CONTAINER_ENGINE) build \
 		--build-arg VERSION=$(VERSION) \
