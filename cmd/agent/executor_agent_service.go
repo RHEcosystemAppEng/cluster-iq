@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -194,16 +193,11 @@ func (e *ExecutorAgentService) Start() error {
 			zap.Any("requester", newAction.GetRequester()),
 		)
 
-		// InstantActions are not registered in the 'schedule' DB Table when are transmitted by gRPC,
-		// so, if the incoming action is InstantAction type, it's registered into the 'events' DB for tracking
-		_, isInstantAction := newAction.(*actions.InstantAction)
-		if isInstantAction {
-			actionID, err := e.actionRepo.CreateAction(context.TODO(), newAction)
-			if err != nil {
-				e.logger.Error("Error registering InstantAction", zap.Error(err))
-				continue
-			}
-			newAction.(*actions.InstantAction).ID = strconv.FormatInt(actionID, 10)
+		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
+		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
+		if err := e.updateActionStatus(newAction); err != nil {
+			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			continue
 		}
 
 		// Initialize event tracker
@@ -220,16 +214,20 @@ func (e *ExecutorAgentService) Start() error {
 		exec := e.GetExecutor(newAction.GetTarget().AccountID)
 		if exec == nil {
 			e.logger.Error("there's no Executor available for the requested account", zap.String("account", newAction.GetTarget().AccountID))
+
+			// Updating Action status
+			m := newAction.(actions.MutableAction)
+			m.SetStatus(actions.StatusFailed)
+			if err := e.updateActionStatus(newAction); err != nil {
+				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+				continue
+			}
+			tracker.Failed()
+
 			continue
 		}
 
 		executor := *exec
-
-		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
-		if err := e.updateActionStatus(newAction); err != nil {
-			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			continue
-		}
 
 		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))

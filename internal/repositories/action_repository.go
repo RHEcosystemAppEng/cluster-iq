@@ -59,7 +59,6 @@ const (
 			operation,
 			target,
 			status,
-			description,
 			enabled
 		) VALUES (
 			'scheduled_action',
@@ -67,7 +66,6 @@ const (
 			:operation,
 			(SELECT id FROM clusters WHERE cluster_id=:target.cluster_id),
 			:status,
-			:description,
 			:enabled
 		)
 	`
@@ -79,7 +77,6 @@ const (
 			operation,
 			target,
 			status,
-			description,
 			enabled
 		) VALUES (
 			'cron_action',
@@ -87,7 +84,6 @@ const (
 			:operation,
 			(SELECT id FROM clusters WHERE cluster_id=:target.cluster_id),
 			:status,
-			:description,
 			:enabled
 		)
 	`

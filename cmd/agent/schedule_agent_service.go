@@ -85,7 +85,7 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 	// Check if the duration is negative, which means it refers to a past timestamp
 	duration := time.Until(newAction.When)
 	if duration <= 0 {
-		a.logger.Warn("Task will not be scheduled because it's scheduled to the past", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+		a.logger.Warn("Task will not be scheduled because it's scheduled to the past", zap.String("action_id", actionID))
 		return
 	}
 
@@ -95,18 +95,18 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 		cancel: cancel,
 		action: newAction,
 	}
-	a.logger.Info("New ScheduledAction being scheduled", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+	a.logger.Info("New ScheduledAction being scheduled", zap.String("action_id", actionID))
 
 	// Scheduling at specified timestamp on parallel
 	go func() {
-		a.logger.Debug("Waiting until timestamp for execution", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+		a.logger.Debug("Waiting until timestamp for execution", zap.String("action_id", actionID))
 		select {
 		case <-time.After(duration): // When the timestamp is "now"
 			a.logger.Debug("Sending to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 			a.actionsChannel <- newAction
 			a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 		case <-ctx.Done(): // Context cancelling
-			a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+			a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID))
 		}
 
 		// Remove action from schedule
@@ -320,8 +320,9 @@ func (a *ScheduleAgentService) ReScheduleActions() {
 		if fetchedActions, err := a.fetchScheduledActions(); err != nil {
 			a.logger.Error("Error when fetching Schedule", zap.Error(err))
 		} else {
-			a.logger.Info("Rescheduling Loop...", zap.Int("running_actions", len(a.schedule)), zap.Time("timestamp", time.Now()))
+			a.logger.Info("Rescheduling Loop...", zap.Int("running_actions", len(a.schedule)))
 			a.ScheduleNewActions(*fetchedActions)
+			a.logger.Info("Adding new Actions to Agent Schedule", zap.Int("added_actions", len(*fetchedActions)), zap.Int("running_actions", len(a.schedule)))
 		}
 		<-ticker.C
 		a.logger.Debug("Current actions after pooling & rescheduling", zap.Int("actions_num", len(a.schedule)))
