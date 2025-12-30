@@ -42,7 +42,7 @@ services:
   agent:
     image: quay.io/ecosystem-appeng/cluster-iq-agent:latest
     container_name: agent
-    restart: "always"
+    restart: "on-failure"
     depends_on:
       api:
         condition: service_started
@@ -52,7 +52,7 @@ services:
       CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL: "0.0.0.0:50051"
       CIQ_CREDS_FILE: "/credentials"
       CIQ_LOG_LEVEL: "DEBUG"
-      CIQ_AGENT_POLLING_SECONDS_INTERVAL: 60 # Seconds
+      CIQ_AGENT_POLLING_SECONDS_INTERVAL: 6 # Seconds
     ports:
       - 50051:50051
     volumes:
