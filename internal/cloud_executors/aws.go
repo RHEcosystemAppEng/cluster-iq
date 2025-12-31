@@ -64,8 +64,8 @@ func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 }
 
 // GetAccountName returns the account name
-func (e AWSExecutor) GetAccountName() string {
-	return e.account.AccountName
+func (e AWSExecutor) GetAccountID() string {
+	return e.account.AccountID
 }
 
 // SetRegion configures a new region for the AWSConnection and refreshes the AWSServiceClients with the new region

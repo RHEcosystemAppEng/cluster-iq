@@ -157,7 +157,7 @@ func (h *ActionHandler) Create(c *gin.Context) {
 
 	actions := dto.ToModelActionList(newActionsDTO)
 	if actions == nil {
-		err := errors.New("error when processing actions")
+		err := errors.New("error when processing action requests data")
 		h.logger.Error("error processing actions", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to create actions: " + err.Error(),

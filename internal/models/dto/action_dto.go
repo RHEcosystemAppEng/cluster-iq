@@ -32,7 +32,7 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 
 	switch actions.ActionType(a.Type) {
 	case actions.ScheduledActionType:
-		return actions.NewScheduledAction(
+		action := actions.NewScheduledAction(
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
@@ -41,8 +41,10 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 			a.Enabled,
 			a.Time,
 		)
+		action.ID = a.ID
+		return action
 	case actions.CronActionType:
-		return actions.NewCronAction(
+		action := actions.NewCronAction(
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
@@ -51,8 +53,10 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 			a.Enabled,
 			a.CronExp,
 		)
+		action.ID = a.ID
+		return action
 	case actions.InstantActionType:
-		return actions.NewInstantAction(
+		action := actions.NewInstantAction(
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
@@ -60,6 +64,8 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 			nil, // TODO: Description missing???
 			a.Enabled,
 		)
+		action.ID = a.ID
+		return action
 	default:
 		return nil
 	}
@@ -104,7 +110,7 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 
 	switch actions.ActionType(a.Type) {
 	case actions.ScheduledActionType:
-		return actions.NewScheduledAction(
+		action := actions.NewScheduledAction(
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
@@ -113,8 +119,10 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 			a.Enabled,
 			a.Time,
 		)
+		action.ID = a.ID
+		return action
 	case actions.CronActionType:
-		return actions.NewCronAction(
+		action := actions.NewCronAction(
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
@@ -123,8 +131,10 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 			a.Enabled,
 			a.CronExp,
 		)
+		action.ID = a.ID
+		return action
 	case actions.InstantActionType:
-		return actions.NewInstantAction(
+		action := actions.NewInstantAction(
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
@@ -132,6 +142,8 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 			nil, // TODO: Description missing???
 			a.Enabled,
 		)
+		action.ID = a.ID
+		return action
 	default:
 		return nil
 	}

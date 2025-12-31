@@ -18,6 +18,7 @@ type ExecutorAgentServiceConfig struct {
 type InstantAgentServiceConfig struct {
 	// ListenURL is the gRPC server listening address
 	ListenURL string `env:"CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL,required"`
+	DBURL     string `env:"CIQ_DB_URL,required"`
 }
 
 type ScheduleAgentServiceConfig struct {
