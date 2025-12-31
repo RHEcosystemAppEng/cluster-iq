@@ -260,11 +260,10 @@ func main() {
 	if err != nil {
 		logger.Error("Error during AgentService setup. Aborting Agent", zap.Error(err))
 		// Ignore Logger sync error
-		logger.Sync()
+		_ = logger.Sync()
 		os.Exit(1)
 	}
 
-	defer func() { os.Exit(0) }()
 	// Starting Agent
 	err = agent.Start()
 
@@ -272,7 +271,8 @@ func main() {
 	if err != nil {
 		agent.logger.Error("Error starting Agent Services", zap.Error(err))
 		// Ignore Logger sync error
-		logger.Sync()
+		_ = logger.Sync()
 		os.Exit(1)
 	}
+	os.Exit(0)
 }

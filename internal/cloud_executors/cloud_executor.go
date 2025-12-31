@@ -13,5 +13,5 @@ type CloudExecutor interface {
 	// GetAccountName returns accounts name
 	GetAccountID() string
 	// SetRegion configure the cloud provider client for using a specific region
-	SetRegion(string) error
+	SetRegion(region string) error
 }
