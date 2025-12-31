@@ -42,7 +42,7 @@ services:
   agent:
     image: quay.io/ecosystem-appeng/cluster-iq-agent:latest
     container_name: agent
-    restart: "on-failure"
+    restart: "always"
     depends_on:
       api:
         condition: service_started
@@ -87,7 +87,7 @@ services:
     restart: "no"
     depends_on:
       pgsql:
-        condition: service_healthy
+        condition: service_started
     command: |
       bash -c '
         echo "Waiting for PGSQL to start up"
@@ -114,8 +114,5 @@ services:
       - ./../../db/sql/init.sql:/init.sql:ro,Z
       - ./../../db/sql/cron.sql:/cron.sql:ro,Z
       - ./../../db/test_files/load_example_data.sql:/load_example_data.sql:ro,Z
-    depends_on:
-      pgsql:
-        condition: service_started
     networks:
       - cluster_iq
