@@ -188,17 +188,9 @@ func (e *ExecutorAgentService) Start() error {
 	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
 		e.logger.Debug("New action received by ExecutorAgentService",
-			zap.Any("action", newAction.GetActionOperation()),
-			zap.Any("target", newAction.GetTarget()),
+			zap.Any("action_id", newAction.GetID()),
 			zap.Any("requester", newAction.GetRequester()),
 		)
-
-		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
-		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
-		if err := e.updateActionStatus(newAction); err != nil {
-			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			continue
-		}
 
 		// Initialize event tracker
 		tracker := e.eventService.StartTracking(&eventservice.EventOptions{
@@ -210,6 +202,14 @@ func (e *ExecutorAgentService) Start() error {
 			Severity:     eventservice.SeverityInfo,
 			TriggeredBy:  newAction.GetRequester(),
 		})
+
+		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
+		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
+		if err := e.updateActionStatus(newAction); err != nil {
+			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			tracker.Failed()
+			continue
+		}
 
 		exec := e.GetExecutor(newAction.GetTarget().AccountID)
 		if exec == nil {
