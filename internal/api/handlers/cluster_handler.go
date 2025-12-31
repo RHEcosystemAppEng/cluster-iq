@@ -7,7 +7,7 @@ import (
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -103,7 +103,7 @@ func (h *ClusterHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToClusterDTOResponseList(clusters), total)
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToClusterDTOs(clusters), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -140,7 +140,7 @@ func (h *ClusterHandler) Get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, cluster.ToClusterDTOResponse())
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToClusterDTO(*cluster))
 }
 
 // GetInstances returns the instances for a cluster ID.
@@ -174,7 +174,7 @@ func (h *ClusterHandler) GetInstances(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, db.ToInstanceDTOResponseList(instances))
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToInstanceDTOs(instances))
 }
 
 // Create creates one or more clusters.
@@ -347,7 +347,7 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, db.ToTagsDTOResponseList(tags))
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToTagDTOs(tags))
 }
 
 // Update applies partial updates to a cluster.

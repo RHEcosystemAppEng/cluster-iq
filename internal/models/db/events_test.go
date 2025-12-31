@@ -1,10 +1,12 @@
-package db
+package db_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,8 +23,9 @@ func TestClusterEventDBResponse_ToClusterEventDTOResponse(t *testing.T) {
 func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) {
 	now := time.Now().UTC()
 	desc := "desc"
+	conv := &convert.ConverterImpl{}
 
-	model := ClusterEventDBResponse{
+	model := db.ClusterEventDBResponse{
 		ID:             1,
 		EventTimestamp: now,
 		TriggeredBy:    "api",
@@ -34,9 +37,8 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) 
 		Severity:       "Info",
 	}
 
-	dto := model.ToClusterEventDTOResponse()
+	dto := conv.ToClusterEventDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.ID, dto.ID)
 	assert.Equal(t, model.EventTimestamp, dto.EventTimestamp)
 	assert.Equal(t, model.TriggeredBy, dto.TriggeredBy)
@@ -50,8 +52,9 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) 
 
 func testClusterEventDBResponse_ToClusterEventDTOResponse_NilDescription(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	model := ClusterEventDBResponse{
+	model := db.ClusterEventDBResponse{
 		ID:             2,
 		EventTimestamp: now,
 		TriggeredBy:    "scanner",
@@ -63,9 +66,8 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_NilDescription(t *test
 		Severity:       "Error",
 	}
 
-	dto := model.ToClusterEventDTOResponse()
+	dto := conv.ToClusterEventDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.ID, dto.ID)
 	assert.Nil(t, dto.Description)
 }
@@ -79,13 +81,14 @@ func TestToClusterEventDTOResponseList(t *testing.T) {
 
 func testToClusterEventDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	models := []ClusterEventDBResponse{
+	models := []db.ClusterEventDBResponse{
 		{ID: 1, EventTimestamp: now, TriggeredBy: "api", Action: "START", ResourceID: "c1", ResourceType: "cluster", Result: "Success", Severity: "Info"},
 		{ID: 2, EventTimestamp: now.Add(-time.Minute), TriggeredBy: "agent", Action: "STOP", ResourceID: "c2", ResourceType: "cluster", Result: "Failed", Severity: "Error"},
 	}
 
-	dtos := ToClusterEventDTOResponseList(models)
+	dtos := conv.ToClusterEventDTOs(models)
 
 	assert.Len(t, dtos, 2)
 	assert.Equal(t, int64(1), dtos[0].ID)
@@ -102,9 +105,10 @@ func TestSystemEventDBResponse_ToSystemEventDTOResponse(t *testing.T) {
 func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 	now := time.Now().UTC()
 	desc := "desc"
+	conv := &convert.ConverterImpl{}
 
-	model := SystemEventDBResponse{
-		ClusterEventDBResponse: ClusterEventDBResponse{
+	model := db.SystemEventDBResponse{
+		ClusterEventDBResponse: db.ClusterEventDBResponse{
 			ID:             10,
 			EventTimestamp: now,
 			TriggeredBy:    "scheduler",
@@ -119,9 +123,8 @@ func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 		Provider:  "AWS",
 	}
 
-	dto := model.ToSystemEventDTOResponse()
+	dto := conv.ToSystemEventDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, int64(10), dto.ID)
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, "scheduler", dto.TriggeredBy)
@@ -144,10 +147,11 @@ func TestToSystemEventDTOResponseList(t *testing.T) {
 
 func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	models := []SystemEventDBResponse{
+	models := []db.SystemEventDBResponse{
 		{
-			ClusterEventDBResponse: ClusterEventDBResponse{
+			ClusterEventDBResponse: db.ClusterEventDBResponse{
 				ID:             1,
 				EventTimestamp: now,
 				TriggeredBy:    "api",
@@ -161,7 +165,7 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 			Provider:  "AWS",
 		},
 		{
-			ClusterEventDBResponse: ClusterEventDBResponse{
+			ClusterEventDBResponse: db.ClusterEventDBResponse{
 				ID:             2,
 				EventTimestamp: now.Add(-time.Minute),
 				TriggeredBy:    "agent",
@@ -176,7 +180,7 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 		},
 	}
 
-	dtos := ToSystemEventDTOResponseList(models)
+	dtos := conv.ToSystemEventDTOs(models)
 
 	assert.Len(t, dtos, 2)
 	assert.Equal(t, int64(1), dtos[0].ID)

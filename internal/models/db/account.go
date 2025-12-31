@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 // AccountDBResponse represents the database schema for account details,
@@ -20,32 +19,4 @@ type AccountDBResponse struct {
 	Last15DaysCost        float64            `db:"last_15_days_cost"`
 	LastMonthCost         float64            `db:"last_month_cost"`
 	CurrentMonthSoFarCost float64            `db:"current_month_so_far_cost"`
-}
-
-// ToAccountDTOResponse converts an AccountDBResponse to an AccountDTOResponse,
-// facilitating the transfer of data from the database layer to the application layer.
-func (a AccountDBResponse) ToAccountDTOResponse() *dto.AccountDTOResponse {
-	return &dto.AccountDTOResponse{
-		AccountID:             a.AccountID,
-		AccountName:           a.AccountName,
-		Provider:              a.Provider,
-		LastScanTimestamp:     a.LastScanTimestamp,
-		CreatedAt:             a.CreatedAt,
-		ClusterCount:          a.ClusterCount,
-		TotalCost:             a.TotalCost,
-		Last15DaysCost:        a.Last15DaysCost,
-		LastMonthCost:         a.LastMonthCost,
-		CurrentMonthSoFarCost: a.CurrentMonthSoFarCost,
-	}
-}
-
-// ToAccountDTOResponseList converts a slice of AccountDBResponse to a slice of AccountDTOResponse,
-// allowing batch transformation of database response objects to DTOs.
-func ToAccountDTOResponseList(models []AccountDBResponse) []dto.AccountDTOResponse {
-	dtos := make([]dto.AccountDTOResponse, len(models))
-	for i, model := range models {
-		dtos[i] = *model.ToAccountDTOResponse()
-	}
-
-	return dtos
 }

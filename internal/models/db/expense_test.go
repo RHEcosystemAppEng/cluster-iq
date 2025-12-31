@@ -1,9 +1,11 @@
-package db
+package db_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,16 +18,16 @@ func TestExpenseDBResponse_ToExpenseDTOResponse(t *testing.T) {
 
 func testExpenseDBResponse_ToExpenseDTOResponse_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	model := ExpenseDBResponse{
+	model := db.ExpenseDBResponse{
 		InstanceID: "i-123",
 		Amount:     42.5,
 		Date:       now,
 	}
 
-	dto := model.ToExpenseDTOResponse()
+	dto := conv.ToExpenseDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.InstanceID, dto.InstanceID)
 	assert.Equal(t, model.Amount, dto.Amount)
 	assert.Equal(t, model.Date, dto.Date)
@@ -40,8 +42,9 @@ func TestToExpenseDTOResponseList(t *testing.T) {
 
 func testToExpenseDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	models := []ExpenseDBResponse{
+	models := []db.ExpenseDBResponse{
 		{
 			InstanceID: "i-1",
 			Amount:     10.0,
@@ -54,7 +57,7 @@ func testToExpenseDTOResponseList_Correct(t *testing.T) {
 		},
 	}
 
-	dtos := ToExpenseDTOResponseList(models)
+	dtos := conv.ToExpenseDTOs(models)
 
 	assert.Len(t, dtos, 2)
 	assert.Equal(t, "i-1", dtos[0].InstanceID)

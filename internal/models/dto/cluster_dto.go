@@ -6,7 +6,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 )
 
-// Cluster is the object to store Openshift Clusters and its properties
+// ClusterDTORequest represents the data needed to create or update a cluster.
 type ClusterDTORequest struct {
 	ClusterID         string                   `json:"clusterId"`
 	ClusterName       string                   `json:"clusterName"`
@@ -79,7 +79,8 @@ func ToClusterDTORequestList(clusters []inventory.Cluster) *[]ClusterDTORequest 
 	return &clusterList
 }
 
-// TODO: comments
+// ClusterDTOResponse represents the data transfer object for a cluster response,
+// containing cluster details with cost and instance information.
 type ClusterDTOResponse struct {
 	ClusterID             string                   `json:"clusterId"`
 	ClusterName           string                   `json:"clusterName"`

@@ -48,7 +48,8 @@ func ToExpenseDTORequestList(expenses []inventory.Expense) *[]ExpenseDTORequest 
 	return &expenseList
 }
 
-// Expense represents the data transfer object for an expense.
+// ExpenseDTOResponse represents the data transfer object for an expense response,
+// containing expense details for a specific instance.
 type ExpenseDTOResponse struct {
 	InstanceID string    `json:"instanceId"`
 	Amount     float64   `json:"amount"`

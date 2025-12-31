@@ -6,7 +6,7 @@ import (
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
@@ -105,7 +105,7 @@ func (h *EventHandler) ListSystem(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToSystemEventDTOResponseList(events), total)
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToSystemEventDTOs(events), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -193,7 +193,7 @@ func (h *EventHandler) ListCluster(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToClusterEventDTOResponseList(events), total)
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToClusterEventDTOs(events), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)

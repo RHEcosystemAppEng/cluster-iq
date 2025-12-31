@@ -7,7 +7,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 )
 
-// Cluster is the object to store Openshift Clusters and its properties
+// ActionDTORequest represents the data needed to create or update an action.
 type ActionDTORequest struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
@@ -78,7 +78,8 @@ func ToModelActionList(dtos []ActionDTORequest) *[]actions.Action {
 	return &actions
 }
 
-// TODO: comments
+// ActionDTOResponse represents the data transfer object for an action response,
+// containing action details including schedule, cron expression, and target resources.
 type ActionDTOResponse struct {
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`

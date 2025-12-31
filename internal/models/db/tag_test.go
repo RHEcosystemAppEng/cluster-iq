@@ -1,9 +1,11 @@
-package db
+package db_test
 
 import (
 	"encoding/json"
 	"testing"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,15 +17,16 @@ func TestTagDBResponse_ToTagDTOResponse(t *testing.T) {
 }
 
 func testTagDBResponse_ToTagDTOResponse_Correct(t *testing.T) {
-	model := TagDBResponse{
+	conv := &convert.ConverterImpl{}
+
+	model := db.TagDBResponse{
 		Key:        "env",
 		Value:      "prod",
 		InstanceID: "i-123",
 	}
 
-	dto := model.ToTagDTOResponse()
+	dto := conv.ToTagDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.Key, dto.Key)
 	assert.Equal(t, model.Value, dto.Value)
 	assert.Equal(t, model.InstanceID, dto.InstanceID)
@@ -37,17 +40,18 @@ func TestToTagsDTOResponseList(t *testing.T) {
 }
 
 func testToTagsDTOResponseList_Correct(t *testing.T) {
-	models := []TagDBResponse{
+	conv := &convert.ConverterImpl{}
+
+	models := []db.TagDBResponse{
 		{Key: "k1", Value: "v1", InstanceID: "i-1"},
 		{Key: "k2", Value: "v2", InstanceID: "i-2"},
 	}
 
-	dtos := ToTagsDTOResponseList(models)
+	dtos := conv.ToTagDTOs(models)
 
-	assert.NotNil(t, dtos)
-	assert.Len(t, *dtos, 2)
-	assert.Equal(t, "k1", (*dtos)[0].Key)
-	assert.Equal(t, "k2", (*dtos)[1].Key)
+	assert.Len(t, dtos, 2)
+	assert.Equal(t, "k1", dtos[0].Key)
+	assert.Equal(t, "k2", dtos[1].Key)
 }
 
 // TestTagDBResponses_Scan verifies Scan behavior for all supported inputs.
@@ -59,7 +63,7 @@ func TestTagDBResponses_Scan(t *testing.T) {
 }
 
 func testTagDBResponsesScan_Nil(t *testing.T) {
-	var tags TagDBResponses
+	var tags db.TagDBResponses
 
 	err := tags.Scan(nil)
 
@@ -68,13 +72,13 @@ func testTagDBResponsesScan_Nil(t *testing.T) {
 }
 
 func testTagDBResponsesScan_Array(t *testing.T) {
-	input := []TagDBResponse{
+	input := []db.TagDBResponse{
 		{Key: "env", Value: "prod"},
 		{Key: "team", Value: "platform"},
 	}
 	b, _ := json.Marshal(input)
 
-	var tags TagDBResponses
+	var tags db.TagDBResponses
 	err := tags.Scan(b)
 
 	assert.NoError(t, err)
@@ -90,7 +94,7 @@ func testTagDBResponsesScan_Map(t *testing.T) {
 	}
 	b, _ := json.Marshal(input)
 
-	var tags TagDBResponses
+	var tags db.TagDBResponses
 	err := tags.Scan(string(b))
 
 	assert.NoError(t, err)
@@ -98,7 +102,7 @@ func testTagDBResponsesScan_Map(t *testing.T) {
 }
 
 func testTagDBResponsesScan_InvalidJSON(t *testing.T) {
-	var tags TagDBResponses
+	var tags db.TagDBResponses
 
 	err := tags.Scan([]byte("{invalid-json"))
 

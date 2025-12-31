@@ -1,10 +1,12 @@
-package db
+package db_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,8 +19,9 @@ func TestAccountDBResponse_ToAccountDTOResponse(t *testing.T) {
 
 func testAccountDBResponse_ToAccountDTOResponse_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	model := AccountDBResponse{
+	model := db.AccountDBResponse{
 		AccountID:             "acc-1",
 		AccountName:           "test-account",
 		Provider:              inventory.AWSProvider,
@@ -31,9 +34,8 @@ func testAccountDBResponse_ToAccountDTOResponse_Correct(t *testing.T) {
 		CurrentMonthSoFarCost: 12.34,
 	}
 
-	dto := model.ToAccountDTOResponse()
+	dto := conv.ToAccountDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.AccountID, dto.AccountID)
 	assert.Equal(t, model.AccountName, dto.AccountName)
 	assert.Equal(t, model.Provider, dto.Provider)
@@ -55,8 +57,9 @@ func TestToAccountDTOResponseList(t *testing.T) {
 
 func testToAccountDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	models := []AccountDBResponse{
+	models := []db.AccountDBResponse{
 		{
 			AccountID:         "acc-1",
 			AccountName:       "account-1",
@@ -75,7 +78,7 @@ func testToAccountDTOResponseList_Correct(t *testing.T) {
 		},
 	}
 
-	dtos := ToAccountDTOResponseList(models)
+	dtos := conv.ToAccountDTOs(models)
 
 	assert.Len(t, dtos, 2)
 	assert.Equal(t, "acc-1", dtos[0].AccountID)
