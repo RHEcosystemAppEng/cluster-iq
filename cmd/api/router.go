@@ -98,15 +98,15 @@ func setupEventRoutes(group *gin.RouterGroup, handler *handlers.EventHandler) {
 }
 
 func setupActionRoutes(group *gin.RouterGroup, handler *handlers.ActionHandler) {
-	schedule := group.Group("/schedule")
+	actions := group.Group("/actions")
 	{
-		schedule.GET("", handler.List)
-		schedule.GET("/:id", handler.Get)
-		schedule.POST("", handler.Create)
-		schedule.PATCH("/:id/enable", handler.Enable)
-		schedule.PATCH("/", handler.Update)
-		schedule.PATCH("/:id/disable", handler.Disable)
-		schedule.DELETE("/:id", handler.Delete)
+		actions.GET("", handler.List)
+		actions.GET("/:id", handler.Get)
+		actions.POST("", handler.Create)
+		actions.PATCH("/:id/enable", handler.Enable)
+		actions.PATCH("", handler.Update)
+		actions.PATCH("/:id/disable", handler.Disable)
+		actions.DELETE("/:id", handler.Delete)
 	}
 }
 
