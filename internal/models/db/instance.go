@@ -1,51 +1,13 @@
 package db
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
-type TagDBResponseJSON struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-func (t *TagDBResponseJSON) ToTagDTOResponse() *dto.TagDTOResponse {
-	return &dto.TagDTOResponse{
-		Key:   t.Key,
-		Value: t.Value,
-	}
-}
-
-type TagDBResponseList []TagDBResponseJSON
-
-func (t *TagDBResponseList) Scan(src any) error {
-	if src == nil {
-		*t = nil
-		return nil
-	}
-	b, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("tags: expected []byte, got %T", src)
-	}
-	return json.Unmarshal(b, t)
-}
-
-func (t *TagDBResponseList) ToTagDTOResponseList() *[]dto.TagDTOResponse {
-	var tags []dto.TagDTOResponse
-	for _, tag := range *t {
-		tags = append(tags, *tag.ToTagDTOResponse())
-	}
-
-	return &tags
-}
-
-// InstanceDBResponse represents
-// TODO: comments
+// InstanceDBResponse represents the database schema for instance details,
+// linking each field to a corresponding column in the database.
 type InstanceDBResponse struct {
 	InstanceID            string                   `db:"instance_id"`
 	InstanceName          string                   `db:"instance_name"`
@@ -63,39 +25,4 @@ type InstanceDBResponse struct {
 	LastMonthCost         float64                  `db:"last_month_cost"`
 	CurrentMonthSoFarCost float64                  `db:"current_month_so_far_cost"`
 	Tags                  TagDBResponses           `db:"tags_json"`
-}
-
-// TODO: comments
-func (i InstanceDBResponse) ToInstanceDTOResponse() *dto.InstanceDTOResponse {
-	var tags []dto.TagDTOResponse
-	for _, tag := range i.Tags {
-		tags = append(tags, *tag.ToTagDTOResponse())
-	}
-	return &dto.InstanceDTOResponse{
-		InstanceID:            i.InstanceID,
-		InstanceName:          i.InstanceName,
-		InstanceType:          i.InstanceType,
-		Provider:              i.Provider,
-		Status:                i.Status,
-		AvailabilityZone:      i.AvailabilityZone,
-		ClusterID:             i.ClusterID,
-		ClusterName:           i.ClusterName,
-		LastScanTimestamp:     i.LastScanTimestamp,
-		CreatedAt:             i.CreatedAt,
-		Age:                   i.Age,
-		TotalCost:             i.TotalCost,
-		Last15DaysCost:        i.Last15DaysCost,
-		LastMonthCost:         i.LastMonthCost,
-		CurrentMonthSoFarCost: i.CurrentMonthSoFarCost,
-		Tags:                  tags,
-	}
-}
-
-func ToInstanceDTOResponseList(models []InstanceDBResponse) []dto.InstanceDTOResponse {
-	dtos := make([]dto.InstanceDTOResponse, len(models))
-	for i, model := range models {
-		dtos[i] = *model.ToInstanceDTOResponse()
-	}
-
-	return dtos
 }

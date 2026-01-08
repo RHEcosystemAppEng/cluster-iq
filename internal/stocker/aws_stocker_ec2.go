@@ -34,6 +34,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 	for _, instance := range instances {
 		// Generating ClusterID for this instance based on its properties
 		clusterName := inventory.GetClusterNameFromTags(instance.Tags)
+		infraID := inventory.GetInfraIDFromTags(instance.Tags)
 		if s.skipNoOpenShiftInstances && clusterName == inventory.UnknownClusterNameCode {
 			s.logger.Debug("Skipping instance because it's not associated to any cluster",
 				zap.String("account_id", s.Account.AccountID),
@@ -42,36 +43,31 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			continue
 		}
 
-		infraID := inventory.GetInfraIDFromTags(instance.Tags)
-
-		// Checking if the cluster of the instance already exists on the inventory
-		cluster, err := inventory.NewCluster(
-			clusterName,
-			infraID,
-			inventory.AWSProvider,
-			s.conn.GetRegion(),
-			unknownConsoleLinkCode,
-			inventory.GetOwnerFromTags(instance.Tags),
-		)
-		if err != nil {
-			s.logger.Error("error creating new cluster during instance processing",
-				zap.String("account_id", s.Account.AccountID),
-				zap.String("cluster_id", clusterName),
-				zap.Error(err),
+		clusterID := inventory.GenerateClusterID(clusterName, infraID)
+		if !s.Account.IsClusterInAccount(clusterID) {
+			cluster, err := inventory.NewCluster(
+				clusterName,
+				infraID,
+				inventory.AWSProvider,
+				s.conn.GetRegion(),
+				unknownConsoleLinkCode,
+				inventory.GetOwnerFromTags(instance.Tags),
 			)
-			continue
-		}
+			if err != nil {
+				s.logger.Error("error creating new cluster during instance processing", zap.Error(err))
+				continue
+			}
 
 		if !s.Account.IsClusterInAccount(cluster.ClusterID) {
 			s.Account.AddCluster(cluster)
 		}
 
-		// Adding the instance to the Cluster
-		if err := s.Account.Clusters[cluster.ClusterID].AddInstance(&instance); err != nil {
+		if err := s.Account.Clusters[clusterID].AddInstance(&instance); err != nil {
 			s.logger.Error("error adding instance to cluster during instance processing",
 				zap.String("account_id", s.Account.AccountID),
-				zap.String("cluster_id", cluster.ClusterID),
+				zap.String("cluster_id", clusterID),
 				zap.String("instance_id", instance.InstanceID),
+				zap.Error(err),
 			)
 		}
 	}

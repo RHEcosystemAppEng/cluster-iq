@@ -50,7 +50,7 @@ const (
 			:created_at,
 			:age,
 			:owner
-		) ON CONFLICT (id) DO UPDATE SET
+		) ON CONFLICT ON CONSTRAINT uq_clusters_accountid_clusterid DO UPDATE SET
 			status = EXCLUDED.status,
 			region = EXCLUDED.region,
 			console_link = EXCLUDED.console_link,

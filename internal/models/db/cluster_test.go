@@ -1,10 +1,12 @@
-package db
+package db_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,8 +19,9 @@ func TestClusterDBResponse_ToClusterDTOResponse(t *testing.T) {
 
 func testClusterDBResponse_ToClusterDTOResponse_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	model := ClusterDBResponse{
+	model := db.ClusterDBResponse{
 		ClusterID:             "cluster-1",
 		ClusterName:           "test-cluster",
 		InfraID:               "ABCDE",
@@ -39,9 +42,8 @@ func testClusterDBResponse_ToClusterDTOResponse_Correct(t *testing.T) {
 		CurrentMonthSoFarCost: 9.01,
 	}
 
-	dto := model.ToClusterDTOResponse()
+	dto := conv.ToClusterDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.ClusterID, dto.ClusterID)
 	assert.Equal(t, model.ClusterName, dto.ClusterName)
 	assert.Equal(t, model.InfraID, dto.InfraID)
@@ -70,8 +72,9 @@ func TestToClusterDTOResponseList(t *testing.T) {
 
 func testToClusterDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	models := []ClusterDBResponse{
+	models := []db.ClusterDBResponse{
 		{
 			ClusterID:         "c1",
 			ClusterName:       "cluster-1",
@@ -100,7 +103,7 @@ func testToClusterDTOResponseList_Correct(t *testing.T) {
 		},
 	}
 
-	dtos := ToClusterDTOResponseList(models)
+	dtos := conv.ToClusterDTOs(models)
 
 	assert.Len(t, dtos, 2)
 	assert.Equal(t, "c1", dtos[0].ClusterID)

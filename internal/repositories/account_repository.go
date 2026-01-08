@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -48,6 +49,7 @@ type AccountRepository interface {
 	GetAccountByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
+	GetScannerTimestamp(ctx context.Context) (time.Time, error)
 	CreateAccount(ctx context.Context, accounts []inventory.Account) error
 	DeleteAccount(ctx context.Context, accountID string) error
 }
@@ -191,4 +193,18 @@ func (r *accountRepositoryImpl) DeleteAccount(ctx context.Context, accountID str
 		return err
 	}
 	return nil
+}
+
+// GetScannerTimestamp retrieves the latest scan timestamp from all accounts.
+//
+// Returns:
+// - The latest scan timestamp.
+// - An error if the query fails.
+func (r *accountRepositoryImpl) GetScannerTimestamp(ctx context.Context) (time.Time, error) {
+	var timestamp time.Time
+
+	if err := r.db.QueryRowContext(ctx, &timestamp, "SELECT MAX(last_scan_ts) FROM accounts"); err != nil {
+		return timestamp, err
+	}
+	return timestamp, nil
 }

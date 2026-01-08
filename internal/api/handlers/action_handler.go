@@ -7,7 +7,7 @@ import (
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -93,7 +93,7 @@ func (h *ActionHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToActionDTOResponseList(actions), total)
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToActionDTOs(actions), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -129,7 +129,7 @@ func (h *ActionHandler) Get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, action.ToActionDTOResponse())
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToActionDTO(action))
 }
 
 // Create creates one or more actions.

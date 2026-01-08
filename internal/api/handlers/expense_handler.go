@@ -6,7 +6,7 @@ import (
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
@@ -86,7 +86,7 @@ func (h *ExpenseHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToExpenseDTOResponseList(expenses), total)
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToExpenseDTOs(expenses), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)

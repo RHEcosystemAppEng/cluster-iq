@@ -54,8 +54,11 @@ func (s *overviewServiceImpl) GetOverview(ctx context.Context) (inventory.Overvi
 	}
 	overview.Providers = providers
 
-	// TODO: Get Scanner data.
-	// For now, returning empty data.
+	scannerTimestamp, err := s.accountRepo.GetScannerTimestamp(ctx)
+	if err != nil {
+		return inventory.OverviewSummary{}, fmt.Errorf("failed to get scanner timestamp: %w", err)
+	}
+	overview.Scanner.LastScanTimestamp = scannerTimestamp
 
 	return overview, nil
 }
