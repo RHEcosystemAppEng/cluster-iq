@@ -225,7 +225,7 @@ func GenerateClusterID(name string, infraID string) string {
 
 // PrintCluster prints cluster info
 func (c Cluster) PrintCluster() {
-	fmt.Printf("\t\tCluster:[%s] -- Region: %s, Provider: %s, #Instances: %d\n", c.ClusterName, c.Region, c.Provider, c.InstancesCount())
+	fmt.Printf("\t\tCluster:[%s] -- Status: %s, Region: %s, Provider: %s, #Instances: %d\n", c.ClusterName, c.Status, c.Region, c.Provider, c.InstancesCount())
 
 	for _, instance := range c.Instances {
 		instance.PrintInstance()

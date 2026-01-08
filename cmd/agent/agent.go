@@ -246,8 +246,6 @@ func (a Agent) Start() error {
 // main is the entry point for the ClusterIQ Agent application.
 // It initializes the Agent, loads configuration, creates cloud executors, and starts the gRPC server.
 func main() {
-	// Ignore Logger sync error
-	defer func() { _ = logger.Sync() }()
 
 	var err error
 
@@ -261,7 +259,9 @@ func main() {
 	agent, err := NewAgent(cfg, logger)
 	if err != nil {
 		logger.Error("Error during AgentService setup. Aborting Agent", zap.Error(err))
-		return
+		// Ignore Logger sync error
+		_ = logger.Sync()
+		os.Exit(1)
 	}
 
 	// Starting Agent
@@ -270,7 +270,9 @@ func main() {
 	agent.logger.Info("ClusterIQ Agent Finished")
 	if err != nil {
 		agent.logger.Error("Error starting Agent Services", zap.Error(err))
-		return
+		// Ignore Logger sync error
+		_ = logger.Sync()
+		os.Exit(1)
 	}
-
+	os.Exit(0)
 }

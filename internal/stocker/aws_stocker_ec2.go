@@ -58,19 +58,17 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 				continue
 			}
 
-			if err := s.Account.AddCluster(cluster); err != nil {
-				s.logger.Error("error adding new cluster during instance processing", zap.Error(err))
-				continue
+			if !s.Account.IsClusterInAccount(cluster.ClusterID) {
+				_ = s.Account.AddCluster(cluster)
 			}
-		}
 
-		if err := s.Account.Clusters[clusterID].AddInstance(&instance); err != nil {
-			s.logger.Error("error adding instance to cluster during instance processing",
-				zap.String("account_id", s.Account.AccountID),
-				zap.String("cluster_id", clusterID),
-				zap.String("instance_id", instance.InstanceID),
-				zap.Error(err),
-			)
+			if err := s.Account.Clusters[clusterID].AddInstance(&instance); err != nil {
+				s.logger.Error("error adding instance to cluster during instance processing",
+					zap.String("account_id", s.Account.AccountID),
+					zap.String("cluster_id", clusterID),
+					zap.String("instance_id", instance.InstanceID),
+					zap.Error(err))
+			}
 		}
 	}
 }

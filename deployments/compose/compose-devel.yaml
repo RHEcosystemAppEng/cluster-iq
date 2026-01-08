@@ -19,6 +19,11 @@ services:
       CIQ_AGENT_URL: "agent:50051"
       CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
       CIQ_LOG_LEVEL: "DEBUG"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -lc 'echo > /dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - cluster_iq
 
@@ -28,7 +33,8 @@ services:
     restart: "no"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+        restart: true
     environment:
       CIQ_API_URL: "http://api:8080/api/v1"
       CIQ_CREDS_FILE: "/credentials"
@@ -45,14 +51,20 @@ services:
     restart: "always"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+        restart: true
     environment:
       CIQ_API_URL: "http://api:8080/api/v1"
       CIQ_DB_URL: "postgresql://user:password@pgsql:5432/clusteriq?sslmode=disable"
       CIQ_AGENT_INSTANT_SERVICE_LISTEN_URL: "0.0.0.0:50051"
       CIQ_CREDS_FILE: "/credentials"
       CIQ_LOG_LEVEL: "DEBUG"
-      CIQ_AGENT_POLLING_SECONDS_INTERVAL: 60 # Seconds
+      CIQ_AGENT_POLLING_SECONDS_INTERVAL: 10 # Seconds
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -lc 'echo > /dev/tcp/127.0.0.1/50051'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - 50051:50051
     volumes:
@@ -75,7 +87,7 @@ services:
       POSTGRESQL_EXTENSIONS: "pg_cron"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:
@@ -114,8 +126,5 @@ services:
       - ./../../db/sql/init.sql:/init.sql:ro,Z
       - ./../../db/sql/cron.sql:/cron.sql:ro,Z
       - ./../../db/test_files/load_example_data.sql:/load_example_data.sql:ro,Z
-    depends_on:
-      pgsql:
-        condition: service_started
     networks:
       - cluster_iq

@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -109,7 +108,7 @@ func (e *ExecutorAgentService) AddExecutor(exec cexec.CloudExecutor) error {
 		return fmt.Errorf("cannot add a nil Executor")
 	}
 
-	e.executors[exec.GetAccountName()] = exec
+	e.executors[exec.GetAccountID()] = exec
 
 	return nil
 }
@@ -189,22 +188,9 @@ func (e *ExecutorAgentService) Start() error {
 	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
 		e.logger.Debug("New action received by ExecutorAgentService",
-			zap.Any("action", newAction.GetActionOperation()),
-			zap.Any("target", newAction.GetTarget()),
+			zap.Any("action_id", newAction.GetID()),
 			zap.Any("requester", newAction.GetRequester()),
 		)
-
-		// InstantActions are not registered in the DB when are transmitted by gRPC,
-		// so, if the incoming action is InstantAction type, it's registered into the DB for tracking
-		_, isInstantAction := newAction.(*actions.InstantAction)
-		if isInstantAction {
-			actionID, err := e.actionRepo.CreateAction(context.TODO(), newAction)
-			if err != nil {
-				e.logger.Error("Error registering InstantAction", zap.Error(err))
-				continue
-			}
-			newAction.(*actions.InstantAction).ID = strconv.FormatInt(actionID, 10)
-		}
 
 		// Initialize event tracker
 		tracker := e.eventService.StartTracking(&eventservice.EventOptions{
@@ -217,19 +203,31 @@ func (e *ExecutorAgentService) Start() error {
 			TriggeredBy:  newAction.GetRequester(),
 		})
 
+		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
+		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
+		if err := e.updateActionStatus(newAction); err != nil {
+			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			tracker.Failed()
+			continue
+		}
+
 		exec := e.GetExecutor(newAction.GetTarget().AccountID)
 		if exec == nil {
 			e.logger.Error("there's no Executor available for the requested account", zap.String("account", newAction.GetTarget().AccountID))
+
+			// Updating Action status
+			m := newAction.(actions.MutableAction)
+			m.SetStatus(actions.StatusFailed)
+			if err := e.updateActionStatus(newAction); err != nil {
+				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+				continue
+			}
+			tracker.Failed()
+
 			continue
 		}
 
 		executor := *exec
-
-		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
-		if err := e.updateActionStatus(newAction); err != nil {
-			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			continue
-		}
 
 		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))

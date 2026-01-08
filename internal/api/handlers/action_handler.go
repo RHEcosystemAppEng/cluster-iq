@@ -67,7 +67,7 @@ type listScheduledActionsRequest struct {
 //	@Success		200			{object}	dto.ActionListResponse
 //	@Failure		400			{object}	responsetypes.GenericErrorResponse
 //	@Failure		500			{object}	responsetypes.GenericErrorResponse
-//	@Router			/schedule [get]
+//	@Router			/actions [get]
 func (h *ActionHandler) List(c *gin.Context) {
 	var req listScheduledActionsRequest
 
@@ -110,7 +110,7 @@ func (h *ActionHandler) List(c *gin.Context) {
 //	@Success		200	{object}	dto.ScheduledAction
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
-//	@Router			/schedule/{id} [get]
+//	@Router			/actions/{id} [get]
 func (h *ActionHandler) Get(c *gin.Context) {
 	actionID := c.Param("id")
 
@@ -157,7 +157,7 @@ func (h *ActionHandler) Create(c *gin.Context) {
 
 	actions := dto.ToModelActionList(newActionsDTO)
 	if actions == nil {
-		err := errors.New("error when processing actions")
+		err := errors.New("error when processing action requests data")
 		h.logger.Error("error processing actions", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to create actions: " + err.Error(),
@@ -188,7 +188,7 @@ func (h *ActionHandler) Create(c *gin.Context) {
 //	@Param			id	path		string	true	"Scheduled action ID"
 //	@Success		200	{object}	nil
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
-//	@Router			/schedule/{id}/enable [patch]
+//	@Router			/actions/{id}/enable [patch]
 func (h *ActionHandler) Enable(c *gin.Context) {
 	actionID := c.Param("id")
 
@@ -211,7 +211,7 @@ func (h *ActionHandler) Enable(c *gin.Context) {
 //	@Param			id	path		string	true	"Scheduled action ID"
 //	@Success		200	{object}	nil
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
-//	@Router			/schedule/{id}/disable [patch]
+//	@Router			/actions/{id}/disable [patch]
 func (h *ActionHandler) Disable(c *gin.Context) {
 	actionID := c.Param("id")
 
@@ -244,13 +244,13 @@ func (h *ActionHandler) Delete(c *gin.Context) {
 		h.logger.Error("error deleting action", zap.String("action_id", actionID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
-				Message: "action not found",
+				Message: "Action not found",
 			})
 			return
 		}
 
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to delete Action: " + err.Error(),
+			Message: "Failed to delete action: " + err.Error(),
 		})
 		return
 	}
@@ -269,7 +269,7 @@ func (h *ActionHandler) Delete(c *gin.Context) {
 //	@Success		200		{object}	nil
 //	@Failure		400		{object}	responsetypes.GenericErrorResponse
 //	@Failure		500		{object}	responsetypes.GenericErrorResponse
-//	@Router			/actions/ [patch]
+//	@Router			/actions [patch]
 func (h *ActionHandler) Update(c *gin.Context) {
 	var actionDTO dto.ActionDTORequest
 
@@ -282,14 +282,14 @@ func (h *ActionHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.service.Update(c.Request.Context(), actionDTO.ToModelAction()); err != nil {
-		h.logger.Error("error creating actions", zap.Error(err))
+		h.logger.Error("error updating action", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to create actions: " + err.Error(),
+			Message: "Failed to update action: " + err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, responsetypes.PostResponse{
+	c.JSON(http.StatusOK, responsetypes.PostResponse{
 		Count:  1,
 		Status: "OK",
 	},

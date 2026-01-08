@@ -40,7 +40,7 @@ func testActionDTORequest_ToModelAction_Scheduled(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, sa)
 
-	assert.Equal(t, "", sa.ID)
+	assert.Equal(t, dto.ID, sa.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), sa.Operation)
 	assert.Equal(t, actions.StatusPending, sa.Status)
 	assert.Equal(t, dto.Enabled, sa.Enabled)
@@ -78,7 +78,7 @@ func testActionDTORequest_ToModelAction_Cron(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, ca)
 
-	assert.Equal(t, "", ca.ID)
+	assert.Equal(t, dto.ID, ca.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), ca.Operation)
 	assert.Equal(t, actions.StatusPending, ca.Status)
 	assert.Equal(t, dto.Enabled, ca.Enabled)
@@ -116,7 +116,7 @@ func testActionDTORequest_ToModelAction_Instant(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, ia)
 
-	assert.Equal(t, "", ia.ID)
+	assert.Equal(t, dto.ID, ia.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), ia.Operation)
 	assert.Equal(t, actions.StatusPending, ia.Status)
 	assert.Equal(t, dto.Enabled, ia.Enabled)
@@ -230,7 +230,7 @@ func testActionDTOResponse_ToModelAction_Scheduled(t *testing.T) {
 	sa, ok := a.(*actions.ScheduledAction)
 	assert.True(t, ok)
 
-	assert.Equal(t, "", sa.ID)
+	assert.Equal(t, dto.ID, sa.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), sa.Operation)
 	assert.Equal(t, actions.StatusPending, sa.Status)
 	assert.Equal(t, dto.Enabled, sa.Enabled)
@@ -265,7 +265,7 @@ func testActionDTOResponse_ToModelAction_Cron(t *testing.T) {
 	ca, ok := a.(*actions.CronAction)
 	assert.True(t, ok)
 
-	assert.Equal(t, "", ca.ID)
+	assert.Equal(t, dto.ID, ca.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), ca.Operation)
 	assert.Equal(t, actions.StatusPending, ca.Status)
 	assert.Equal(t, dto.Enabled, ca.Enabled)
@@ -301,7 +301,7 @@ func testActionDTOResponse_ToModelAction_Instant(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, ia)
 
-	assert.Equal(t, "", ia.ID)
+	assert.Equal(t, dto.ID, ia.ID)
 	assert.Equal(t, actions.ActionOperation(dto.Operation), ia.Operation)
 	assert.Equal(t, actions.StatusPending, ia.Status)
 	assert.Equal(t, dto.Enabled, ia.Enabled)

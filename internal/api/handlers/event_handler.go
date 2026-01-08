@@ -30,7 +30,7 @@ func NewEventHandler(service services.EventService, logger *zap.Logger) *EventHa
 // systemEventFilterParams defines the supported filter parameters
 type systemEventFilterParams struct {
 	TriggeredBy  string `form:"triggered_by"`
-	ActionName   string `form:"action_name"`
+	ActionName   string `form:"action"`
 	ResourceType string `form:"resource_type"`
 	Result       string `form:"result"`
 	Severity     string `form:"severity"`
@@ -43,7 +43,7 @@ func (f *systemEventFilterParams) toRepoFilters() map[string]interface{} {
 		filters["triggered_by"] = f.TriggeredBy
 	}
 	if f.ActionName != "" {
-		filters["action_name"] = f.ActionName
+		filters["action"] = f.ActionName
 	}
 	if f.ResourceType != "" {
 		filters["resource_type"] = f.ResourceType
@@ -72,7 +72,7 @@ type listSystemEventsRequest struct {
 //	@Param			page			query		int		false	"Page number"		default(1)
 //	@Param			page_size		query		int		false	"Items per page"	default(10)
 //	@Param			triggered_by	query		string	false	"Triggered by"
-//	@Param			action_name		query		string	false	"Action name"
+//	@Param			action			query		string	false	"Action"
 //	@Param			resource_type	query		string	false	"Resource type"
 //	@Param			result			query		string	false	"Result"
 //	@Param			severity		query		string	false	"Severity"
@@ -137,9 +137,9 @@ func (h *EventHandler) Create(c *gin.Context) {
 	}
 
 	if _, err := h.service.Create(c.Request.Context(), *newEventsDTO.ToModelEvent()); err != nil {
-		h.logger.Error("error creating accounts", zap.Error(err))
+		h.logger.Error("error creating event", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to create accounts: " + err.Error(),
+			Message: "Failed to create event: " + err.Error(),
 		})
 		return
 	}
@@ -224,9 +224,9 @@ func (h *EventHandler) Update(c *gin.Context) {
 
 	event := newEventsDTO.ToModelEvent()
 	if err := h.service.Update(c.Request.Context(), event.ID, event.Result); err != nil {
-		h.logger.Error("error updating events", zap.Error(err))
+		h.logger.Error("error updating event", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to create accounts: " + err.Error(),
+			Message: "Failed to update event: " + err.Error(),
 		})
 		return
 	}
