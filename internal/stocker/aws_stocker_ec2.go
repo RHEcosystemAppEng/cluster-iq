@@ -62,12 +62,8 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			continue
 		}
 
-		if err = s.Account.AddCluster(cluster); err != nil {
-			s.logger.Error("error adding new cluster to account during instance processing",
-				zap.String("account_id", s.Account.AccountID),
-				zap.Error(err),
-			)
-			continue
+		if !s.Account.IsClusterInAccount(cluster.ClusterID) {
+			s.Account.AddCluster(cluster)
 		}
 
 		// Adding the instance to the Cluster
