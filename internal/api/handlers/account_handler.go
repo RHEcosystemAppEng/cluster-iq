@@ -7,7 +7,7 @@ import (
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
@@ -88,7 +88,7 @@ func (h *AccountHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToAccountDTOResponseList(accounts), total)
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToAccountDTOs(accounts), total)
 
 	c.Header("X-Total-Count", strconv.Itoa(total))
 	c.JSON(http.StatusOK, response)
@@ -127,7 +127,7 @@ func (h *AccountHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, account.ToAccountDTOResponse())
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToAccountDTO(account))
 }
 
 // GetAccountClustersByID lists clusters belonging to a given account ID.
@@ -163,7 +163,7 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToClusterDTOResponseList(clusters), len(clusters))
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToClusterDTOs(clusters), len(clusters))
 
 	c.JSON(http.StatusOK, response)
 }
@@ -201,7 +201,7 @@ func (h *AccountHandler) GetExpensesUpdateInstances(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse(db.ToInstanceDTOResponseList(instances), len(instances))
+	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToInstanceDTOs(instances), len(instances))
 
 	c.JSON(http.StatusOK, response)
 }

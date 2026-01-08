@@ -1,10 +1,12 @@
-package db
+package db_test
 
 import (
 	"database/sql"
 	"testing"
 	"time"
 
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/convert"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,8 +19,9 @@ func TestActionDBResponse_ToActionDTOResponse(t *testing.T) {
 
 func testActionDBResponse_ToActionDTOResponse_WithValidFields(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	model := ActionDBResponse{
+	model := db.ActionDBResponse{
 		ID:        "id-1",
 		Type:      "scheduled_action",
 		Time:      sql.NullTime{Time: now, Valid: true},
@@ -32,9 +35,8 @@ func testActionDBResponse_ToActionDTOResponse_WithValidFields(t *testing.T) {
 		Instances: pq.StringArray{"i-1", "i-2"},
 	}
 
-	dto := model.ToActionDTOResponse()
+	dto := conv.ToActionDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.ID, dto.ID)
 	assert.Equal(t, model.Type, dto.Type)
 	assert.Equal(t, now, dto.Time)
@@ -49,7 +51,9 @@ func testActionDBResponse_ToActionDTOResponse_WithValidFields(t *testing.T) {
 }
 
 func testActionDBResponse_ToActionDTOResponse_WithInvalidFields(t *testing.T) {
-	model := ActionDBResponse{
+	conv := &convert.ConverterImpl{}
+
+	model := db.ActionDBResponse{
 		ID:        "id-2",
 		Type:      "cron_action",
 		Time:      sql.NullTime{Valid: false},
@@ -63,9 +67,8 @@ func testActionDBResponse_ToActionDTOResponse_WithInvalidFields(t *testing.T) {
 		Instances: pq.StringArray{"i-9"},
 	}
 
-	dto := model.ToActionDTOResponse()
+	dto := conv.ToActionDTO(model)
 
-	assert.NotNil(t, dto)
 	assert.Equal(t, model.ID, dto.ID)
 	assert.Equal(t, model.Type, dto.Type)
 
@@ -89,8 +92,9 @@ func TestToActionDTOResponseList(t *testing.T) {
 
 func testToActionDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
+	conv := &convert.ConverterImpl{}
 
-	models := []ActionDBResponse{
+	models := []db.ActionDBResponse{
 		{
 			ID:        "id-1",
 			Type:      "scheduled_action",
@@ -119,7 +123,7 @@ func testToActionDTOResponseList_Correct(t *testing.T) {
 		},
 	}
 
-	dtos := ToActionDTOResponseList(models)
+	dtos := conv.ToActionDTOs(models)
 
 	assert.Len(t, dtos, 2)
 	assert.Equal(t, "id-1", dtos[0].ID)

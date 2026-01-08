@@ -3,33 +3,14 @@ package db
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
-// TODO comments
+// TagDBResponse represents the database schema for tag details,
+// linking each field to a corresponding column in the database.
 type TagDBResponse struct {
 	Key        string `db:"key"`
 	Value      string `db:"value"`
 	InstanceID string `db:"instance_id"`
-}
-
-// TODO comments
-func (t TagDBResponse) ToTagDTOResponse() *dto.TagDTOResponse {
-	return &dto.TagDTOResponse{
-		Key:        t.Key,
-		Value:      t.Value,
-		InstanceID: t.InstanceID,
-	}
-}
-
-// ToTagsDTOList converts a slice of inventory.Tag models to a slice of TagDTOResponse.
-func ToTagsDTOResponseList(models []TagDBResponse) *[]dto.TagDTOResponse {
-	dtos := make([]dto.TagDTOResponse, len(models))
-	for i, model := range models {
-		dtos[i] = *model.ToTagDTOResponse()
-	}
-	return &dtos
 }
 
 // TagDBResponses implements sql.Scanner interface for processing tags as JSONB
