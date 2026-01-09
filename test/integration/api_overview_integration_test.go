@@ -26,7 +26,7 @@ func TestAPIOverview(t *testing.T) {
 
 func testGetOverview(t *testing.T) {
 	expectedHTTPCode := http.StatusOK
-	lastScanTS, _ := time.Parse(time.RFC3339, "0001-01-01T00:00:00Z")
+	lastScanTS, _ := time.Parse(time.RFC3339, "2025-08-03T10:00:00Z")
 	expectedOverviewResponse := dto.OverviewSummary{
 		Clusters: dto.ClusterSummary{
 			Running:  0,

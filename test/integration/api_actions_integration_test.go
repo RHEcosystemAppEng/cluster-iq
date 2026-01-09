@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	APIActionsURL = APIBaseURL + "/schedule"
+	APIActionsURL = APIBaseURL + "/actions"
 )
 
 func TestAPIActions(t *testing.T) {
@@ -177,9 +177,9 @@ func testPostOneAction(t *testing.T) {
 			Operation: "PowerOn",
 			Status:    "Pending",
 			Enabled:   false,
-			ClusterID: "3",
+			ClusterID: "gcp-cluster-1-gcp-infra-1",
 			Region:    "europe",
-			AccountID: "2",
+			AccountID: "gcp-project-1",
 			Instances: []string{},
 		},
 	}
@@ -217,9 +217,9 @@ func testPostMultipleActions(t *testing.T) {
 			Operation: "PowerOn",
 			Status:    "Pending",
 			Enabled:   false,
-			ClusterID: "4",
+			ClusterID: "gcp-cluster-2-gcp-infra-2",
 			Region:    "europe",
-			AccountID: "2",
+			AccountID: "gcp-project-1",
 			Instances: []string{},
 		},
 		{
@@ -228,9 +228,9 @@ func testPostMultipleActions(t *testing.T) {
 			Operation: "PowerOn",
 			Status:    "Pending",
 			Enabled:   false,
-			ClusterID: "3",
+			ClusterID: "gcp-cluster-1-gcp-infra-1",
 			Region:    "europe",
-			AccountID: "2",
+			AccountID: "gcp-project-1",
 			Instances: []string{},
 		},
 	}
@@ -257,7 +257,7 @@ func testPostMultipleActions(t *testing.T) {
 
 func testPostWrongAction(t *testing.T) {
 	expectedHTTPCode := http.StatusInternalServerError
-	expectedMsg := "Failed to create actions: error when processing actions"
+	expectedMsg := "Failed to create actions: error when processing action requests data"
 
 	payload := []dto.ActionDTORequest{
 		{
@@ -267,9 +267,9 @@ func testPostWrongAction(t *testing.T) {
 			Operation: "power",
 			Status:    "Pending",
 			Enabled:   false,
-			ClusterID: "2",
+			ClusterID: "aws-cluster-2-aws-infra-2",
 			Region:    "europe",
-			AccountID: "3",
+			AccountID: "subs-00000001",
 			Instances: []string{},
 		},
 	}
