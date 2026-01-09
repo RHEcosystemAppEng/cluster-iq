@@ -65,7 +65,7 @@ func (c *AWSRoute53Connection) GetZonesWithTags() ([]HostedZone, error) {
 // ZoneBelongsToCluster returns true or false if the hosted zone is associated to a cluster Ingress (routers)
 func (c *AWSRoute53Connection) ZoneBelongsToCluster(cluster *inventory.Cluster, zoneWithTags HostedZone) bool {
 	for _, tag := range zoneWithTags.Tags {
-		if strings.Contains(*(tag.Key), cluster.Name) {
+		if strings.Contains(*(tag.Key), cluster.ClusterName) {
 			return true
 		}
 	}
@@ -88,7 +88,7 @@ func (c *AWSRoute53Connection) GetHostedZoneRecords(hostedZoneID string) ([]*rou
 			return !lastPage // Continue if there are more record pages
 		})
 	if err != nil {
-		return nil, fmt.Errorf("Error getting the DNS registries: %w", err)
+		return nil, fmt.Errorf("error getting the DNS registries: %w", err)
 	}
 
 	return records, nil

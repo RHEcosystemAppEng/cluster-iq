@@ -22,7 +22,7 @@ type AWSExecutor struct {
 // to validate that the connection is correct.
 func NewAWSExecutor(account *inventory.Account, ch <-chan actions.Action, logger *zap.Logger) *AWSExecutor {
 	// Generate AWSConnection
-	conn, err := cpaws.NewAWSConnection(account.GetUser(), account.GetPassword(), "", cpaws.WithEC2())
+	conn, err := cpaws.NewAWSConnection(account.User(), account.Password(), "", cpaws.WithEC2())
 	if err != nil {
 		logger.Error("Cannot create an AWS connection for the AWS Executor", zap.Error(err))
 		return nil
@@ -37,7 +37,7 @@ func NewAWSExecutor(account *inventory.Account, ch <-chan actions.Action, logger
 	}
 
 	if err := exec.Connect(); err != nil {
-		logger.Error("Cannot connect AWSExecutor to AWS API", zap.String("account_name", account.Name))
+		logger.Error("Cannot connect AWSExecutor to AWS API", zap.String("account_name", account.AccountName))
 		return nil
 	}
 	return &exec
@@ -52,10 +52,10 @@ func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 	}
 
 	switch a := action.GetActionOperation(); a {
-	case actions.PowerOnCluster:
+	case actions.PowerOn:
 		return e.PowerOnCluster(target.GetInstances())
 
-	case actions.PowerOffCluster:
+	case actions.PowerOff:
 		return e.PowerOffCluster(target.GetInstances())
 
 	default: // No registered ActionOperation
@@ -64,8 +64,8 @@ func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 }
 
 // GetAccountName returns the account name
-func (e AWSExecutor) GetAccountName() string {
-	return e.account.Name
+func (e AWSExecutor) GetAccountID() string {
+	return e.account.AccountID
 }
 
 // SetRegion configures a new region for the AWSConnection and refreshes the AWSServiceClients with the new region

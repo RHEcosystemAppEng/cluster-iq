@@ -45,6 +45,9 @@ AGENT_IMG_NAME ?= $(PROJECT_NAME)-agent
 AGENT_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(AGENT_IMG_NAME)
 AGENT_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-agent
 AGENT_PROTO_PATH ?= ./cmd/agent/proto/agent.proto
+PGSQL_IMG_NAME ?= $(PROJECT_NAME)-pgsql
+PGSQL_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(PGSQL_IMG_NAME)
+PGSQL_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-pgsql
 
 # Standard targets
 all: ## Stop, build and start the development environment based on containers
@@ -64,7 +67,11 @@ local-clean:
 
 local-build: local-build-scanner local-build-api local-build-agent ## Build all local binaries
 
-local-build-api: swagger-doc ## Build the API binary
+generate-converters: ## Generate goverter converters (DB to DTO)
+	@echo "### [Generating converters] ###"
+	@$(GO) generate ./internal/models/convert
+
+local-build-api: generate-converters swagger-doc ## Build the API binary
 	@echo "### [Building API] ###"
 	@$(GO) build -o $(BIN_DIR)/api/api $(LDFLAGS) ./cmd/api/
 
@@ -75,17 +82,18 @@ local-build-scanner: ## Build the scanner binary
 local-build-agent: ## Build the agent binary
 	@echo "### [Building Agent] ###"
 	@[ ! -d $(GENERATED_DIR) ] && { mkdir $(GENERATED_DIR); } || { exit 0; }
-	@protoc --go_out=$(GENERATED_DIR) --go-grpc_out=$(GENERATED_DIR) $(AGENT_PROTO_PATH)
+	@$(PROTOC) --go_out=$(GENERATED_DIR) --go-grpc_out=$(GENERATED_DIR) $(AGENT_PROTO_PATH)
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -o $(BIN_DIR)/agent/agent $(LDFLAGS) ./cmd/agent
 
 
 # Container based working targets
 clean: ## Remove the container images
 	@echo "### [Cleaning Container images] ###"
-	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) -e $(AGENT_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
+	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) -e $(AGENT_IMAGE) -e $(PGSQL_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
-build: build-api build-scanner build-agent ## Build all container images
-build-api: ## Build the API container image
+build: ## Build all container images
+build: build-api build-scanner build-agent build-pgsql
+build-api: generate-converters ## Build the API container image
 	@echo "### [Building API container image] ###"
 	@$(CONTAINER_ENGINE) build \
 		--build-arg VERSION=$(VERSION) \
@@ -112,6 +120,15 @@ build-agent: ## Build the agent container image
 	@$(CONTAINER_ENGINE) tag $(AGENT_IMAGE):latest $(AGENT_IMAGE):$(SHORT_COMMIT_HASH)
 	@echo "Build Successful"
 
+build-pgsql: ## Build the PGSQL container image
+	@echo "### [Building PGSQL container image] ###"
+	@$(CONTAINER_ENGINE) build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(SHORT_COMMIT_HASH) \
+		-t $(PGSQL_IMAGE):latest -f $(PGSQL_CONTAINERFILE) .
+	@$(CONTAINER_ENGINE) tag $(PGSQL_IMAGE):latest $(PGSQL_IMAGE):$(SHORT_COMMIT_HASH)
+	@echo "Build Successful"
+
 
 # Development targets
 start-dev: ## Start the container-based development environment
@@ -136,20 +153,36 @@ go-setup-tests:
 
 go-unit-tests: ## Runs go unit tests
 go-unit-tests: go-setup-tests
-	@$(GO) test -v -race ./internal/inventory -coverprofile $(TEST_DIR)/cover-unit-tests.out
+	@$(GO) test -race ./internal/inventory ./internal/actions ./internal/events/event_service ./internal/models/dto ./internal/models/db ./internal/config ./internal/credentials -coverprofile $(TEST_DIR)/cover-unit-tests.out
+
+go-coverage-unit-tests: ## Calculates unit tests coverage percentage
+go-coverage-unit-tests: go-setup-tests go-unit-tests
 	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
 
 go-integration-tests: ## Runs the Integration tests for this project
 go-integration-tests: go-setup-tests
 	@echo -e "### [Running Integration tests] ###"
-	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out
+	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
+	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml up -d
+	@sleep 10 # let init-pgsql to do its job
+	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out | sed -e 's/PASS/\x1b[32mPASS\x1b[0m/' -e 's/FAIL/\x1b[31mFAIL\x1b[0m/' -e 's/RUN/\x1b[33mRUN\x1b[0m/'
 	@$(GO) tool cover -func $(TEST_DIR)/cover-integration-tests.out
+	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
 
 go-tests: ## Runs every test
-go-tests: go-unit-tests go-integration-tests
+go-tests: go-unit-tests go-coverage-unit-tests go-integration-tests
 
-go-linter: ## Runs go linter tools
+lint: ## Runs go linter tools against the whole project
 	@$(GO_LINTER) run
+
+lint-staged: ## Runs go linter tools against staged files
+	@echo "### [Running Linter against staged files] ###"
+	@STAGED_FILES=$$(git diff --name-only --staged -- '*.go' ':(exclude)*.pb.go'); \
+	if [ -z "$$STAGED_FILES" ]; then \
+		echo "No staged Go files to lint."; \
+	else \
+		$(GO_LINTER) run --new-from-patch=<(git diff --staged -- '*.go' ':(exclude)*.pb.go') --whole-files; \
+	fi
 
 go-fmt: ## Runs go formatting tools
 	@WRONG_LINES="$$($(GO_FMT) -l . | wc -l)"; \
@@ -170,7 +203,7 @@ swagger-editor: ## Open web editor for modifying Swagger docs
 
 swagger-doc: ## Generate Swagger documentation for ClusterIQ API
 	@echo "### [Generating Swagger Docs] ###"
-	@$(SWAGGER) fmt
+	@$(SWAGGER) fmt --exclude ./internal
 	@$(SWAGGER) init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
 
 

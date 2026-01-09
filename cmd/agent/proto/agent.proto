@@ -12,15 +12,17 @@ service AgentService {
 
 // Message for requesting power on a cluster
 message PowerOnClusterRequest {
-  string account_name = 1;
+  string account_id = 1;
   string region = 2;
   string cluster_id = 3;
   repeated string instances_id_list = 4;
+  string requester = 5;
+  string description = 6;
 }
 
 // Message for answering to PowerOnClusterRequests
 message PowerOnClusterResponse {
-  // if error != 0, there was an error during the action. If error == 0, the request was sucessfully completed
+  // if error != 0, there was an error during the action. If error == 0, the request was successfully completed
   int32 error = 1;
   // message with additional info
   string message = 2;
@@ -28,15 +30,17 @@ message PowerOnClusterResponse {
 
 // Message for requesting power off a cluster
 message PowerOffClusterRequest {
-  string account_name = 1;
+  string account_id = 1;
   string region = 2;
   string cluster_id = 3;
   repeated string instances_id_list = 4;
+  string requester = 5;
+  string description = 6;
 }
 
 // Message for answering to PowerOffClusterRequests
 message PowerOffClusterResponse {
-  // if error != 0, there was an error during the action. If error == 0, the request was sucessfully completed
+  // if error != 0, there was an error during the action. If error == 0, the request was successfully completed
   int32 error = 1;
   // message with additional info
   string message = 2;

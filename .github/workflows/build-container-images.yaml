@@ -11,6 +11,7 @@ on:
 
 jobs:
   setup:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false # Prevents running if the PR is a draft
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,7 +23,7 @@ jobs:
       LATEST_TAG: ${{ steps.vars.outputs.LATEST_TAG }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Needed for getting Git Tags
 
@@ -69,7 +70,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Login to Quay.io
         run: |
@@ -117,7 +118,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Login to Quay.io
         run: |
@@ -165,7 +166,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Login to Quay.io
         run: |

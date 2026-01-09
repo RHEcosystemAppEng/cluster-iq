@@ -1,99 +1,118 @@
 package inventory
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
 
+var (
+	// Error when creating an account wihout ID
+	ErrorMissingAccountIDCreation = errors.New("cannot to create an Account without AccountID")
+	// Error when adding a cluster that already belongs to the account
+	ErrorAddingClusterToAccount = errors.New("cannot add cluster to account")
+	// Error when deleting a cluster that doesn't belong to the account
+	ErrorDeletingClusterFromAccount = errors.New("cannot delete cluster from account")
+)
+
 // Account defines an infrastructure provider account
 type Account struct {
-	// ID is the uniq identifier for each account without considering the cloud provider
+	// AccountID is the internal account ID used by its provider. Depending on the provider, it's named differently:
 	// AWS: AccountID
 	// Azure: SubscriptionID
 	// GCP: ProjectID
-	ID string `db:"id" json:"id"`
+	AccountID string `db:"account_id"`
 
-	// Account's name. It's considered as an uniq key. Two accounts with same
-	// name can't belong to same Inventory
-	Name string `db:"name" json:"name"`
+	// AccountName is the name assigned by the cloud provider to the account, or an alias configured by the user.
+	// The account will be identified by the AccountID, not by the AccountName.
+	AccountName string `db:"account_name"`
 
-	// Infrastructure provider identifier.
-	Provider CloudProvider `db:"provider" json:"provider"`
+	// Provider identifies the cloud/infrastructure provider.
+	Provider Provider `db:"provider"`
 
-	// ClusterCount
-	ClusterCount int `db:"cluster_count" json:"clusterCount"`
+	// LastScanTimestamp is the timestamp when the account was scanned for the last time.
+	LastScanTimestamp time.Time `db:"last_scan_ts"`
 
-	// List of clusters deployed on this account indexed by Cluster's name
-	Clusters map[string]*Cluster `json:"-"`
+	// CreatedAt is the timestamp when the account was created (from the inventory point of view, not from the provider).
+	CreatedAt time.Time `db:"created_at"`
 
-	// Last scan timestamp of the account
-	LastScanTimestamp time.Time `db:"last_scan_timestamp" json:"lastScanTimestamp"`
+	// In-memory fields (no saved in the DB)
+	// ===========================================================================
 
-	// Account's username
+	// Clusters is the list of clusters deployed on this account indexed by ClusterID.
+	Clusters map[string]*Cluster
+
+	// billingEnabled determines if billing scanners are enabled or not for this account when scanning.
+	billingEnabled bool
+
+	// Account user
 	user string
 
-	// Account's password
+	// Account password
 	password string
-
-	// Total cost (US Dollars)
-	TotalCost float64 `db:"total_cost" json:"totalCost"`
-
-	// Cost Last 15d
-	Last15DaysCost float64 `db:"last_15_days_cost" json:"last15DaysCost"`
-
-	// Last month cost
-	LastMonthCost float64 `db:"last_month_cost" json:"lastMonthCost"`
-
-	// Current month so far cost
-	CurrentMonthSoFarCost float64 `db:"current_month_so_far_cost" json:"currentMonthSoFarCost"`
-
-	// Billing information flag
-	billingEnabled bool
 }
 
-// NewAccount create a new Could Provider account to store its instances
-func NewAccount(id string, name string, provider CloudProvider, user string, password string) *Account {
-	return &Account{
-		ID:                    id,
-		Name:                  name,
-		Provider:              provider,
-		ClusterCount:          0,
-		Clusters:              make(map[string]*Cluster),
-		LastScanTimestamp:     time.Now(),
-		user:                  user,
-		password:              password,
-		TotalCost:             0.0,
-		Last15DaysCost:        0.0,
-		LastMonthCost:         0.0,
-		CurrentMonthSoFarCost: 0.0,
-		billingEnabled:        false, // Disabled by default
+// NewAccount create a new Could Provider account to store its instances.
+func NewAccount(accountID string, accountName string, provider Provider, user string, password string) (*Account, error) {
+	if accountID == "" {
+		return nil, fmt.Errorf("%w: accountName: %s", ErrorMissingAccountIDCreation, accountName)
 	}
+
+	return &Account{
+		AccountID:         accountID,
+		AccountName:       accountName,
+		Provider:          provider,
+		Clusters:          make(map[string]*Cluster),
+		LastScanTimestamp: time.Time{},
+		CreatedAt:         time.Now(),
+		user:              user,
+		password:          password,
+	}, nil
 }
 
-// GetUser returns the username value
-func (a Account) GetUser() string {
+// User returns the account's username
+func (a *Account) User() string {
 	return a.user
 }
 
-// GetPassword returns the password value
-func (a Account) GetPassword() string {
+// Password returns the account's password
+func (a *Account) Password() string {
 	return a.password
 }
 
-// IsClusterOnAccount checks if a cluster is already in the Stock
-func (a Account) IsClusterOnAccount(id string) bool {
-	_, ok := a.Clusters[id]
+// IsClusterInAccount checks if a cluster is already in the account
+func (a *Account) IsClusterInAccount(clusterID string) bool {
+	_, ok := a.Clusters[clusterID]
 	return ok
 }
 
 // AddCluster adds a cluster to the stock
 func (a *Account) AddCluster(cluster *Cluster) error {
-	if a.IsClusterOnAccount(cluster.ID) {
-		return fmt.Errorf("Cluster '%s[%s]' already exists on Account %s", cluster.Name, cluster.ID, a.Name)
+	if a.IsClusterInAccount(cluster.ClusterID) {
+		return fmt.Errorf("%w: Cluster %s already exists in Account %s", ErrorAddingClusterToAccount, cluster.ClusterID, a.AccountID)
 	}
 
-	a.Clusters[cluster.ID] = cluster
-	a.ClusterCount = len(a.Clusters)
+	// Assign reference to owner account
+	cluster.AccountID = a.AccountID
+
+	// Adding to the map
+	a.Clusters[cluster.ClusterID] = cluster
+
+	return nil
+}
+
+// DeleteCluster checks if the cluster exists in the account, and if so, removes it from the clusters map
+func (a *Account) DeleteCluster(clusterID string) error {
+	if !a.IsClusterInAccount(clusterID) {
+		return fmt.Errorf("%w: Cluster %s doesn't exists in Account %s", ErrorDeletingClusterFromAccount, clusterID, a.AccountID)
+	}
+
+	// Removing reference to owner account
+	a.Clusters[clusterID].AccountID = ""
+
+	// Removing from the map
+	delete(a.Clusters, clusterID)
+
 	return nil
 }
 
@@ -108,13 +127,13 @@ func (a *Account) DisableBilling() {
 }
 
 // IsBillingEnabled returns a boolean value based on if the billing module is enabled or not
-func (a Account) IsBillingEnabled() bool {
+func (a *Account) IsBillingEnabled() bool {
 	return a.billingEnabled
 }
 
 // PrintAccount prints account info and every cluster on it by stdout
 func (a Account) PrintAccount() {
-	fmt.Printf("\tAccount: %s[%s] #Clusters: %d\n", a.Name, a.ID, len(a.Clusters))
+	fmt.Printf("\t - Account: %s[%s] #Clusters: %d\n", a.AccountName, a.AccountID, len(a.Clusters))
 
 	for _, cluster := range a.Clusters {
 		cluster.PrintCluster()

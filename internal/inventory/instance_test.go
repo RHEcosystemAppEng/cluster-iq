@@ -1,7 +1,6 @@
 package inventory
 
 import (
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -11,154 +10,126 @@ import (
 
 // TestNewInstance verifies that NewInstance returns a correctly initialized instance
 func TestNewInstance(t *testing.T) {
-	id := "0000-11A"
-	name := "testAccount"
-	var provider CloudProvider = UnknownProvider
-	instanceType := "t2.micro"
-	availabilityZone := "us-west-1a"
-	status := Terminated
-	clusterID := "testCluster"
-	tags := make([]Tag, 0)
-	creationTimestamp := time.Now()
-
-	expectedInstance := &Instance{
-		ID:                id,
-		Name:              name,
-		Provider:          provider,
-		InstanceType:      instanceType,
-		AvailabilityZone:  availabilityZone,
-		Status:            status,
-		ClusterID:         clusterID,
-		LastScanTimestamp: creationTimestamp,
-		CreationTimestamp: creationTimestamp,
-		DailyCost:         0.0,
-		TotalCost:         0.0,
-		Tags:              tags,
-	}
-
-	actualInstance := NewInstance(id, name, provider, instanceType, availabilityZone, status, clusterID, tags, creationTimestamp)
-
-	assert.NotNil(t, actualInstance)
-	assert.NotZero(t, actualInstance.LastScanTimestamp)
-
-	expectedInstance.Age = actualInstance.Age
-	expectedInstance.LastScanTimestamp = actualInstance.LastScanTimestamp
-	expectedInstance.CreationTimestamp = actualInstance.CreationTimestamp
-	assert.Equal(t, expectedInstance, actualInstance)
+	t.Run("New Instance", func(t *testing.T) { testNewInstance_Correct(t) })
+	t.Run("New Instance without InstanceID", func(t *testing.T) { testNewInstance_WithoutInstanceID(t) })
 }
 
-// TestCalculateTotalCost_Success verifies that total cost is correctly aggregated
-func TestCalculateTotalCost_Success(t *testing.T) {
-	i := Instance{
-		Expenses: []Expense{
-			{Amount: 2.5},
-			{Amount: 3.5},
-		},
-	}
-	err := i.calculateTotalCost()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if i.TotalCost != 6.0 {
-		t.Errorf("expected total cost 6.0, got %f", i.TotalCost)
-	}
+func testNewInstance_Correct(t *testing.T) {
+	id := "id-012345X"
+	name := "test-instance"
+	provider := AWSProvider
+	instanceType := "vm.small"
+	az := "north-eu-1"
+	status := Running
+	tags := []Tag{}
+	tz := time.Now()
+
+	instance, err := NewInstance(id, name, provider, instanceType, az, status, tags, tz)
+
+	// Basic check
+	assert.Nil(t, err)
+	assert.NotNil(t, instance)
+
+	// Parameters Check
+	assert.Equal(t, instance.InstanceID, id)
+	assert.Equal(t, instance.InstanceName, name)
+	assert.Equal(t, instance.Provider, provider)
+	assert.Equal(t, instance.InstanceType, instanceType)
+	assert.Equal(t, instance.AvailabilityZone, az)
+	assert.Equal(t, instance.Status, status)
+	assert.Equal(t, instance.ClusterID, "")
+	assert.NotZero(t, instance.LastScanTimestamp)
+	assert.Equal(t, instance.CreatedAt, tz)
+	assert.Equal(t, instance.Age, 1)
+	assert.Equal(t, instance.Tags, tags)
+	assert.NotNil(t, instance.Expenses)
 }
 
-// TestCalculateTotalCost_ErrorNegative verifies that total cost fails when resulting value is negative
-func TestCalculateTotalCost_ErrorNegative(t *testing.T) {
-	i := Instance{
-		Expenses: []Expense{{Amount: -10}},
-	}
-	err := i.calculateTotalCost()
-	if !errors.Is(err, ERR_INSTANCE_TOTAL_COST_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_TOTAL_COST_LESS_ZERO, got %v", err)
-	}
+func testNewInstance_WithoutInstanceID(t *testing.T) {
+	id := ""
+	name := "test-instance"
+	provider := AWSProvider
+	instanceType := "vm.small"
+	az := "north-eu-1"
+	status := Running
+	tags := []Tag{}
+	tz := time.Now()
+
+	instance, err := NewInstance(id, name, provider, instanceType, az, status, tags, tz)
+
+	// Basic check
+	assert.Nil(t, instance)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, ErrMissingInstanceIDCreation.Error())
 }
 
-// TestCalculateDailyCost_Success verifies that daily cost is computed correctly
-func TestCalculateDailyCost_Success(t *testing.T) {
-	i := Instance{TotalCost: 10.0, Age: 5}
-	err := i.calculateDailyCost()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if i.DailyCost != 2.0 {
-		t.Errorf("expected daily cost 2.0, got %f", i.DailyCost)
-	}
-}
-
-// TestCalculateDailyCost_ZeroAge verifies error when age is zero
-func TestCalculateDailyCost_ZeroAge(t *testing.T) {
-	i := Instance{TotalCost: 10.0, Age: 0}
-	err := i.calculateDailyCost()
-	if !errors.Is(err, ERR_INSTANCE_AGE_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_AGE_LESS_ZERO, got %v", err)
-	}
-}
-
-// TestCalculateDailyCost_Negative verifies error when daily cost would be negative
-func TestCalculateDailyCost_Negative(t *testing.T) {
-	i := Instance{TotalCost: -10.0, Age: 5}
-	err := i.calculateDailyCost()
-	if !errors.Is(err, ERR_INSTANCE_DAILY_COST_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_DAILY_COST_LESS_ZERO, got %v", err)
-	}
-}
-
-// TestUpdateCosts_Success verifies UpdateCosts runs correctly when no errors are present
-func TestUpdateCosts_Success(t *testing.T) {
-	i := Instance{
-		Age:      2,
-		Expenses: []Expense{{Amount: 8.0}},
-	}
-	err := i.UpdateCosts()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if i.TotalCost != 8.0 || i.DailyCost != 4.0 {
-		t.Errorf("unexpected costs: total %f, daily %f", i.TotalCost, i.DailyCost)
-	}
-}
-
-// TestUpdateCosts_TotalCostError verifies UpdateCosts fails on invalid total cost
-func TestUpdateCosts_TotalCostError(t *testing.T) {
-	i := Instance{
-		Age:      2,
-		Expenses: []Expense{{Amount: -1}},
-	}
-	err := i.UpdateCosts()
-	if !errors.Is(err, ERR_INSTANCE_TOTAL_COST_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_TOTAL_COST_LESS_ZERO, got %v", err)
-	}
-}
-
-// TestUpdateCosts_DailyCostError verifies UpdateCosts fails on invalid daily cost
-func TestUpdateCosts_DailyCostError(t *testing.T) {
-	i := Instance{
-		Age:      0,
-		Expenses: []Expense{{Amount: 10}},
-	}
-	err := i.UpdateCosts()
-	if !errors.Is(err, ERR_INSTANCE_AGE_LESS_ZERO) {
-		t.Errorf("expected ERR_INSTANCE_AGE_LESS_ZERO, got %v", err)
-	}
-}
-
-// TestAddTag verifies that a new tag is appended to the tag list
+// TestAddTag tests the tag adding operation to an Instance
 func TestAddTag(t *testing.T) {
+	t.Run("Adding Tag", func(t *testing.T) { testAddTag_Correct(t) })
+	t.Run("Adding Keyless Tag", func(t *testing.T) { testAddTag_WithoutKey(t) })
+}
+
+func testAddTag_Correct(t *testing.T) {
 	i := Instance{}
 	tag := Tag{Key: "env", Value: "prod"}
-	i.AddTag(tag)
-	if len(i.Tags) != 1 || i.Tags[0] != tag {
-		t.Errorf("tag was not added correctly")
-	}
+
+	assert.Zero(t, len(i.Tags))
+
+	err := i.AddTag(tag)
+	assert.Nil(t, err)
+
+	assert.Equal(t, len(i.Tags), 1)
+	assert.Contains(t, i.Tags, tag)
+}
+
+func testAddTag_WithoutKey(t *testing.T) {
+	i := Instance{}
+	tag := Tag{Key: "", Value: "value"}
+
+	assert.Zero(t, len(i.Tags))
+
+	err := i.AddTag(tag)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, ErrAddingTagWithoutKey.Error())
+	assert.Zero(t, len(i.Tags))
+}
+
+// TestAddExpense tests the Expense adding operation to an Instance
+func TestAddExpense(t *testing.T) {
+	t.Run("Adding Expense", func(t *testing.T) { testAddExpense_Correct(t) })
+	t.Run("Adding Expense with negative amount", func(t *testing.T) { testAddExpense_WithNegativeAmount(t) })
+}
+
+func testAddExpense_Correct(t *testing.T) {
+	i := Instance{InstanceID: "id-012345X"}
+	expense := Expense{InstanceID: "id-00000X", Amount: 2.4, Date: time.Now()}
+
+	assert.Zero(t, len(i.Expenses))
+
+	err := i.AddExpense(&expense)
+	assert.Nil(t, err)
+
+	assert.Equal(t, len(i.Expenses), 1)
+	assert.Contains(t, i.Expenses, expense)
+}
+
+func testAddExpense_WithNegativeAmount(t *testing.T) {
+	i := Instance{InstanceID: "id-012345X"}
+	expense := Expense{InstanceID: "id-00000X", Amount: -2.4, Date: time.Now()}
+
+	assert.Zero(t, len(i.Expenses))
+
+	err := i.AddExpense(&expense)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, ErrAddingExpenseWithWrongAmount.Error())
+	assert.Zero(t, len(i.Tags))
 }
 
 // TestInstance_String verifies String method returns expected format
 func TestInstance_String(t *testing.T) {
 	i := Instance{
-		ID:               "i-123",
-		Name:             "test",
+		InstanceID:       "i-123",
+		InstanceName:     "test",
 		Provider:         AWSProvider,
 		InstanceType:     "t2.micro",
 		AvailabilityZone: "us-east-1a",
@@ -175,6 +146,6 @@ func TestInstance_String(t *testing.T) {
 
 // TestPrintInstance verifies PrintInstance runs without panic
 func TestPrintInstance(t *testing.T) {
-	i := Instance{ID: "i-456", Name: "node1"}
+	i := Instance{InstanceID: "i-456", InstanceName: "node1"}
 	i.PrintInstance()
 }

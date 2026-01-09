@@ -7,7 +7,7 @@ type Expense struct {
 	// InstanceID references the instance of the expense
 	InstanceID string `db:"instance_id" json:"instanceID"`
 
-	// Ammount represents the cost in USDollars
+	// Amount represents the cost in USDollars
 	Amount float64 `db:"amount" json:"amount"`
 
 	// Date (Year, month, day)
@@ -18,7 +18,7 @@ type Expense struct {
 func NewExpense(instanceID string, amount float64, date time.Time) *Expense {
 	// Checking if cost is below zero, which is not possible
 	if amount < 0.0 {
-		return nil
+		amount = 0.0
 	}
 
 	return &Expense{

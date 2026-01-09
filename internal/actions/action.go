@@ -2,7 +2,12 @@ package actions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+)
+
+var (
+	ErrorUnknownActionType = errors.New("unknown ActionType")
 )
 
 // Action defines the interface for cloud actions that can be executed.
@@ -12,7 +17,7 @@ type Action interface {
 	// GetActionOperation returns the type of action being performed.
 	//
 	// Returns:
-	// - An ActionOperation indicating the action type (e.g., PowerOnCluster, PowerOffCluster).
+	// - An ActionOperation indicating the action type (e.g., PowerOn, PowerOff).
 	GetActionOperation() ActionOperation
 
 	// GetRegion returns the cloud region where the action is executed.
@@ -33,11 +38,32 @@ type Action interface {
 	// - A string representing the unique action ID.
 	GetID() string
 
+	// GetRequester returns the action requester
+	//
+	// Returns:
+	// - A string representing action requester
+	GetRequester() string
+
+	// GetDescription returns the action description
+	//
+	// Returns:
+	// - A string representing action description
+	GetDescription() *string
+
 	// GetType returns the action type
 	//
 	// Returns:
 	// - A string representing action type
 	GetType() ActionType
+}
+
+type MutableAction interface {
+	Action
+	// SetStatus updates the action status
+	//
+	// Parameters:
+	// - New ActionStatus
+	SetStatus(status ActionStatus)
 }
 
 // DecodeActions received a http response body as a []byte for decoding the
@@ -57,7 +83,7 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 
 		// Auxiliar struct for getting the action type
 		var r struct {
-			Type string `json:"type"`
+			Type ActionType `json:"type"`
 		}
 
 		// Unmarshalling action type
@@ -79,8 +105,14 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 				return nil, err
 			}
 			resultActions = append(resultActions, a)
+		case InstantActionType:
+			var a InstantAction
+			if err := json.Unmarshal(action, &a); err != nil {
+				return nil, err
+			}
+			resultActions = append(resultActions, a)
 		default:
-			return nil, fmt.Errorf("unknown ActionType: %s", r.Type)
+			return nil, fmt.Errorf("%w: %s", ErrorUnknownActionType, r.Type)
 		}
 	}
 
@@ -95,16 +127,16 @@ func DecodeActions(actions []json.RawMessage) (*[]Action, error) {
 // Returns:
 // - A pointer to a slice of ScheduledActions
 // - A pointer to a slice of CronAction
-func SplitActionsByType(actions []Action) ([]ScheduledAction, []CronAction) {
-	var schedActions []ScheduledAction
-	var cronActions []CronAction
+func SplitActionsByType(actions []Action) ([]*ScheduledAction, []*CronAction) {
+	var schedActions []*ScheduledAction
+	var cronActions []*CronAction
 
 	for _, action := range actions {
-		switch action.GetType() {
-		case ScheduledActionType: // Unmarshall as ScheduledAction
-			schedActions = append(schedActions, action.(ScheduledAction))
-		case CronActionType: // Unmarshall as CronAction
-			cronActions = append(cronActions, action.(CronAction))
+		switch value := action.(type) {
+		case *ScheduledAction: // Unmarshall as ScheduledAction
+			schedActions = append(schedActions, value)
+		case *CronAction: // Unmarshall as CronAction
+			cronActions = append(cronActions, value)
 		}
 	}
 

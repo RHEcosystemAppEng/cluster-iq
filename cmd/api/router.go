@@ -1,103 +1,118 @@
 package main
 
 import (
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/api/handlers"
 	"github.com/gin-gonic/gin"
 )
 
-type Router struct {
-	engine *gin.Engine
-	api    *APIServer
+// APIHandlers holds all the handlers that the router needs.
+type APIHandlers struct {
+	InventoryHandler   *handlers.InventoryHandler
+	AccountHandler     *handlers.AccountHandler
+	ClusterHandler     *handlers.ClusterHandler
+	InstanceHandler    *handlers.InstanceHandler
+	ExpenseHandler     *handlers.ExpenseHandler
+	EventHandler       *handlers.EventHandler
+	ActionHandler      *handlers.ActionHandler
+	OverviewHandler    *handlers.OverviewHandler
+	HealthCheckHandler *handlers.HealthCheckHandler
 }
 
-func NewRouter(api *APIServer) *Router {
-	return &Router{
-		engine: api.router,
-		api:    api,
+// Setup configures the API routes.
+func Setup(engine *gin.Engine, handlers APIHandlers) {
+	baseGroup := engine.Group("/api/v1")
+	{
+		setupInventoryRoutes(baseGroup, handlers.InventoryHandler)
+		setupHealthCheckRoutes(baseGroup, handlers.HealthCheckHandler)
+		setupAccountRoutes(baseGroup, handlers.AccountHandler)
+		setupClusterRoutes(baseGroup, handlers.ClusterHandler, handlers.InstanceHandler, handlers.EventHandler)
+		setupInstanceRoutes(baseGroup, handlers.InstanceHandler)
+		setupExpenseRoutes(baseGroup, handlers.ExpenseHandler)
+		setupEventRoutes(baseGroup, handlers.EventHandler)
+		setupActionRoutes(baseGroup, handlers.ActionHandler)
+		setupOverviewRoutes(baseGroup, handlers.OverviewHandler)
 	}
 }
 
-func (r *Router) SetupRoutes() {
-	// API Endpoints
-	baseGroup := r.engine.Group("/api/v1")
-	r.setupHealthcheckRoutes(baseGroup)
-	r.setupScheduledActionsRoutes(baseGroup)
-	r.setupExpensesRoutes(baseGroup)
-	r.setupInstancesRoutes(baseGroup)
-	r.setupClustersRoutes(baseGroup)
-	r.setupAccountsRoutes(baseGroup)
-	r.setupEventsRoutes(baseGroup)
-	r.setupOverviewRoutes(baseGroup)
-	r.setupInventoryRoutes(baseGroup)
+func setupInventoryRoutes(group *gin.RouterGroup, handler *handlers.InventoryHandler) {
+	group.POST("/inventory", handler.Refresh)
 }
 
-func (r *Router) setupHealthcheckRoutes(baseGroup *gin.RouterGroup) {
-	healthcheckGroup := baseGroup.Group("/healthcheck")
-	healthcheckGroup.GET("", r.api.HandlerHealthCheck)
+func setupHealthCheckRoutes(group *gin.RouterGroup, handler *handlers.HealthCheckHandler) {
+	group.GET("/healthcheck", handler.Check)
 }
 
-func (r *Router) setupScheduledActionsRoutes(baseGroup *gin.RouterGroup) {
-	actionsGroup := baseGroup.Group("/schedule")
-	actionsGroup.GET("", r.api.HandlerGetScheduledActions)
-	actionsGroup.GET("/:action_id", r.api.HandlerGetScheduledActionByID)
-	actionsGroup.PATCH("/:action_id/enable", r.api.HandlerEnableScheduledAction)
-	actionsGroup.PATCH("/:action_id/disable", r.api.HandlerDisableScheduledAction)
-	actionsGroup.POST("", r.api.HandlerPostScheduledAction)
-	actionsGroup.PATCH("", r.api.HandlerPatchScheduledActions)
-	actionsGroup.PATCH(":action_id/status", r.api.HandlerPatchStatusScheduledActions)
-	actionsGroup.DELETE("/:action_id", r.api.HandlerDeleteScheduledAction)
+func setupAccountRoutes(group *gin.RouterGroup, handler *handlers.AccountHandler) {
+	accounts := group.Group("/accounts")
+	{
+		accounts.GET("", handler.List)
+		accounts.POST("", handler.Create)
+		accounts.GET("/:id", handler.GetByID)
+		accounts.GET("/:id/clusters", handler.GetAccountClustersByID)
+		accounts.GET("/:id/expense_update", handler.GetExpensesUpdateInstances)
+		accounts.PATCH("/:id", handler.Update)
+		accounts.DELETE("/:id", handler.Delete)
+	}
 }
 
-func (r *Router) setupExpensesRoutes(baseGroup *gin.RouterGroup) {
-	expensesGroup := baseGroup.Group("/expenses")
-	expensesGroup.GET("", r.api.HandlerGetExpenses)
-	expensesGroup.GET("/:instance_id", r.api.HandlerGetExpensesByInstance)
-	expensesGroup.POST("", r.api.HandlerPostExpense)
+func setupClusterRoutes(group *gin.RouterGroup, clusterHandler *handlers.ClusterHandler, _ *handlers.InstanceHandler, eventHandler *handlers.EventHandler) {
+	clusters := group.Group("/clusters")
+	{
+		clusters.GET("", clusterHandler.List)
+		clusters.POST("", clusterHandler.Create)
+		clusters.GET("/:id", clusterHandler.Get)
+		clusters.GET("/:id/instances", clusterHandler.GetInstances)
+		clusters.DELETE("/:id", clusterHandler.Delete)
+		clusters.PATCH("/:id", clusterHandler.Update)
+		clusters.POST("/:id/power_on", clusterHandler.PowerOn)
+		clusters.POST("/:id/power_off", clusterHandler.PowerOff)
+		clusters.GET("/:id/tags", clusterHandler.GetTags)
+		clusters.GET("/:id/events", eventHandler.ListCluster)
+	}
 }
 
-func (r *Router) setupInstancesRoutes(baseGroup *gin.RouterGroup) {
-	instancesGroup := baseGroup.Group("/instances")
-	instancesGroup.GET("", r.api.HandlerGetInstances)
-	instancesGroup.GET("/expense_update", r.api.HandlerGetInstancesForBillingUpdate)
-	instancesGroup.GET("/:instance_id", r.api.HandlerGetInstanceByID)
-	instancesGroup.POST("", r.api.HandlerPostInstance)
-	instancesGroup.DELETE("/:instance_id", r.api.HandlerDeleteInstance)
-	instancesGroup.PATCH("/:instance_id", r.api.HandlerPatchInstance)
+func setupInstanceRoutes(group *gin.RouterGroup, handler *handlers.InstanceHandler) {
+	instances := group.Group("/instances")
+	{
+		instances.GET("", handler.List)
+		instances.POST("", handler.Create)
+		instances.GET("/:id", handler.Get)
+	}
 }
 
-func (r *Router) setupClustersRoutes(baseGroup *gin.RouterGroup) {
-	clustersGroup := baseGroup.Group("/clusters")
-	clustersGroup.GET("", r.api.HandlerGetClusters)
-	clustersGroup.GET("/:cluster_id", r.api.HandlerGetClustersByID)
-	clustersGroup.GET("/:cluster_id/instances", r.api.HandlerGetInstancesOnCluster)
-	clustersGroup.GET("/:cluster_id/tags", r.api.HandlerGetClusterTags)
-	clustersGroup.GET("/:cluster_id/events", r.api.HandlerGetClusterEvents)
-	clustersGroup.POST("", r.api.HandlerPostCluster)
-	clustersGroup.POST("/:cluster_id/power_on", r.api.HandlerPowerOnCluster)
-	clustersGroup.POST("/:cluster_id/power_off", r.api.HandlerPowerOffCluster)
-	clustersGroup.DELETE("/:cluster_id", r.api.HandlerDeleteCluster)
-	clustersGroup.PATCH("/:cluster_id", r.api.HandlerPatchCluster)
+func setupExpenseRoutes(group *gin.RouterGroup, handler *handlers.ExpenseHandler) {
+	expenses := group.Group("/expenses")
+	{
+		expenses.GET("", handler.List)
+		expenses.POST("", handler.Create)
+	}
 }
 
-func (r *Router) setupAccountsRoutes(baseGroup *gin.RouterGroup) {
-	accountsGroup := baseGroup.Group("/accounts")
-	accountsGroup.GET("", r.api.HandlerGetAccounts)
-	accountsGroup.GET("/:account_name", r.api.HandlerGetAccountsByName)
-	accountsGroup.GET("/:account_name/clusters", r.api.HandlerGetClustersOnAccount)
-	accountsGroup.POST("", r.api.HandlerPostAccount)
-	accountsGroup.DELETE("/:account_name", r.api.HandlerDeleteAccount)
-	accountsGroup.PATCH("/:account_name", r.api.HandlerPatchAccount)
+func setupEventRoutes(group *gin.RouterGroup, handler *handlers.EventHandler) {
+	events := group.Group("/events")
+	{
+		events.GET("", handler.ListSystem)
+		events.POST("", handler.Create)
+		events.PATCH("", handler.Update)
+	}
 }
 
-func (r *Router) setupOverviewRoutes(baseGroup *gin.RouterGroup) {
-	overviewGroup := baseGroup.Group("/overview")
-	overviewGroup.GET("", r.api.HandlerGetInventoryOverview)
+func setupActionRoutes(group *gin.RouterGroup, handler *handlers.ActionHandler) {
+	actions := group.Group("/actions")
+	{
+		actions.GET("", handler.List)
+		actions.GET("/:id", handler.Get)
+		actions.POST("", handler.Create)
+		actions.PATCH("/:id/enable", handler.Enable)
+		actions.PATCH("", handler.Update)
+		actions.PATCH("/:id/disable", handler.Disable)
+		actions.DELETE("/:id", handler.Delete)
+	}
 }
 
-func (r *Router) setupInventoryRoutes(baseGroup *gin.RouterGroup) {
-	inventoryGroup := baseGroup.Group("/inventory")
-	inventoryGroup.POST("/refresh", r.api.HandlerRefreshInventory)
-}
-
-func (r *Router) setupEventsRoutes(baseGroup *gin.RouterGroup) {
-	baseGroup.GET("/events", r.api.HandlerGetSystemEvents)
+func setupOverviewRoutes(group *gin.RouterGroup, handler *handlers.OverviewHandler) {
+	overview := group.Group("/overview")
+	{
+		overview.GET("", handler.Get)
+	}
 }

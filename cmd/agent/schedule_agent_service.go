@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	cron "github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
@@ -83,7 +85,7 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 	// Check if the duration is negative, which means it refers to a past timestamp
 	duration := time.Until(newAction.When)
 	if duration <= 0 {
-		a.logger.Warn("Task will not be scheduled because it's scheduled to the past", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+		a.logger.Warn("Task will not be scheduled because it's scheduled to the past", zap.String("action_id", actionID))
 		return
 	}
 
@@ -93,18 +95,18 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 		cancel: cancel,
 		action: newAction,
 	}
-	a.logger.Info("New ScheduledAction being scheduled", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+	a.logger.Info("New ScheduledAction being scheduled", zap.String("action_id", actionID))
 
 	// Scheduling at specified timestamp on parallel
 	go func() {
-		a.logger.Debug("Waiting until timestamp for execution", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+		a.logger.Debug("Waiting until timestamp for execution", zap.String("action_id", actionID))
 		select {
 		case <-time.After(duration): // When the timestamp is "now"
 			a.logger.Debug("Sending to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 			a.actionsChannel <- newAction
 			a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 		case <-ctx.Done(): // Context cancelling
-			a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID), zap.Time("action_timestamp", newAction.When))
+			a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID))
 		}
 
 		// Remove action from schedule
@@ -165,7 +167,6 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronActio
 				a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 			}
 		})
-
 		if err != nil {
 			a.logger.Error("Failed adding new CronAction execution", zap.Error(err))
 		}
@@ -217,7 +218,6 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 			delete(a.schedule, id)
 			a.logger.Warn("Action Cancelled", zap.String("action_id", id))
 		}
-
 	}
 
 	// Checking the entire new schedule to schedule or reschedule actions
@@ -235,15 +235,14 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 
 		// managing actions based on type
 		switch t := action.(type) {
-		case actions.ScheduledAction:
-			scheduledFunc(t)
-		case actions.CronAction:
-			cronFunc(t)
+		case *actions.ScheduledAction:
+			scheduledFunc(*t)
+		case *actions.CronAction:
+			cronFunc(*t)
 		default:
 			a.logger.Error("Unknown action type", zap.String("action_id", action.GetID()))
 		}
 	}
-
 }
 
 // fetchScheduledActions goes to the API and retrieves the updated list of scheduled actions on the DB
@@ -272,34 +271,38 @@ func (a *ScheduleAgentService) fetchScheduledActions() (*[]actions.Action, error
 	if err != nil {
 		return nil, err
 	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error fetching ScheduleActions list from API")
+	}
 
 	// Reading response body
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// Struct for Unmarshalling results
 	var result struct {
-		Count   int               `json:"count"`
-		Actions []json.RawMessage `json:"actions"`
+		Count int                     `json:"count"`
+		Items []dto.ActionDTOResponse `json:"items"`
 	}
 
 	// Unmarshalling response
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	// Unmarshalling Actions by type
-	resultActions, err := actions.DecodeActions(result.Actions)
+	resultActions, err := dto.ToModelActionListFromResponse(result.Items)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to convert DTOs to actions: %w", err)
 	}
 
-	a.logger.Debug("Fetched scheduled actions", zap.Int("actions_num", len(*resultActions)))
+	a.logger.Debug("Fetched scheduled actions", zap.Int("actions_num", len(resultActions)))
 
-	return resultActions, nil
+	return &resultActions, nil
 }
 
 // ReScheduleActions maintains an infinite loop for rescheduling the actions
@@ -317,8 +320,9 @@ func (a *ScheduleAgentService) ReScheduleActions() {
 		if fetchedActions, err := a.fetchScheduledActions(); err != nil {
 			a.logger.Error("Error when fetching Schedule", zap.Error(err))
 		} else {
-			a.logger.Info("Rescheduling Loop...", zap.Int("running_actions", len(a.schedule)), zap.Time("timestamp", time.Now()))
+			a.logger.Info("Rescheduling Loop...", zap.Int("running_actions", len(a.schedule)))
 			a.ScheduleNewActions(*fetchedActions)
+			a.logger.Info("Adding new Actions to Agent Schedule", zap.Int("added_actions", len(*fetchedActions)), zap.Int("running_actions", len(a.schedule)))
 		}
 		<-ticker.C
 		a.logger.Debug("Current actions after pooling & rescheduling", zap.Int("actions_num", len(a.schedule)))

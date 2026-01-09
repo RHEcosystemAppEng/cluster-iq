@@ -6,194 +6,187 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewTag verifies NewTag constructor assigns values correctly
+// TestNewTag verifies NewTag returns a correctly initialized Tag.
 func TestNewTag(t *testing.T) {
-	key := "environment"
-	value := "production"
-	instanceID := "testInstance"
-
-	expectedTag := &Tag{
-		Key:        key,
-		Value:      value,
-		InstanceID: instanceID,
-	}
-
-	actualTag := NewTag(key, value, instanceID)
-
-	assert.NotNil(t, actualTag)
-	assert.Equal(t, actualTag, expectedTag)
+	t.Run("New Tag", func(t *testing.T) { testNewTag_Correct(t) })
 }
 
-// TestLookForTagByKey_Found verifies tag retrieval by key
-func TestLookForTagByKey_Found(t *testing.T) {
+func testNewTag_Correct(t *testing.T) {
+	key := "env"
+	value := "prod"
+	instanceID := "i-123"
+
+	tag := NewTag(key, value, instanceID)
+
+	assert.NotNil(t, tag)
+	assert.Equal(t, key, tag.Key)
+	assert.Equal(t, value, tag.Value)
+	assert.Equal(t, instanceID, tag.InstanceID)
+}
+
+// TestLookForTagByKey verifies LookForTagByKey returns the expected tag pointer.
+func TestLookForTagByKey(t *testing.T) {
+	t.Run("Tag found", func(t *testing.T) { testLookForTagByKey_Found(t) })
+	t.Run("Tag not found", func(t *testing.T) { testLookForTagByKey_NotFound(t) })
+}
+
+func testLookForTagByKey_Found(t *testing.T) {
 	tags := []Tag{
-		{Key: "Name", Value: "test"},
-		{Key: "Owner", Value: "devops"},
+		{Key: "Name", Value: "node-1"},
+		{Key: "Owner", Value: "alice"},
 	}
 
-	tag := LookForTagByKey("Owner", tags)
-	if tag == nil || tag.Key != "Owner" {
-		t.Errorf("Expected tag with key Owner, got %v", tag)
-	}
+	res := LookForTagByKey("Owner", tags)
+	assert.NotNil(t, res)
+	assert.Equal(t, "Owner", res.Key)
+	assert.Equal(t, "alice", res.Value)
 }
 
-// TestLookForTagByKey_NotFound verifies nil is returned if key doesn't exist
-func TestLookForTagByKey_NotFound(t *testing.T) {
-	tags := []Tag{{Key: "Name", Value: "test"}}
-	if tag := LookForTagByKey("Zone", tags); tag != nil {
-		t.Errorf("Expected nil, got %v", tag)
+func testLookForTagByKey_NotFound(t *testing.T) {
+	tags := []Tag{
+		{Key: "Name", Value: "node-1"},
 	}
+
+	res := LookForTagByKey("Owner", tags)
+	assert.Nil(t, res)
 }
 
-// TestParseClusterName_Valid extracts name from valid tag key
-func TestParseClusterName_Valid(t *testing.T) {
-	expectedValue := "test-cluster"
-	key := "kubernetes.io/cluster/" + expectedValue + "-abcde"
-	actualValue := parseClusterName(key)
-	if expectedValue != actualValue {
-		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
-	}
-}
-
-// TestParseClusterName_Invalid returns UNKNOWN when tag is malformed
-func TestParseClusterName_Invalid(t *testing.T) {
-	key := "kubernetes.io/cluster/invalid"
-	name := parseClusterName(key)
-	if name != UnknownClusterNameCode {
-		t.Errorf("Expected UNKNOWN, got %s", name)
-	}
-}
-
-// TestParseClusterID_Valid tests clusterID regex logic with valid input
-func TestParseClusterID_Valid(t *testing.T) {
-	expectedValue := "test-cluster-abcde"
-	key := "kubernetes.io/cluster/" + expectedValue
-	actualValue := parseClusterID(key)
-	if actualValue != expectedValue {
-		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
-	}
-}
-
-// TestParseClusterID_Invalid tests fallback behavior on malformed key
-func TestParseClusterID_Invalid(t *testing.T) {
-	key := "garbage"
-	id := parseClusterID(key)
-	if id != UnknownClusterIDCode {
-		t.Errorf("Expected UNKNOWN, got %s", id)
-	}
-}
-
-// TestParseInfraID_Valid verifies infra ID parsing for valid keys
-func TestParseInfraID_Valid(t *testing.T) {
-	expectedValue := "abcde"
-	key := "kubernetes.io/cluster/test-cluster-" + expectedValue
-	actualValue := parseInfraID(key)
-	if expectedValue != actualValue {
-		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
-	}
-}
-
-// TestParseInfraID_Invalid returns empty string when no match
-func TestParseInfraID_Invalid(t *testing.T) {
-	key := "garbage"
-	infra := parseInfraID(key)
-	if infra != "" {
-		t.Errorf("Expected empty string, got %s", infra)
-	}
-}
-
-// TestGetOwnerFromTags returns Owner tag value if present
+// TestGetOwnerFromTags verifies GetOwnerFromTags returns expected values.
 func TestGetOwnerFromTags(t *testing.T) {
-	expectedValue := "Alice"
-	tags := []Tag{{Key: "Owner", Value: expectedValue}}
-	actualValue := GetOwnerFromTags(tags)
-
-	if actualValue != expectedValue {
-		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
-	}
+	t.Run("Owner exists", func(t *testing.T) { testGetOwnerFromTags_Exists(t) })
+	t.Run("Owner missing", func(t *testing.T) { testGetOwnerFromTags_Missing(t) })
 }
 
-// TestGetOwnerFromTags_Empty if no Owner tag present
-func TestGetOwnerFromTags_Empty(t *testing.T) {
-	tags := []Tag{{Key: "Name", Value: "node"}}
-	val := GetOwnerFromTags(tags)
-
-	if val != "" {
-		t.Errorf("Expected empty string, got %s", val)
+func testGetOwnerFromTags_Exists(t *testing.T) {
+	tags := []Tag{
+		{Key: "Owner", Value: "john"},
 	}
+
+	assert.Equal(t, "john", GetOwnerFromTags(tags))
 }
 
-// TestGetInstanceNameFromTags returns Name tag if present
+func testGetOwnerFromTags_Missing(t *testing.T) {
+	tags := []Tag{
+		{Key: "Name", Value: "node-1"},
+	}
+
+	assert.Equal(t, "", GetOwnerFromTags(tags))
+}
+
+// TestGetInstanceNameFromTags verifies GetInstanceNameFromTags returns expected values.
 func TestGetInstanceNameFromTags(t *testing.T) {
-	expectedValue := "instance-001"
-	tags := []Tag{{Key: "Name", Value: expectedValue}}
-	actualValue := GetInstanceNameFromTags(tags)
-
-	if actualValue != expectedValue {
-		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
-	}
+	t.Run("Name exists", func(t *testing.T) { testGetInstanceNameFromTags_Exists(t) })
+	t.Run("Name missing", func(t *testing.T) { testGetInstanceNameFromTags_Missing(t) })
 }
 
-// TestGetInstanceNameFromTags_Empty validates fallback to empty string
-func TestGetInstanceNameFromTags_Empty(t *testing.T) {
-	tags := []Tag{{Key: "Owner", Value: "ops"}}
-	val := GetInstanceNameFromTags(tags)
-	if val != "" {
-		t.Errorf("Expected empty string, got %s", val)
+func testGetInstanceNameFromTags_Exists(t *testing.T) {
+	tags := []Tag{
+		{Key: "Name", Value: "my-instance"},
 	}
+
+	assert.Equal(t, "my-instance", GetInstanceNameFromTags(tags))
 }
 
-// TestGetClusterIDFromTags parses valid cluster tag key
-func TestGetClusterIDFromTags(t *testing.T) {
-	expectedValue := "test-cluster-abcde"
-	tags := []Tag{{Key: "kubernetes.io/cluster/" + expectedValue}}
-	actualValue := GetClusterIDFromTags(tags)
-
-	if actualValue != expectedValue {
-		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
+func testGetInstanceNameFromTags_Missing(t *testing.T) {
+	tags := []Tag{
+		{Key: "Owner", Value: "john"},
 	}
+
+	assert.Equal(t, "", GetInstanceNameFromTags(tags))
 }
 
-// TestGetClusterIDFromTags_Unknown when tag is not found
-func TestGetClusterIDFromTags_Unknown(t *testing.T) {
-	id := GetClusterIDFromTags([]Tag{})
-	if id != UnknownClusterNameCode {
-		t.Errorf("Expected UNKNOWN, got %s", id)
-	}
-}
-
-// TestGetClusterNameFromTags works with proper tag key
+// TestGetClusterNameFromTags verifies GetClusterNameFromTags parses a tag key correctly.
 func TestGetClusterNameFromTags(t *testing.T) {
-	expectedValue := "test-cluster"
-	tags := []Tag{{Key: "kubernetes.io/cluster/" + expectedValue + "-abcde"}}
-	actualValue := GetClusterNameFromTags(tags)
-
-	if actualValue != expectedValue {
-		t.Errorf("Expected %s, got %s", expectedValue, actualValue)
-	}
+	t.Run("ClusterName found", func(t *testing.T) { testGetClusterNameFromTags_Found(t) })
+	t.Run("ClusterName missing", func(t *testing.T) { testGetClusterNameFromTags_Missing(t) })
+	t.Run("ClusterName malformed key", func(t *testing.T) { testGetClusterNameFromTags_Malformed(t) })
 }
 
-// TestGetClusterNameFromTags_Unknown fallback logic
-func TestGetClusterNameFromTags_Unknown(t *testing.T) {
-	name := GetClusterNameFromTags([]Tag{})
-	if name != UnknownClusterNameCode {
-		t.Errorf("Expected UNKNOWN, got %s", name)
+func testGetClusterNameFromTags_Found(t *testing.T) {
+	tags := []Tag{
+		{Key: ClusterTagKey + "mycluster-ABCDE", Value: "owned"},
 	}
+
+	assert.Equal(t, "mycluster", GetClusterNameFromTags(tags))
 }
 
-// TestGetInfraIDFromTags verifies successful parsing
+func testGetClusterNameFromTags_Missing(t *testing.T) {
+	tags := []Tag{
+		{Key: "Name", Value: "node-1"},
+	}
+
+	assert.Equal(t, UnknownClusterNameCode, GetClusterNameFromTags(tags))
+}
+
+func testGetClusterNameFromTags_Malformed(t *testing.T) {
+	tags := []Tag{
+		{Key: ClusterTagKey + "invalidkey", Value: "x"},
+	}
+
+	assert.Equal(t, UnknownClusterNameCode, GetClusterNameFromTags(tags))
+}
+
+// TestGetClusterIDFromTags verifies GetClusterIDFromTags parses a tag key correctly.
+func TestGetClusterIDFromTags(t *testing.T) {
+	t.Run("ClusterID found", func(t *testing.T) { testGetClusterIDFromTags_Found(t) })
+	t.Run("ClusterID missing", func(t *testing.T) { testGetClusterIDFromTags_Missing(t) })
+	t.Run("ClusterID malformed key", func(t *testing.T) { testGetClusterIDFromTags_Malformed(t) })
+}
+
+func testGetClusterIDFromTags_Found(t *testing.T) {
+	tags := []Tag{
+		{Key: ClusterTagKey + "mycluster-ABCDE", Value: "owned"},
+	}
+
+	assert.Equal(t, "mycluster-ABCDE", GetClusterIDFromTags(tags))
+}
+
+func testGetClusterIDFromTags_Missing(t *testing.T) {
+	tags := []Tag{
+		{Key: "Owner", Value: "john"},
+	}
+
+	assert.Equal(t, UnknownClusterNameCode, GetClusterIDFromTags(tags))
+}
+
+func testGetClusterIDFromTags_Malformed(t *testing.T) {
+	tags := []Tag{
+		{Key: ClusterTagKey + "", Value: "x"},
+	}
+
+	// parseClusterID returns UnknownClusterIDCode for non-matching keys.
+	assert.Equal(t, UnknownClusterIDCode, GetClusterIDFromTags(tags))
+}
+
+// TestGetInfraIDFromTags verifies GetInfraIDFromTags parses infraID correctly.
 func TestGetInfraIDFromTags(t *testing.T) {
-	tags := []Tag{{Key: "kubernetes.io/cluster/test-name-abcde"}}
-	infra := GetInfraIDFromTags(tags)
-	if infra != "abcde" {
-		t.Errorf("Expected abcde, got %s", infra)
-	}
+	t.Run("InfraID found", func(t *testing.T) { testGetInfraIDFromTags_Found(t) })
+	t.Run("InfraID missing", func(t *testing.T) { testGetInfraIDFromTags_Missing(t) })
+	t.Run("InfraID malformed key", func(t *testing.T) { testGetInfraIDFromTags_Malformed(t) })
 }
 
-// TestGetInfraIDFromTags_Unknown fallback behavior
-func TestGetInfraIDFromTags_Unknown(t *testing.T) {
-	infra := GetInfraIDFromTags([]Tag{})
-	if infra != UnknownClusterNameCode {
-		t.Errorf("Expected UNKNOWN, got %s", infra)
+func testGetInfraIDFromTags_Found(t *testing.T) {
+	tags := []Tag{
+		{Key: ClusterTagKey + "/mycluster-ABCDE", Value: "owned"},
 	}
+
+	assert.Equal(t, "ABCDE", GetInfraIDFromTags(tags))
+}
+
+func testGetInfraIDFromTags_Missing(t *testing.T) {
+	tags := []Tag{
+		{Key: "Owner", Value: "john"},
+	}
+
+	assert.Equal(t, UnknownClusterNameCode, GetInfraIDFromTags(tags))
+}
+
+func testGetInfraIDFromTags_Malformed(t *testing.T) {
+	tags := []Tag{
+		{Key: ClusterTagKey + "/invalidkey", Value: "x"},
+	}
+
+	// parseInfraID returns empty string for non-matching keys, while GetInfraIDFromTags
+	// returns that value once it finds ClusterTagKey.
+	assert.Equal(t, "", GetInfraIDFromTags(tags))
 }
