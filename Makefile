@@ -160,12 +160,12 @@ go-coverage-unit-tests: go-setup-tests go-unit-tests
 	@$(GO) tool cover -func $(TEST_DIR)/cover-unit-tests.out
 
 go-integration-tests: ## Runs the Integration tests for this project
-go-integration-tests: go-setup-tests
+go-integration-tests: go-setup-tests stop-dev
 	@echo -e "### [Running Integration tests] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml up -d
 	@sleep 10 # let init-pgsql to do its job
-	@$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out | sed -e 's/PASS/\x1b[32mPASS\x1b[0m/' -e 's/FAIL/\x1b[31mFAIL\x1b[0m/' -e 's/RUN/\x1b[33mRUN\x1b[0m/'
+	@bash -o pipefail -c "$(GO) test -v -race $(TEST_DIR)/integration -coverprofile $(TEST_DIR)/cover-integration-tests.out | sed -e 's/PASS/\x1b[32mPASS\x1b[0m/' -e 's/FAIL/\x1b[31mFAIL\x1b[0m/' -e 's/RUN/\x1b[33mRUN\x1b[0m/'"
 	@$(GO) tool cover -func $(TEST_DIR)/cover-integration-tests.out
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-integration-tests.yaml down
 
