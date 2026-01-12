@@ -94,7 +94,7 @@ services:
       - cluster_iq
 
   init-pgsql:
-    image: registry.redhat.io/rhel9/postgresql-16@sha256:2017a5806a07b02dc0d6e9ab38ac8c508688bf7842111af2d796c8a4233e88ed
+    image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
     container_name: init-pgsql
     restart: "no"
     depends_on:
