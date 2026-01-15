@@ -1,5 +1,5 @@
 networks:
-  cluster_iq_test:
+  cluster_iq:
     driver: bridge
 
 services:
@@ -15,7 +15,7 @@ services:
       CIQ_DB_URL: "postgresql://user:password@pgsql-test:5432/clusteriq?sslmode=disable"
       CIQ_LOG_LEVEL: "DEBUG"
     networks:
-      - cluster_iq_test
+      - cluster_iq
 
   pgsql-test:
     image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
@@ -31,7 +31,7 @@ services:
       POSTGRESQL_LIBRARIES: "pg_cron"
       POSTGRESQL_EXTENSIONS: "pg_cron"
     networks:
-      - cluster_iq_test
+      - cluster_iq
 
   init-pgsql-test:
     image: quay.io/ecosystem-appeng/cluster-iq-pgsql:latest
@@ -64,4 +64,4 @@ services:
       - ./../../db/sql/cron.sql:/cron.sql:ro,Z
       - ./../../db/test_files/integration_tests_data.sql:/integration_tests_data.sql:ro,Z
     networks:
-      - cluster_iq_test
+      - cluster_iq

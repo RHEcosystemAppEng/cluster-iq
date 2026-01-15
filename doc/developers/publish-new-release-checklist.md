@@ -26,7 +26,7 @@ This procedure does **NOT**:
   ```
   ```sh
   git checkout $CIQ_RELEASE
-  git pull
+  git pull <REMOTE> $CIQ_RELEASE
   git branch --show-current
   ```
   **Expected result:** current branch is `release-X.Y.Z`
@@ -41,7 +41,7 @@ This procedure does **NOT**:
 
 * [ ] **P4** — Run unit tests and linters.
   ```sh
-  make go-tests
+  make clean build go-tests
   ```
   **Expected result:** command exits with status `0`
   **DO NOT CONTINUE** if any error is reported
@@ -52,7 +52,7 @@ This procedure does **NOT**:
 
 * [ ] **P6** — Compare `db/sql/init.sql` with the Helm database initialization ConfigMap.
   ```sh
-  vim db/sql/init.sql deployments/helm/cluster-iq/templates/database/configmap-init.yaml -O
+  vim db/sql/init.sql deployments/helm/cluster-iq/templates/database/configmap-init.yaml -d
   ```
   **Expected result:** differences are identified or confirmed absent
 
@@ -62,7 +62,7 @@ This procedure does **NOT**:
 
 * [ ] **P8** — Compare `db/sql/cron.sql` with the Helm database initialization ConfigMap.
   ```sh
-  vim db/sql/cron.sql deployments/helm/cluster-iq/templates/database/configmap-init.yaml -O
+  vim db/sql/cron.sql deployments/helm/cluster-iq/templates/database/configmap-init.yaml -d
   ```
   **Expected result:** differences are identified or confirmed absent
 
@@ -86,9 +86,11 @@ This procedure does **NOT**:
 * [ ] **P12** — Include these changes in a single commit describing the new
     release changes
   ```sh
-  git status # Check the changes performed during the release preparation procedure
+  # Check the changes performed during the release preparation procedure
+  git status
 
-  git add <CHANGES> # Add the changes
+  # Add the changes
+  git add <CHANGES>
 
   git commit -s -S -m "release: Changes for preparing release: $CIQ_RELEASE"
   git push <REMOTE> $CIQ_RELEASE # Remember to specify the remote name
