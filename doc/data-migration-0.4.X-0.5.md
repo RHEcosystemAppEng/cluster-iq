@@ -10,6 +10,9 @@ with the new data model, and restore
 mkdir -p /tmp/backups
 
 # Count of elements (save the output for compare them later)
+oc project cluster-iq
+oc rsh pgsql-0
+
 psql -d clusteriq -c "SELECT count(*) as account_count FROM accounts;"
 psql -d clusteriq -c "SELECT count(*) as cluster_count FROM clusters;"
 psql -d clusteriq -c "SELECT count(*) as instance_count FROM instances;"
