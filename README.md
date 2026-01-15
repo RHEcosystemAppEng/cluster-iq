@@ -2,23 +2,26 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/RHEcosystemAppEng/cluster-iq)](https://goreportcard.com/report/github.com/RHEcosystemAppEng/cluster-iq)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RHEcosystemAppEng/cluster-iq.svg)](https://pkg.go.dev/github.com/RHEcosystemAppEng/cluster-iq)
-![Version](https://img.shields.io/badge/version-0.4.2-blue)
+![Version](https://img.shields.io/badge/version-0.5-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ---
 [![Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/build-container-images.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/build-container-images.yaml)
 [![Pull Request Validation](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/validate-pr.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/validate-pr.yaml)
 ---
 
-Cluster IQ is a tool for making stock of the Openshift Clusters and its
-resources running on the most common cloud providers and collects relevant
-information about the compute resources, access routes and billing.
+ClusterIQ is a comprehensive tool designed to inventory OpenShift clusters and
+their associated resources across popular cloud providers. Its primary function
+is to gather detailed information about compute resources, network access
+routes, and billing details for these clusters.
 
-Metrics and monitoring is not part of the scope of this project, the main
-purpose is to maintain and updated inventory of the clusters and offer a easier
-way to identify, manage, and estimate costs.
+While ClusterIQ does not include features for metrics and monitoring, its main
+goal is to provide a continually updated inventory of clusters. This helps
+users efficiently identify and manage their clusters, offering a simplified
+approach to estimating costs and ensuring better resource management.
 
 ClusterIQ has a Web UI called [ClusterIQ Console](https://github.com/RHEcosystemAppEng/cluster-iq-console).
 Follow this [link](https://github.com/RHEcosystemAppEng/cluster-iq-console?tab=readme-ov-file#development-scripts) for installation instructions.
+
 
 ## Supported cloud providers
 
@@ -29,11 +32,12 @@ providers could be included in the future.
 The following table shows the compatibility matrix and which features are
 available for every cloud provider:
 
+
 | Cloud Provider | Compute Resources | Billing | Actions | Scheduled Actions |
-| -------------- | ----------------- | ------- | ------- | ----------------- |
-| AWS            | Yes               | Yes     | Yes     | Yes               |
-| Azure          | No                | No      | No      | No                |
-| GCP            | No                | No      | No      | No                |
+| -------------- | :---------------: | :-----: | :-----: | :---------------: |
+| **AWS**        | ✅                | ✅      | ✅      | ✅                |
+| **Azure**      | ❌                | ❌      | ❌      | ❌                |
+| **GCP**        | ❌                | ❌      | ❌      | ❌                |
 
 
 ## Architecture
@@ -41,16 +45,9 @@ available for every cloud provider:
 The following graph shows the architecture of this project:
 ![ClusterIQ architecture diagram](./doc/architecture.png)
 
-## Documentation
-
-The following documentation is available:
-
-- [Events Documentation](doc/events/README.md) - Event flows and sequence diagrams
-- [Development Setup](doc/development-setup.md) - Local development guide
-
 ## Installation
-This section explains how to deploy ClusterIQ and ClusterIQ Console.
-
+ClusterIQ was designed to run in K8s/Openshift platforms, but it can also run in
+local using `podman-compose`.
 
 ### Prerequisites:
 #### Cloud provider RBAC configuration
@@ -64,7 +61,7 @@ Each Cloud Provider has a different way for configuring users and permissions.
 Before continuing, check and follow the steps for each Cloud Provider you want
 to configure:
 
-* **[Amazon Web Services (AWS)](./doc/aws-user-permissions-config.md)**
+* **[Amazon Web Services (AWS)](./doc/cloud-provider-rbac-conf/aws/aws-user-permissions-config.md)**
 * **Microsoft Azure** Not available.
 * **Google cloud Platform:** Not available.
 
@@ -151,7 +148,7 @@ helm list -n $NAMESPACE
 
 ## Local Deployment (for development)
 For deploying ClusterIQ in local for development purposes, check the following
-[document](./doc/development-setup.md)
+[document](./doc/developers/development-setup.md)
 
 ## DB Backup
 For backing up or restoring the ClusterIQ database, check the following
@@ -201,7 +198,7 @@ make build-api
 make local-build-api
 ```
 
-## Agent (gRPC)
+### Agent (gRPC)
 The Agent performs actions over the selected cloud resources. It only accepts
 incoming requests from the API.
 
@@ -214,3 +211,10 @@ make build-agent
 # Building in local
 make local-build-agent
 ```
+
+## Extra Documentation
+
+The following documentation is available:
+
+- [Events Documentation](./doc/events/README.md) - Event flows and sequence diagrams
+- [Development Setup](./doc/developers/development-setup.md) - Local development guide

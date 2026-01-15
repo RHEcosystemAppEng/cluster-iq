@@ -27,7 +27,7 @@ sudo setenforce 0
 
 ## Build dependencies
 
-* [go v1.19](https://go.dev/dl/)
+* [go v1.24](https://go.dev/dl/)
 * [podman](https://podman.io/docs/installation) or [docker](https://docs.docker.com/engine/install)
 * [podman-compose](https://github.com/containers/podman-compose?tab=readme-ov-file#installation) or [docker-compose](https://docs.docker.com/compose/install/)
 * [swag](https://github.com/swaggo/swag?tab=readme-ov-file#getting-started)
