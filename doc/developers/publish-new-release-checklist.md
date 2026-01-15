@@ -118,10 +118,16 @@ This procedure does **NOT**:
   ```
   **Expected result:** tag `v<VERSION>` exists on `main` and is pushed to the remote
 
+* [ ] **P17** — Create the Github Release associating it to the new tag, and
+    generate the changelog.
+  **Expected result:** A new release available in the Github repository.
+
+
 ## Postconditions
 - Release PR merged into `main`
 - Git tag `v<VERSION>` created and pushed
 - All GitHub Actions workflows completed successfully
+- New Release available in Github with its changelog and tag
 
 ## Rollback
 This procedure does not include rollback steps.
