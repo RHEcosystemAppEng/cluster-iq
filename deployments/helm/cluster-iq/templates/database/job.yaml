@@ -1,4 +1,5 @@
 {{- $job := lookup "batch/v1" "Job" .Release.Namespace "init-pgsql" -}}
+{{- $dbHost := printf "pgsql.%s.svc.cluster.local" .Release.Namespace -}}
 {{- if not $job }}
 kind: Job
 apiVersion: batch/v1
@@ -35,18 +36,26 @@ spec:
             - name: init
               mountPath: /var/lib/pgsql/init.sql
               subPath: init.sql
-          env:
-            - name: CIQ_DB_URL
-              valueFrom:
-                secretKeyRef:
-                  name: postgresql
-                  key: POSTGRESQL_CONNECTION_STRING
+            - name: cron
+              mountPath: /var/lib/pgsql/cron.sql
+              subPath: cron.sql
+          envFrom:
+            - secretRef:
+                name: postgresql
           image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag | default .Chart.AppVersion }}"
           args:
             - |
+              echo "Waiting for PGSQL to start up"
               while true; do
-              psql "$CIQ_DB_URL" -c "SELECT true" && break || sleep 2;
+                  psql postgresql://$POSTGRESQL_USER:$POSTGRESQL_PASSWORD@{{ $dbHost }}:{{ .Values.database.service.port }}/$POSTGRESQL_DATABASE -c "SELECT true" && break || sleep 2;
               done
-              psql "$CIQ_DB_URL" < /var/lib/pgsql/init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+
+              echo "Initializing ClusterIQ Database"
+              psql postgresql://$POSTGRESQL_USER:$POSTGRESQL_PASSWORD@{{ $dbHost }}:{{ .Values.database.service.port }}/$POSTGRESQL_DATABASE < /var/lib/pgsql/init.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
+
+              echo "Creating PG_CRON tasks"
+              psql postgresql://postgres:$POSTGRESQL_ADMIN_PASSWORD@{{ $dbHost }}:{{ .Values.database.service.port }}/postgres < /var/lib/pgsql/cron.sql && { echo "Ok"; } || { echo "Cron Tasks creation Failed"; exit 1; }
+
+              echo "Done!"
       restartPolicy: OnFailure
 {{- end }}

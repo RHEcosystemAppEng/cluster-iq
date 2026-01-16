@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 
 	pb "github.com/RHEcosystemAppEng/cluster-iq/generated/agent"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
+	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -24,6 +27,7 @@ type InstantAgentService struct {
 	pb.UnimplementedAgentServiceServer
 	grpcServer *grpc.Server
 	listener   net.Listener
+	actionRepo repositories.ActionRepository
 }
 
 // NewInstantAgentService creates and initializes a new AgentService instance for serving gRPC requests
@@ -42,6 +46,13 @@ func NewInstantAgentService(cfg *config.InstantAgentServiceConfig, actionsChanne
 		return nil
 	}
 
+	// Creating DB client
+	db, err := dbclient.NewDBClient(cfg.DBURL, logger)
+	if err != nil {
+		return nil
+	}
+	actionRepo := repositories.NewActionRepository(db)
+
 	// Initializing gRPC server
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(LoggingInterceptor))
 	reflection.Register(grpcServer)
@@ -54,6 +65,7 @@ func NewInstantAgentService(cfg *config.InstantAgentServiceConfig, actionsChanne
 			actionsChannel: actionsChannel,
 		},
 		grpcServer: grpcServer,
+		actionRepo: actionRepo,
 		listener:   lis,
 	}
 
@@ -90,35 +102,41 @@ func (i *InstantAgentService) Start() error {
 // Returns:
 // - *pb.PowerOnClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
-func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
-	i.logger.Debug("Received PowerOnCluster gRPC Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
-
-	// PowerOn
+func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
 	i.logger.Warn("Powering On Cluster",
-		zap.String("account_name", req.AccountName),
+		zap.String("account_name", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
+		zap.String("requester", req.Requester),
 		zap.Int("instances_num", len(req.InstancesIdList)),
 	)
 
-	action := actions.NewInstantAction(
-		actions.PowerOnCluster,
+	action := actions.NewPowerOnClusterAction(
 		*actions.NewActionTarget(
-			req.AccountName,
+			req.AccountId,
 			req.Region,
 			req.ClusterId,
 			req.InstancesIdList,
 		),
-		"Pending",
-		true,
+		req.Requester,
+		&req.Description,
 	)
+
+	actionID, err := i.actionRepo.CreateAction(ctx, action)
+	if err != nil {
+		return &pb.PowerOnClusterResponse{
+			Error:   1,
+			Message: fmt.Sprintf(PowerOnClusterError, req.ClusterId, req.AccountId, len(req.InstancesIdList)),
+		}, nil
+	}
+	action.ID = strconv.FormatInt(actionID, 10)
 
 	i.actionsChannel <- action
 
 	return &pb.PowerOnClusterResponse{
 		Error:   0,
-		Message: fmt.Sprintf(PowerOnClusterSuccessfully, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		Message: fmt.Sprintf(PowerOnClusterSuccessfully, req.ClusterId, req.AccountId, len(req.InstancesIdList)),
 	}, nil
 }
 
@@ -131,33 +149,39 @@ func (i *InstantAgentService) PowerOnCluster(_ context.Context, req *pb.PowerOnC
 // Returns:
 // - *pb.PowerOffClusterResponse: The response object containing a success or error message.
 // - error: An error if the operation fails.
-func (i *InstantAgentService) PowerOffCluster(_ context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
-	i.logger.Debug("Received PowerOffCluster Request", zap.String("cluster_id", req.ClusterId), zap.String("accound_name", req.AccountName), zap.Int("instances", len(req.InstancesIdList)))
-
-	// PowerOff
+func (i *InstantAgentService) PowerOffCluster(ctx context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
 	i.logger.Warn("Powering Off Cluster",
-		zap.String("account_name", req.AccountName),
+		zap.String("account_name", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
+		zap.String("requester", req.Requester),
 		zap.Int("instances_num", len(req.InstancesIdList)))
 
-	action := actions.NewInstantAction(
-		actions.PowerOffCluster,
+	action := actions.NewPowerOffClusterAction(
 		*actions.NewActionTarget(
-			req.AccountName,
+			req.AccountId,
 			req.Region,
 			req.ClusterId,
 			req.InstancesIdList,
 		),
-		"Pending",
-		true,
+		req.Requester,
+		&req.Description,
 	)
+
+	actionID, err := i.actionRepo.CreateAction(ctx, action)
+	if err != nil {
+		return &pb.PowerOffClusterResponse{
+			Error:   1,
+			Message: fmt.Sprintf(PowerOffClusterError, req.ClusterId, req.AccountId, len(req.InstancesIdList)),
+		}, nil
+	}
+	action.ID = strconv.FormatInt(actionID, 10)
 
 	i.actionsChannel <- action
 
 	return &pb.PowerOffClusterResponse{
 		Error:   0,
-		Message: fmt.Sprintf(PowerOffClusterSuccessfully, req.ClusterId, req.AccountName, len(req.InstancesIdList)),
+		Message: fmt.Sprintf(PowerOffClusterSuccessfully, req.ClusterId, req.AccountId, len(req.InstancesIdList)),
 	}, nil
 }

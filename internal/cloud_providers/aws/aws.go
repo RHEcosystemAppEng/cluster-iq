@@ -43,7 +43,7 @@ type AWSConnectionOption func(*AWSConnection)
 
 // NewAWSConnection creates a connection with AWS APIs. Based on the AWSConnectionOptions, it will create different clients for every available service
 func NewAWSConnection(user string, password string, region string, opts ...AWSConnectionOption) (*AWSConnection, error) {
-	var token string = ""
+	var token string
 
 	// If there's no region specified, it will take the default one.
 	if region == "" {
@@ -92,7 +92,7 @@ func (conn *AWSConnection) newAWSConfig() error {
 	// Preparing AWSConfig for new AWS API Session
 	conn.awsConfig = aws.NewConfig().WithCredentials(conn.credentials).WithRegion(conn.region)
 	if conn.awsConfig == nil {
-		return fmt.Errorf("Cannot obtain AWS config for Account: %s\n", conn.accountID)
+		return fmt.Errorf("cannot obtain AWS config for Account: %s", conn.accountID)
 	}
 
 	return nil

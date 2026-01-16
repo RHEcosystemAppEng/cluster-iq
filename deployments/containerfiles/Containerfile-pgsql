@@ -1,0 +1,52 @@
+## Build
+# vim: set ft=dockerfile :
+####################
+# ===== Stage 1: install pg_cron with PGDG and get artifacts =====
+FROM registry.access.redhat.com/ubi9/ubi AS pgdg-builder
+
+# Build arguments
+ARG VERSION
+ARG COMMIT
+
+ARG PG_MAJOR=16
+USER 0
+
+RUN set -euxo pipefail \
+ && dnf -y install ca-certificates --setopt=install_weak_deps=False \
+ && dnf -y install \
+      https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
+ && dnf -y module disable postgresql || true \
+ && dnf -y makecache \
+ && dnf -y install \
+      postgresql${PG_MAJOR}-server \
+      pg_cron_${PG_MAJOR} \
+      --enablerepo=pgdg${PG_MAJOR},pgdg-common \
+      --setopt=install_weak_deps=False \
+ && dnf -y clean all && rm -rf /var/cache/dnf
+
+# Extract pg_cron artifacts
+RUN set -euxo pipefail \
+ && mkdir -p /out/lib /out/extension \
+ && cp -v /usr/pgsql-${PG_MAJOR}/lib/pg_cron.so /out/lib/ \
+ && cp -v /usr/pgsql-${PG_MAJOR}/share/extension/pg_cron* /out/extension/
+
+# ===== Stage 2: Preparing image with postgresql distributed by RedHat =====
+FROM registry.redhat.io/rhel9/postgresql-16:9.6-1755720954 AS runtime
+
+USER 0
+COPY --from=pgdg-builder /out/ /tmp/pg_cron/
+COPY --from=pgdg-builder /usr/pgsql-16/lib/libpq.so.5* /usr/lib64/
+
+# Find out pg_cron extension routes and installing the artifacts
+RUN set -euxo pipefail \
+ && if [ -d /usr/lib64/pgsql ]; then PKGLIBDIR=/usr/lib64/pgsql; else PKGLIBDIR=/usr/pgsql-16/lib; fi \
+ && if [ -d /usr/pgsql-16/share ]; then SHAREDIR=/usr/pgsql-16/share; else SHAREDIR=/usr/share/pgsql; fi \
+ && install -d -m 0755 "$SHAREDIR/extension" \
+ && install -D -m 0755 /tmp/pg_cron/lib/pg_cron.so "$PKGLIBDIR/pg_cron.so" \
+ && install -D -m 0644 /tmp/pg_cron/extension/pg_cron.control "$SHAREDIR/extension/pg_cron.control" \
+ && install -D -m 0644 /tmp/pg_cron/extension/pg_cron--*.sql "$SHAREDIR/extension/" \
+ && rm -rf /tmp/pg_cron
+
+USER 26
+ENTRYPOINT ["container-entrypoint"]
+CMD ["run-postgresql"]
