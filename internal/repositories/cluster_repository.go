@@ -65,6 +65,7 @@ var _ ClusterRepository = (*clusterRepositoryImpl)(nil)
 
 type ClusterRepository interface {
 	ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error)
+	CountClusters(ctx context.Context, opts models.ListOptions) (int, error)
 	GetClusterByID(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error)
 	GetClusterAccountName(ctx context.Context, clusterID string) (string, error)
 	GetClusterRegion(ctx context.Context, clusterID string) (string, error)
@@ -99,6 +100,21 @@ func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.Li
 	}
 
 	return clusters, len(clusters), nil
+}
+
+// CountClusters performs counting operations.
+//
+// Returns:
+// - The number of counted clusters.
+// - An error if the query fails.
+func (r *clusterRepositoryImpl) CountClusters(ctx context.Context, opts models.ListOptions) (int, error) {
+	var count int
+
+	if err := r.db.GetWithContext(ctx, &count, SelectClustersFullMView, opts, "count(*)"); err != nil {
+		return count, fmt.Errorf("failed to list clusters: %w", err)
+	}
+
+	return count, nil
 }
 
 // GetClusterByID retrieves a cluster's details by its unique identifier.

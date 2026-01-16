@@ -46,6 +46,7 @@ var _ AccountRepository = (*accountRepositoryImpl)(nil)
 // AccountRepository defines the interface for data access operations for accounts.
 type AccountRepository interface {
 	ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error)
+	CountAccounts(ctx context.Context, opts models.ListOptions) (int, error)
 	GetAccountByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
@@ -75,6 +76,21 @@ func (r *accountRepositoryImpl) ListAccounts(ctx context.Context, opts models.Li
 	}
 
 	return accounts, len(accounts), nil
+}
+
+// CountAccounts performs counting operations.
+//
+// Returns:
+// - The number of counted accounts.
+// - An error if the query fails.
+func (r *accountRepositoryImpl) CountAccounts(ctx context.Context, opts models.ListOptions) (int, error) {
+	var count int
+
+	if err := r.db.GetWithContext(ctx, &count, SelectAccountsMView, opts, "count(*)"); err != nil {
+		return count, fmt.Errorf("failed to list accounts: %w", err)
+	}
+
+	return count, nil
 }
 
 // GetAccountByID retrieves an account by its name from the database.

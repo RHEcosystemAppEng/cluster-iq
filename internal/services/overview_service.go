@@ -63,51 +63,42 @@ func (s *overviewServiceImpl) GetOverview(ctx context.Context) (inventory.Overvi
 	return overview, nil
 }
 
-//nolint:cyclop
 func (s *overviewServiceImpl) getProvidersSummary(ctx context.Context) (inventory.ProvidersSummary, error) {
-	summary := inventory.ProvidersSummary{}
-	const maxAccounts = 1000 // Assuming we have less than 1000 accounts
-	opts := models.ListOptions{PageSize: maxAccounts, Offset: 0}
+	var err error
+	var summary inventory.ProvidersSummary
 
-	accounts, _, err := s.accountRepo.ListAccounts(ctx, opts)
-	if err != nil {
-		return summary, err
+	// Define a slice of providers with their names and corresponding summary buckets
+	providers := []struct {
+		name   string
+		bucket *inventory.ProviderDetails
+	}{
+		{name: "AWS", bucket: &summary.AWS},
+		{name: "GCP", bucket: &summary.GCP},
+		{name: "Azure", bucket: &summary.Azure},
 	}
 
-	clusters, _, err := s.clusterRepo.ListClusters(ctx, opts)
-	if err != nil {
-		return summary, err
-	}
+	// Iterate over each provider to populate their summary details
+	for _, p := range providers {
+		// Set list options with filters for the current provider
+		opts := models.ListOptions{
+			PageSize: 0,
+			Offset:   0,
+			Filters: map[string]interface{}{
+				"provider": p.name,
+			},
+		}
 
-	for _, acc := range accounts {
-		switch acc.Provider {
-		case inventory.AWSProvider:
-			summary.AWS.AccountCount++
-		case inventory.GCPProvider:
-			summary.GCP.AccountCount++
-		case inventory.AzureProvider:
-			summary.Azure.AccountCount++
-		case inventory.UnknownProvider:
-			continue
-		default:
-			continue
+		// Count accounts for the current provider and handle errors
+		if p.bucket.AccountCount, err = s.accountRepo.CountAccounts(ctx, opts); err != nil {
+			return summary, err
+		}
+
+		// Count clusters for the current provider and handle errors
+		if p.bucket.ClusterCount, err = s.clusterRepo.CountClusters(ctx, opts); err != nil {
+			return summary, err
 		}
 	}
 
-	for _, cls := range clusters {
-		switch cls.Provider {
-		case inventory.AWSProvider:
-			summary.AWS.ClusterCount++
-		case inventory.GCPProvider:
-			summary.GCP.ClusterCount++
-		case inventory.AzureProvider:
-			summary.Azure.ClusterCount++
-		case inventory.UnknownProvider:
-			continue
-		default:
-			continue
-		}
-	}
-
+	// Return the populated summary of providers
 	return summary, nil
 }
