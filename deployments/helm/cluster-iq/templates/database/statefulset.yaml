@@ -49,6 +49,11 @@ spec:
           envFrom:
           - secretRef:
               name: postgresql
+          env:
+          - name: POSTGRESQL_LIBRARIES
+            value: "pg_cron"
+          - name: POSTGRESQL_EXTENSIONS
+            value: "pg_cron"
           securityContext:
             {{- toYaml .Values.database.securityContext | nindent 12 }}
           image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag | default .Chart.AppVersion }}"
