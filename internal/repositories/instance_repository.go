@@ -97,7 +97,7 @@ func NewInstanceRepository(db *dbclient.DBClient) InstanceRepository {
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
 func (r *instanceRepositoryImpl) ListInstances(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error) {
-	var instances []db.InstanceDBResponse
+	instances := []db.InstanceDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullMView, opts, "instance_id", "*"); err != nil {
 		return instances, 0, fmt.Errorf("failed to list instances: %w", err)
@@ -162,7 +162,7 @@ func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances 
 		return err
 	}
 
-	var newTags []inventory.Tag
+	newTags := []inventory.Tag{}
 	for _, instance := range instances {
 		for _, tag := range instance.Tags {
 			tag.InstanceID = instance.InstanceID
