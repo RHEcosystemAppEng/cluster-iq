@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS instances (
   provider                CLOUD_PROVIDER NOT NULL,
   availability_zone       TEXT,
   status                  STATUS DEFAULT 'Unknown' NOT NULL,
-  cluster_id              INTEGER REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
+  cluster_id              BIGINT REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
   last_scan_ts            TIMESTAMP WITH TIME ZONE,
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
@@ -194,12 +194,11 @@ CREATE TABLE IF NOT EXISTS events (
   event_timestamp         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   triggered_by            TEXT NOT NULL,
   action                  TEXT NOT NULL,
-  resource_id             INTEGER,
-  resource_type           TEXT NOT NULL,
+  resource_id             BIGINT,
+  resource_type           RESOURCE_TYPE NOT NULL,
   result                  ACTION_STATUS NOT NULL,
   description             TEXT NULL,
   severity                TEXT DEFAULT 'info'::TEXT NOT NULL,
-  CONSTRAINT events_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
   PRIMARY KEY (id, event_timestamp)
 ) PARTITION BY RANGE (event_timestamp);
 
@@ -559,8 +558,8 @@ SELECT
   ev.description,
   ev.severity
 FROM events ev
-LEFT JOIN clusters  c ON ev.resource_type = 'cluster'  AND c.id = ev.resource_id
-LEFT JOIN instances i ON ev.resource_type = 'instance' AND i.id = ev.resource_id
+LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
+LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
 ORDER BY event_timestamp DESC;
 
 -- View for System Events
@@ -578,13 +577,13 @@ SELECT
   acc.account_id,
   acc.provider
 FROM events ev
-LEFT JOIN clusters  c ON ev.resource_type = 'cluster'  AND c.id = ev.resource_id
-LEFT JOIN instances i ON ev.resource_type = 'instance' AND i.id = ev.resource_id
+LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
+LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
 LEFT JOIN accounts acc ON acc.id = (
   CASE
-    WHEN ev.resource_type = 'cluster'
+    WHEN ev.resource_type = 'Cluster'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = ev.resource_id)
-    WHEN ev.resource_type = 'instance'
+    WHEN ev.resource_type = 'Instance'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = ev.resource_id))
   END
 )
