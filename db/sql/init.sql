@@ -243,13 +243,13 @@ CREATE INDEX IF NOT EXISTS ix_schedule_status         ON schedule (status);
 -- ############################################################
 
 -- Accounts Cluster Count view
-CREATE VIEW accounts_with_cluster_count AS
+CREATE OR REPLACE VIEW accounts_with_cluster_count AS
 SELECT c.account_id, COUNT(*)::bigint AS cluster_count
 FROM clusters c
 GROUP BY c.account_id;
 
 -- Accounts Costs view
-CREATE VIEW accounts_with_costs AS
+CREATE OR REPLACE VIEW accounts_with_costs AS
 WITH base AS (
   SELECT a.id, e.date, e.amount
   FROM accounts a
@@ -273,7 +273,7 @@ LEFT JOIN base b ON b.id = a.id
 GROUP BY a.id;
 
 -- Accounts Full view
-CREATE VIEW accounts_full_view AS
+CREATE OR REPLACE VIEW accounts_full_view AS
 SELECT
   a.account_id,
   a.account_name,
@@ -298,13 +298,13 @@ CREATE MATERIALIZED VIEW m_accounts_full_view AS SELECT * FROM accounts_full_vie
 -- ############################################################
 
 -- Cluster Instances Count view
-CREATE VIEW clusters_with_instance_count AS
+CREATE OR REPLACE VIEW clusters_with_instance_count AS
 SELECT i.cluster_id, COUNT(*)::bigint AS instance_count
 FROM instances i
 GROUP BY i.cluster_id;
 
 -- clusters Costs view
-CREATE VIEW clusters_with_costs AS
+CREATE OR REPLACE VIEW clusters_with_costs AS
 WITH base AS (
   SELECT c.id, e.date, e.amount
   FROM clusters c
@@ -326,7 +326,7 @@ LEFT JOIN base b ON b.id = c.id
 GROUP BY c.id;
 
 -- clusters Full view
-CREATE VIEW clusters_full_view AS
+CREATE OR REPLACE VIEW clusters_full_view AS
 SELECT
   c.cluster_id,
   c.cluster_name,
@@ -354,7 +354,7 @@ LEFT JOIN clusters_with_costs         ac ON ac.id = c.id;
 CREATE MATERIALIZED VIEW m_clusters_full_view AS SELECT * FROM clusters_full_view;
 
 -- cluster tags view. Returns the cluster_id + every tag omitting repeated tags keys
-CREATE view clusters_tags AS
+CREATE OR REPLACE VIEW clusters_tags AS
 SELECT
     c.cluster_id,
     t.key,
@@ -372,7 +372,7 @@ HAVING COUNT(*) > 1;
 -- #############################################################################
 
 -- Instances Costs view
-CREATE VIEW instances_with_costs AS
+CREATE OR REPLACE VIEW instances_with_costs AS
 WITH base AS (
   SELECT i.id, e.date, e.amount
   FROM instances i
@@ -393,7 +393,7 @@ LEFT JOIN base b ON b.id = i.id
 GROUP BY i.id;
 
 -- Instances Full view
-CREATE VIEW instances_full_view AS
+CREATE OR REPLACE VIEW instances_full_view AS
 SELECT
   i.instance_id,
   i.instance_name,
@@ -417,7 +417,7 @@ LEFT JOIN instances_with_costs ic ON ic.id = i.id;
 CREATE MATERIALIZED VIEW m_instances_full_view AS SELECT * FROM instances_full_view;
 
 -- Instances Full view
-CREATE VIEW instances_full_view_with_tags AS
+CREATE OR REPLACE VIEW instances_full_view_with_tags AS
 SELECT
   i.instance_id,
   i.instance_name,
@@ -448,7 +448,7 @@ LEFT JOIN LATERAL (
 CREATE MATERIALIZED VIEW m_instances_full_view_with_tags AS SELECT * FROM instances_full_view_with_tags;
 
 -- Instances pending for expense update
-CREATE VIEW instances_pending_expense_update AS
+CREATE OR REPLACE VIEW instances_pending_expense_update AS
 SELECT
   a.account_id,
 	i.instance_id
@@ -489,7 +489,7 @@ WHERE
 -- #############################################################################
 
 -- Schedule with cluster and instances list view
-CREATE VIEW schedule_full_view AS
+CREATE OR REPLACE VIEW schedule_full_view AS
 SELECT
 	s.id,
 	s.type,
@@ -546,7 +546,7 @@ $$;
 -- #############################################################################
 
 -- View for Cluster Events
-CREATE VIEW cluster_events AS
+CREATE OR REPLACE VIEW cluster_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
@@ -563,7 +563,7 @@ LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id =
 ORDER BY event_timestamp DESC;
 
 -- View for System Events
-CREATE VIEW system_events AS
+CREATE OR REPLACE VIEW system_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
