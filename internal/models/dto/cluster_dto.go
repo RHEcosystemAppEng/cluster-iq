@@ -40,6 +40,7 @@ func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 	cluster.CreatedAt = c.CreatedAt
 	cluster.Status = c.Status
 	cluster.AccountID = c.AccountID
+	cluster.Age = c.Age
 
 	return cluster
 }
