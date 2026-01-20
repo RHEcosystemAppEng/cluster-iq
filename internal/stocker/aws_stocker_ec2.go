@@ -35,6 +35,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 		// Generating ClusterID for this instance based on its properties
 		clusterName := inventory.GetClusterNameFromTags(instance.Tags)
 		infraID := inventory.GetInfraIDFromTags(instance.Tags)
+
 		if s.skipNoOpenShiftInstances && clusterName == inventory.UnknownClusterNameCode {
 			s.logger.Debug("Skipping instance because it's not associated to any cluster",
 				zap.String("account_id", s.Account.AccountID),
@@ -61,14 +62,14 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			if !s.Account.IsClusterInAccount(cluster.ClusterID) {
 				_ = s.Account.AddCluster(cluster)
 			}
+		}
 
-			if err := s.Account.Clusters[clusterID].AddInstance(&instance); err != nil {
-				s.logger.Error("error adding instance to cluster during instance processing",
-					zap.String("account_id", s.Account.AccountID),
-					zap.String("cluster_id", clusterID),
-					zap.String("instance_id", instance.InstanceID),
-					zap.Error(err))
-			}
+		if err := s.Account.Clusters[clusterID].AddInstance(&instance); err != nil {
+			s.logger.Error("error adding instance to cluster during instance processing",
+				zap.String("account_id", s.Account.AccountID),
+				zap.String("cluster_id", clusterID),
+				zap.String("instance_id", instance.InstanceID),
+				zap.Error(err))
 		}
 	}
 }
