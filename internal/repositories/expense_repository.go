@@ -53,7 +53,7 @@ func NewExpenseRepository(db *dbclient.DBClient) ExpenseRepository {
 // - A slice of inventory.Expense objects.
 // - An error if the query fails.
 func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, opts models.ListOptions) ([]db.ExpenseDBResponse, int, error) {
-	var expenses []db.ExpenseDBResponse
+	expenses := []db.ExpenseDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &expenses, ExpensesTable, opts, "date", "*"); err != nil {
 		return expenses, 0, fmt.Errorf("failed to list expenses: %w", err)

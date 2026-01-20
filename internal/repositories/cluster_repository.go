@@ -93,7 +93,7 @@ func NewClusterRepository(db *dbclient.DBClient) ClusterRepository {
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error) {
-	var clusters []db.ClusterDBResponse
+	clusters := []db.ClusterDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &clusters, SelectClustersFullMView, opts, "cluster_id", "*"); err != nil {
 		return clusters, 0, fmt.Errorf("failed to list clusters: %w", err)
@@ -188,7 +188,7 @@ func (r *clusterRepositoryImpl) GetClusterRegion(ctx context.Context, clusterID 
 // - A slice of inventory.Tag objects representing the cluster's tags.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error) {
-	var result []db.TagDBResponse
+	result := []db.TagDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -239,7 +239,7 @@ func (r *clusterRepositoryImpl) GetClustersOnAccount(ctx context.Context, accoun
 // - A slice of inventory.Instance objects representing the instances in the cluster.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error) {
-	var instances []db.InstanceDBResponse
+	instances := []db.InstanceDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,

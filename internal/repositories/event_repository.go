@@ -70,7 +70,7 @@ func NewEventRepository(db *dbclient.DBClient) EventRepository {
 
 // ListSystemEvents retrieves system-wide events with extended metadata.
 func (r *eventRepositoryImpl) ListSystemEvents(ctx context.Context, opts models.ListOptions) ([]db.SystemEventDBResponse, int, error) {
-	var events []db.SystemEventDBResponse
+	events := []db.SystemEventDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &events, SelectSystemEventsView, opts, "event_timestamp", "*"); err != nil {
 		return events, 0, fmt.Errorf("failed to list events: %w", err)
@@ -81,7 +81,7 @@ func (r *eventRepositoryImpl) ListSystemEvents(ctx context.Context, opts models.
 
 // ListClusterEvents retrieves events for a specific resource (like a cluster).
 func (r *eventRepositoryImpl) ListClusterEvents(ctx context.Context, opts models.ListOptions) ([]db.ClusterEventDBResponse, int, error) {
-	var events []db.ClusterEventDBResponse
+	events := []db.ClusterEventDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &events, SelectClusterEventsView, opts, "event_timestamp", "*"); err != nil {
 		return events, 0, fmt.Errorf("failed to list cluster events: %w", err)

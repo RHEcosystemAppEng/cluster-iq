@@ -69,7 +69,7 @@ func NewAccountRepository(db *dbclient.DBClient) AccountRepository {
 // - A slice of inventory.Account objects.
 // - An error if the query fails.
 func (r *accountRepositoryImpl) ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error) {
-	var accounts []db.AccountDBResponse
+	accounts := []db.AccountDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &accounts, SelectAccountsMView, opts, "account_id", "*"); err != nil {
 		return accounts, 0, fmt.Errorf("failed to list accounts: %w", err)
@@ -130,7 +130,7 @@ func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID st
 // - A slice of inventory.Account objects (usually containing one element).
 // - An error if the query fails.
 func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error) {
-	var clusters []db.ClusterDBResponse
+	clusters := []db.ClusterDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -157,7 +157,7 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
 func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error) {
-	var instances []db.InstanceDBResponse
+	instances := []db.InstanceDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,

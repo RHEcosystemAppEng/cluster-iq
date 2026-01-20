@@ -126,7 +126,7 @@ func NewActionRepository(db *dbclient.DBClient) ActionRepository {
 //   - An array of actions.Action with the scheduled actions declared on the DB
 //   - An error if the query fails
 func (r *actionRepositoryImpl) List(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error) {
-	var schedule []db.ActionDBResponse
+	schedule := []db.ActionDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &schedule, SelectScheduleFullView, opts, "id", "*"); err != nil {
 		return schedule, 0, fmt.Errorf("failed to list schedule: %w", err)
