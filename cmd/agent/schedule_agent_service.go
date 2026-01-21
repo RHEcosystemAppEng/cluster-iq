@@ -22,7 +22,7 @@ import (
 
 const (
 	// APIScheduleActionsPath endpoint for retrieving the list of actions that needs to be rescheduled
-	APIScheduleActionsPath = "/schedule"
+	APIScheduleActionsPath = "/actions"
 )
 
 // scheduleItem represents the pair of action and CancelFunc for tracking the already running actions
@@ -103,7 +103,7 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 		select {
 		case <-time.After(duration): // When the timestamp is "now"
 			a.logger.Debug("Sending to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
-			a.actionsChannel <- newAction
+			a.actionsChannel <- &newAction
 			a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 		case <-ctx.Done(): // Context cancelling
 			a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID))
@@ -163,7 +163,7 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronActio
 				a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
 			default:
 				a.logger.Debug("Sending to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
-				a.actionsChannel <- newAction
+				a.actionsChannel <- &newAction
 				a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 			}
 		})

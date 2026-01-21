@@ -104,7 +104,7 @@ func (i *InstantAgentService) Start() error {
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
 	i.logger.Warn("Powering On Cluster",
-		zap.String("account_name", req.AccountId),
+		zap.String("account_id", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
@@ -151,7 +151,7 @@ func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerO
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOffCluster(ctx context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
 	i.logger.Warn("Powering Off Cluster",
-		zap.String("account_name", req.AccountId),
+		zap.String("account_id", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),

@@ -127,36 +127,36 @@ func (e *ExecutorAgentService) createExecutors() error {
 	for _, account := range accounts {
 		switch account.Provider {
 		case inventory.AWSProvider: // AWS
-			e.logger.Info("Creating Executor for AWS account", zap.String("account_name", account.Name))
-			account, err := inventory.NewAccount(account.ID, account.Name, account.Provider, account.User, account.Key)
+			e.logger.Info("Creating Executor for AWS account", zap.String("account_id", account.ID))
+			newAccount, err := inventory.NewAccount(account.ID, account.Name, account.Provider, account.User, account.Key)
 			if err != nil {
 				return err
 			}
 			exec := cexec.NewAWSExecutor(
-				account,
+				newAccount,
 				e.actionsChannel,
 				logger,
 			)
 			err = e.AddExecutor(exec)
 			if err != nil {
-				e.logger.Error("Cannot create an AWSEexecutor for account", zap.String("account_name", account.AccountName), zap.Error(err))
+				e.logger.Error("Cannot create an AWSEexecutor for account", zap.String("account_id", newAccount.AccountID), zap.Error(err))
 				return err
 			}
 
 		case inventory.GCPProvider: // GCP
 			e.logger.Warn("Failed to create Executor for GCP account",
-				zap.String("account", account.Name),
+				zap.String("account_id", account.ID),
 				zap.String("reason", "not implemented"),
 			)
 
 		case inventory.AzureProvider: // Azure
 			e.logger.Warn("Failed to create Executor for Azure account",
-				zap.String("account", account.Name),
+				zap.String("account_id", account.ID),
 				zap.String("reason", "not implemented"),
 			)
 		case inventory.UnknownProvider:
 			e.logger.Warn("Failed to create Executor for Unknown Provider account",
-				zap.String("account", account.Name),
+				zap.String("account_id", account.ID),
 				zap.Any("provider", account.Provider),
 				zap.String("reason", "Unknown provider"),
 			)
@@ -202,6 +202,7 @@ func (e *ExecutorAgentService) Start() error {
 			Severity:     eventservice.SeverityInfo,
 			TriggeredBy:  newAction.GetRequester(),
 		})
+		// TODO: Keep this or transform the cannel into: 'chan *action.Action'
 
 		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
 		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
@@ -213,7 +214,7 @@ func (e *ExecutorAgentService) Start() error {
 
 		exec := e.GetExecutor(newAction.GetTarget().AccountID)
 		if exec == nil {
-			e.logger.Error("there's no Executor available for the requested account", zap.String("account", newAction.GetTarget().AccountID))
+			e.logger.Error("there's no Executor available for the requested account", zap.String("account_id", newAction.GetTarget().AccountID))
 
 			// Updating Action status
 			m := newAction.(actions.MutableAction)
