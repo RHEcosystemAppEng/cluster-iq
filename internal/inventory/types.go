@@ -11,6 +11,6 @@ const (
 	ClusterPowerOffAction = "PowerOff"
 
 	// Resource types
-	ClusterResourceType  = "cluster"
-	InstanceResourceType = "instance"
+	ClusterResourceType  = "Cluster"
+	InstanceResourceType = "Instance"
 )

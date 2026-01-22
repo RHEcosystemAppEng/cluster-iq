@@ -97,7 +97,7 @@ func testPostEvents(t *testing.T) {
 	event := dto.EventDTORequest{
 		Action:         "TestAction",
 		ResourceID:     "aws-cluster-2-aws-infra-2",
-		ResourceType:   "cluster",
+		ResourceType:   "Cluster",
 		EventTimestamp: time.Now(),
 		Result:         "Pending",
 		Severity:       "info",

@@ -34,9 +34,9 @@ const (
 			:action,
 			(
 				CASE
-					WHEN :resource_type = 'cluster'
+					WHEN :resource_type = 'Cluster'
 					THEN (SELECT id FROM clusters c WHERE c.cluster_id = :resource_id)
-					WHEN :resource_type = 'instance'
+					WHEN :resource_type = 'Instance'
 					THEN (SELECT id FROM instances i WHERE i.instance_id = :resource_id)
 				END
 			),
