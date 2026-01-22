@@ -127,6 +127,8 @@ func (c *Cluster) Update() error {
 // UpdateAge updates cluster age based on the oldest instance creation timestamp. The cluster will be considered as old as the oldest instance
 func (c *Cluster) UpdateAge() error {
 	creationTS := time.Now()
+
+	// Getting oldest creation timestamp
 	for _, instance := range c.Instances {
 		if instance.CreatedAt.Before(creationTS) {
 			creationTS = instance.CreatedAt
@@ -135,7 +137,7 @@ func (c *Cluster) UpdateAge() error {
 	c.CreatedAt = creationTS
 
 	// Calculating Age in days since the cluster was created until last scraping
-	newAge := calculateAge(c.CreatedAt, c.LastScanTimestamp)
+	newAge := calculateAge(c.CreatedAt, time.Now())
 	if c.Age > newAge && c.Age != 0 {
 		return fmt.Errorf("%s. Current age: %d, New estimated age: %d", ErrorNewClusterAge, c.Age, newAge)
 	}

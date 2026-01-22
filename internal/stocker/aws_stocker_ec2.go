@@ -44,30 +44,28 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			continue
 		}
 
-		clusterID := inventory.GenerateClusterID(clusterName, infraID)
-		if !s.Account.IsClusterInAccount(clusterID) {
-			cluster, err := inventory.NewCluster(
-				clusterName,
-				infraID,
-				inventory.AWSProvider,
-				s.conn.GetRegion(),
-				unknownConsoleLinkCode,
-				inventory.GetOwnerFromTags(instance.Tags),
-			)
-			if err != nil {
-				s.logger.Error("error creating new cluster during instance processing", zap.Error(err))
-				continue
-			}
+		cluster, err := inventory.NewCluster(
+			clusterName,
+			infraID,
+			inventory.AWSProvider,
+			s.conn.GetRegion(),
+			unknownConsoleLinkCode,
+			inventory.GetOwnerFromTags(instance.Tags),
+		)
 
-			if !s.Account.IsClusterInAccount(cluster.ClusterID) {
-				_ = s.Account.AddCluster(cluster)
-			}
+		if err != nil {
+			s.logger.Error("error creating new cluster during instance processing", zap.Error(err))
+			continue
 		}
 
-		if err := s.Account.Clusters[clusterID].AddInstance(&instance); err != nil {
+		if !s.Account.IsClusterInAccount(cluster.ClusterID) {
+			_ = s.Account.AddCluster(cluster)
+		}
+
+		if err := s.Account.Clusters[cluster.ClusterID].AddInstance(&instance); err != nil {
 			s.logger.Error("error adding instance to cluster during instance processing",
 				zap.String("account_id", s.Account.AccountID),
-				zap.String("cluster_id", clusterID),
+				zap.String("cluster_id", cluster.ClusterID),
 				zap.String("instance_id", instance.InstanceID),
 				zap.Error(err))
 		}
