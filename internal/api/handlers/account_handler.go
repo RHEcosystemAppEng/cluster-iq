@@ -179,7 +179,7 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 //	@Success		200	{object}	dto.InstanceListResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
-//	@Router			/accounts/{id}/expense_update_instances [get]
+//	@Router			/accounts/{id}/expense_update [get]
 //
 // NOTE: Align the documented route with the actual router configuration.
 func (h *AccountHandler) GetExpensesUpdateInstances(c *gin.Context) {

@@ -383,11 +383,14 @@ func (s *Scanner) postScannerInventory() error {
 		return fmt.Errorf("error when posting Scanner inventory")
 	}
 
+	s.logger.Info("Inventory posted correctly")
+
+	// HTTP post to /inventory to refresh views
 	if err := postData(apiInventoryEndpoint, []byte{}); err != nil {
 		return err
 	}
 
-	s.logger.Info("Inventory posted correctly")
+	s.logger.Info("Inventory refreshed correctly")
 	return nil
 }
 
