@@ -8,6 +8,7 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
 	"github.com/stretchr/testify/assert"
@@ -95,7 +96,7 @@ func testLogEvent_Success(t *testing.T) {
 		TriggeredBy:  "scanner",
 		Action:       actions.ActionOperation("START"),
 		ResourceID:   "cluster-1",
-		ResourceType: "cluster",
+		ResourceType: inventory.ClusterResourceType,
 		Result:       ResultPending,
 		Description:  &desc,
 		Severity:     SeverityInfo,
@@ -138,7 +139,7 @@ func testLogEvent_RepoError(t *testing.T) {
 		TriggeredBy:  "api",
 		Action:       actions.ActionOperation("STOP"),
 		ResourceID:   "cluster-1",
-		ResourceType: "cluster",
+		ResourceType: inventory.ClusterResourceType,
 		Result:       ResultPending,
 		Description:  nil,
 		Severity:     SeverityError,
@@ -210,7 +211,7 @@ func testStartTracking_Success(t *testing.T) {
 		TriggeredBy:  "agent",
 		Action:       actions.ActionOperation("START"),
 		ResourceID:   "cluster-1",
-		ResourceType: "cluster",
+		ResourceType: inventory.ClusterResourceType,
 		Result:       ResultPending,
 		Description:  nil,
 		Severity:     SeverityInfo,
@@ -236,7 +237,7 @@ func testStartTracking_LogEventError(t *testing.T) {
 		TriggeredBy:  "agent",
 		Action:       actions.ActionOperation("STOP"),
 		ResourceID:   "cluster-1",
-		ResourceType: "cluster",
+		ResourceType: inventory.ClusterResourceType,
 		Result:       ResultPending,
 		Description:  nil,
 		Severity:     SeverityError,

@@ -6,6 +6,7 @@ import (
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ func testEventDTORequest_ToModelEvent_Correct(t *testing.T) {
 		ID:             42,
 		Action:         "START",
 		ResourceID:     "cluster-1",
-		ResourceType:   "cluster",
+		ResourceType:   inventory.ClusterResourceType,
 		EventTimestamp: now,
 		Result:         "Success",
 		Severity:       "Info",
@@ -56,7 +57,7 @@ func testEventDTORequest_ToModelEvent_NilDescription(t *testing.T) {
 		ID:             7,
 		Action:         "STOP",
 		ResourceID:     "instance-1",
-		ResourceType:   "instance",
+		ResourceType:   inventory.InstanceResourceType,
 		EventTimestamp: now,
 		Result:         "Failed",
 		Severity:       "Error",
@@ -84,7 +85,7 @@ func testClusterEventDTOResponse_Struct(t *testing.T) {
 		ID:             1,
 		Action:         "START",
 		ResourceID:     "cluster-1",
-		ResourceType:   "cluster",
+		ResourceType:   inventory.ClusterResourceType,
 		EventTimestamp: now,
 		Result:         "Success",
 		Severity:       "Info",
@@ -95,7 +96,7 @@ func testClusterEventDTOResponse_Struct(t *testing.T) {
 	assert.Equal(t, int64(1), dto.ID)
 	assert.Equal(t, "START", dto.Action)
 	assert.Equal(t, "cluster-1", dto.ResourceID)
-	assert.Equal(t, "cluster", dto.ResourceType)
+	assert.Equal(t, inventory.ClusterResourceType, dto.ResourceType)
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, actions.StatusSuccess, dto.Result)
 	assert.Equal(t, "Info", dto.Severity)
@@ -112,7 +113,7 @@ func testSystemEventDTOResponse_Struct(t *testing.T) {
 			ID:             2,
 			Action:         "STOP",
 			ResourceID:     "cluster-2",
-			ResourceType:   "cluster",
+			ResourceType:   inventory.ClusterResourceType,
 			EventTimestamp: now,
 			Result:         "Failed",
 			Severity:       "Error",
@@ -126,7 +127,7 @@ func testSystemEventDTOResponse_Struct(t *testing.T) {
 	assert.Equal(t, int64(2), dto.ID)
 	assert.Equal(t, "STOP", dto.Action)
 	assert.Equal(t, "cluster-2", dto.ResourceID)
-	assert.Equal(t, "cluster", dto.ResourceType)
+	assert.Equal(t, inventory.ClusterResourceType, dto.ResourceType)
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, actions.StatusFailed, dto.Result)
 	assert.Equal(t, "Error", dto.Severity)
