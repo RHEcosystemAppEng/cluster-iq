@@ -362,6 +362,7 @@ SELECT
 FROM clusters   c
 JOIN instances  i ON i.cluster_id = c.id
 JOIN tags       t ON t.instance_id = i.id
+WHERE t.key != 'Name' AND t.key != 'MachineName'
 GROUP BY c.cluster_id, t.key
 HAVING COUNT(*) > 1;
 
