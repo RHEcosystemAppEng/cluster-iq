@@ -256,13 +256,33 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
 //	@Success		202	{object}	responsetypes.GenericResponse
+//	@Failure		400	{object}	responsetypes.GenericErrorResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/power_on [post]
 func (h *ClusterHandler) PowerOn(c *gin.Context) {
-	clusterID := c.Param("id")
+	// Struct for collecting InstantAction details
+	type PowerOnRequest struct {
+		Requester   string `json:"requester" binding:"required"`
+		Description string `json:"description"`
+	}
 
-	if err := h.service.PowerOn(c.Request.Context(), clusterID); err != nil {
+	clusterID := c.Param("id")
+	var request PowerOnRequest
+
+	// Bind JSON body to request struct
+	if err := c.ShouldBindJSON(&request); err != nil {
+		h.logger.Error("Bad request for PowerOn cluster operation", zap.String("cluster_id", clusterID), zap.String("requester", request.Requester), zap.String("description", request.Description))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	// Log requester and description
+	h.logger.Info("Power on request received", zap.String("requester", request.Requester), zap.String("description", request.Description))
+
+	if err := h.service.PowerOn(c.Request.Context(), clusterID, request.Requester, &request.Description); err != nil {
 		h.logger.Error("error powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
@@ -291,13 +311,33 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
 //	@Success		202	{object}	responsetypes.GenericResponse
+//	@Failure		400	{object}	responsetypes.GenericErrorResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/power_off [post]
 func (h *ClusterHandler) PowerOff(c *gin.Context) {
-	clusterID := c.Param("id")
+	// Struct for collecting InstantAction details
+	type PowerOffRequest struct {
+		Requester   string `json:"requester" binding:"required"`
+		Description string `json:"description"`
+	}
 
-	if err := h.service.PowerOff(c.Request.Context(), clusterID); err != nil {
+	clusterID := c.Param("id")
+	var request PowerOffRequest
+
+	// Bind JSON body to request struct
+	if err := c.ShouldBindJSON(&request); err != nil {
+		h.logger.Error("Bad request for PowerOff cluster operation", zap.String("cluster_id", clusterID), zap.String("requester", request.Requester), zap.String("description", request.Description))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	// Log requester and description
+	h.logger.Info("Power off request received", zap.String("requester", request.Requester), zap.String("description", request.Description))
+
+	if err := h.service.PowerOff(c.Request.Context(), clusterID, request.Requester, &request.Description); err != nil {
 		h.logger.Error("error powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
