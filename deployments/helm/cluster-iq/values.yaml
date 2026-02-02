@@ -2,6 +2,14 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# This section configures HashiCorp Vault integration
+vault:
+  enabled: false
+  address: "http://vault.hashicorp-vault.svc.cluster.local:8200"
+  secretPath: "secret/data/cluster-iq/credentials"
+  secretKey: "credentials"
+  # ServiceAccount names are derived from component names or values
+
 api:
   # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
   replicaCount: 1
@@ -254,6 +262,18 @@ scanner:
 
   skipNoOpenshiftInstances: true
 
+  #This section builds out the service account
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Automatically mount a ServiceAccount's API credentials?
+    automount: true
+    # Annotations to add to the service account
+    annotations: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: ""
+
 agent:
   # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
   replicaCount: 1
@@ -345,17 +365,17 @@ agent:
   autoscaling: {}
 
   # Additional volumes on the output Deployment definition.
-  volumes:
-    - name: credentials
-      secret:
-        secretName: credentials
-        optional: false
+  volumes: []
+    # - name: credentials
+    #   secret:
+    #     secretName: credentials
+    #     optional: false
 
   # Additional volumeMounts on the output Deployment definition.
-  volumeMounts:
-    - name: credentials
-      readOnly: true
-      mountPath: /credentials
+  volumeMounts: []
+    # - name: credentials
+    #   readOnly: true
+    #   mountPath: /credentials
 
   nodeSelector: {}
 

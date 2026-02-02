@@ -4,7 +4,7 @@ metadata:
   name: scanner
   labels:
     {{- include "cluster-iq.labels" . | nindent 4 }}
-    {{- include "cluster-iq.componentLabels" "api" | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "scanner" | nindent 4 }}
 spec:
   schedule: 0 0 * * *
   concurrencyPolicy: Allow
@@ -15,10 +15,20 @@ spec:
     spec:
       template:
         spec:
+          serviceAccountName: {{ include "cluster-iq.scannerServiceAccountName" . }}
           volumes:
+            {{- if .Values.vault.enabled }}
+            - name: credentials
+              csi:
+                driver: secrets-store.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: "cluster-iq-credentials-scanner"
+            {{- else }}
             - name: credentials
               secret:
                 secretName: credentials
+            {{- end }}
           containers:
             - name: scanner
               image: "{{ .Values.scanner.image.repository }}:{{ .Values.scanner.image.tag | default .Chart.AppVersion }}"
