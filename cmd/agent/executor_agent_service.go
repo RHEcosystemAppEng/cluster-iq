@@ -240,9 +240,22 @@ func (e *ExecutorAgentService) Start() error {
 			tracker.Success()
 		}
 
+		// Update action status to Success/Failed
 		if err := e.updateActionStatus(newAction); err != nil {
 			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
 			continue
+		}
+
+		// For CronActions, reset status back to Pending so they can be rescheduled
+		if newAction.GetType() == actions.CronActionType {
+			e.logger.Debug("Resetting CronAction status to Pending for next execution",
+				zap.String("action_id", newAction.GetID()),
+			)
+			newAction.(actions.MutableAction).SetStatus(actions.StatusPending)
+			if err := e.updateActionStatus(newAction); err != nil {
+				e.logger.Error("Error resetting CronAction status to Pending", zap.String("action_id", newAction.GetID()), zap.Error(err))
+				continue
+			}
 		}
 	}
 
