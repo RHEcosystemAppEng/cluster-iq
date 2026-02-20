@@ -27,7 +27,6 @@ jobs:
         with:
           only-new-issues: true
           args: --whole-files
-          version: v2.1
 
   call-unit-tests:
     name: Go Unit tests
