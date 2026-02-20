@@ -37,12 +37,6 @@ type clusterFilterParams struct {
 	Account  string `form:"account"`
 }
 
-// PowerActionRequest defines the information required by the API to complement the actions and events for a Power On/Off request0
-type PowerActionRequest struct {
-	Requester   string `json:"requester" binding:"required"`
-	Description string `json:"description"`
-}
-
 // toRepoFilters maps bound query params to repository filters.
 func (f *clusterFilterParams) toRepoFilters() map[string]interface{} {
 	filters := make(map[string]interface{})
@@ -261,7 +255,7 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
-//	@Param			request body  PowerActionRequest  true  "Power action details"
+//	@Param			request body  dto.PowerActionRequest  true  "Power action details"
 //	@Success		202	{object}	responsetypes.GenericResponse
 //	@Failure		400	{object}	responsetypes.GenericErrorResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
@@ -269,7 +263,7 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 //	@Router			/clusters/{id}/power_on [post]
 func (h *ClusterHandler) PowerOn(c *gin.Context) {
 	clusterID := c.Param("id")
-	var request PowerActionRequest
+	var request dto.PowerActionRequest
 
 	// Bind JSON body to request struct
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -311,7 +305,7 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
-//	@Param			request body  PowerActionRequest  true  "Power action details"
+//	@Param			request body  dto.PowerActionRequest  true  "Power action details"
 //	@Success		202	{object}	responsetypes.GenericResponse
 //	@Failure		400	{object}	responsetypes.GenericErrorResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
@@ -319,7 +313,7 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 //	@Router			/clusters/{id}/power_off [post]
 func (h *ClusterHandler) PowerOff(c *gin.Context) {
 	clusterID := c.Param("id")
-	var request PowerActionRequest
+	var request dto.PowerActionRequest
 
 	// Bind JSON body to request struct
 	if err := c.ShouldBindJSON(&request); err != nil {
