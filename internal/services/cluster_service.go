@@ -19,8 +19,8 @@ type ClusterService interface {
 	Get(ctx context.Context, clusterID string) (*db.ClusterDBResponse, error)
 	GetInstances(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error)
 	GetSummary(ctx context.Context) (inventory.ClustersSummary, error)
-	PowerOn(ctx context.Context, clusterID string) error
-	PowerOff(ctx context.Context, clusterID string) error
+	PowerOn(ctx context.Context, clusterID string, requester string, description *string) error
+	PowerOff(ctx context.Context, clusterID string, requester string, description *string) error
 	Create(ctx context.Context, clusters []inventory.Cluster) error
 	Delete(ctx context.Context, clusterID string) error
 	GetTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error)
@@ -70,7 +70,7 @@ func (s *clusterServiceImpl) GetSummary(ctx context.Context) (inventory.Clusters
 }
 
 // PowerOn sends a request to power on a cluster.
-func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string) error {
+func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string, requester string, description *string) error {
 	cluster, err := s.repo.GetClusterByID(ctx, clusterID)
 	if err != nil {
 		return err
@@ -84,7 +84,6 @@ func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string) erro
 		instanceIDs[i] = inst.InstanceID
 	}
 
-	description := "triggered by user request"
 	action := actions.NewPowerOnClusterAction(
 		*actions.NewActionTarget(
 			cluster.AccountID,
@@ -92,15 +91,15 @@ func (s *clusterServiceImpl) PowerOn(ctx context.Context, clusterID string) erro
 			cluster.ClusterID,
 			instanceIDs,
 		),
-		"cluster-iq-API", // TODO: include username who created this request
-		&description,
+		requester,
+		description,
 	)
 
 	return s.agentClient.PowerOnCluster(ctx, action)
 }
 
 // PowerOff sends a request to power off a cluster.
-func (s *clusterServiceImpl) PowerOff(ctx context.Context, clusterID string) error {
+func (s *clusterServiceImpl) PowerOff(ctx context.Context, clusterID string, requester string, description *string) error {
 	cluster, err := s.repo.GetClusterByID(ctx, clusterID)
 	if err != nil {
 		return err
@@ -114,7 +113,6 @@ func (s *clusterServiceImpl) PowerOff(ctx context.Context, clusterID string) err
 		instanceIDs[i] = inst.InstanceID
 	}
 
-	description := "triggered by user request"
 	action := actions.NewPowerOffClusterAction(
 		*actions.NewActionTarget(
 			cluster.AccountID,
@@ -122,8 +120,8 @@ func (s *clusterServiceImpl) PowerOff(ctx context.Context, clusterID string) err
 			cluster.ClusterID,
 			instanceIDs,
 		),
-		"cluster-iq-API", // TODO: include username who created this request
-		&description,
+		requester,
+		description,
 	)
 
 	return s.agentClient.PowerOffCluster(ctx, action)

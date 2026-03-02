@@ -10,12 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-const (
-	// Reference https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html#available-ec2-device-names
-	rootDeviceXvda = "/dev/xvda"
-	rootDeviceSda  = "/dev/sda1"
-)
-
 // AWSEC2Connection represents the EC2 client for AWS
 type AWSEC2Connection struct {
 	client *ec2.EC2
@@ -252,13 +246,28 @@ func EC2InstanceToInventoryInstance(ec2instance *ec2.Instance) (*inventory.Insta
 }
 
 // getInstanceCreationTimestamp retrieves the creation timestamp of an EC2 instance.
-// It determines the instance creation time based on the attach time of the root block device.
-// If the root device is not found among the block device mappings, it returns an empty time.Time.
+// It uses a hybrid strategy to get the most accurate creation time:
+// 1. Primary: Root EBS volume attach time (persists through stop/start cycles)
+// 2. Fallback: Instance LaunchTime (always available, but changes on restart)
+// 3. Last resort: Zero time (should never happen with valid AWS instances)
 func getInstanceCreationTimestamp(instance ec2.Instance) time.Time {
-	for _, mapping := range instance.BlockDeviceMappings {
-		if *mapping.DeviceName == rootDeviceXvda || *mapping.DeviceName == rootDeviceSda {
-			return *mapping.Ebs.AttachTime
+	// Strategy 1: Use root device attach time (most accurate for original creation)
+	// This approach works with all device naming conventions (Xen, NVMe, etc.)
+	if instance.RootDeviceName != nil {
+		for _, mapping := range instance.BlockDeviceMappings {
+			if mapping.DeviceName != nil && *mapping.DeviceName == *instance.RootDeviceName {
+				if mapping.Ebs != nil && mapping.Ebs.AttachTime != nil {
+					return *mapping.Ebs.AttachTime
+				}
+			}
 		}
 	}
+
+	// Strategy 2: Fallback to LaunchTime (always available)
+	if instance.LaunchTime != nil {
+		return *instance.LaunchTime
+	}
+
+	// Strategy 3: Last resort (should never happen with valid AWS instances)
 	return time.Time{}
 }
