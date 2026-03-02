@@ -87,7 +87,7 @@ func (i *InstantAgentService) Start() error {
 
 	// Serving gRPC
 	if err := i.grpcServer.Serve(i.listener); err != nil {
-		logger.Fatal("failed to start server", zap.Error(err))
+		i.logger.Fatal("failed to start server", zap.Error(err))
 		return err
 	}
 	return nil

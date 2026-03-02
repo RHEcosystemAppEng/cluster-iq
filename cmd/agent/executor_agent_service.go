@@ -172,14 +172,13 @@ func (e *ExecutorAgentService) createExecutors() error {
 // - accountID: The name of the account for which the executor is requested.
 //
 // Returns:
-// - cexec.CloudExecutor: The executor for the specified account.
-// - error: An error if no executor is found for the given account.
-func (e *ExecutorAgentService) GetExecutor(accountID string) *cexec.CloudExecutor {
+// - cexec.CloudExecutor: The executor for the specified account, or nil if not found.
+func (e *ExecutorAgentService) GetExecutor(accountID string) cexec.CloudExecutor {
 	exec, ok := e.executors[accountID]
 	if !ok {
 		return nil
 	}
-	return &exec
+	return exec
 }
 
 func (e *ExecutorAgentService) Start() error {
@@ -205,44 +204,51 @@ func (e *ExecutorAgentService) Start() error {
 		// TODO: Keep this or transform the cannel into: 'chan *action.Action'
 
 		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
-		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
-		if err := e.updateActionStatus(newAction); err != nil {
-			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			tracker.Failed()
-			continue
+		if mutable, ok := newAction.(actions.MutableAction); ok {
+			mutable.SetStatus(actions.StatusRunning)
+			if err := e.updateActionStatus(newAction); err != nil {
+				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+				tracker.Failed()
+				continue
+			}
+		} else {
+			e.logger.Warn("Action does not implement MutableAction, skipping status update", zap.String("action_id", newAction.GetID()))
 		}
 
-		exec := e.GetExecutor(newAction.GetTarget().AccountID)
-		if exec == nil {
+		executor := e.GetExecutor(newAction.GetTarget().AccountID)
+		if executor == nil {
 			e.logger.Error("there's no Executor available for the requested account", zap.String("account_id", newAction.GetTarget().AccountID))
 
 			// Updating Action status
-			m := newAction.(actions.MutableAction)
-			m.SetStatus(actions.StatusFailed)
-			if err := e.updateActionStatus(newAction); err != nil {
-				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-				continue
+			if mutable, ok := newAction.(actions.MutableAction); ok {
+				mutable.SetStatus(actions.StatusFailed)
+				if err := e.updateActionStatus(newAction); err != nil {
+					e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+				}
 			}
 			tracker.Failed()
 
 			continue
 		}
 
-		executor := *exec
-
 		if err := executor.ProcessAction(newAction); err != nil {
 			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
-			newAction.(actions.MutableAction).SetStatus(actions.StatusFailed)
+			if mutable, ok := newAction.(actions.MutableAction); ok {
+				mutable.SetStatus(actions.StatusFailed)
+			}
 			tracker.Failed()
 		} else {
 			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
-			newAction.(actions.MutableAction).SetStatus(actions.StatusSuccess)
+			if mutable, ok := newAction.(actions.MutableAction); ok {
+				mutable.SetStatus(actions.StatusSuccess)
+			}
 			tracker.Success()
 		}
 
-		if err := e.updateActionStatus(newAction); err != nil {
-			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			continue
+		if mutable, ok := newAction.(actions.MutableAction); ok {
+			if err := e.updateActionStatus(mutable); err != nil {
+				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
+			}
 		}
 	}
 
