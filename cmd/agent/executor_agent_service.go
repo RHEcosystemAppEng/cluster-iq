@@ -230,6 +230,9 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 
 	// Mark as success
 	e.handleExecutionSuccess(action, tracker)
+
+	// For CronActions, reset status back to Pending so they can be rescheduled
+	e.resetCronActionStatus(action)
 }
 
 // setActionStatus safely updates action status with type assertion.
@@ -278,6 +281,30 @@ func (e *ExecutorAgentService) handleExecutionSuccess(action actions.Action, tra
 
 	e.setActionStatus(action, actions.StatusSuccess)
 	tracker.Success()
+}
+
+// resetCronActionStatus resets CronAction status to Pending after execution so they can be rescheduled
+func (e *ExecutorAgentService) resetCronActionStatus(action actions.Action) {
+	if action.GetType() != actions.CronActionType {
+		return
+	}
+
+	e.logger.Debug("Resetting CronAction status to Pending for next execution",
+		zap.String("action_id", action.GetID()))
+
+	mutable, ok := action.(actions.MutableAction)
+	if !ok {
+		e.logger.Warn("CronAction does not implement MutableAction, cannot reset status",
+			zap.String("action_id", action.GetID()))
+		return
+	}
+
+	mutable.SetStatus(actions.StatusPending)
+	if err := e.updateActionStatus(action); err != nil {
+		e.logger.Error("Error resetting CronAction status to Pending",
+			zap.String("action_id", action.GetID()),
+			zap.Error(err))
+	}
 }
 
 func (e *ExecutorAgentService) updateActionStatus(action actions.Action) error {
