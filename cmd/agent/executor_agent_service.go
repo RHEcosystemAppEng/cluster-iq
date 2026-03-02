@@ -184,75 +184,100 @@ func (e *ExecutorAgentService) GetExecutor(accountID string) cexec.CloudExecutor
 func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
 
-	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
-		e.logger.Debug("New action received by ExecutorAgentService",
-			zap.Any("action_id", newAction.GetID()),
-			zap.Any("requester", newAction.GetRequester()),
-		)
-
-		// Initialize event tracker
-		tracker := e.eventService.StartTracking(&eventservice.EventOptions{
-			Action:       newAction.GetActionOperation(),
-			Description:  newAction.GetDescription(),
-			ResourceID:   newAction.GetTarget().ClusterID,
-			ResourceType: inventory.ClusterResourceType,
-			Result:       eventservice.ResultPending,
-			Severity:     eventservice.SeverityInfo,
-			TriggeredBy:  newAction.GetRequester(),
-		})
-		// TODO: Keep this or transform the cannel into: 'chan *action.Action'
-
-		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
-		if mutable, ok := newAction.(actions.MutableAction); ok {
-			mutable.SetStatus(actions.StatusRunning)
-			if err := e.updateActionStatus(newAction); err != nil {
-				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-				tracker.Failed()
-				continue
-			}
-		} else {
-			e.logger.Warn("Action does not implement MutableAction, skipping status update", zap.String("action_id", newAction.GetID()))
-		}
-
-		executor := e.GetExecutor(newAction.GetTarget().AccountID)
-		if executor == nil {
-			e.logger.Error("there's no Executor available for the requested account", zap.String("account_id", newAction.GetTarget().AccountID))
-
-			// Updating Action status
-			if mutable, ok := newAction.(actions.MutableAction); ok {
-				mutable.SetStatus(actions.StatusFailed)
-				if err := e.updateActionStatus(newAction); err != nil {
-					e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-				}
-			}
-			tracker.Failed()
-
-			continue
-		}
-
-		if err := executor.ProcessAction(newAction); err != nil {
-			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
-			if mutable, ok := newAction.(actions.MutableAction); ok {
-				mutable.SetStatus(actions.StatusFailed)
-			}
-			tracker.Failed()
-		} else {
-			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
-			if mutable, ok := newAction.(actions.MutableAction); ok {
-				mutable.SetStatus(actions.StatusSuccess)
-			}
-			tracker.Success()
-		}
-
-		if mutable, ok := newAction.(actions.MutableAction); ok {
-			if err := e.updateActionStatus(mutable); err != nil {
-				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			}
-		}
+		e.processAction(newAction)
 	}
 
 	return nil
+}
+
+// processAction handles the complete lifecycle of a single action from channel to execution
+func (e *ExecutorAgentService) processAction(action actions.Action) {
+	e.logger.Debug("New action received by ExecutorAgentService",
+		zap.Any("action_id", action.GetID()),
+		zap.Any("requester", action.GetRequester()),
+	)
+
+	// Initialize event tracker
+	tracker := e.eventService.StartTracking(&eventservice.EventOptions{
+		Action:       action.GetActionOperation(),
+		Description:  action.GetDescription(),
+		ResourceID:   action.GetTarget().ClusterID,
+		ResourceType: inventory.ClusterResourceType,
+		Result:       eventservice.ResultPending,
+		Severity:     eventservice.SeverityInfo,
+		TriggeredBy:  action.GetRequester(),
+	})
+
+	// Mark as running
+	if !e.setActionStatus(action, actions.StatusRunning) {
+		tracker.Failed()
+		return
+	}
+
+	// Get executor
+	executor := e.GetExecutor(action.GetTarget().AccountID)
+	if executor == nil {
+		e.handleMissingExecutor(action, tracker)
+		return
+	}
+
+	// Execute action
+	if err := executor.ProcessAction(action); err != nil {
+		e.handleExecutionFailure(action, tracker, err)
+		return
+	}
+
+	// Mark as success
+	e.handleExecutionSuccess(action, tracker)
+}
+
+// setActionStatus safely updates action status with type assertion.
+// Returns false if update failed (caller should abort).
+func (e *ExecutorAgentService) setActionStatus(action actions.Action, status actions.ActionStatus) bool {
+	mutable, ok := action.(actions.MutableAction)
+	if !ok {
+		e.logger.Warn("Action does not implement MutableAction, skipping status update",
+			zap.String("action_id", action.GetID()))
+		return true // Not an error, just skip
+	}
+
+	mutable.SetStatus(status)
+	if err := e.updateActionStatus(action); err != nil {
+		e.logger.Error("Error updating action status",
+			zap.String("action_id", action.GetID()),
+			zap.Error(err))
+		return false
+	}
+	return true
+}
+
+// handleMissingExecutor handles the case when no executor is available for the account
+func (e *ExecutorAgentService) handleMissingExecutor(action actions.Action, tracker *eventservice.EventTracker) {
+	e.logger.Error("there's no Executor available for the requested account",
+		zap.String("account_id", action.GetTarget().AccountID))
+
+	e.setActionStatus(action, actions.StatusFailed)
+	tracker.Failed()
+}
+
+// handleExecutionFailure handles action execution failures
+func (e *ExecutorAgentService) handleExecutionFailure(action actions.Action, tracker *eventservice.EventTracker, err error) {
+	e.logger.Error("Error while processing action",
+		zap.String("action_id", action.GetID()),
+		zap.Error(err))
+
+	e.setActionStatus(action, actions.StatusFailed)
+	tracker.Failed()
+}
+
+// handleExecutionSuccess handles successful action execution
+func (e *ExecutorAgentService) handleExecutionSuccess(action actions.Action, tracker *eventservice.EventTracker) {
+	e.logger.Info("Action execution correct",
+		zap.String("action_id", action.GetID()))
+
+	e.setActionStatus(action, actions.StatusSuccess)
+	tracker.Success()
 }
 
 func (e *ExecutorAgentService) updateActionStatus(action actions.Action) error {
