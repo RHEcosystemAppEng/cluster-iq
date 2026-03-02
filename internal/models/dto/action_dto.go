@@ -162,3 +162,9 @@ func ToModelActionListFromResponse(dtos []ActionDTOResponse) ([]actions.Action, 
 	}
 	return resultActions, nil
 }
+
+// PowerActionRequest defines the information required by the API to complement the actions and events for a Power On/Off request0
+type PowerActionRequest struct {
+	Requester   string `json:"requester" binding:"required"`
+	Description string `json:"description"`
+}

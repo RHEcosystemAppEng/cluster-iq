@@ -12,12 +12,12 @@ import (
 )
 
 // goverter:converter
+// goverter:output:file ./generated.go
 // goverter:extend Time
 // goverter:extend NullTime
 // goverter:extend NullString
 // goverter:extend StringArray
 // goverter:extend TagDBResponsesToDTO
-// goverter:output:file ./generated.go
 type Converter interface {
 	// Account
 	ToAccountDTO(src db.AccountDBResponse) dto.AccountDTOResponse
