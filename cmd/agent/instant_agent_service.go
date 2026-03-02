@@ -40,7 +40,8 @@ type InstantAgentService struct {
 //   - *InstantAgentService: A pointer to the newly created AgentService instance.
 func NewInstantAgentService(cfg *config.InstantAgentServiceConfig, actionsChannel chan<- actions.Action, wg *sync.WaitGroup, logger *zap.Logger) *InstantAgentService {
 	// Listener config
-	lis, err := net.Listen("tcp", cfg.ListenURL)
+	lc := net.ListenConfig{}
+	lis, err := lc.Listen(context.Background(), "tcp", cfg.ListenURL)
 	if err != nil {
 		logger.Error("Error initializing gRPC AgentService on ClusterIQ Agent", zap.Error(err))
 		return nil
