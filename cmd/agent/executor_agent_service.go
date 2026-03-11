@@ -172,94 +172,139 @@ func (e *ExecutorAgentService) createExecutors() error {
 // - accountID: The name of the account for which the executor is requested.
 //
 // Returns:
-// - cexec.CloudExecutor: The executor for the specified account.
-// - error: An error if no executor is found for the given account.
-func (e *ExecutorAgentService) GetExecutor(accountID string) *cexec.CloudExecutor {
+// - cexec.CloudExecutor: The executor for the specified account, or nil if not found.
+func (e *ExecutorAgentService) GetExecutor(accountID string) cexec.CloudExecutor {
 	exec, ok := e.executors[accountID]
 	if !ok {
 		return nil
 	}
-	return &exec
+	return exec
 }
 
 func (e *ExecutorAgentService) Start() error {
 	e.logger.Debug("Starting ExecutorAgentService")
 
-	// Reading actions from channel to prepare its execution
 	for newAction := range e.actionsChannel {
-		e.logger.Debug("New action received by ExecutorAgentService",
-			zap.Any("action_id", newAction.GetID()),
-			zap.Any("requester", newAction.GetRequester()),
-		)
-
-		// Initialize event tracker
-		tracker := e.eventService.StartTracking(&eventservice.EventOptions{
-			Action:       newAction.GetActionOperation(),
-			Description:  newAction.GetDescription(),
-			ResourceID:   newAction.GetTarget().ClusterID,
-			ResourceType: inventory.ClusterResourceType,
-			Result:       eventservice.ResultPending,
-			Severity:     eventservice.SeverityInfo,
-			TriggeredBy:  newAction.GetRequester(),
-		})
-		// TODO: Keep this or transform the cannel into: 'chan *action.Action'
-
-		// Mark the incoming action as 'Running' since it arrives to the ExecutorService
-		newAction.(actions.MutableAction).SetStatus(actions.StatusRunning)
-		if err := e.updateActionStatus(newAction); err != nil {
-			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			tracker.Failed()
-			continue
-		}
-
-		exec := e.GetExecutor(newAction.GetTarget().AccountID)
-		if exec == nil {
-			e.logger.Error("there's no Executor available for the requested account", zap.String("account_id", newAction.GetTarget().AccountID))
-
-			// Updating Action status
-			m := newAction.(actions.MutableAction)
-			m.SetStatus(actions.StatusFailed)
-			if err := e.updateActionStatus(newAction); err != nil {
-				e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-				continue
-			}
-			tracker.Failed()
-
-			continue
-		}
-
-		executor := *exec
-
-		if err := executor.ProcessAction(newAction); err != nil {
-			e.logger.Error("Error while processing action", zap.String("action_id", newAction.GetID()))
-			newAction.(actions.MutableAction).SetStatus(actions.StatusFailed)
-			tracker.Failed()
-		} else {
-			e.logger.Info("Action execution correct", zap.String("action_id", newAction.GetID()))
-			newAction.(actions.MutableAction).SetStatus(actions.StatusSuccess)
-			tracker.Success()
-		}
-
-		// Update action status to Success/Failed
-		if err := e.updateActionStatus(newAction); err != nil {
-			e.logger.Error("Error updating action status", zap.String("action_id", newAction.GetID()), zap.Error(err))
-			continue
-		}
-
-		// For CronActions, reset status back to Pending so they can be rescheduled
-		if newAction.GetType() == actions.CronActionType {
-			e.logger.Debug("Resetting CronAction status to Pending for next execution",
-				zap.String("action_id", newAction.GetID()),
-			)
-			newAction.(actions.MutableAction).SetStatus(actions.StatusPending)
-			if err := e.updateActionStatus(newAction); err != nil {
-				e.logger.Error("Error resetting CronAction status to Pending", zap.String("action_id", newAction.GetID()), zap.Error(err))
-				continue
-			}
-		}
+		e.processAction(newAction)
 	}
 
 	return nil
+}
+
+// processAction handles the complete lifecycle of a single action from channel to execution
+func (e *ExecutorAgentService) processAction(action actions.Action) {
+	e.logger.Debug("New action received by ExecutorAgentService",
+		zap.Any("action_id", action.GetID()),
+		zap.Any("requester", action.GetRequester()),
+	)
+
+	// Initialize event tracker
+	tracker := e.eventService.StartTracking(&eventservice.EventOptions{
+		Action:       action.GetActionOperation(),
+		Description:  action.GetDescription(),
+		ResourceID:   action.GetTarget().ClusterID,
+		ResourceType: inventory.ClusterResourceType,
+		Result:       eventservice.ResultPending,
+		Severity:     eventservice.SeverityInfo,
+		TriggeredBy:  action.GetRequester(),
+	})
+
+	// Mark as running
+	if !e.setActionStatus(action, actions.StatusRunning) {
+		tracker.Failed()
+		return
+	}
+
+	// Get executor
+	executor := e.GetExecutor(action.GetTarget().AccountID)
+	if executor == nil {
+		e.handleMissingExecutor(action, tracker)
+		return
+	}
+
+	// Execute action
+	if err := executor.ProcessAction(action); err != nil {
+		e.handleExecutionFailure(action, tracker, err)
+		return
+	}
+
+	// Mark as success
+	e.handleExecutionSuccess(action, tracker)
+
+	// For CronActions, reset status back to Pending so they can be rescheduled
+	e.resetCronActionStatus(action)
+}
+
+// setActionStatus safely updates action status with type assertion.
+// Returns false if update failed (caller should abort).
+func (e *ExecutorAgentService) setActionStatus(action actions.Action, status actions.ActionStatus) bool {
+	mutable, ok := action.(actions.MutableAction)
+	if !ok {
+		e.logger.Warn("Action does not implement MutableAction, skipping status update",
+			zap.String("action_id", action.GetID()))
+		return true // Not an error, just skip
+	}
+
+	mutable.SetStatus(status)
+	if err := e.updateActionStatus(action); err != nil {
+		e.logger.Error("Error updating action status",
+			zap.String("action_id", action.GetID()),
+			zap.Error(err))
+		return false
+	}
+	return true
+}
+
+// handleMissingExecutor handles the case when no executor is available for the account
+func (e *ExecutorAgentService) handleMissingExecutor(action actions.Action, tracker *eventservice.EventTracker) {
+	e.logger.Error("there's no Executor available for the requested account",
+		zap.String("account_id", action.GetTarget().AccountID))
+
+	e.setActionStatus(action, actions.StatusFailed)
+	tracker.Failed()
+}
+
+// handleExecutionFailure handles action execution failures
+func (e *ExecutorAgentService) handleExecutionFailure(action actions.Action, tracker *eventservice.EventTracker, err error) {
+	e.logger.Error("Error while processing action",
+		zap.String("action_id", action.GetID()),
+		zap.Error(err))
+
+	e.setActionStatus(action, actions.StatusFailed)
+	tracker.Failed()
+}
+
+// handleExecutionSuccess handles successful action execution
+func (e *ExecutorAgentService) handleExecutionSuccess(action actions.Action, tracker *eventservice.EventTracker) {
+	e.logger.Info("Action execution correct",
+		zap.String("action_id", action.GetID()))
+
+	e.setActionStatus(action, actions.StatusSuccess)
+	tracker.Success()
+}
+
+// resetCronActionStatus resets CronAction status to Pending after execution so they can be rescheduled
+func (e *ExecutorAgentService) resetCronActionStatus(action actions.Action) {
+	if action.GetType() != actions.CronActionType {
+		return
+	}
+
+	e.logger.Debug("Resetting CronAction status to Pending for next execution",
+		zap.String("action_id", action.GetID()))
+
+	mutable, ok := action.(actions.MutableAction)
+	if !ok {
+		e.logger.Warn("CronAction does not implement MutableAction, cannot reset status",
+			zap.String("action_id", action.GetID()))
+		return
+	}
+
+	mutable.SetStatus(actions.StatusPending)
+	if err := e.updateActionStatus(action); err != nil {
+		e.logger.Error("Error resetting CronAction status to Pending",
+			zap.String("action_id", action.GetID()),
+			zap.Error(err))
+	}
 }
 
 func (e *ExecutorAgentService) updateActionStatus(action actions.Action) error {

@@ -27,8 +27,9 @@ const (
 
 // scheduleItem represents the pair of action and CancelFunc for tracking the already running actions
 type scheduleItem struct {
-	cancel context.CancelFunc
-	action actions.Action
+	cancel   context.CancelFunc
+	action   actions.Action
+	cronInst *cron.Cron // Only used for CronActions, nil for ScheduledActions
 }
 
 // ScheduleAgentService represents the main structure for managing scheduled actions of ClusterIQ
@@ -79,7 +80,7 @@ func NewScheduleAgentService(cfg *config.ScheduleAgentServiceConfig, actionsChan
 //   - newAction: the new actions.ScheduledAction to be executed
 //
 // Returns:
-func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.ScheduledAction) {
+func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction *actions.ScheduledAction) {
 	actionID := newAction.GetID()
 
 	// Check if the duration is negative, which means it refers to a past timestamp
@@ -103,7 +104,7 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 		select {
 		case <-time.After(duration): // When the timestamp is "now"
 			a.logger.Debug("Sending to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
-			a.actionsChannel <- &newAction
+			a.actionsChannel <- newAction
 			a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 		case <-ctx.Done(): // Context cancelling
 			a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID))
@@ -123,7 +124,7 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction actions.Sche
 //   - newAction: the new actions.ScheduledAction to be executed
 //
 // Returns:
-func (a *ScheduleAgentService) rescheduleScheduledAction(newAction actions.ScheduledAction) {
+func (a *ScheduleAgentService) rescheduleScheduledAction(newAction *actions.ScheduledAction) {
 	actionID := newAction.GetID()
 
 	if !reflect.DeepEqual(a.schedule[actionID].action, newAction) {
@@ -142,36 +143,54 @@ func (a *ScheduleAgentService) rescheduleScheduledAction(newAction actions.Sched
 //   - newAction: the new actions.ScheduledAction to be executed
 //
 // Returns:
-func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronAction) {
+func (a *ScheduleAgentService) scheduleNewCronAction(newAction *actions.CronAction) {
 	actionID := newAction.GetID()
 
 	// Creating new action context and cancel function
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// Create cron instance before goroutine
+	c := cron.New()
+
+	// Store in schedule with cron instance
 	a.schedule[actionID] = scheduleItem{
-		cancel: cancel,
-		action: newAction,
+		cancel:   cancel,
+		action:   newAction,
+		cronInst: c,
 	}
 	a.logger.Info("New CronAction being scheduled", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
 
 	// Scheduling at specified timestamp on parallel
 	go func() {
 		a.logger.Debug("Starting CronAction execution", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
-		c := cron.New()
+
 		_, err := c.AddFunc(newAction.GetCronExpression(), func() {
 			select {
 			case <-ctx.Done():
 				a.logger.Warn("Task cancelled before execution", zap.String("action_id", actionID), zap.String("action_cron_exp", newAction.GetCronExpression()))
 			default:
 				a.logger.Debug("Sending to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
-				a.actionsChannel <- &newAction
+				a.actionsChannel <- newAction
 				a.logger.Debug("Action sent to execution channel", zap.String("action_id", actionID), zap.Int("channel", len(a.actionsChannel)))
 			}
 		})
 		if err != nil {
 			a.logger.Error("Failed adding new CronAction execution", zap.Error(err))
+			return
 		}
 
 		c.Start() // Cron Start
+
+		// Wait for cancellation and stop cron
+		<-ctx.Done()
+		a.logger.Debug("Stopping cron scheduler for action", zap.String("action_id", actionID))
+		c.Stop()
+
+		// Remove action from schedule
+		a.mutex.Lock()
+		delete(a.schedule, actionID)
+		a.logger.Debug("Removing cron action from schedule since it was cancelled", zap.String("action_id", actionID))
+		a.mutex.Unlock()
 	}()
 }
 
@@ -181,7 +200,7 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction actions.CronActio
 //   - newAction: the new actions.ScheduledAction to be executed
 //
 // Returns:
-func (a *ScheduleAgentService) rescheduleCronAction(newAction actions.CronAction) {
+func (a *ScheduleAgentService) rescheduleCronAction(newAction *actions.CronAction) {
 	actionID := newAction.GetID()
 
 	if !reflect.DeepEqual(a.schedule[actionID].action, newAction) {
@@ -214,16 +233,16 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 	// Checking which actions must be cancelled if are missing on 'newSchedule'
 	for id, item := range a.schedule {
 		if _, exists := actionMap[id]; !exists {
+			// Cancel the action - the goroutine will handle cleanup (delete + cron.Stop)
 			item.cancel()
-			delete(a.schedule, id)
 			a.logger.Warn("Action Cancelled", zap.String("action_id", id))
 		}
 	}
 
 	// Checking the entire new schedule to schedule or reschedule actions
 	for _, action := range newSchedule {
-		var scheduledFunc func(actions.ScheduledAction)
-		var cronFunc func(actions.CronAction)
+		var scheduledFunc func(*actions.ScheduledAction)
+		var cronFunc func(*actions.CronAction)
 
 		if _, exists := a.schedule[action.GetID()]; !exists { // Schedule new actions
 			scheduledFunc = a.scheduleNewScheduledAction
@@ -236,9 +255,9 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 		// managing actions based on type
 		switch t := action.(type) {
 		case *actions.ScheduledAction:
-			scheduledFunc(*t)
+			scheduledFunc(t)
 		case *actions.CronAction:
-			cronFunc(*t)
+			cronFunc(t)
 		default:
 			a.logger.Error("Unknown action type", zap.String("action_id", action.GetID()))
 		}
