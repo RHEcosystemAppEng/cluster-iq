@@ -267,7 +267,9 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 
 	// Bind JSON body to request struct
 	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Error("Bad request for PowerOn cluster operation", zap.String("cluster_id", clusterID), zap.String("requester", request.Requester), zap.String("description", request.Description))
+		h.logger.Error("Bad request for power on cluster operation - invalid JSON body",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
 		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
 			Message: "Invalid request body: " + err.Error(),
 		})
@@ -317,7 +319,9 @@ func (h *ClusterHandler) PowerOff(c *gin.Context) {
 
 	// Bind JSON body to request struct
 	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Error("Bad request for PowerOff cluster operation", zap.String("cluster_id", clusterID), zap.String("requester", request.Requester), zap.String("description", request.Description))
+		h.logger.Error("Bad request for power off cluster operation - invalid JSON body",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
 		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
 			Message: "Invalid request body: " + err.Error(),
 		})

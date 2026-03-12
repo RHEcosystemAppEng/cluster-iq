@@ -111,7 +111,7 @@ func testLogEvent_Success(t *testing.T) {
 	svc := &EventService{repo: repo, logger: zap.NewNop()}
 
 	before := time.Now().UTC()
-	id, err := svc.LogEvent(opts)
+	id, err := svc.LogEvent(context.Background(), opts)
 	after := time.Now().UTC()
 
 	assert.NoError(t, err)
@@ -153,7 +153,7 @@ func testLogEvent_RepoError(t *testing.T) {
 
 	svc := &EventService{repo: repo, logger: zap.NewNop()}
 
-	id, err := svc.LogEvent(opts)
+	id, err := svc.LogEvent(context.Background(), opts)
 	assert.Error(t, err)
 	assert.Equal(t, int64(0), id)
 	assert.Equal(t, 1, repo.createEventCalls)
@@ -174,7 +174,7 @@ func testUpdateEventStatus_Success(t *testing.T) {
 
 	svc := &EventService{repo: repo, logger: zap.NewNop()}
 
-	err := svc.UpdateEventStatus(7, ResultSuccess)
+	err := svc.UpdateEventStatus(context.Background(),7, ResultSuccess)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, repo.updateEventStatusCalls)
@@ -192,7 +192,7 @@ func testUpdateEventStatus_RepoError(t *testing.T) {
 
 	svc := &EventService{repo: repo, logger: zap.NewNop()}
 
-	err := svc.UpdateEventStatus(7, ResultFailed)
+	err := svc.UpdateEventStatus(context.Background(),7, ResultFailed)
 	assert.Error(t, err)
 
 	assert.Equal(t, 1, repo.updateEventStatusCalls)
