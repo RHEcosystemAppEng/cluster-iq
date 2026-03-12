@@ -48,7 +48,7 @@ The following graph shows the architecture of this project:
 ### Secrets Management (Optional)
 
 By default, Cluster IQ uses standard Kubernetes Secrets. For production environments, you can integrate with HashiCorp Vault.
-See [Vault Integration Guide](doc/vault/readme.md) for detailed setup instructions.
+See [Vault Integration Guide](doc/vault/README.md) for detailed setup instructions.
 
 ## Installation
 ClusterIQ was designed to run in K8s/Openshift platforms, but it can also run in

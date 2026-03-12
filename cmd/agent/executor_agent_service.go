@@ -139,7 +139,7 @@ func (e *ExecutorAgentService) createExecutors() error {
 			)
 			err = e.AddExecutor(exec)
 			if err != nil {
-				e.logger.Error("Cannot create an AWSEexecutor for account", zap.String("account_id", newAccount.AccountID), zap.Error(err))
+				e.logger.Error("Cannot create an AWSExecutor for account", zap.String("account_id", newAccount.AccountID), zap.Error(err))
 				return err
 			}
 

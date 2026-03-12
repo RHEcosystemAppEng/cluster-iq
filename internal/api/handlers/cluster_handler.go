@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -247,6 +248,56 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// handlePowerAction is a generic handler for power operations (on/off) on clusters.
+// It reduces code duplication by centralizing the common logic for both operations.
+func (h *ClusterHandler) handlePowerAction(
+	c *gin.Context,
+	action string,
+	serviceFunc func(ctx context.Context, clusterID string, requester string, description *string) error,
+) {
+	clusterID := c.Param("id")
+	var request dto.PowerActionRequest
+
+	// Bind JSON body to request struct
+	if err := c.ShouldBindJSON(&request); err != nil {
+		h.logger.Error("Bad request for "+action+" cluster operation - invalid JSON body",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	// Log requester and description
+	h.logger.Info(action+" request received",
+		zap.String("cluster_id", clusterID),
+		zap.String("requester", request.Requester),
+		zap.String("description", request.Description))
+
+	if err := serviceFunc(c.Request.Context(), clusterID, request.Requester, &request.Description); err != nil {
+		h.logger.Error("error "+action+" a cluster",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Cluster not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to " + action + " cluster: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, responsetypes.GenericResponse{
+		Message: action + " request accepted",
+	})
+}
+
 // PowerOn triggers a power-on operation for a cluster.
 //
 //	@Summary		Power on a cluster
@@ -262,41 +313,7 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/power_on [post]
 func (h *ClusterHandler) PowerOn(c *gin.Context) {
-	clusterID := c.Param("id")
-	var request dto.PowerActionRequest
-
-	// Bind JSON body to request struct
-	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Error("Bad request for power on cluster operation - invalid JSON body",
-			zap.String("cluster_id", clusterID),
-			zap.Error(err))
-		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
-			Message: "Invalid request body: " + err.Error(),
-		})
-		return
-	}
-
-	// Log requester and description
-	h.logger.Info("Power on request received", zap.String("requester", request.Requester), zap.String("description", request.Description))
-
-	if err := h.service.PowerOn(c.Request.Context(), clusterID, request.Requester, &request.Description); err != nil {
-		h.logger.Error("error powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
-				Message: "Cluster not found",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to power on cluster: " + err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusAccepted, responsetypes.GenericResponse{
-		Message: "Power on request accepted",
-	})
+	h.handlePowerAction(c, "power on", h.service.PowerOn)
 }
 
 // PowerOff triggers a power-off operation for a cluster.
@@ -314,41 +331,7 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/power_off [post]
 func (h *ClusterHandler) PowerOff(c *gin.Context) {
-	clusterID := c.Param("id")
-	var request dto.PowerActionRequest
-
-	// Bind JSON body to request struct
-	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Error("Bad request for power off cluster operation - invalid JSON body",
-			zap.String("cluster_id", clusterID),
-			zap.Error(err))
-		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
-			Message: "Invalid request body: " + err.Error(),
-		})
-		return
-	}
-
-	// Log requester and description
-	h.logger.Info("Power off request received", zap.String("requester", request.Requester), zap.String("description", request.Description))
-
-	if err := h.service.PowerOff(c.Request.Context(), clusterID, request.Requester, &request.Description); err != nil {
-		h.logger.Error("error powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
-				Message: "Cluster not found",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to power off cluster: " + err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusAccepted, responsetypes.GenericResponse{
-		Message: "Power off request accepted",
-	})
+	h.handlePowerAction(c, "power off", h.service.PowerOff)
 }
 
 // GetTags returns tags for the specified cluster.

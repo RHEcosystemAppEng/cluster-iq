@@ -344,7 +344,7 @@ func (a *ScheduleAgentService) ReScheduleActions() {
 			a.logger.Info("Adding new Actions to Agent Schedule", zap.Int("added_actions", len(*fetchedActions)), zap.Int("running_actions", len(a.schedule)))
 		}
 		<-ticker.C
-		a.logger.Debug("Current actions after pooling & rescheduling", zap.Int("actions_num", len(a.schedule)))
+		a.logger.Debug("Current actions after polling & rescheduling", zap.Int("actions_num", len(a.schedule)))
 	}
 }
 
