@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
@@ -30,6 +31,9 @@ const (
 	apiClusterEndpoint   = "/clusters"
 	apiInstanceEndpoint  = "/instances"
 	apiExpenseEndpoint   = "/expenses"
+
+	// apiRequestTimeout defines the timeout for HTTP POST requests to the API
+	apiRequestTimeout = 60 * time.Second
 )
 
 var (
@@ -396,7 +400,12 @@ func (s *Scanner) postScannerInventory() error {
 
 func postData(path string, b []byte) error {
 	url := fmt.Sprintf("%s%s", APIURL, path)
-	request, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, url, bytes.NewBuffer(b))
+
+	// Create context with timeout for API requests
+	ctx, cancel := context.WithTimeout(context.Background(), apiRequestTimeout)
+	defer cancel()
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}

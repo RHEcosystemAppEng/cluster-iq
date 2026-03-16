@@ -9,19 +9,17 @@ import (
 
 // ActionDTORequest represents the data needed to create or update an action.
 type ActionDTORequest struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	Time        time.Time `json:"time"`
-	CronExp     string    `json:"cronExpression"`
-	Operation   string    `json:"operation"`
-	Status      string    `json:"status"`
-	Enabled     bool      `json:"enabled"`
-	ClusterID   string    `json:"clusterId"`
-	Region      string    `json:"region"`
-	AccountID   string    `json:"accountId"`
-	Instances   []string  `json:"instances"`
-	Requester   string    `json:"requester"`
-	Description *string   `json:"description,omitempty"`
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	Time      time.Time `json:"time"`
+	CronExp   string    `json:"cronExpression"`
+	Operation string    `json:"operation"`
+	Status    string    `json:"status"`
+	Enabled   bool      `json:"enabled"`
+	ClusterID string    `json:"clusterId"`
+	Region    string    `json:"region"`
+	AccountID string    `json:"accountId"`
+	Instances []string  `json:"instances"`
 } // @name ActionRequest
 
 func (a ActionDTORequest) ToModelAction() actions.Action {
@@ -38,8 +36,8 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
-			a.Requester,
-			a.Description,
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
 			a.Enabled,
 			a.Time,
 		)
@@ -50,8 +48,8 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
-			a.Requester,
-			a.Description,
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
 			a.Enabled,
 			a.CronExp,
 		)
@@ -62,8 +60,8 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
-			a.Requester,
-			a.Description,
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
 			a.Enabled,
 		)
 		action.ID = a.ID
@@ -89,19 +87,17 @@ func ToModelActionList(dtos []ActionDTORequest) *[]actions.Action {
 // ActionDTOResponse represents the data transfer object for an action response,
 // containing action details including schedule, cron expression, and target resources.
 type ActionDTOResponse struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	Time        time.Time `json:"time"`
-	CronExp     string    `json:"cronExpression"`
-	Operation   string    `json:"operation"`
-	Status      string    `json:"status"`
-	Enabled     bool      `json:"enabled"`
-	ClusterID   string    `json:"clusterId"`
-	Region      string    `json:"region"`
-	AccountID   string    `json:"accountId"`
-	Instances   []string  `json:"instances"`
-	Requester   string    `json:"requester"`
-	Description *string   `json:"description,omitempty"`
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	Time      time.Time `json:"time"`
+	CronExp   string    `json:"cronExpression"`
+	Operation string    `json:"operation"`
+	Status    string    `json:"status"`
+	Enabled   bool      `json:"enabled"`
+	ClusterID string    `json:"clusterId"`
+	Region    string    `json:"region"`
+	AccountID string    `json:"accountId"`
+	Instances []string  `json:"instances"`
 } // @name ActionResponse
 
 // ToModelAction converts ActionDTOResponse to actions.Action
@@ -119,8 +115,8 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
-			a.Requester,
-			a.Description,
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
 			a.Enabled,
 			a.Time,
 		)
@@ -131,8 +127,8 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
-			a.Requester,
-			a.Description,
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
 			a.Enabled,
 			a.CronExp,
 		)
@@ -143,8 +139,8 @@ func (a ActionDTOResponse) ToModelAction() actions.Action {
 			actions.ActionOperation(a.Operation),
 			target,
 			actions.ActionStatus(a.Status),
-			a.Requester,
-			a.Description,
+			"",  // TODO: Requester missing???
+			nil, // TODO: Description missing???
 			a.Enabled,
 		)
 		action.ID = a.ID
