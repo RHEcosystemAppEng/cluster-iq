@@ -201,7 +201,16 @@ func (h *ClusterHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryClusterList(newClusterDTOs)); err != nil {
+	clusters, err := dto.ToInventoryClusterList(newClusterDTOs)
+	if err != nil {
+		h.logger.Error("error converting cluster DTOs", zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid cluster data: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), *clusters); err != nil {
 		h.logger.Error("error creating a cluster", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to create clusters: " + err.Error(),

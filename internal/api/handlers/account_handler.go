@@ -229,7 +229,16 @@ func (h *AccountHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryAccountList(newAccountsDTO)); err != nil {
+	accounts, err := dto.ToInventoryAccountList(newAccountsDTO)
+	if err != nil {
+		h.logger.Error("error converting accounts DTOs", zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid account data: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), *accounts); err != nil {
 		h.logger.Error("error creating accounts", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to create accounts: " + err.Error(),

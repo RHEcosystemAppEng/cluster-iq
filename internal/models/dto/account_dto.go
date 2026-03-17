@@ -15,8 +15,9 @@ type AccountDTORequest struct {
 	CreatedAt         time.Time          `json:"createdAt"`
 } // @name AccountRequest
 
-// TODO: comments
-func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
+// ToInventoryAccount converts an AccountDTORequest to an inventory.Account.
+// Returns an error if the account cannot be created.
+func (a AccountDTORequest) ToInventoryAccount() (*inventory.Account, error) {
 	account, err := inventory.NewAccount(
 		a.AccountID,
 		a.AccountName,
@@ -25,21 +26,24 @@ func (a AccountDTORequest) ToInventoryAccount() *inventory.Account {
 		"",
 	)
 	if err != nil {
-		// TODO: Propagate error
-		return nil
+		return nil, err
 	}
 
 	account.LastScanTimestamp = a.LastScanTimestamp
-	return account
+	return account, nil
 }
 
-func ToInventoryAccountList(dtos []AccountDTORequest) *[]inventory.Account {
-	accounts := make([]inventory.Account, len(dtos))
-	for i, dto := range dtos {
-		accounts[i] = *dto.ToInventoryAccount()
+func ToInventoryAccountList(dtos []AccountDTORequest) (*[]inventory.Account, error) {
+	accounts := make([]inventory.Account, 0, len(dtos))
+	for _, dto := range dtos {
+		account, err := dto.ToInventoryAccount()
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, *account)
 	}
 
-	return &accounts
+	return &accounts, nil
 }
 
 func ToAccountDTORequest(account inventory.Account) *AccountDTORequest {

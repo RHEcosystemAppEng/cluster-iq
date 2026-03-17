@@ -11,7 +11,7 @@ import (
 // TestAccountDTORequest_ToInventoryAccount verifies DTO to inventory.Account conversion.
 func TestAccountDTORequest_ToInventoryAccount(t *testing.T) {
 	t.Run("Valid DTO", func(t *testing.T) { testAccountDTORequest_ToInventoryAccount_Correct(t) })
-	t.Run("Invalid DTO returns nil", func(t *testing.T) { testAccountDTORequest_ToInventoryAccount_Invalid(t) })
+	t.Run("Invalid DTO returns error", func(t *testing.T) { testAccountDTORequest_ToInventoryAccount_Invalid(t) })
 }
 
 func testAccountDTORequest_ToInventoryAccount_Correct(t *testing.T) {
@@ -25,8 +25,9 @@ func testAccountDTORequest_ToInventoryAccount_Correct(t *testing.T) {
 		CreatedAt:         now.Add(-time.Hour),
 	}
 
-	account := dto.ToInventoryAccount()
+	account, err := dto.ToInventoryAccount()
 
+	assert.NoError(t, err)
 	assert.NotNil(t, account)
 	assert.Equal(t, dto.AccountID, account.AccountID)
 	assert.Equal(t, dto.AccountName, account.AccountName)
@@ -41,7 +42,8 @@ func testAccountDTORequest_ToInventoryAccount_Invalid(t *testing.T) {
 		Provider:    inventory.AWSProvider,
 	}
 
-	account := dto.ToInventoryAccount()
+	account, err := dto.ToInventoryAccount()
+	assert.Error(t, err)
 	assert.Nil(t, account)
 }
 
@@ -68,8 +70,9 @@ func testToInventoryAccountList_Correct(t *testing.T) {
 		},
 	}
 
-	accounts := ToInventoryAccountList(dtos)
+	accounts, err := ToInventoryAccountList(dtos)
 
+	assert.NoError(t, err)
 	assert.NotNil(t, accounts)
 	assert.Len(t, *accounts, 2)
 
