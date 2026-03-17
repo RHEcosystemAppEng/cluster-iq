@@ -206,11 +206,12 @@ func (c *AWSEC2Connection) GetInstances() ([]inventory.Instance, error) {
 	var instances []inventory.Instance
 	for _, reser := range reservations {
 		for _, instance := range reser.Instances {
-			// TODO: Should the loop break in case or error, or continue?
 			newInstance, err := EC2InstanceToInventoryInstance(instance)
-			if err == nil {
-				instances = append(instances, *newInstance)
+			if err != nil {
+				// Skip instance on conversion error and continue processing remaining instances
+				continue
 			}
+			instances = append(instances, *newInstance)
 		}
 	}
 
