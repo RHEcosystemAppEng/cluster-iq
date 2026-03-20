@@ -288,16 +288,54 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 // Update applies partial updates to an existing account.
 //
 //	@Summary		Update an account
-//	@Description	Patch an existing account by ID.
+//	@Description	Patch mutable fields of an account (accountName).
 //	@Tags			Accounts
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		string					true	"Account ID"
-//	@Param			account	body		dto.AccountDTORequest	true	"Partial account payload"
-//	@Success		200		{object}	nil
-//	@Failure		501		{object}	nil	"Not Implemented"
+//	@Param			account	body		dto.AccountPatchRequest	true	"Partial account payload"
+//	@Success		200		{object}	db.AccountDBResponse
+//	@Failure		400		{object}	responsetypes.GenericErrorResponse
+//	@Failure		404		{object}	responsetypes.GenericErrorResponse
+//	@Failure		500		{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id} [patch]
 func (h *AccountHandler) Update(c *gin.Context) {
-	// TODO: Implement partial update semantics
-	c.PureJSON(http.StatusNotImplemented, nil)
+	accountID := c.Param("id")
+
+	var patchRequest dto.AccountPatchRequest
+	if err := c.ShouldBindJSON(&patchRequest); err != nil {
+		h.logger.Error("Bad request for account update - invalid JSON body",
+			zap.String("account_id", accountID),
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Update(c.Request.Context(), accountID, patchRequest); err != nil {
+		h.logger.Error("error updating account", zap.String("account_id", accountID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Account not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to update account: " + err.Error(),
+		})
+		return
+	}
+
+	// Fetch updated account to return
+	updatedAccount, err := h.service.GetByID(c.Request.Context(), accountID)
+	if err != nil {
+		h.logger.Error("error fetching updated account", zap.String("account_id", accountID), zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Account updated but failed to fetch result",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToAccountDTO(updatedAccount))
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
 
@@ -16,6 +17,7 @@ type AccountService interface {
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
 	Create(ctx context.Context, accounts []inventory.Account) error
+	Update(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
 	Delete(ctx context.Context, accountID string) error
 }
 
@@ -59,6 +61,17 @@ func (s *accountServiceImpl) GetExpenseUpdateInstances(ctx context.Context, acco
 // Create creates one or more new accounts.
 func (s *accountServiceImpl) Create(ctx context.Context, accounts []inventory.Account) error {
 	return s.repo.CreateAccount(ctx, accounts)
+}
+
+// Update updates mutable fields of an existing account.
+func (s *accountServiceImpl) Update(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error {
+	// Verify account exists before updating
+	_, err := s.repo.GetAccountByID(ctx, accountID)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdateAccount(ctx, accountID, patch)
 }
 
 // Delete removes an account by its name.

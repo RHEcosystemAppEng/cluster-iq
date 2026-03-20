@@ -11,6 +11,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 const (
@@ -52,6 +53,7 @@ type AccountRepository interface {
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
 	GetScannerTimestamp(ctx context.Context) (time.Time, error)
 	CreateAccount(ctx context.Context, accounts []inventory.Account) error
+	UpdateAccount(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
 	DeleteAccount(ctx context.Context, accountID string) error
 }
 
@@ -184,6 +186,70 @@ func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, a
 func (r *accountRepositoryImpl) CreateAccount(ctx context.Context, accounts []inventory.Account) error {
 	if err := r.db.InsertWithContext(ctx, InsertAccountsQuery, accounts); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// UpdateAccount updates mutable fields of an existing account in the database.
+// Only non-nil fields in the patch request will be updated.
+func (r *accountRepositoryImpl) UpdateAccount(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error {
+	// Build dynamic UPDATE query with positional parameters
+	query := "UPDATE accounts SET "
+	args := make([]interface{}, 0)
+	argCount := 1
+
+	if patch.AccountName != nil {
+		query += fmt.Sprintf("account_name = $%d", argCount)
+		args = append(args, *patch.AccountName)
+		argCount++
+	}
+
+	// If no fields to update, return early
+	if len(args) == 0 {
+		return nil
+	}
+
+	query += fmt.Sprintf(" WHERE account_id = $%d", argCount)
+	args = append(args, accountID)
+
+	// Execute update in a transaction
+	tx, err := r.db.NewTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("exec UPDATE error: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit UPDATE error: %w", err)
+	}
+
+	// Refresh materialized view after transaction commits
+	// Note: REFRESH MATERIALIZED VIEW must run outside the transaction
+	tx2, err := r.db.NewTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create transaction for refresh: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx2.Rollback()
+		}
+	}()
+
+	if _, err = tx2.ExecContext(ctx, "REFRESH MATERIALIZED VIEW m_accounts_full_view"); err != nil {
+		return fmt.Errorf("refresh materialized view error: %w", err)
+	}
+
+	if err = tx2.Commit(); err != nil {
+		return fmt.Errorf("commit refresh error: %w", err)
 	}
 
 	return nil

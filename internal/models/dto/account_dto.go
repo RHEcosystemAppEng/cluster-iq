@@ -69,3 +69,9 @@ type AccountDTOResponse struct {
 	LastMonthCost         float64            `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64            `json:"currentMonthSoFarCost"`
 } // @name AccountResponse
+
+// AccountPatchRequest represents mutable fields for partial account updates.
+// Only fields present in the request will be updated (using pointers to distinguish null from empty).
+type AccountPatchRequest struct {
+	AccountName *string `json:"accountName,omitempty"`
+} // @name AccountPatchRequest

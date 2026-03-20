@@ -8,8 +8,6 @@ import (
 	"time"
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
-
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
@@ -34,7 +32,8 @@ func TestAPIAccounts(t *testing.T) {
 	t.Run("Test Post One Account", func(t *testing.T) { testPostOneAccount(t) })
 	t.Run("Test Post Multiple Accounts", func(t *testing.T) { testPostMultipleAccounts(t) })
 	t.Run("Test Post Wrong Accounts", func(t *testing.T) { testPostWrongAccount(t) })
-	t.Run("Test Patch Account", func(t *testing.T) { testPatchAccount(t) })
+	t.Run("Test Patch Account Success", func(t *testing.T) { testPatchAccount_Success(t) })
+	t.Run("Test Patch Account Not Found", func(t *testing.T) { testPatchAccount_NotFound(t) })
 	t.Run("Test Delete Account Success", func(t *testing.T) { testDeleteAccount_Exists(t) })
 	t.Run("Test Delete Account Not Found", func(t *testing.T) { testDeleteAccount_NoExists(t) })
 }
@@ -361,26 +360,28 @@ func testPostWrongAccount(t *testing.T) {
 	}
 }
 
-func testPatchAccount(t *testing.T) {
-	expectedHTTPCode := http.StatusNotImplemented
+func testPatchAccount_Success(t *testing.T) {
+	expectedHTTPCode := http.StatusOK
+	expectedAccountID := "gcp-project-1"
+	expectedAccountName := "updated-gcp-project-name"
 
-	patchAccount := dto.AccountDTORequest{
-		AccountID:         "ACC-001",
-		AccountName:       "test-account-003",
-		Provider:          inventory.AWSProvider,
-		LastScanTimestamp: time.Now(),
+	// Create patch request with only the fields to update
+	newAccountName := expectedAccountName
+	patchAccount := dto.AccountPatchRequest{
+		AccountName: &newAccountName,
 	}
 
 	patchBody, err := json.Marshal(patchAccount)
 	if err != nil {
-		t.Fatalf("Failed to marshal updated account: %v", err)
+		t.Fatalf("Failed to marshal patch request: %v", err)
 	}
 
 	// Preparing PATCH request
-	req, err := http.NewRequest(http.MethodPatch, APIAccountsURL+"/ACC-003", bytes.NewBuffer(patchBody))
+	req, err := http.NewRequest(http.MethodPatch, APIAccountsURL+"/"+expectedAccountID, bytes.NewBuffer(patchBody))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	// Executing PATCH request
 	client := &http.Client{}
@@ -392,6 +393,67 @@ func testPatchAccount(t *testing.T) {
 
 	// Check response code
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response dto.AccountDTOResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Verify the account was updated
+	if response.AccountID != expectedAccountID {
+		t.Fatalf("Expected AccountID: '%s', got: '%s'", expectedAccountID, response.AccountID)
+	}
+
+	if response.AccountName != expectedAccountName {
+		t.Fatalf("Expected AccountName: '%s', got: '%s'", expectedAccountName, response.AccountName)
+	}
+}
+
+func testPatchAccount_NotFound(t *testing.T) {
+	expectedHTTPCode := http.StatusNotFound
+	expectedMsg := "Account not found"
+	nonExistentAccountID := "non-existent-account"
+
+	// Create patch request
+	newAccountName := "should-not-be-applied"
+	patchAccount := dto.AccountPatchRequest{
+		AccountName: &newAccountName,
+	}
+
+	patchBody, err := json.Marshal(patchAccount)
+	if err != nil {
+		t.Fatalf("Failed to marshal patch request: %v", err)
+	}
+
+	// Preparing PATCH request
+	req, err := http.NewRequest(http.MethodPatch, APIAccountsURL+"/"+nonExistentAccountID, bytes.NewBuffer(patchBody))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Executing PATCH request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response responsetypes.GenericErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Verify error message
+	if response.Message != expectedMsg {
+		t.Fatalf("Expected Message: '%s', got: '%s'", expectedMsg, response.Message)
+	}
 }
 
 func testDeleteAccount_Exists(t *testing.T) {
