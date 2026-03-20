@@ -75,12 +75,26 @@ func NewScheduleAgentService(cfg *config.ScheduleAgentServiceConfig, actionsChan
 }
 
 // scheduleNewScheduledAction starts the timing until action's execution timestamp and writes the message on the actions channel to be executed on the ExecutorAgentService
+// This is the public version that acquires the mutex before calling the internal implementation.
 //
 // Parameters:
 //   - newAction: the new actions.ScheduledAction to be executed
 //
 // Returns:
 func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction *actions.ScheduledAction) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	a.scheduleNewScheduledActionLocked(newAction)
+}
+
+// scheduleNewScheduledActionLocked is the internal implementation that assumes the mutex is already held.
+// This method should only be called from within methods that have already acquired a.mutex.
+//
+// Parameters:
+//   - newAction: the new actions.ScheduledAction to be executed
+//
+// Returns:
+func (a *ScheduleAgentService) scheduleNewScheduledActionLocked(newAction *actions.ScheduledAction) {
 	actionID := newAction.GetID()
 
 	// Check if the duration is negative, which means it refers to a past timestamp
@@ -119,6 +133,7 @@ func (a *ScheduleAgentService) scheduleNewScheduledAction(newAction *actions.Sch
 }
 
 // rescheduleScheduleAction Re-schedules the scheduled action considering it's already running
+// This method assumes the mutex is already held by the caller (e.g., ScheduleNewActions).
 //
 // Parameters:
 //   - newAction: the new actions.ScheduledAction to be executed
@@ -132,18 +147,32 @@ func (a *ScheduleAgentService) rescheduleScheduledAction(newAction *actions.Sche
 		// Canceling previous action instance
 		a.schedule[actionID].cancel()
 
-		// Re-scheduling action
-		a.scheduleNewScheduledAction(newAction)
+		// Re-scheduling action (using locked version since we already have the mutex)
+		a.scheduleNewScheduledActionLocked(newAction)
 	}
 }
 
 // scheduleNewCronAction starts the timing until action's execution timestamp and writes the message on the actions channel to be executed on the ExecutorAgentService
+// This is the public version that acquires the mutex before calling the internal implementation.
 //
 // Parameters:
-//   - newAction: the new actions.ScheduledAction to be executed
+//   - newAction: the new actions.CronAction to be executed
 //
 // Returns:
 func (a *ScheduleAgentService) scheduleNewCronAction(newAction *actions.CronAction) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	a.scheduleNewCronActionLocked(newAction)
+}
+
+// scheduleNewCronActionLocked is the internal implementation that assumes the mutex is already held.
+// This method should only be called from within methods that have already acquired a.mutex.
+//
+// Parameters:
+//   - newAction: the new actions.CronAction to be executed
+//
+// Returns:
+func (a *ScheduleAgentService) scheduleNewCronActionLocked(newAction *actions.CronAction) {
 	actionID := newAction.GetID()
 
 	// Creating new action context and cancel function
@@ -194,10 +223,11 @@ func (a *ScheduleAgentService) scheduleNewCronAction(newAction *actions.CronActi
 	}()
 }
 
-// rescheduleCronAction  Re-schedules the cron action considering it's already running
+// rescheduleCronAction Re-schedules the cron action considering it's already running
+// This method assumes the mutex is already held by the caller (e.g., ScheduleNewActions).
 //
 // Parameters:
-//   - newAction: the new actions.ScheduledAction to be executed
+//   - newAction: the new actions.CronAction to be executed
 //
 // Returns:
 func (a *ScheduleAgentService) rescheduleCronAction(newAction *actions.CronAction) {
@@ -208,8 +238,8 @@ func (a *ScheduleAgentService) rescheduleCronAction(newAction *actions.CronActio
 		// Canceling previous action instance
 		a.schedule[actionID].cancel()
 
-		// Re-scheduling action
-		a.scheduleNewCronAction(newAction)
+		// Re-scheduling action (using locked version since we already have the mutex)
+		a.scheduleNewCronActionLocked(newAction)
 	}
 }
 

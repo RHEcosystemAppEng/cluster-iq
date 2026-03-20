@@ -221,7 +221,16 @@ func (a Agent) signalHandler(signal os.Signal) error {
 		a.logger.Warn("Shutting down server...", zap.String("signal", signal.String()))
 	}
 
-	for _, item := range a.sas.schedule {
+	// Copy schedule map under lock to avoid race condition during iteration
+	a.sas.mutex.Lock()
+	scheduleCopy := make(map[string]scheduleItem, len(a.sas.schedule))
+	for k, v := range a.sas.schedule {
+		scheduleCopy[k] = v
+	}
+	a.sas.mutex.Unlock()
+
+	// Iterate over the copy (without holding lock) to cancel all scheduled actions
+	for _, item := range scheduleCopy {
 		cancel := item.cancel
 		action := item.action
 		a.logger.Warn("Cancelling ScheduledAction", zap.String("action_id", action.GetID()))
