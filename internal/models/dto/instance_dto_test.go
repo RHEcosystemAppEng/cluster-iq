@@ -80,6 +80,7 @@ func testInstanceDTORequest_ToInventoryInstance_Invalid(t *testing.T) {
 // TestToInventoryInstanceList verifies slice conversion from DTOs to inventory.Instance.
 func TestToInventoryInstanceList(t *testing.T) {
 	t.Run("Multiple DTOs", func(t *testing.T) { testToInventoryInstanceList_Correct(t) })
+	t.Run("Error on invalid DTO", func(t *testing.T) { testToInventoryInstanceList_Error(t) })
 }
 
 func testToInventoryInstanceList_Correct(t *testing.T) {
@@ -119,6 +120,32 @@ func testToInventoryInstanceList_Correct(t *testing.T) {
 	assert.Len(t, *instances, 2)
 	assert.Equal(t, "i-1", (*instances)[0].InstanceID)
 	assert.Equal(t, "i-2", (*instances)[1].InstanceID)
+}
+
+func testToInventoryInstanceList_Error(t *testing.T) {
+	now := time.Now().UTC()
+
+	dtos := []InstanceDTORequest{
+		{
+			InstanceID:   "i-1",
+			InstanceName: "n1",
+			Provider:     inventory.AWSProvider,
+			CreatedAt:    now,
+			Tags:         []TagDTORequest{},
+		},
+		{
+			InstanceID:   "", // This will cause NewInstance to return error
+			InstanceName: "n2",
+			Provider:     inventory.AWSProvider,
+			CreatedAt:    now,
+			Tags:         []TagDTORequest{},
+		},
+	}
+
+	instances, err := ToInventoryInstanceList(dtos)
+
+	assert.Error(t, err)
+	assert.Nil(t, instances)
 }
 
 // TestToInstanceDTORequest verifies inventory.Instance to DTO conversion.
