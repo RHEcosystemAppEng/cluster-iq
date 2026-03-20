@@ -8,7 +8,6 @@ import (
 	"time"
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
-	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
@@ -38,7 +37,8 @@ func TestClusters(t *testing.T) {
 	t.Run("Test Post One Cluster", func(t *testing.T) { testPostOneCluster(t) })
 	t.Run("Test Post Multiple Clusters", func(t *testing.T) { testPostMultipleClusters(t) })
 	t.Run("Test Post Wrong Cluster", func(t *testing.T) { testPostWrongCluster(t) })
-	t.Run("Test Patch Cluster", func(t *testing.T) { testPatchCluster(t) })
+	t.Run("Test Patch Cluster Success", func(t *testing.T) { testPatchCluster_Success(t) })
+	t.Run("Test Patch Cluster Not Found", func(t *testing.T) { testPatchCluster_NotFound(t) })
 	t.Run("Test Delete Cluster Success", func(t *testing.T) { testDeleteCluster_Exists(t) })
 	t.Run("Test Delete Cluster Not Found", func(t *testing.T) { testDeleteCluster_NoExists(t) })
 }
@@ -513,26 +513,31 @@ func testPostWrongCluster(t *testing.T) {
 	}
 }
 
-func testPatchCluster(t *testing.T) {
-	expectedHTTPCode := http.StatusNotImplemented
+func testPatchCluster_Success(t *testing.T) {
+	expectedHTTPCode := http.StatusOK
+	expectedClusterID := "aws-cluster-1-aws-infra-1"
+	expectedConsoleLink := "https://updated-console.example.com"
+	expectedOwner := "Updated Owner Name"
 
-	patchCluster := dto.ClusterDTORequest{
-		ClusterID:         "test-cluster-infra-2345",
-		ClusterName:       "test-Cluster-003",
-		Provider:          inventory.AWSProvider,
-		LastScanTimestamp: time.Now(),
+	// Create patch request with only the fields to update
+	newConsoleLink := expectedConsoleLink
+	newOwner := expectedOwner
+	patchCluster := dto.ClusterPatchRequest{
+		ConsoleLink: &newConsoleLink,
+		Owner:       &newOwner,
 	}
 
 	patchBody, err := json.Marshal(patchCluster)
 	if err != nil {
-		t.Fatalf("Failed to marshal updated Cluster: %v", err)
+		t.Fatalf("Failed to marshal patch request: %v", err)
 	}
 
 	// Preparing PATCH request
-	req, err := http.NewRequest(http.MethodPatch, APIClustersURL+"/aws-cluster-1", bytes.NewBuffer(patchBody))
+	req, err := http.NewRequest(http.MethodPatch, APIClustersURL+"/"+expectedClusterID, bytes.NewBuffer(patchBody))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	// Executing PATCH request
 	client := &http.Client{}
@@ -544,6 +549,71 @@ func testPatchCluster(t *testing.T) {
 
 	// Check response code
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response dto.ClusterDTOResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Verify the cluster was updated
+	if response.ClusterID != expectedClusterID {
+		t.Fatalf("Expected ClusterID: '%s', got: '%s'", expectedClusterID, response.ClusterID)
+	}
+
+	if response.ConsoleLink != expectedConsoleLink {
+		t.Fatalf("Expected ConsoleLink: '%s', got: '%s'", expectedConsoleLink, response.ConsoleLink)
+	}
+
+	if response.Owner != expectedOwner {
+		t.Fatalf("Expected Owner: '%s', got: '%s'", expectedOwner, response.Owner)
+	}
+}
+
+func testPatchCluster_NotFound(t *testing.T) {
+	expectedHTTPCode := http.StatusNotFound
+	expectedMsg := "Cluster not found"
+	nonExistentClusterID := "non-existent-cluster"
+
+	// Create patch request
+	newConsoleLink := "https://should-not-be-applied.com"
+	patchCluster := dto.ClusterPatchRequest{
+		ConsoleLink: &newConsoleLink,
+	}
+
+	patchBody, err := json.Marshal(patchCluster)
+	if err != nil {
+		t.Fatalf("Failed to marshal patch request: %v", err)
+	}
+
+	// Preparing PATCH request
+	req, err := http.NewRequest(http.MethodPatch, APIClustersURL+"/"+nonExistentClusterID, bytes.NewBuffer(patchBody))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Executing PATCH request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response code
+	checkHTTPResponseCode(t, resp, expectedHTTPCode)
+
+	// Decode the JSON response
+	var response responsetypes.GenericErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response body: %v", err)
+	}
+
+	// Verify error message
+	if response.Message != expectedMsg {
+		t.Fatalf("Expected Message: '%s', got: '%s'", expectedMsg, response.Message)
+	}
 }
 
 func testDeleteCluster_Exists(t *testing.T) {

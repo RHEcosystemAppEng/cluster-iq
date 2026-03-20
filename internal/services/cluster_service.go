@@ -24,7 +24,7 @@ type ClusterService interface {
 	Create(ctx context.Context, clusters []inventory.Cluster) error
 	Delete(ctx context.Context, clusterID string) error
 	GetTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error)
-	Update(ctx context.Context, cluster dto.ClusterDTORequest) error
+	Update(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) error
 }
 
 var _ ClusterService = (*clusterServiceImpl)(nil)
@@ -142,7 +142,13 @@ func (s *clusterServiceImpl) GetTags(ctx context.Context, clusterID string) ([]d
 	return s.repo.GetClusterTags(ctx, clusterID)
 }
 
-// Update updates an existing cluster.
-func (s *clusterServiceImpl) Update(ctx context.Context, cluster dto.ClusterDTORequest) error {
-	return s.repo.UpdateCluster(ctx, cluster)
+// Update updates mutable fields of an existing cluster.
+func (s *clusterServiceImpl) Update(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) error {
+	// Verify cluster exists before updating
+	_, err := s.repo.GetClusterByID(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdateCluster(ctx, clusterID, patch)
 }

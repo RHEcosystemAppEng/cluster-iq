@@ -379,16 +379,54 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 // Update applies partial updates to a cluster.
 //
 //	@Summary		Update a cluster
-//	@Description	Patch mutable fields of a cluster.
+//	@Description	Patch mutable fields of a cluster (consoleLink, owner).
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		string					true	"Cluster ID"
-//	@Param			cluster	body		dto.ClusterDTOResponse	true	"Partial cluster payload"
-//	@Success		200		{object}	nil
-//	@Failure		501		{object}	nil	"Not Implemented"
+//	@Param			cluster	body		dto.ClusterPatchRequest	true	"Partial cluster payload"
+//	@Success		200		{object}	dto.ClusterDTOResponse
+//	@Failure		400		{object}	responsetypes.GenericErrorResponse
+//	@Failure		404		{object}	responsetypes.GenericErrorResponse
+//	@Failure		500		{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id} [patch]
 func (h *ClusterHandler) Update(c *gin.Context) {
-	// TODO: Implement partial update strategy
-	c.PureJSON(http.StatusNotImplemented, nil)
+	clusterID := c.Param("id")
+
+	var patchRequest dto.ClusterPatchRequest
+	if err := c.ShouldBindJSON(&patchRequest); err != nil {
+		h.logger.Error("Bad request for cluster update - invalid JSON body",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Update(c.Request.Context(), clusterID, patchRequest); err != nil {
+		h.logger.Error("error updating cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Cluster not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to update cluster: " + err.Error(),
+		})
+		return
+	}
+
+	// Fetch updated cluster to return
+	updatedCluster, err := h.service.Get(c.Request.Context(), clusterID)
+	if err != nil {
+		h.logger.Error("error fetching updated cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Cluster updated but failed to fetch result",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToClusterDTO(*updatedCluster))
 }

@@ -107,3 +107,10 @@ type ClusterDTOResponse struct {
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
 } // @name ClusterResponse
+
+// ClusterPatchRequest represents mutable fields for partial cluster updates.
+// Only fields present in the request will be updated (using pointers to distinguish null from empty).
+type ClusterPatchRequest struct {
+	ConsoleLink *string `json:"consoleLink,omitempty"`
+	Owner       *string `json:"owner,omitempty"`
+} // @name ClusterPatchRequest
