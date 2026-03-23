@@ -297,7 +297,7 @@ func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []i
 
 // UpdateCluster updates mutable fields of an existing cluster in the database.
 // Only non-nil fields in the patch request will be updated.
-func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) error {
+func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) (err error) {
 	// Build dynamic UPDATE query with positional parameters
 	query := "UPDATE clusters SET "
 	args := make([]interface{}, 0)
@@ -326,9 +326,9 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID str
 	args = append(args, clusterID)
 
 	// Execute update in a transaction
-	tx, err := r.db.NewTx(ctx)
-	if err != nil {
-		return err
+	tx, txErr := r.db.NewTx(ctx)
+	if txErr != nil {
+		return txErr
 	}
 	defer func() {
 		if err != nil {
@@ -336,19 +336,21 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID str
 		}
 	}()
 
-	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
-		return fmt.Errorf("exec UPDATE error: %w", err)
+	if _, execErr := tx.ExecContext(ctx, query, args...); execErr != nil {
+		err = fmt.Errorf("exec UPDATE error: %w", execErr)
+		return err
 	}
 
-	if err = tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		return fmt.Errorf("commit UPDATE error: %w", err)
 	}
 
 	// Refresh materialized view after transaction commits
 	// Note: REFRESH MATERIALIZED VIEW must run outside the transaction
-	tx2, err := r.db.NewTx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create transaction for refresh: %w", err)
+	tx2, tx2Err := r.db.NewTx(ctx)
+	if tx2Err != nil {
+		return fmt.Errorf("failed to create transaction for refresh: %w", tx2Err)
 	}
 	defer func() {
 		if err != nil {
@@ -356,11 +358,13 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID str
 		}
 	}()
 
-	if _, err = tx2.ExecContext(ctx, "REFRESH MATERIALIZED VIEW m_clusters_full_view"); err != nil {
-		return fmt.Errorf("refresh materialized view error: %w", err)
+	if _, refreshErr := tx2.ExecContext(ctx, "REFRESH MATERIALIZED VIEW m_clusters_full_view"); refreshErr != nil {
+		err = fmt.Errorf("refresh materialized view error: %w", refreshErr)
+		return err
 	}
 
-	if err = tx2.Commit(); err != nil {
+	err = tx2.Commit()
+	if err != nil {
 		return fmt.Errorf("commit refresh error: %w", err)
 	}
 

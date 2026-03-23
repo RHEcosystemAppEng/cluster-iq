@@ -125,24 +125,23 @@ func (d *DBClient) Select(dest interface{}, table string, opts models.ListOption
 	return d.SelectWithContext(context.TODO(), dest, table, opts, orderColumn, columns...)
 }
 
-func (d *DBClient) InsertWithReturnWithContext(ctx context.Context, query string, data interface{}) (int64, error) {
+func (d *DBClient) InsertWithReturnWithContext(ctx context.Context, query string, data interface{}) (returnedValue int64, err error) {
 	builder := d.NewInsertBuilder().Query(query).Data(data)
 
-	tx, err := d.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return -1, err
+	tx, txErr := d.db.BeginTxx(ctx, nil)
+	if txErr != nil {
+		return -1, txErr
 	}
 
-	// Rollback defer func
+	// Rollback defer func - only executes if err != nil (transaction not committed)
 	defer func() {
 		if err != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				d.logger.Error("failed to Rollback INSERT")
+				d.logger.Error("failed to rollback transaction", zap.Error(rbErr))
 			}
 		}
 	}()
 
-	var returnedValue int64
 	rows, err := tx.NamedQuery(builder.query, builder.data)
 	if err != nil {
 		return -1, fmt.Errorf("named-exec INSERT error: %w", err)
@@ -154,42 +153,47 @@ func (d *DBClient) InsertWithReturnWithContext(ctx context.Context, query string
 	}()
 
 	if rows.Next() {
-		if err := rows.Scan(&returnedValue); err != nil {
-			return -1, fmt.Errorf("scan INSERT return value error %w", err)
+		if scanErr := rows.Scan(&returnedValue); scanErr != nil {
+			err = fmt.Errorf("scan INSERT return value error %w", scanErr)
+			return -1, err
 		}
 	} else {
-		return -1, fmt.Errorf("sql INSERT did not return any value")
+		err = fmt.Errorf("sql INSERT did not return any value")
+		return -1, err
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		return -1, fmt.Errorf("commit INSERT error: %w", err)
 	}
 
 	return returnedValue, nil
 }
 
-func (d *DBClient) InsertWithContext(ctx context.Context, query string, data interface{}) error {
+func (d *DBClient) InsertWithContext(ctx context.Context, query string, data interface{}) (err error) {
 	builder := d.NewInsertBuilder().Query(query).Data(data)
 
-	tx, err := d.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
+	tx, txErr := d.db.BeginTxx(ctx, nil)
+	if txErr != nil {
+		return txErr
 	}
 
-	// Rollback defer func
+	// Rollback defer func - only executes if err != nil (transaction not committed)
 	defer func() {
 		if err != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				d.logger.Error("failed to Rollback INSERT")
+				d.logger.Error("failed to rollback transaction", zap.Error(rbErr))
 			}
 		}
 	}()
 
-	if _, err := tx.NamedExecContext(ctx, builder.query, builder.data); err != nil {
-		return fmt.Errorf("named-exec INSERT error: %w", err)
+	if _, execErr := tx.NamedExecContext(ctx, builder.query, builder.data); execErr != nil {
+		err = fmt.Errorf("named-exec INSERT error: %w", execErr)
+		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		return fmt.Errorf("commit INSERT error: %w", err)
 	}
 
@@ -202,28 +206,30 @@ func (d *DBClient) Insert(query string, data interface{}) error {
 	return d.InsertWithContext(context.TODO(), query, data)
 }
 
-func (d *DBClient) UpdateWithContext(ctx context.Context, query string, data interface{}) error {
+func (d *DBClient) UpdateWithContext(ctx context.Context, query string, data interface{}) (err error) {
 	builder := d.NewUpdateBuilder().Query(query).Data(data)
 
-	tx, err := d.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
+	tx, txErr := d.db.BeginTxx(ctx, nil)
+	if txErr != nil {
+		return txErr
 	}
 
-	// Rollback defer func
+	// Rollback defer func - only executes if err != nil (transaction not committed)
 	defer func() {
 		if err != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				d.logger.Error("failed to Rollback UPDATE")
+				d.logger.Error("failed to rollback transaction", zap.Error(rbErr))
 			}
 		}
 	}()
 
-	if _, err := tx.ExecContext(ctx, builder.query, builder.data); err != nil {
-		return fmt.Errorf("exec UPDATE error: %w", err)
+	if _, execErr := tx.ExecContext(ctx, builder.query, builder.data); execErr != nil {
+		err = fmt.Errorf("exec UPDATE error: %w", execErr)
+		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		return fmt.Errorf("commit UPDATE error: %w", err)
 	}
 
@@ -236,28 +242,30 @@ func (d *DBClient) Update(query string, data interface{}) error {
 	return d.UpdateWithContext(context.TODO(), query, data)
 }
 
-func (d *DBClient) NamedUpdateWithContext(ctx context.Context, query string, data interface{}) error {
+func (d *DBClient) NamedUpdateWithContext(ctx context.Context, query string, data interface{}) (err error) {
 	builder := d.NewUpdateBuilder().Query(query).Data(data)
 
-	tx, err := d.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
+	tx, txErr := d.db.BeginTxx(ctx, nil)
+	if txErr != nil {
+		return txErr
 	}
 
-	// Rollback defer func
+	// Rollback defer func - only executes if err != nil (transaction not committed)
 	defer func() {
 		if err != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				d.logger.Error("failed to Rollback UPDATE")
+				d.logger.Error("failed to rollback transaction", zap.Error(rbErr))
 			}
 		}
 	}()
 
-	if _, err := tx.NamedExecContext(ctx, builder.query, builder.data); err != nil {
-		return fmt.Errorf("named-exec UPDATE error: %w", err)
+	if _, execErr := tx.NamedExecContext(ctx, builder.query, builder.data); execErr != nil {
+		err = fmt.Errorf("named-exec UPDATE error: %w", execErr)
+		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		return fmt.Errorf("commit UPDATE error: %w", err)
 	}
 
@@ -271,7 +279,7 @@ func (d *DBClient) NamedUpdate(query string, data interface{}) error {
 }
 
 // Delete executes a DELETE with a safe transaction pattern.Delete
-func (d *DBClient) DeleteWithContext(ctx context.Context, table string, opts models.ListOptions) error {
+func (d *DBClient) DeleteWithContext(ctx context.Context, table string, opts models.ListOptions) (err error) {
 	builder := d.NewDeleteBuilder().From(table)
 
 	// Processing "WHERE" conditions
@@ -283,30 +291,32 @@ func (d *DBClient) DeleteWithContext(ctx context.Context, table string, opts mod
 	}
 
 	// Building query
-	query, args, err := builder.Build()
-	if err != nil {
+	query, args, buildErr := builder.Build()
+	if buildErr != nil {
 		return fmt.Errorf("error building DELETE query: '%s'", query)
 	}
 
-	tx, err := d.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
+	tx, txErr := d.db.BeginTxx(ctx, nil)
+	if txErr != nil {
+		return txErr
 	}
 
-	// Rollback defer func
+	// Rollback defer func - only executes if err != nil (transaction not committed)
 	defer func() {
 		if err != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				d.logger.Error("failed to Rollback DELETE")
+				d.logger.Error("failed to rollback transaction", zap.Error(rbErr))
 			}
 		}
 	}()
 
-	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
-		return fmt.Errorf("exec DELETE error: %w", err)
+	if _, execErr := tx.ExecContext(ctx, query, args...); execErr != nil {
+		err = fmt.Errorf("exec DELETE error: %w", execErr)
+		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		return fmt.Errorf("commit DELETE error: %w", err)
 	}
 
