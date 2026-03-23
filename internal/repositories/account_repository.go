@@ -114,7 +114,7 @@ func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID st
 		},
 	}
 
-	if err := r.db.GetWithContext(ctx, &account, SelectAccountsMView, opts, "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &account, SelectAccountsView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return account, ErrNotFound
 		}

@@ -309,6 +309,18 @@ func testPostMultipleAccounts(t *testing.T) {
 		},
 	}
 
+	// Cleanup created accounts after test
+	defer func() {
+		for _, acc := range payload {
+			req, _ := http.NewRequest(http.MethodDelete, APIAccountsURL+"/"+acc.AccountID, nil)
+			client := &http.Client{}
+			resp, _ := client.Do(req)
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}
+	}()
+
 	// Posting test data
 	resp := postAccounts(t, payload, expectedHTTPCode)
 	defer resp.Body.Close()
@@ -363,7 +375,24 @@ func testPostWrongAccount(t *testing.T) {
 func testPatchAccount_Success(t *testing.T) {
 	expectedHTTPCode := http.StatusOK
 	expectedAccountID := "gcp-project-1"
+	originalAccountName := "gcp-project-demo"
 	expectedAccountName := "updated-gcp-project-name"
+
+	// Restore original account name after test to prevent interference with other tests
+	defer func() {
+		restoreName := originalAccountName
+		restorePatch := dto.AccountPatchRequest{
+			AccountName: &restoreName,
+		}
+		restoreBody, _ := json.Marshal(restorePatch)
+		req, _ := http.NewRequest(http.MethodPatch, APIAccountsURL+"/"+expectedAccountID, bytes.NewBuffer(restoreBody))
+		req.Header.Set("Content-Type", "application/json")
+		client := &http.Client{}
+		resp, _ := client.Do(req)
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	// Create patch request with only the fields to update
 	newAccountName := expectedAccountName

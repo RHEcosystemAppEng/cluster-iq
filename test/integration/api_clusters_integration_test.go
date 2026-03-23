@@ -455,6 +455,18 @@ func testPostMultipleClusters(t *testing.T) {
 		},
 	}
 
+	// Cleanup created clusters after test
+	defer func() {
+		for _, cluster := range payload {
+			req, _ := http.NewRequest(http.MethodDelete, APIClustersURL+"/"+cluster.ClusterID, nil)
+			client := &http.Client{}
+			resp, _ := client.Do(req)
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}
+	}()
+
 	// Posting test data
 	resp := postClusters(t, payload, expectedHTTPCode)
 	defer resp.Body.Close()
@@ -516,8 +528,28 @@ func testPostWrongCluster(t *testing.T) {
 func testPatchCluster_Success(t *testing.T) {
 	expectedHTTPCode := http.StatusOK
 	expectedClusterID := "aws-cluster-1-aws-infra-1"
+	originalConsoleLink := "https://console.aws/1"
+	originalOwner := "team-aws"
 	expectedConsoleLink := "https://updated-console.example.com"
 	expectedOwner := "Updated Owner Name"
+
+	// Restore original values after test to prevent interference with other tests
+	defer func() {
+		restoreConsoleLink := originalConsoleLink
+		restoreOwner := originalOwner
+		restorePatch := dto.ClusterPatchRequest{
+			ConsoleLink: &restoreConsoleLink,
+			Owner:       &restoreOwner,
+		}
+		restoreBody, _ := json.Marshal(restorePatch)
+		req, _ := http.NewRequest(http.MethodPatch, APIClustersURL+"/"+expectedClusterID, bytes.NewBuffer(restoreBody))
+		req.Header.Set("Content-Type", "application/json")
+		client := &http.Client{}
+		resp, _ := client.Do(req)
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	// Create patch request with only the fields to update
 	newConsoleLink := expectedConsoleLink

@@ -137,7 +137,7 @@ func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullMView, opts, "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}

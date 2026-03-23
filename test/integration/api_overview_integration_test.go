@@ -44,11 +44,11 @@ func testGetOverview(t *testing.T) {
 				ClusterCount: 2,
 			},
 			GCP: dto.ProviderDetails{
-				AccountCount: 2,
+				AccountCount: 1,
 				ClusterCount: 2,
 			},
 			Azure: dto.ProviderDetails{
-				AccountCount: 2,
+				AccountCount: 1,
 				ClusterCount: 2,
 			},
 		},
