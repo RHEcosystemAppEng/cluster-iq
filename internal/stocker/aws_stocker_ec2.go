@@ -59,9 +59,16 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 		}
 
 		if !s.Account.IsClusterInAccount(cluster.ClusterID) {
-			_ = s.Account.AddCluster(cluster)
+			if err := s.Account.AddCluster(cluster); err != nil {
+				s.logger.Error("error adding cluster to account during instance processing",
+					zap.String("account_id", s.Account.AccountID),
+					zap.String("cluster_id", cluster.ClusterID),
+					zap.Error(err))
+				continue
+			}
 		}
 
+		// At this point, the cluster is guaranteed to exist in s.Account.Clusters
 		if err := s.Account.Clusters[cluster.ClusterID].AddInstance(&instance); err != nil {
 			s.logger.Error("error adding instance to cluster during instance processing",
 				zap.String("account_id", s.Account.AccountID),
