@@ -24,6 +24,7 @@ func TestClusterEventDBResponse_ToClusterEventDTOResponse(t *testing.T) {
 func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) {
 	now := time.Now().UTC()
 	desc := "desc"
+	resID := "cluster-1"
 	conv := &convert.ConverterImpl{}
 
 	model := db.ClusterEventDBResponse{
@@ -31,7 +32,7 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) 
 		EventTimestamp: now,
 		TriggeredBy:    "api",
 		Action:         "START",
-		ResourceID:     "cluster-1",
+		ResourceID:     &resID,
 		ResourceType:   inventory.ClusterResourceType,
 		Result:         "Success",
 		Description:    &desc,
@@ -53,6 +54,7 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) 
 
 func testClusterEventDBResponse_ToClusterEventDTOResponse_NilDescription(t *testing.T) {
 	now := time.Now().UTC()
+	resID := "cluster-2"
 	conv := &convert.ConverterImpl{}
 
 	model := db.ClusterEventDBResponse{
@@ -60,7 +62,7 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_NilDescription(t *test
 		EventTimestamp: now,
 		TriggeredBy:    "scanner",
 		Action:         "STOP",
-		ResourceID:     "cluster-2",
+		ResourceID:     &resID,
 		ResourceType:   inventory.ClusterResourceType,
 		Result:         "Failed",
 		Description:    nil,
@@ -84,9 +86,11 @@ func testToClusterEventDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
 	conv := &convert.ConverterImpl{}
 
+	c1 := "c1"
+	c2 := "c2"
 	models := []db.ClusterEventDBResponse{
-		{ID: 1, EventTimestamp: now, TriggeredBy: "api", Action: "START", ResourceID: "c1", ResourceType: inventory.ClusterResourceType, Result: "Success", Severity: "Info"},
-		{ID: 2, EventTimestamp: now.Add(-time.Minute), TriggeredBy: "agent", Action: "STOP", ResourceID: "c2", ResourceType: inventory.ClusterResourceType, Result: "Failed", Severity: "Error"},
+		{ID: 1, EventTimestamp: now, TriggeredBy: "api", Action: "START", ResourceID: &c1, ResourceType: inventory.ClusterResourceType, Result: "Success", Severity: "Info"},
+		{ID: 2, EventTimestamp: now.Add(-time.Minute), TriggeredBy: "agent", Action: "STOP", ResourceID: &c2, ResourceType: inventory.ClusterResourceType, Result: "Failed", Severity: "Error"},
 	}
 
 	dtos := conv.ToClusterEventDTOs(models)
@@ -106,6 +110,7 @@ func TestSystemEventDBResponse_ToSystemEventDTOResponse(t *testing.T) {
 func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 	now := time.Now().UTC()
 	desc := "desc"
+	resID := "cluster-10"
 	conv := &convert.ConverterImpl{}
 
 	model := db.SystemEventDBResponse{
@@ -114,7 +119,7 @@ func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 			EventTimestamp: now,
 			TriggeredBy:    "scheduler",
 			Action:         "START",
-			ResourceID:     "cluster-10",
+			ResourceID:     &resID,
 			ResourceType:   inventory.ClusterResourceType,
 			Result:         "Pending",
 			Description:    &desc,
@@ -130,7 +135,7 @@ func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, "scheduler", dto.TriggeredBy)
 	assert.Equal(t, "START", dto.Action)
-	assert.Equal(t, "cluster-10", dto.ResourceID)
+	assert.Equal(t, &resID, dto.ResourceID)
 	assert.Equal(t, inventory.ClusterResourceType, dto.ResourceType)
 	assert.Equal(t, actions.StatusPending, dto.Result)
 	assert.Equal(t, &desc, dto.Description)
@@ -150,6 +155,8 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 	now := time.Now().UTC()
 	conv := &convert.ConverterImpl{}
 
+	sc1 := "c1"
+	sc2 := "c2"
 	models := []db.SystemEventDBResponse{
 		{
 			ClusterEventDBResponse: db.ClusterEventDBResponse{
@@ -157,7 +164,7 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 				EventTimestamp: now,
 				TriggeredBy:    "api",
 				Action:         "START",
-				ResourceID:     "c1",
+				ResourceID:     &sc1,
 				ResourceType:   inventory.ClusterResourceType,
 				Result:         "Success",
 				Severity:       "Info",
@@ -171,7 +178,7 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 				EventTimestamp: now.Add(-time.Minute),
 				TriggeredBy:    "agent",
 				Action:         "STOP",
-				ResourceID:     "c2",
+				ResourceID:     &sc2,
 				ResourceType:   inventory.ClusterResourceType,
 				Result:         "Failed",
 				Severity:       "Error",

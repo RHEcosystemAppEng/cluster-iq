@@ -45,6 +45,7 @@ type Converter interface {
 	ToSystemEventDTOs(src []db.SystemEventDBResponse) []dto.SystemEventDTOResponse
 
 	// Action
+	// goverter:ignore Requester Description
 	ToActionDTO(src db.ActionDBResponse) dto.ActionDTOResponse
 	ToActionDTOs(src []db.ActionDBResponse) []dto.ActionDTOResponse
 

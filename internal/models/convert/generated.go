@@ -97,15 +97,18 @@ func (c *ConverterImpl) ToClusterEventDTO(source db.ClusterEventDBResponse) dto.
 	var dtoClusterEventDTOResponse dto.ClusterEventDTOResponse
 	dtoClusterEventDTOResponse.ID = source.ID
 	dtoClusterEventDTOResponse.Action = source.Action
-	dtoClusterEventDTOResponse.ResourceID = source.ResourceID
+	if source.ResourceID != nil {
+		xstring := *source.ResourceID
+		dtoClusterEventDTOResponse.ResourceID = &xstring
+	}
 	dtoClusterEventDTOResponse.ResourceType = source.ResourceType
 	dtoClusterEventDTOResponse.EventTimestamp = Time(source.EventTimestamp)
 	dtoClusterEventDTOResponse.Result = actions.ActionStatus(source.Result)
 	dtoClusterEventDTOResponse.Severity = source.Severity
 	dtoClusterEventDTOResponse.TriggeredBy = source.TriggeredBy
 	if source.Description != nil {
-		xstring := *source.Description
-		dtoClusterEventDTOResponse.Description = &xstring
+		xstring2 := *source.Description
+		dtoClusterEventDTOResponse.Description = &xstring2
 	}
 	return dtoClusterEventDTOResponse
 }

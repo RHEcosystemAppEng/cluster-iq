@@ -13,7 +13,7 @@ type ClusterEventDBResponse struct {
 	EventTimestamp time.Time            `db:"event_timestamp"`
 	TriggeredBy    string               `db:"triggered_by"`
 	Action         string               `db:"action"`
-	ResourceID     string               `db:"resource_id"`
+	ResourceID     *string              `db:"resource_id"`
 	ResourceType   string               `db:"resource_type"`
 	Result         actions.ActionStatus `db:"result"`
 	Description    *string              `db:"description,omitempty"`

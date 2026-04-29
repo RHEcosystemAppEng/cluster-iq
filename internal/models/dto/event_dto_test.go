@@ -79,12 +79,13 @@ func TestEventDTOResponse_Struct(t *testing.T) {
 
 func testClusterEventDTOResponse_Struct(t *testing.T) {
 	desc := "desc"
+	resID := "cluster-1"
 	now := time.Now()
 
 	dto := ClusterEventDTOResponse{
 		ID:             1,
 		Action:         "START",
-		ResourceID:     "cluster-1",
+		ResourceID:     &resID,
 		ResourceType:   inventory.ClusterResourceType,
 		EventTimestamp: now,
 		Result:         "Success",
@@ -95,7 +96,7 @@ func testClusterEventDTOResponse_Struct(t *testing.T) {
 
 	assert.Equal(t, int64(1), dto.ID)
 	assert.Equal(t, "START", dto.Action)
-	assert.Equal(t, "cluster-1", dto.ResourceID)
+	assert.Equal(t, &resID, dto.ResourceID)
 	assert.Equal(t, inventory.ClusterResourceType, dto.ResourceType)
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, actions.StatusSuccess, dto.Result)
@@ -106,13 +107,14 @@ func testClusterEventDTOResponse_Struct(t *testing.T) {
 
 func testSystemEventDTOResponse_Struct(t *testing.T) {
 	desc := "desc"
+	resID := "cluster-2"
 	now := time.Now()
 
 	dto := SystemEventDTOResponse{
 		ClusterEventDTOResponse: ClusterEventDTOResponse{
 			ID:             2,
 			Action:         "STOP",
-			ResourceID:     "cluster-2",
+			ResourceID:     &resID,
 			ResourceType:   inventory.ClusterResourceType,
 			EventTimestamp: now,
 			Result:         "Failed",
@@ -126,7 +128,7 @@ func testSystemEventDTOResponse_Struct(t *testing.T) {
 
 	assert.Equal(t, int64(2), dto.ID)
 	assert.Equal(t, "STOP", dto.Action)
-	assert.Equal(t, "cluster-2", dto.ResourceID)
+	assert.Equal(t, &resID, dto.ResourceID)
 	assert.Equal(t, inventory.ClusterResourceType, dto.ResourceType)
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, actions.StatusFailed, dto.Result)
