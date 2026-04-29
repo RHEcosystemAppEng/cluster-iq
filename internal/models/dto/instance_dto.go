@@ -96,7 +96,7 @@ type InstanceDTOResponse struct {
 	ClusterID             string                   `json:"clusterId"`
 	ClusterName           string                   `json:"clusterName"`
 	LastScanTimestamp     time.Time                `json:"lastScanTimestamp"`
-	CreatedAt             time.Time                `json:"creationTimestamp"`
+	CreatedAt             time.Time                `json:"createdAt"`
 	Age                   int                      `json:"age"`
 	TotalCost             float64                  `json:"totalCost"`
 	Last15DaysCost        float64                  `json:"last15DaysCost"`
