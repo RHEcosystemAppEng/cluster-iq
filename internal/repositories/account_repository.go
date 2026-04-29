@@ -132,6 +132,10 @@ func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID st
 // - A slice of inventory.Account objects (usually containing one element).
 // - An error if the query fails.
 func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error) {
+	if _, err := r.GetAccountByID(ctx, accountID); err != nil {
+		return nil, err
+	}
+
 	clusters := []db.ClusterDBResponse{}
 
 	opts := models.ListOptions{
@@ -144,10 +148,15 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 
 	if err := r.db.SelectWithContext(ctx, &clusters, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return clusters, ErrNotFound
+			return clusters, nil
 		}
 		return clusters, err
 	}
+
+	if len(clusters) == 0 {
+		return clusters, ErrNoClustersInAccount
+	}
+
 	return clusters, nil
 }
 

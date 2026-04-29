@@ -144,7 +144,7 @@ func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inve
 		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
 		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",
 	); err != nil {
-		return countsDB, fmt.Errorf("failed to list clusters: %w", err)
+		return countsDB, fmt.Errorf("failed to list instances: %w", err)
 	}
 
 	return countsDB, nil
