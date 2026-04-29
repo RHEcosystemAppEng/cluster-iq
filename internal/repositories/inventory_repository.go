@@ -32,7 +32,7 @@ func NewInventoryRepository(db *dbclient.DBClient) InventoryRepository {
 
 func (r *inventoryRepositoryImpl) Refresh(ctx context.Context) error {
 	// Updating 'Terminated' Instances
-	if err := r.db.ExecFunc(ctx, UpdateTerminatedClustersQuery); err != nil {
+	if err := r.db.ExecFunc(ctx, UpdateTerminatedInstancesQuery); err != nil {
 		return err
 	}
 
