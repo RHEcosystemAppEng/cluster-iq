@@ -295,6 +295,31 @@ func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []i
 	return nil
 }
 
+// refreshClustersMView refreshes the clusters materialized view in a separate transaction.
+func (r *clusterRepositoryImpl) refreshClustersMView(ctx context.Context) error {
+	tx, txErr := r.db.NewTx(ctx)
+	if txErr != nil {
+		return fmt.Errorf("failed to create transaction for refresh: %w", txErr)
+	}
+
+	var err error
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.ExecContext(ctx, "REFRESH MATERIALIZED VIEW m_clusters_full_view"); err != nil {
+		return fmt.Errorf("refresh materialized view error: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit refresh error: %w", err)
+	}
+
+	return nil
+}
+
 // UpdateCluster updates mutable fields of an existing cluster in the database.
 // Only non-nil fields in the patch request will be updated.
 func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) (err error) {
@@ -347,28 +372,7 @@ func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID str
 	}
 
 	// Refresh materialized view after transaction commits
-	// Note: REFRESH MATERIALIZED VIEW must run outside the transaction
-	tx2, tx2Err := r.db.NewTx(ctx)
-	if tx2Err != nil {
-		return fmt.Errorf("failed to create transaction for refresh: %w", tx2Err)
-	}
-	defer func() {
-		if err != nil {
-			_ = tx2.Rollback()
-		}
-	}()
-
-	if _, refreshErr := tx2.ExecContext(ctx, "REFRESH MATERIALIZED VIEW m_clusters_full_view"); refreshErr != nil {
-		err = fmt.Errorf("refresh materialized view error: %w", refreshErr)
-		return err
-	}
-
-	err = tx2.Commit()
-	if err != nil {
-		return fmt.Errorf("commit refresh error: %w", err)
-	}
-
-	return nil
+	return r.refreshClustersMView(ctx)
 }
 
 // UpdateClusterStatusByClusterID updates the status of a cluster and all its instances in the database.
