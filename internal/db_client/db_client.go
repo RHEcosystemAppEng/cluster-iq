@@ -83,6 +83,7 @@ func (d *DBClient) GetWithContext(ctx context.Context, dest interface{}, table s
 }
 
 // Get is a convenience wrapper without context.
+//
 // Deprecated: Prefer GetWithContext for proper timeout and cancellation support.
 func (d *DBClient) Get(dest interface{}, table string, opts models.ListOptions, columns ...string) error {
 	return d.GetWithContext(context.TODO(), dest, table, opts, columns...)
@@ -120,6 +121,7 @@ func (d *DBClient) SelectWithContext(ctx context.Context, dest interface{}, tabl
 }
 
 // Select is a convenience wrapper without context.
+//
 // Deprecated: Prefer SelectWithContext for proper timeout and cancellation support.
 func (d *DBClient) Select(dest interface{}, table string, opts models.ListOptions, orderColumn string, columns ...string) error {
 	return d.SelectWithContext(context.TODO(), dest, table, opts, orderColumn, columns...)
@@ -201,6 +203,7 @@ func (d *DBClient) InsertWithContext(ctx context.Context, query string, data int
 }
 
 // Insert is a convenience wrapper without context.
+//
 // Deprecated: Prefer InsertWithContext for proper timeout and cancellation support.
 func (d *DBClient) Insert(query string, data interface{}) error {
 	return d.InsertWithContext(context.TODO(), query, data)
@@ -237,6 +240,7 @@ func (d *DBClient) UpdateWithContext(ctx context.Context, query string, data int
 }
 
 // Update is a convenience wrapper without context.
+//
 // Deprecated: Prefer UpdateWithContext for proper timeout and cancellation support.
 func (d *DBClient) Update(query string, data interface{}) error {
 	return d.UpdateWithContext(context.TODO(), query, data)
@@ -273,6 +277,7 @@ func (d *DBClient) NamedUpdateWithContext(ctx context.Context, query string, dat
 }
 
 // NamedUpdate is a convenience wrapper without context.
+//
 // Deprecated: Prefer NamedUpdateWithContext for proper timeout and cancellation support.
 func (d *DBClient) NamedUpdate(query string, data interface{}) error {
 	return d.NamedUpdateWithContext(context.TODO(), query, data)
@@ -324,6 +329,7 @@ func (d *DBClient) DeleteWithContext(ctx context.Context, table string, opts mod
 }
 
 // Delete is a convenience wrapper without context.
+//
 // Deprecated: Prefer DeleteWithContext for proper timeout and cancellation support.
 func (d *DBClient) Delete(table string, opts models.ListOptions) error {
 	return d.DeleteWithContext(context.TODO(), table, opts)
