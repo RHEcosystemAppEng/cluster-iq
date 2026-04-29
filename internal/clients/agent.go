@@ -47,15 +47,15 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 	}, nil
 }
 
-func (a APIGRPCClient) ProcessInstantAction(action *actions.InstantAction) error {
+func (a APIGRPCClient) ProcessInstantAction(ctx context.Context, action *actions.InstantAction) error {
 	if action.GetDescription() == nil {
 		action.Description = &DefaultInstantActionDescription
 	}
 	switch action.Operation {
 	case actions.PowerOff:
-		return a.PowerOffCluster(context.Background(), action)
+		return a.PowerOffCluster(ctx, action)
 	case actions.PowerOn:
-		return a.PowerOnCluster(context.Background(), action)
+		return a.PowerOnCluster(ctx, action)
 	default:
 		return fmt.Errorf("received InstantAction with unknown Operation")
 	}
