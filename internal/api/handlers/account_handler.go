@@ -294,7 +294,7 @@ func (h *AccountHandler) Delete(c *gin.Context) {
 //	@Produce		json
 //	@Param			id		path		string					true	"Account ID"
 //	@Param			account	body		dto.AccountPatchRequest	true	"Partial account payload"
-//	@Success		200		{object}	db.AccountDBResponse
+//	@Success		200		{object}	dto.AccountDTOResponse
 //	@Failure		400		{object}	responsetypes.GenericErrorResponse
 //	@Failure		404		{object}	responsetypes.GenericErrorResponse
 //	@Failure		500		{object}	responsetypes.GenericErrorResponse
