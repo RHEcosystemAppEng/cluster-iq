@@ -150,7 +150,9 @@ func (s *Scanner) createStockers() error {
 						zap.String("account_name", account.AccountName),
 						zap.Error(err))
 				} else {
-					s.billingStockers = append(s.billingStockers, stocker.NewAWSBillingStocker(account, s.logger, instancesToScan))
+					if bs := stocker.NewAWSBillingStocker(account, s.logger, instancesToScan); bs != nil {
+						s.billingStockers = append(s.billingStockers, bs)
+					}
 				}
 			}
 		case inventory.GCPProvider:

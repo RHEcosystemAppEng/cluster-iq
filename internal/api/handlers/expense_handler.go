@@ -114,7 +114,15 @@ func (h *ExpenseHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryExpenseList(expenseDTOs)); err != nil {
+	expenses := dto.ToInventoryExpenseList(expenseDTOs)
+	if expenses == nil {
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Failed to convert expense data",
+		})
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), *expenses); err != nil {
 		h.logger.Error("error creating expense", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to create expenses: " + err.Error(),
