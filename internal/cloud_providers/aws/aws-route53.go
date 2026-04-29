@@ -50,7 +50,7 @@ func (c *AWSRoute53Connection) GetZonesWithTags() ([]HostedZone, error) {
 			ResourceType: &hztype,
 			ResourceId:   aws.String(*zone.Id),
 		})
-		if err != nil {
+		if err != nil || tags.ResourceTagSet == nil {
 			continue
 		}
 		zonesWithTags = append(zonesWithTags, HostedZone{
