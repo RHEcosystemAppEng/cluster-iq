@@ -30,6 +30,7 @@ test/integration/       # Integration tests
 ## Essential Commands
 
 **CRITICAL**: Always use Makefile. Never use direct `go build`, `go test`, or `go run`.
+This includes compilation checks after code changes — use `make local-build` instead of `go build ./...`.
 
 ```bash
 # Development
