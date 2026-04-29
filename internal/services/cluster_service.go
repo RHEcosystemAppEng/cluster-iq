@@ -59,7 +59,7 @@ func (s *clusterServiceImpl) Get(ctx context.Context, clusterID string) (*db.Clu
 	return s.repo.GetClusterByID(ctx, clusterID)
 }
 
-// Get retrieves a single cluster by its ID.
+// GetInstances retrieves all instances belonging to a cluster.
 func (s *clusterServiceImpl) GetInstances(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error) {
 	return s.repo.GetInstancesOnCluster(ctx, clusterID)
 }
