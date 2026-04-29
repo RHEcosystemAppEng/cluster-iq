@@ -208,6 +208,33 @@ CREATE INDEX IF NOT EXISTS ix_events_type_id_time ON events (resource_type, reso
 -- Default expenses partition. The rest of expenses will be created by pg_cron
 CREATE TABLE events_default PARTITION OF events DEFAULT;
 
+-- Cascade delete events when clusters are deleted
+CREATE OR REPLACE FUNCTION delete_cluster_events()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM events WHERE resource_type = 'Cluster'::RESOURCE_TYPE AND resource_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_delete_cluster_events
+    BEFORE DELETE ON clusters
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_cluster_events();
+
+-- Cascade delete events when instances are deleted
+CREATE OR REPLACE FUNCTION delete_instance_events()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM events WHERE resource_type = 'Instance'::RESOURCE_TYPE AND resource_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_delete_instance_events
+    BEFORE DELETE ON instances
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_instance_events();
 
 
 -- #############################################################################
