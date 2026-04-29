@@ -1,5 +1,3 @@
-// TODO: Placeholder for the SQL client to fix linter issues
-// TODO: Add actual implementation in next PR
 package dbclient
 
 import (
@@ -144,24 +142,14 @@ func (d *DBClient) InsertWithReturnWithContext(ctx context.Context, query string
 		}
 	}()
 
-	rows, err := tx.NamedQuery(builder.query, builder.data)
+	stmt, err := tx.PrepareNamed(builder.query)
 	if err != nil {
-		return -1, fmt.Errorf("named-exec INSERT error: %w", err)
+		return -1, fmt.Errorf("prepare INSERT error: %w", err)
 	}
-	defer func() {
-		if cerr := rows.Close(); cerr != nil {
-			d.logger.Error("failed to close rows after insert")
-		}
-	}()
+	defer stmt.Close()
 
-	if rows.Next() {
-		if scanErr := rows.Scan(&returnedValue); scanErr != nil {
-			err = fmt.Errorf("scan INSERT return value error %w", scanErr)
-			return -1, err
-		}
-	} else {
-		err = fmt.Errorf("sql INSERT did not return any value")
-		return -1, err
+	if err = stmt.Get(&returnedValue, builder.data); err != nil {
+		return -1, fmt.Errorf("exec INSERT error: %w", err)
 	}
 
 	err = tx.Commit()
