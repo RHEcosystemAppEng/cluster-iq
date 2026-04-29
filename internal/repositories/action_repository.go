@@ -194,14 +194,18 @@ func (r *actionRepositoryImpl) GetByID(ctx context.Context, actionID string) (db
 //   - An error if the insert fails
 //
 // TODO: Temporal fix returning TX from DBClient to manage both insertions in the same sql transaction
-func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) error {
+func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) (err error) {
 	schedActions, cronActions := actions.SplitActionsByType(newActions)
 
 	tx, err := r.db.NewTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer func() { _ = tx.Rollback() }()
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
 
 	// Writing Scheduled Actions
 	if len(schedActions) > 0 {
