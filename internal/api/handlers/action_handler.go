@@ -288,15 +288,15 @@ func (h *ActionHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Update applies partial updates to an existing actions.
+// Update applies partial updates to an existing action.
 //
-//	@Summary		Update an actions
-//	@Description	Patch an existing actions by ID.
+//	@Summary		Update an action
+//	@Description	Patch an existing action.
 //	@Tags			Actions
 //	@Accept			json
 //	@Produce		json
 //	@Param			action	body		dto.ActionDTORequest	true	"Partial action payload"
-//	@Success		200		{object}	nil
+//	@Success		200		{object}	responsetypes.PostResponse
 //	@Failure		400		{object}	responsetypes.GenericErrorResponse
 //	@Failure		500		{object}	responsetypes.GenericErrorResponse
 //	@Router			/actions [patch]

@@ -23,6 +23,14 @@ func NewInventoryHandler(service services.InventoryService, logger *zap.Logger) 
 	}
 }
 
+// Refresh triggers a refresh of materialized views and terminated resource status.
+//
+//	@Summary		Refresh inventory
+//	@Description	Refresh materialized views and update terminated resource status.
+//	@Tags			Inventory
+//	@Success		200
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/inventory [post]
 func (h *InventoryHandler) Refresh(c *gin.Context) {
 	if err := h.service.Refresh(c); err != nil {
 		h.logger.Error("Error when refreshing Inventory", zap.Error(err))
