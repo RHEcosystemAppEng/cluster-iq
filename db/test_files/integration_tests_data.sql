@@ -20,20 +20,20 @@ INSERT INTO clusters (cluster_id, cluster_name, infra_id, provider, status, regi
 
 -- ## Instances ##
 INSERT INTO instances (instance_id, instance_name, cluster_id, provider, instance_type, availability_zone, status, last_scan_ts, created_at, age) VALUES
-  ('id-0123456789X', 'aws-instance-1a', 1, 'AWS',   't3.micro',   'us-east-1a', 'Running', '2025-08-01 12:00:00+00', '2025-02-10 00:00:00+00', 170),
-  ('id-1123456789X', 'aws-instance-1b', 1, 'AWS',   't3.medium',  'us-east-1b', 'Stopped', '2025-08-01 12:00:00+00', '2025-02-11 00:00:00+00', 169),
-  ('id-2123456789X', 'aws-instance-2a', 2, 'AWS',   'm6g.large',  'us-east-2a', 'Running', '2025-08-01 12:00:00+00', '2025-03-15 00:00:00+00', 140),
-  ('id-3123456789X', 'aws-instance-2b', 2, 'AWS',   'c6i.large',  'us-east-2b', 'Unknown', '2025-08-01 12:00:00+00', '2025-03-20 00:00:00+00', 135),
+  ('id-0123456789X', 'aws-instance-1a', 1, 'AWS',   't3.micro',   'us-east-1a', 'Running', NOW(), '2025-02-10 00:00:00+00', 170),
+  ('id-1123456789X', 'aws-instance-1b', 1, 'AWS',   't3.medium',  'us-east-1b', 'Stopped', NOW(), '2025-02-11 00:00:00+00', 169),
+  ('id-2123456789X', 'aws-instance-2a', 2, 'AWS',   'm6g.large',  'us-east-2a', 'Running', NOW(), '2025-03-15 00:00:00+00', 140),
+  ('id-3123456789X', 'aws-instance-2b', 2, 'AWS',   'c6i.large',  'us-east-2b', 'Unknown', NOW(), '2025-03-20 00:00:00+00', 135),
 
-  ('id-0123456789Y', 'gcp-instance-1a', 3, 'GCP',   'e2-small',   'europe-west1-b', 'Running', '2025-08-02 12:00:00+00', '2025-02-05 00:00:00+00', 175),
-  ('id-1123456789Y', 'gcp-instance-1b', 3, 'GCP',   'e2-medium',  'europe-west1-c', 'Stopped', '2025-08-02 12:00:00+00', '2025-02-06 00:00:00+00', 174),
-  ('id-2123456789Y', 'gcp-instance-2a', 4, 'GCP',   'n2-standard', 'europe-west2-a','Running', '2025-08-02 12:00:00+00', '2025-03-10 00:00:00+00', 150),
-  ('id-3123456789Y', 'gcp-instance-2b', 4, 'GCP',   'n2-standard', 'europe-west2-b','Unknown', '2025-08-02 12:00:00+00', '2025-03-11 00:00:00+00', 149),
+  ('id-0123456789Y', 'gcp-instance-1a', 3, 'GCP',   'e2-small',   'europe-west1-b', 'Running', NOW(), '2025-02-05 00:00:00+00', 175),
+  ('id-1123456789Y', 'gcp-instance-1b', 3, 'GCP',   'e2-medium',  'europe-west1-c', 'Stopped', NOW(), '2025-02-06 00:00:00+00', 174),
+  ('id-2123456789Y', 'gcp-instance-2a', 4, 'GCP',   'n2-standard', 'europe-west2-a','Running', NOW(), '2025-03-10 00:00:00+00', 150),
+  ('id-3123456789Y', 'gcp-instance-2b', 4, 'GCP',   'n2-standard', 'europe-west2-b','Unknown', NOW(), '2025-03-11 00:00:00+00', 149),
 
-  ('id-0123456789Z', 'az-instance-1a',  5, 'Azure', 'B1s',        'westeurope-1',   'Running', '2025-08-03 12:00:00+00', '2025-02-01 00:00:00+00', 180),
-  ('id-1123456789Z', 'az-instance-1b',  5, 'Azure', 'B2s',        'westeurope-2',   'Stopped', '2025-08-03 12:00:00+00', '2025-02-02 00:00:00+00', 179),
-  ('id-2123456789Z', 'az-instance-2a',  6, 'Azure', 'D2s_v3',     'westeurope-1',   'Running', '2025-08-03 12:00:00+00', '2025-03-05 00:00:00+00', 160),
-  ('id-3123456789Z', 'az-instance-2b',  6, 'Azure', 'D2s_v3',     'westeurope-2',   'Unknown', '2025-08-03 12:00:00+00', '2025-03-06 00:00:00+00', 159);
+  ('id-0123456789Z', 'az-instance-1a',  5, 'Azure', 'B1s',        'westeurope-1',   'Running', NOW(), '2025-02-01 00:00:00+00', 180),
+  ('id-1123456789Z', 'az-instance-1b',  5, 'Azure', 'B2s',        'westeurope-2',   'Stopped', NOW(), '2025-02-02 00:00:00+00', 179),
+  ('id-2123456789Z', 'az-instance-2a',  6, 'Azure', 'D2s_v3',     'westeurope-1',   'Running', NOW(), '2025-03-05 00:00:00+00', 160),
+  ('id-3123456789Z', 'az-instance-2b',  6, 'Azure', 'D2s_v3',     'westeurope-2',   'Unknown', NOW(), '2025-03-06 00:00:00+00', 159);
 
 -- ## Instance Tags ##
 INSERT INTO tags (key, value, instance_id) VALUES

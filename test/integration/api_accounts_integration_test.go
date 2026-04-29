@@ -343,7 +343,7 @@ func testPostMultipleAccounts(t *testing.T) {
 
 func testPostWrongAccount(t *testing.T) {
 	expectedHTTPCode := http.StatusInternalServerError
-	expectedMsg := "Failed to create accounts: named-exec INSERT error: pq: invalid input value for enum cloud_provider: \"Provider\""
+	expectedMsg := "Failed to create accounts: create accounts: named-exec INSERT error: pq: invalid input value for enum cloud_provider: \"Provider\""
 
 	ts, _ := time.Parse(time.RFC3339, "2025-08-02T10:00:00+00:00")
 	payload := []dto.AccountDTORequest{
