@@ -23,7 +23,7 @@ internal/
   ├── services/         # Business logic
   ├── api/handlers/     # HTTP handlers
   └── models/           # DTO, DB, domain models
-db/sql/                 # Schemas and migrations
+db/sql/                 # Schema definitions (init.sql, cron.sql)
 test/integration/       # Integration tests
 ```
 
@@ -60,7 +60,8 @@ make swagger-doc         # OpenAPI docs
 - Handlers → Services → Repositories → Database
 - Each layer has interfaces for testability
 - Repository returns `repositories.ErrNotFound` for missing resources
-- Services validate business rules, wrap errors with context
+- Repository returns `repositories.ErrNoClustersInAccount` when an account exists but has no clusters
+- Services wrap all errors with `fmt.Errorf` context before returning to handlers
 - Handlers map errors to HTTP status codes (404, 400, 500)
 
 **Key Patterns:**
@@ -112,7 +113,7 @@ go tool cover -html=coverage.out -o coverage.html    # Visual
 2. Run `make lint-staged` before committing
 3. Run relevant tests: `make go-unit-tests`
 4. For API changes: update Swagger with `make swagger-doc`
-5. For DB changes: create migration in `db/sql/migrations/`
+5. For DB changes: update `db/sql/init.sql` or add data migration in `doc/releases/`
 6. For protobuf changes: `make local-build-agent`
 7. For goverter changes: `make generate-converters`
 
@@ -147,7 +148,7 @@ go tool cover -html=coverage.out -o coverage.html    # Visual
 
 Environment variables:
 - `CIQ_AGENT_URL` - Agent gRPC endpoint (default: "agent:50051")
-- `CIQ_API_URL` - API public endpoint
+- `CIQ_API_URL` - API endpoint used by Scanner and Agent (not by the API server itself)
 - `CIQ_DB_URL` - PostgreSQL connection (default: "postgresql://pgsql:5432/clusteriq")
 - `CIQ_CREDS_FILE` - Cloud provider credentials file
 - `CIQ_LOG_LEVEL` - Log verbosity (default: "INFO")
