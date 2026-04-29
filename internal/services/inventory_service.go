@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
@@ -27,5 +28,8 @@ func NewInventoryService(repo repositories.InventoryRepository) InventoryService
 
 // Refresh updates the views and inventory results
 func (s *inventoryServiceImpl) Refresh(ctx context.Context) error {
-	return s.repo.Refresh(ctx)
+	if err := s.repo.Refresh(ctx); err != nil {
+		return fmt.Errorf("refresh inventory: %w", err)
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
@@ -40,30 +41,49 @@ func (s *actionServiceImpl) List(ctx context.Context, options models.ListOptions
 
 // Get retrieves a single scheduled action by its ID.
 func (s *actionServiceImpl) Get(ctx context.Context, actionID string) (db.ActionDBResponse, error) {
-	return s.repo.GetByID(ctx, actionID)
+	action, err := s.repo.GetByID(ctx, actionID)
+	if err != nil {
+		return action, fmt.Errorf("get action %s: %w", actionID, err)
+	}
+	return action, nil
 }
 
 // Create creates new scheduled actions.
 func (s *actionServiceImpl) Create(ctx context.Context, newActions []actions.Action) error {
-	return s.repo.Create(ctx, newActions)
+	if err := s.repo.Create(ctx, newActions); err != nil {
+		return fmt.Errorf("create actions: %w", err)
+	}
+	return nil
 }
 
 // Enable enables a scheduled action.
 func (s *actionServiceImpl) Enable(ctx context.Context, actionID string) error {
-	return s.repo.Enable(ctx, actionID)
+	if err := s.repo.Enable(ctx, actionID); err != nil {
+		return fmt.Errorf("enable action %s: %w", actionID, err)
+	}
+	return nil
 }
 
 // Disable disables a scheduled action.
 func (s *actionServiceImpl) Disable(ctx context.Context, actionID string) error {
-	return s.repo.Disable(ctx, actionID)
+	if err := s.repo.Disable(ctx, actionID); err != nil {
+		return fmt.Errorf("disable action %s: %w", actionID, err)
+	}
+	return nil
 }
 
 // Delete removes a scheduled action by its ID.
 func (s *actionServiceImpl) Delete(ctx context.Context, actionID string) error {
-	return s.repo.Delete(ctx, actionID)
+	if err := s.repo.Delete(ctx, actionID); err != nil {
+		return fmt.Errorf("delete action %s: %w", actionID, err)
+	}
+	return nil
 }
 
 // Update updates an action.
 func (s *actionServiceImpl) Update(ctx context.Context, action actions.Action) error {
-	return s.repo.Update(ctx, action)
+	if err := s.repo.Update(ctx, action); err != nil {
+		return fmt.Errorf("update action %s: %w", action.GetID(), err)
+	}
+	return nil
 }

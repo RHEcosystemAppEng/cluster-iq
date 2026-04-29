@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
@@ -46,21 +47,30 @@ func (s *accountServiceImpl) GetByID(ctx context.Context, accountID string) (db.
 	return s.repo.GetAccountByID(ctx, accountID)
 }
 
-// GetAccountClustersByID retrieves a single account by its name.
-// It returns an error if no account or more than one account is found.
+// GetAccountClustersByID retrieves the clusters belonging to an account.
 func (s *accountServiceImpl) GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error) {
-	return s.repo.GetAccountClustersByID(ctx, accountID)
+	clusters, err := s.repo.GetAccountClustersByID(ctx, accountID)
+	if err != nil {
+		return clusters, fmt.Errorf("get clusters for account %s: %w", accountID, err)
+	}
+	return clusters, nil
 }
 
-// GetExpenseUpdateInstances retrieves a single account by its name.
-// It returns an error if no account or more than one account is found.
+// GetExpenseUpdateInstances retrieves instances with outdated billing information.
 func (s *accountServiceImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error) {
-	return s.repo.GetExpenseUpdateInstances(ctx, accountID)
+	instances, err := s.repo.GetExpenseUpdateInstances(ctx, accountID)
+	if err != nil {
+		return instances, fmt.Errorf("get expense update instances for account %s: %w", accountID, err)
+	}
+	return instances, nil
 }
 
 // Create creates one or more new accounts.
 func (s *accountServiceImpl) Create(ctx context.Context, accounts []inventory.Account) error {
-	return s.repo.CreateAccount(ctx, accounts)
+	if err := s.repo.CreateAccount(ctx, accounts); err != nil {
+		return fmt.Errorf("create accounts: %w", err)
+	}
+	return nil
 }
 
 // Update updates mutable fields of an existing account.
@@ -74,7 +84,10 @@ func (s *accountServiceImpl) Update(ctx context.Context, accountID string, patch
 	return s.repo.UpdateAccount(ctx, accountID, patch)
 }
 
-// Delete removes an account by its name.
+// Delete removes an account by its ID.
 func (s *accountServiceImpl) Delete(ctx context.Context, accountID string) error {
-	return s.repo.DeleteAccount(ctx, accountID)
+	if err := s.repo.DeleteAccount(ctx, accountID); err != nil {
+		return fmt.Errorf("delete account %s: %w", accountID, err)
+	}
+	return nil
 }

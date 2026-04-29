@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
@@ -38,15 +39,26 @@ func (s *instanceServiceImpl) List(ctx context.Context, opts models.ListOptions)
 
 // Get retrieves a single instance by its ID.
 func (s *instanceServiceImpl) Get(ctx context.Context, instanceID string) (db.InstanceDBResponse, error) {
-	return s.repo.GetInstanceByID(ctx, instanceID)
+	instance, err := s.repo.GetInstanceByID(ctx, instanceID)
+	if err != nil {
+		return instance, fmt.Errorf("get instance %s: %w", instanceID, err)
+	}
+	return instance, nil
 }
 
 // GetSummary retrieves a summary of instance counts.
 func (s *instanceServiceImpl) GetSummary(ctx context.Context) (inventory.InstancesSummary, error) {
-	return s.repo.GetInstancesOverview(ctx)
+	summary, err := s.repo.GetInstancesOverview(ctx)
+	if err != nil {
+		return summary, fmt.Errorf("get instances summary: %w", err)
+	}
+	return summary, nil
 }
 
 // Create creates new instances.
 func (s *instanceServiceImpl) Create(ctx context.Context, instances []inventory.Instance) error {
-	return s.repo.CreateInstances(ctx, instances)
+	if err := s.repo.CreateInstances(ctx, instances); err != nil {
+		return fmt.Errorf("create instances: %w", err)
+	}
+	return nil
 }
