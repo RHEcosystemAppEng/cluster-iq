@@ -20,6 +20,8 @@ var (
 type APIGRPCClient struct {
 	// Client is the gRPC client used to communicate with the Agent service.
 	Client pb.AgentServiceClient
+	// conn holds the underlying gRPC connection for lifecycle management.
+	conn *grpc.ClientConn
 	// logger is used for logging gRPC operations and errors.
 	logger *zap.Logger
 }
@@ -43,8 +45,14 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 
 	return &APIGRPCClient{
 		Client: pb.NewAgentServiceClient(conn),
+		conn:   conn,
 		logger: logger,
 	}, nil
+}
+
+// Close closes the underlying gRPC connection.
+func (a *APIGRPCClient) Close() error {
+	return a.conn.Close()
 }
 
 func (a APIGRPCClient) ProcessInstantAction(ctx context.Context, action *actions.InstantAction) error {

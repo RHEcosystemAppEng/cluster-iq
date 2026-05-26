@@ -106,14 +106,13 @@ func NewAgent(cfg *config.AgentConfig, logger *zap.Logger) (*Agent, error) {
 
 // StartAgentServices starts every AgentService on a separate thread(go-routine)
 func (a *Agent) StartAgentServices() error {
-	var err error
 	errChan := make(chan error, AgentServicesCount)
 
 	// Starting InstantAgentService
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		if err = a.ias.Start(); err != nil {
+		if err := a.ias.Start(); err != nil {
 			errChan <- fmt.Errorf("instant AgentService (gRPC) failed: %w", err)
 			return
 		}
@@ -124,7 +123,7 @@ func (a *Agent) StartAgentServices() error {
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		if err = a.sas.Start(); err != nil {
+		if err := a.sas.Start(); err != nil {
 			errChan <- fmt.Errorf("scheduled Agent Service failed: %w", err)
 			return
 		}
@@ -135,7 +134,7 @@ func (a *Agent) StartAgentServices() error {
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		if err = a.eas.Start(); err != nil {
+		if err := a.eas.Start(); err != nil {
 			errChan <- fmt.Errorf("executor Agent Service failed: %w", err)
 			return
 		}

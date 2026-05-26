@@ -68,7 +68,7 @@ type Scanner struct {
 func NewScanner(cfg *config.ScannerConfig, logger *zap.Logger) *Scanner {
 	// Calculate Credentials file MD5 checksum for checking on runtime
 	hash := md5.Sum([]byte(cfg.CredentialsFile))
-	copy(hash[:], credsFileHash)
+	credsFileHash = hash[:]
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},

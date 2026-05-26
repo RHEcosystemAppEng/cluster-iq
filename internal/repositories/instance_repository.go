@@ -157,9 +157,19 @@ func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inve
 //
 // Returns:
 // - An error if the transaction fails.
-func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances []inventory.Instance) error {
-	if err := r.db.InsertWithContext(ctx, InsertInstancesQuery, instances); err != nil {
-		return err
+func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances []inventory.Instance) (err error) {
+	tx, err := r.db.NewTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.NamedExecContext(ctx, InsertInstancesQuery, instances); err != nil {
+		return fmt.Errorf("failed to insert instances: %w", err)
 	}
 
 	newTags := []inventory.Tag{}
@@ -171,12 +181,12 @@ func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances 
 	}
 
 	if len(newTags) > 0 {
-		if err := r.db.InsertWithContext(ctx, InsertTagsQuery, newTags); err != nil {
-			return err
+		if _, err = tx.NamedExecContext(ctx, InsertTagsQuery, newTags); err != nil {
+			return fmt.Errorf("failed to insert tags: %w", err)
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // DeleteInstance deletes an instance and its associated tags from the database.

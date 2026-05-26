@@ -29,11 +29,11 @@ func (d *DeleteBuilder) Build() (string, []interface{}, error) {
 		return "", nil, fmt.Errorf("no table defined for DeleteBuilder")
 	}
 
-	query := fmt.Sprintf("DELETE FROM %s", d.table)
-
-	if len(d.where) > 0 {
-		query += " WHERE " + strings.Join(d.where, " AND ")
+	if len(d.where) == 0 {
+		return "", nil, fmt.Errorf("DELETE requires at least one WHERE condition for safety")
 	}
+
+	query := fmt.Sprintf("DELETE FROM %s WHERE %s", d.table, strings.Join(d.where, " AND "))
 
 	return query, d.args, nil
 }

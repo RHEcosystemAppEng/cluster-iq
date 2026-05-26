@@ -178,7 +178,7 @@ func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, a
 		},
 	}
 
-	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesPendingExpenseUpdateView, opts, "instance_id", "instance_id"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesPendingExpenseUpdateView, opts, "instance_id"); err != nil {
 		return instances, fmt.Errorf("failed to list instances pending of expense update: %w", err)
 	}
 
