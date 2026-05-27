@@ -18,7 +18,7 @@ type Event struct {
 	Description *string `db:"description"`
 	// ID of the affected resource (e.g., cluster_id, instance_id).
 	ResourceID string `db:"resource_id"`
-	// Type of resource affected (e.g., "cluster", "instance").
+	// Type of resource affected (e.g., "Cluster", "Instance").
 	ResourceType string `db:"resource_type"`
 	// Outcome of the action (e.g., "success", "error").
 	Result string `db:"result"`

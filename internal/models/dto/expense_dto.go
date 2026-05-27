@@ -13,7 +13,7 @@ type ExpenseDTORequest struct {
 	Date       time.Time `json:"date"`
 } // @name ExpenseRequest
 
-// TODO: comments
+// ToInventoryExpense converts an ExpenseDTORequest to an inventory.Expense.
 func (e ExpenseDTORequest) ToInventoryExpense() *inventory.Expense {
 	return inventory.NewExpense(
 		e.InstanceID,

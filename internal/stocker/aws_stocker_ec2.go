@@ -35,6 +35,7 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 		// Generating ClusterID for this instance based on its properties
 		clusterName := inventory.GetClusterNameFromTags(instance.Tags)
 		infraID := inventory.GetInfraIDFromTags(instance.Tags)
+
 		if s.skipNoOpenShiftInstances && clusterName == inventory.UnknownClusterNameCode {
 			s.logger.Debug("Skipping instance because it's not associated to any cluster",
 				zap.String("account_id", s.Account.AccountID),
@@ -43,32 +44,37 @@ func (s *AWSStocker) processInstances(instances []inventory.Instance) {
 			continue
 		}
 
-		clusterID := inventory.GenerateClusterID(clusterName, infraID)
-		if !s.Account.IsClusterInAccount(clusterID) {
-			cluster, err := inventory.NewCluster(
-				clusterName,
-				infraID,
-				inventory.AWSProvider,
-				s.conn.GetRegion(),
-				unknownConsoleLinkCode,
-				inventory.GetOwnerFromTags(instance.Tags),
-			)
-			if err != nil {
-				s.logger.Error("error creating new cluster during instance processing", zap.Error(err))
+		cluster, err := inventory.NewCluster(
+			clusterName,
+			infraID,
+			inventory.AWSProvider,
+			s.conn.GetRegion(),
+			unknownConsoleLinkCode,
+			inventory.GetOwnerFromTags(instance.Tags),
+		)
+
+		if err != nil {
+			s.logger.Error("error creating new cluster during instance processing", zap.Error(err))
+			continue
+		}
+
+		if !s.Account.IsClusterInAccount(cluster.ClusterID) {
+			if err := s.Account.AddCluster(cluster); err != nil {
+				s.logger.Error("error adding cluster to account during instance processing",
+					zap.String("account_id", s.Account.AccountID),
+					zap.String("cluster_id", cluster.ClusterID),
+					zap.Error(err))
 				continue
 			}
+		}
 
-			if !s.Account.IsClusterInAccount(cluster.ClusterID) {
-				_ = s.Account.AddCluster(cluster)
-			}
-
-			if err := s.Account.Clusters[clusterID].AddInstance(&instance); err != nil {
-				s.logger.Error("error adding instance to cluster during instance processing",
-					zap.String("account_id", s.Account.AccountID),
-					zap.String("cluster_id", clusterID),
-					zap.String("instance_id", instance.InstanceID),
-					zap.Error(err))
-			}
+		// At this point, the cluster is guaranteed to exist in s.Account.Clusters
+		if err := s.Account.Clusters[cluster.ClusterID].AddInstance(&instance); err != nil {
+			s.logger.Error("error adding instance to cluster during instance processing",
+				zap.String("account_id", s.Account.AccountID),
+				zap.String("cluster_id", cluster.ClusterID),
+				zap.String("instance_id", instance.InstanceID),
+				zap.Error(err))
 		}
 	}
 }

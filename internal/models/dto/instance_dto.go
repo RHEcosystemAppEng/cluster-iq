@@ -22,7 +22,9 @@ type InstanceDTORequest struct {
 	Tags              []TagDTORequest          `json:"tags"`
 } // @name InstanceRequest
 
-func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
+// ToInventoryInstance converts an InstanceDTORequest to an inventory.Instance.
+// Returns an error if the instance cannot be created.
+func (i InstanceDTORequest) ToInventoryInstance() (*inventory.Instance, error) {
 	instance, err := inventory.NewInstance(
 		i.InstanceID,
 		i.InstanceName,
@@ -34,23 +36,26 @@ func (i InstanceDTORequest) ToInventoryInstance() *inventory.Instance {
 		i.CreatedAt,
 	)
 	if err != nil {
-		// TODO: Propagate error
-		return nil
+		return nil, err
 	}
 
 	instance.LastScanTimestamp = i.LastScanTimestamp
 	instance.ClusterID = i.ClusterID
 
-	return instance
+	return instance, nil
 }
 
-func ToInventoryInstanceList(dtos []InstanceDTORequest) *[]inventory.Instance {
-	instances := make([]inventory.Instance, len(dtos))
-	for i, dto := range dtos {
-		instances[i] = *dto.ToInventoryInstance()
+func ToInventoryInstanceList(dtos []InstanceDTORequest) (*[]inventory.Instance, error) {
+	instances := make([]inventory.Instance, 0, len(dtos))
+	for _, dto := range dtos {
+		instance, err := dto.ToInventoryInstance()
+		if err != nil {
+			return nil, err
+		}
+		instances = append(instances, *instance)
 	}
 
-	return &instances
+	return &instances, nil
 }
 
 func ToInstanceDTORequest(instance inventory.Instance) *InstanceDTORequest {
@@ -91,7 +96,7 @@ type InstanceDTOResponse struct {
 	ClusterID             string                   `json:"clusterId"`
 	ClusterName           string                   `json:"clusterName"`
 	LastScanTimestamp     time.Time                `json:"lastScanTimestamp"`
-	CreatedAt             time.Time                `json:"creationTimestamp"`
+	CreatedAt             time.Time                `json:"createdAt"`
 	Age                   int                      `json:"age"`
 	TotalCost             float64                  `json:"totalCost"`
 	Last15DaysCost        float64                  `json:"last15DaysCost"`

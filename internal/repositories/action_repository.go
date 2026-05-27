@@ -126,7 +126,7 @@ func NewActionRepository(db *dbclient.DBClient) ActionRepository {
 //   - An array of actions.Action with the scheduled actions declared on the DB
 //   - An error if the query fails
 func (r *actionRepositoryImpl) List(ctx context.Context, opts models.ListOptions) ([]db.ActionDBResponse, int, error) {
-	var schedule []db.ActionDBResponse
+	schedule := []db.ActionDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &schedule, SelectScheduleFullView, opts, "id", "*"); err != nil {
 		return schedule, 0, fmt.Errorf("failed to list schedule: %w", err)
@@ -194,14 +194,18 @@ func (r *actionRepositoryImpl) GetByID(ctx context.Context, actionID string) (db
 //   - An error if the insert fails
 //
 // TODO: Temporal fix returning TX from DBClient to manage both insertions in the same sql transaction
-func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) error {
+func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) (err error) {
 	schedActions, cronActions := actions.SplitActionsByType(newActions)
 
 	tx, err := r.db.NewTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer func() { _ = tx.Rollback() }()
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
 
 	// Writing Scheduled Actions
 	if len(schedActions) > 0 {

@@ -11,7 +11,7 @@ import (
 // TestClusterDTORequest_ToInventoryCluster verifies DTO to inventory.Cluster conversion.
 func TestClusterDTORequest_ToInventoryCluster(t *testing.T) {
 	t.Run("Valid DTO", func(t *testing.T) { testClusterDTORequest_ToInventoryCluster_Correct(t) })
-	t.Run("Invalid DTO returns nil", func(t *testing.T) { testClusterDTORequest_ToInventoryCluster_Invalid(t) })
+	t.Run("Invalid DTO returns error", func(t *testing.T) { testClusterDTORequest_ToInventoryCluster_Invalid(t) })
 }
 
 func testClusterDTORequest_ToInventoryCluster_Correct(t *testing.T) {
@@ -32,8 +32,9 @@ func testClusterDTORequest_ToInventoryCluster_Correct(t *testing.T) {
 		Owner:             "owner",
 	}
 
-	cluster := dto.ToInventoryCluster()
+	cluster, err := dto.ToInventoryCluster()
 
+	assert.NoError(t, err)
 	assert.NotNil(t, cluster)
 
 	assert.Equal(t, dto.ClusterName, cluster.ClusterName)
@@ -61,13 +62,15 @@ func testClusterDTORequest_ToInventoryCluster_Invalid(t *testing.T) {
 		Owner:       "owner",
 	}
 
-	cluster := dto.ToInventoryCluster()
+	cluster, err := dto.ToInventoryCluster()
+	assert.Error(t, err)
 	assert.Nil(t, cluster)
 }
 
 // TestToInventoryClusterList verifies slice conversion from DTOs to inventory.Cluster.
 func TestToInventoryClusterList(t *testing.T) {
 	t.Run("Multiple DTOs", func(t *testing.T) { testToInventoryClusterList_Correct(t) })
+	t.Run("Error on invalid DTO", func(t *testing.T) { testToInventoryClusterList_Error(t) })
 }
 
 func testToInventoryClusterList_Correct(t *testing.T) {
@@ -100,13 +103,34 @@ func testToInventoryClusterList_Correct(t *testing.T) {
 		},
 	}
 
-	clusters := ToInventoryClusterList(dtos)
+	clusters, err := ToInventoryClusterList(dtos)
 
+	assert.NoError(t, err)
 	assert.NotNil(t, clusters)
 	assert.Len(t, *clusters, 2)
 
 	assert.Equal(t, "c1", (*clusters)[0].ClusterName)
 	assert.Equal(t, "c2", (*clusters)[1].ClusterName)
+}
+
+func testToInventoryClusterList_Error(t *testing.T) {
+	dtos := []ClusterDTORequest{
+		{
+			ClusterName: "c1",
+			InfraID:     "AAAAA",
+			Provider:    inventory.AWSProvider,
+		},
+		{
+			ClusterName: "", // This will cause NewCluster to return error
+			InfraID:     "BBBBB",
+			Provider:    inventory.AWSProvider,
+		},
+	}
+
+	clusters, err := ToInventoryClusterList(dtos)
+
+	assert.Error(t, err)
+	assert.Nil(t, clusters)
 }
 
 // TestToClusterDTORequest verifies inventory.Cluster to DTO conversion.

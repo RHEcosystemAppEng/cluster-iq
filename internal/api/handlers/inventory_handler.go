@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"net/http"
+
+	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/services"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -20,8 +23,22 @@ func NewInventoryHandler(service services.InventoryService, logger *zap.Logger) 
 	}
 }
 
+// Refresh triggers a refresh of materialized views and terminated resource status.
+//
+//	@Summary		Refresh inventory
+//	@Description	Refresh materialized views and update terminated resource status.
+//	@Tags			Inventory
+//	@Success		200
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/inventory [post]
 func (h *InventoryHandler) Refresh(c *gin.Context) {
 	if err := h.service.Refresh(c); err != nil {
 		h.logger.Error("Error when refreshing Inventory", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to refresh inventory",
+		})
+		return
 	}
+
+	c.Status(http.StatusOK)
 }

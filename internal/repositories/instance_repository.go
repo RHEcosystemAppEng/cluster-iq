@@ -97,7 +97,7 @@ func NewInstanceRepository(db *dbclient.DBClient) InstanceRepository {
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
 func (r *instanceRepositoryImpl) ListInstances(ctx context.Context, opts models.ListOptions) ([]db.InstanceDBResponse, int, error) {
-	var instances []db.InstanceDBResponse
+	instances := []db.InstanceDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesFullMView, opts, "instance_id", "*"); err != nil {
 		return instances, 0, fmt.Errorf("failed to list instances: %w", err)
@@ -144,7 +144,7 @@ func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inve
 		"COUNT(CASE WHEN status = 'Stopped' THEN 1 END) AS stopped",
 		"COUNT(CASE WHEN status = 'Terminated' THEN 1 END) AS archived",
 	); err != nil {
-		return countsDB, fmt.Errorf("failed to list clusters: %w", err)
+		return countsDB, fmt.Errorf("failed to list instances: %w", err)
 	}
 
 	return countsDB, nil
@@ -157,12 +157,22 @@ func (r *instanceRepositoryImpl) GetInstancesOverview(ctx context.Context) (inve
 //
 // Returns:
 // - An error if the transaction fails.
-func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances []inventory.Instance) error {
-	if err := r.db.InsertWithContext(ctx, InsertInstancesQuery, instances); err != nil {
-		return err
+func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances []inventory.Instance) (err error) {
+	tx, err := r.db.NewTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.NamedExecContext(ctx, InsertInstancesQuery, instances); err != nil {
+		return fmt.Errorf("failed to insert instances: %w", err)
 	}
 
-	var newTags []inventory.Tag
+	newTags := []inventory.Tag{}
 	for _, instance := range instances {
 		for _, tag := range instance.Tags {
 			tag.InstanceID = instance.InstanceID
@@ -171,12 +181,12 @@ func (r *instanceRepositoryImpl) CreateInstances(ctx context.Context, instances 
 	}
 
 	if len(newTags) > 0 {
-		if err := r.db.InsertWithContext(ctx, InsertTagsQuery, newTags); err != nil {
-			return err
+		if _, err = tx.NamedExecContext(ctx, InsertTagsQuery, newTags); err != nil {
+			return fmt.Errorf("failed to insert tags: %w", err)
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // DeleteInstance deletes an instance and its associated tags from the database.

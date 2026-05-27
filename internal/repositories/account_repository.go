@@ -11,6 +11,7 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/db"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
 const (
@@ -52,6 +53,7 @@ type AccountRepository interface {
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
 	GetScannerTimestamp(ctx context.Context) (time.Time, error)
 	CreateAccount(ctx context.Context, accounts []inventory.Account) error
+	UpdateAccount(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
 	DeleteAccount(ctx context.Context, accountID string) error
 }
 
@@ -69,7 +71,7 @@ func NewAccountRepository(db *dbclient.DBClient) AccountRepository {
 // - A slice of inventory.Account objects.
 // - An error if the query fails.
 func (r *accountRepositoryImpl) ListAccounts(ctx context.Context, opts models.ListOptions) ([]db.AccountDBResponse, int, error) {
-	var accounts []db.AccountDBResponse
+	accounts := []db.AccountDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &accounts, SelectAccountsMView, opts, "account_id", "*"); err != nil {
 		return accounts, 0, fmt.Errorf("failed to list accounts: %w", err)
@@ -112,7 +114,7 @@ func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID st
 		},
 	}
 
-	if err := r.db.GetWithContext(ctx, &account, SelectAccountsMView, opts, "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &account, SelectAccountsView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return account, ErrNotFound
 		}
@@ -130,7 +132,11 @@ func (r *accountRepositoryImpl) GetAccountByID(ctx context.Context, accountID st
 // - A slice of inventory.Account objects (usually containing one element).
 // - An error if the query fails.
 func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error) {
-	var clusters []db.ClusterDBResponse
+	if _, err := r.GetAccountByID(ctx, accountID); err != nil {
+		return nil, err
+	}
+
+	clusters := []db.ClusterDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -142,10 +148,15 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 
 	if err := r.db.SelectWithContext(ctx, &clusters, SelectClustersFullMView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return clusters, ErrNotFound
+			return clusters, nil
 		}
 		return clusters, err
 	}
+
+	if len(clusters) == 0 {
+		return clusters, ErrNoClustersInAccount
+	}
+
 	return clusters, nil
 }
 
@@ -157,7 +168,7 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
 func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error) {
-	var instances []db.InstanceDBResponse
+	instances := []db.InstanceDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -167,7 +178,7 @@ func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, a
 		},
 	}
 
-	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesPendingExpenseUpdateView, opts, "instance_id", "instance_id"); err != nil {
+	if err := r.db.SelectWithContext(ctx, &instances, SelectInstancesPendingExpenseUpdateView, opts, "instance_id"); err != nil {
 		return instances, fmt.Errorf("failed to list instances pending of expense update: %w", err)
 	}
 
@@ -187,6 +198,78 @@ func (r *accountRepositoryImpl) CreateAccount(ctx context.Context, accounts []in
 	}
 
 	return nil
+}
+
+// refreshAccountsMView refreshes the accounts materialized view in a separate transaction.
+func (r *accountRepositoryImpl) refreshAccountsMView(ctx context.Context) error {
+	tx, txErr := r.db.NewTx(ctx)
+	if txErr != nil {
+		return fmt.Errorf("failed to create transaction for refresh: %w", txErr)
+	}
+
+	var err error
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.ExecContext(ctx, "REFRESH MATERIALIZED VIEW m_accounts_full_view"); err != nil {
+		return fmt.Errorf("refresh materialized view error: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit refresh error: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateAccount updates mutable fields of an existing account in the database.
+// Only non-nil fields in the patch request will be updated.
+func (r *accountRepositoryImpl) UpdateAccount(ctx context.Context, accountID string, patch dto.AccountPatchRequest) (err error) {
+	// Build dynamic UPDATE query with positional parameters
+	query := "UPDATE accounts SET "
+	args := make([]interface{}, 0)
+	argCount := 1
+
+	if patch.AccountName != nil {
+		query += fmt.Sprintf("account_name = $%d", argCount)
+		args = append(args, *patch.AccountName)
+		argCount++
+	}
+
+	// If no fields to update, return early
+	if len(args) == 0 {
+		return nil
+	}
+
+	query += fmt.Sprintf(" WHERE account_id = $%d", argCount)
+	args = append(args, accountID)
+
+	// Execute update in a transaction
+	tx, txErr := r.db.NewTx(ctx)
+	if txErr != nil {
+		return txErr
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, execErr := tx.ExecContext(ctx, query, args...); execErr != nil {
+		err = fmt.Errorf("exec UPDATE error: %w", execErr)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit UPDATE error: %w", err)
+	}
+
+	// Refresh materialized view after transaction commits
+	return r.refreshAccountsMView(ctx)
 }
 
 // DeleteAccount deletes an account from the database by its ID.

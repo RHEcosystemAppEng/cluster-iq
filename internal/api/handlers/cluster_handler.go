@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -200,7 +201,16 @@ func (h *ClusterHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryClusterList(newClusterDTOs)); err != nil {
+	clusters, err := dto.ToInventoryClusterList(newClusterDTOs)
+	if err != nil {
+		h.logger.Error("error converting cluster DTOs", zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid cluster data: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), *clusters); err != nil {
 		h.logger.Error("error creating a cluster", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to create clusters: " + err.Error(),
@@ -247,23 +257,38 @@ func (h *ClusterHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// PowerOn triggers a power-on operation for a cluster.
-//
-//	@Summary		Power on a cluster
-//	@Description	Request powering on a cluster.
-//	@Tags			Clusters
-//	@Accept			json
-//	@Produce		json
-//	@Param			id	path		string	true	"Cluster ID"
-//	@Success		202	{object}	responsetypes.GenericResponse
-//	@Failure		404	{object}	responsetypes.GenericErrorResponse
-//	@Failure		500	{object}	responsetypes.GenericErrorResponse
-//	@Router			/clusters/{id}/power_on [post]
-func (h *ClusterHandler) PowerOn(c *gin.Context) {
+// handlePowerAction is a generic handler for power operations (on/off) on clusters.
+// It reduces code duplication by centralizing the common logic for both operations.
+func (h *ClusterHandler) handlePowerAction(
+	c *gin.Context,
+	action string,
+	serviceFunc func(ctx context.Context, clusterID string, requester string, description *string) error,
+) {
 	clusterID := c.Param("id")
+	var request dto.PowerActionRequest
 
-	if err := h.service.PowerOn(c.Request.Context(), clusterID); err != nil {
-		h.logger.Error("error powering on a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+	// Bind JSON body to request struct
+	if err := c.ShouldBindJSON(&request); err != nil {
+		h.logger.Error("Bad request for "+action+" cluster operation - invalid JSON body",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	// Log requester and description
+	h.logger.Info(action+" request received",
+		zap.String("cluster_id", clusterID),
+		zap.String("requester", request.Requester),
+		zap.String("description", request.Description))
+
+	if err := serviceFunc(c.Request.Context(), clusterID, request.Requester, &request.Description); err != nil {
+		h.logger.Error("error "+action+" a cluster",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+
 		if errors.Is(err, repositories.ErrNotFound) {
 			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
 				Message: "Cluster not found",
@@ -272,14 +297,32 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to power on cluster: " + err.Error(),
+			Message: "Failed to " + action + " cluster: " + err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusAccepted, responsetypes.GenericResponse{
-		Message: "Power on request accepted",
+		Message: action + " request accepted",
 	})
+}
+
+// PowerOn triggers a power-on operation for a cluster.
+//
+//	@Summary		Power on a cluster
+//	@Description	Request powering on a cluster.
+//	@Tags			Clusters
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Cluster ID"
+//	@Param			request body  dto.PowerActionRequest  true  "Power action details"
+//	@Success		202	{object}	responsetypes.GenericResponse
+//	@Failure		400	{object}	responsetypes.GenericErrorResponse
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/clusters/{id}/power_on [post]
+func (h *ClusterHandler) PowerOn(c *gin.Context) {
+	h.handlePowerAction(c, "power on", h.service.PowerOn)
 }
 
 // PowerOff triggers a power-off operation for a cluster.
@@ -290,31 +333,14 @@ func (h *ClusterHandler) PowerOn(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Cluster ID"
+//	@Param			request body  dto.PowerActionRequest  true  "Power action details"
 //	@Success		202	{object}	responsetypes.GenericResponse
+//	@Failure		400	{object}	responsetypes.GenericErrorResponse
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id}/power_off [post]
 func (h *ClusterHandler) PowerOff(c *gin.Context) {
-	clusterID := c.Param("id")
-
-	if err := h.service.PowerOff(c.Request.Context(), clusterID); err != nil {
-		h.logger.Error("error powering off a cluster", zap.String("cluster_id", clusterID), zap.Error(err))
-		if errors.Is(err, repositories.ErrNotFound) {
-			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
-				Message: "Cluster not found",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
-			Message: "Failed to power off cluster: " + err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusAccepted, responsetypes.GenericResponse{
-		Message: "Power off request accepted",
-	})
+	h.handlePowerAction(c, "power off", h.service.PowerOff)
 }
 
 // GetTags returns tags for the specified cluster.
@@ -353,16 +379,54 @@ func (h *ClusterHandler) GetTags(c *gin.Context) {
 // Update applies partial updates to a cluster.
 //
 //	@Summary		Update a cluster
-//	@Description	Patch mutable fields of a cluster.
+//	@Description	Patch mutable fields of a cluster (consoleLink, owner).
 //	@Tags			Clusters
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		string					true	"Cluster ID"
-//	@Param			cluster	body		dto.ClusterDTOResponse	true	"Partial cluster payload"
-//	@Success		200		{object}	nil
-//	@Failure		501		{object}	nil	"Not Implemented"
+//	@Param			cluster	body		dto.ClusterPatchRequest	true	"Partial cluster payload"
+//	@Success		200		{object}	dto.ClusterDTOResponse
+//	@Failure		400		{object}	responsetypes.GenericErrorResponse
+//	@Failure		404		{object}	responsetypes.GenericErrorResponse
+//	@Failure		500		{object}	responsetypes.GenericErrorResponse
 //	@Router			/clusters/{id} [patch]
 func (h *ClusterHandler) Update(c *gin.Context) {
-	// TODO: Implement partial update strategy
-	c.PureJSON(http.StatusNotImplemented, nil)
+	clusterID := c.Param("id")
+
+	var patchRequest dto.ClusterPatchRequest
+	if err := c.ShouldBindJSON(&patchRequest); err != nil {
+		h.logger.Error("Bad request for cluster update - invalid JSON body",
+			zap.String("cluster_id", clusterID),
+			zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Update(c.Request.Context(), clusterID, patchRequest); err != nil {
+		h.logger.Error("error updating cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Cluster not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to update cluster: " + err.Error(),
+		})
+		return
+	}
+
+	// Fetch updated cluster to return
+	updatedCluster, err := h.service.Get(c.Request.Context(), clusterID)
+	if err != nil {
+		h.logger.Error("error fetching updated cluster", zap.String("cluster_id", clusterID), zap.Error(err))
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Cluster updated but failed to fetch result",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, (&convert.ConverterImpl{}).ToClusterDTO(*updatedCluster))
 }

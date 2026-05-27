@@ -4,6 +4,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
@@ -39,10 +40,17 @@ func (s *expenseServiceImpl) List(ctx context.Context, options models.ListOption
 
 // GetByInstanceID retrieves all expenses associated with a specific instance.
 func (s *expenseServiceImpl) GetByInstanceID(ctx context.Context, instanceID string) ([]db.ExpenseDBResponse, error) {
-	return s.repo.GetExpensesByInstance(ctx, instanceID)
+	expenses, err := s.repo.GetExpensesByInstance(ctx, instanceID)
+	if err != nil {
+		return expenses, fmt.Errorf("get expenses for instance %s: %w", instanceID, err)
+	}
+	return expenses, nil
 }
 
 // Create creates new expense records.
 func (s *expenseServiceImpl) Create(ctx context.Context, expenses []inventory.Expense) error {
-	return s.repo.Create(ctx, expenses)
+	if err := s.repo.Create(ctx, expenses); err != nil {
+		return fmt.Errorf("create expenses: %w", err)
+	}
+	return nil
 }

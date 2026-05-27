@@ -1,5 +1,7 @@
 \c postgres
 
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
 -- pg_cron task for updating the 'Terminated' elements in the inventory every 6 hours
 SELECT cron.schedule_in_database(
   'check_terminated_inventory',

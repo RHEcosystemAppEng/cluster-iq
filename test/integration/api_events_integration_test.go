@@ -8,6 +8,7 @@ import (
 	"time"
 
 	responsetypes "github.com/RHEcosystemAppEng/cluster-iq/internal/api/response_types"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models/dto"
 )
 
@@ -97,7 +98,7 @@ func testPostEvents(t *testing.T) {
 	event := dto.EventDTORequest{
 		Action:         "TestAction",
 		ResourceID:     "aws-cluster-2-aws-infra-2",
-		ResourceType:   "cluster",
+		ResourceType:   inventory.ClusterResourceType,
 		EventTimestamp: time.Now(),
 		Result:         "Pending",
 		Severity:       "info",
@@ -143,7 +144,7 @@ func testUpdateEvent(t *testing.T) {
 		ID:             2,
 		Action:         "TestAction",
 		ResourceID:     "aws-cluster-2-aws-infra-2",
-		ResourceType:   "cluster",
+		ResourceType:   inventory.ClusterResourceType,
 		EventTimestamp: time.Now(),
 		Result:         "Success",
 		Severity:       "info",

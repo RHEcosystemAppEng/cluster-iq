@@ -25,9 +25,9 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
+          version: v2.6.2
           only-new-issues: true
           args: --whole-files
-          version: v2.1
 
   call-unit-tests:
     name: Go Unit tests

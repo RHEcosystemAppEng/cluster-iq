@@ -187,10 +187,25 @@ func (h *ActionHandler) Create(c *gin.Context) {
 //	@Tags			Actions
 //	@Param			id	path		string	true	"Scheduled action ID"
 //	@Success		200	{object}	nil
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/actions/{id}/enable [patch]
 func (h *ActionHandler) Enable(c *gin.Context) {
 	actionID := c.Param("id")
+
+	if _, err := h.service.Get(c.Request.Context(), actionID); err != nil {
+		h.logger.Error("error enabling action", zap.String("action_id", actionID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Scheduled action not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to enable scheduled action",
+		})
+		return
+	}
 
 	if err := h.service.Enable(c.Request.Context(), actionID); err != nil {
 		h.logger.Error("error enabling action", zap.String("action_id", actionID), zap.Error(err))
@@ -210,10 +225,25 @@ func (h *ActionHandler) Enable(c *gin.Context) {
 //	@Tags			Actions
 //	@Param			id	path		string	true	"Scheduled action ID"
 //	@Success		200	{object}	nil
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/actions/{id}/disable [patch]
 func (h *ActionHandler) Disable(c *gin.Context) {
 	actionID := c.Param("id")
+
+	if _, err := h.service.Get(c.Request.Context(), actionID); err != nil {
+		h.logger.Error("error disabling action", zap.String("action_id", actionID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Scheduled action not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to disable scheduled action",
+		})
+		return
+	}
 
 	if err := h.service.Disable(c.Request.Context(), actionID); err != nil {
 		h.logger.Error("error disabling action", zap.String("action_id", actionID), zap.Error(err))
@@ -258,15 +288,15 @@ func (h *ActionHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Update applies partial updates to an existing actions.
+// Update applies partial updates to an existing action.
 //
-//	@Summary		Update an actions
-//	@Description	Patch an existing actions by ID.
+//	@Summary		Update an action
+//	@Description	Patch an existing action.
 //	@Tags			Actions
 //	@Accept			json
 //	@Produce		json
 //	@Param			action	body		dto.ActionDTORequest	true	"Partial action payload"
-//	@Success		200		{object}	nil
+//	@Success		200		{object}	responsetypes.PostResponse
 //	@Failure		400		{object}	responsetypes.GenericErrorResponse
 //	@Failure		500		{object}	responsetypes.GenericErrorResponse
 //	@Router			/actions [patch]
@@ -281,7 +311,15 @@ func (h *ActionHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Update(c.Request.Context(), actionDTO.ToModelAction()); err != nil {
+	action := actionDTO.ToModelAction()
+	if action == nil {
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Unknown action type: " + actionDTO.Type,
+		})
+		return
+	}
+
+	if err := h.service.Update(c.Request.Context(), action); err != nil {
 		h.logger.Error("error updating action", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to update action: " + err.Error(),

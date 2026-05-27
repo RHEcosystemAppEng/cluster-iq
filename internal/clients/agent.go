@@ -20,6 +20,8 @@ var (
 type APIGRPCClient struct {
 	// Client is the gRPC client used to communicate with the Agent service.
 	Client pb.AgentServiceClient
+	// conn holds the underlying gRPC connection for lifecycle management.
+	conn *grpc.ClientConn
 	// logger is used for logging gRPC operations and errors.
 	logger *zap.Logger
 }
@@ -43,19 +45,25 @@ func NewAPIGRPCClient(agentURL string, logger *zap.Logger) (*APIGRPCClient, erro
 
 	return &APIGRPCClient{
 		Client: pb.NewAgentServiceClient(conn),
+		conn:   conn,
 		logger: logger,
 	}, nil
 }
 
-func (a APIGRPCClient) ProcessInstantAction(action *actions.InstantAction) error {
+// Close closes the underlying gRPC connection.
+func (a *APIGRPCClient) Close() error {
+	return a.conn.Close()
+}
+
+func (a APIGRPCClient) ProcessInstantAction(ctx context.Context, action *actions.InstantAction) error {
 	if action.GetDescription() == nil {
 		action.Description = &DefaultInstantActionDescription
 	}
 	switch action.Operation {
 	case actions.PowerOff:
-		return a.PowerOffCluster(context.Background(), action)
+		return a.PowerOffCluster(ctx, action)
 	case actions.PowerOn:
-		return a.PowerOnCluster(context.Background(), action)
+		return a.PowerOnCluster(ctx, action)
 	default:
 		return fmt.Errorf("received InstantAction with unknown Operation")
 	}

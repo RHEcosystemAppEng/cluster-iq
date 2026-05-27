@@ -209,6 +209,7 @@ This procedure does NOT:
 
   DROP TABLE stage_clusters;
 
+  -- Remove "UNKNOWN" clusters
   DELETE FROM clusters WHERE cluster_name = 'NO_CLUSTER';
   DELETE FROM clusters WHERE cluster_name = 'UNKNOWN-CLUSTER' AND infra_id = '';
   ```
@@ -322,6 +323,9 @@ This procedure does NOT:
     date                    DATE,
     amount                  NUMERIC(12,2)
   );
+
+  CREATE TABLE IF NOT EXISTS expenses_default PARTITION OF expenses DEFAULT;
+
 
   -- Loading tags backup
   \COPY stage_expenses (instance_id, date, amount) FROM '/tmp/backups/expenses.csv' CSV HEADER;
@@ -465,6 +469,27 @@ This procedure does NOT:
 
 * [ ] **M12** — Clean and normalize clusters data.
   ```sql
+  -- Verifying "-<ACCOUNT_NAME>" suffix
+  SELECT
+    c.id,
+    c.cluster_id,
+    a.account_name
+  FROM clusters c
+  JOIN accounts a ON a.id = c.account_id
+  WHERE c.cluster_id ~* ('-' || regexp_replace(a.account_name, '([\\W])', '\\\1', 'g') || '$');
+
+  -- Remove "-<ACCOUNT_NAME>" suffix from cluster_id
+  UPDATE clusters c
+  SET cluster_id = regexp_replace(
+    c.cluster_id,
+    '-' || regexp_replace(a.account_name, '([\\W])', '\\\1', 'g') || '$',
+    '',
+    'i'
+  )
+  FROM accounts a
+  WHERE a.id = c.account_id
+    AND c.cluster_id ~* ('-' || regexp_replace(a.account_name, '([\\W])', '\\\1', 'g') || '$');
+
   -- Processing no-clustered clusters
   UPDATE clusters SET infra_id = '', cluster_name = 'NO_CLUSTER', cluster_id = 'NO_CLUSTER' WHERE infra_id = '' OR infra_id = 'UNKNOWN-CLUSTER';
   -- Processing cluster_id column for removing embeeded account_id
@@ -495,5 +520,3 @@ This procedure does NOT:
 - Row counts match or are explainable against pre-check values
 - No temporary tables remain
 - Database is ready for ClusterIQ `0.5`
-
-

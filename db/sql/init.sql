@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS instances (
   provider                CLOUD_PROVIDER NOT NULL,
   availability_zone       TEXT,
   status                  STATUS DEFAULT 'Unknown' NOT NULL,
-  cluster_id              INTEGER REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
+  cluster_id              BIGINT REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
   last_scan_ts            TIMESTAMP WITH TIME ZONE,
   created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   age                     INTEGER DEFAULT 0,
@@ -194,12 +194,11 @@ CREATE TABLE IF NOT EXISTS events (
   event_timestamp         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   triggered_by            TEXT NOT NULL,
   action                  TEXT NOT NULL,
-  resource_id             INTEGER,
-  resource_type           TEXT NOT NULL,
+  resource_id             BIGINT,
+  resource_type           RESOURCE_TYPE NOT NULL,
   result                  ACTION_STATUS NOT NULL,
   description             TEXT NULL,
   severity                TEXT DEFAULT 'info'::TEXT NOT NULL,
-  CONSTRAINT events_resource_type_check CHECK ((resource_type = ANY (ARRAY['cluster'::TEXT, 'instance'::TEXT]))),
   PRIMARY KEY (id, event_timestamp)
 ) PARTITION BY RANGE (event_timestamp);
 
@@ -209,6 +208,33 @@ CREATE INDEX IF NOT EXISTS ix_events_type_id_time ON events (resource_type, reso
 -- Default expenses partition. The rest of expenses will be created by pg_cron
 CREATE TABLE events_default PARTITION OF events DEFAULT;
 
+-- Cascade delete events when clusters are deleted
+CREATE OR REPLACE FUNCTION delete_cluster_events()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM events WHERE resource_type = 'Cluster'::RESOURCE_TYPE AND resource_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_delete_cluster_events
+    BEFORE DELETE ON clusters
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_cluster_events();
+
+-- Cascade delete events when instances are deleted
+CREATE OR REPLACE FUNCTION delete_instance_events()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM events WHERE resource_type = 'Instance'::RESOURCE_TYPE AND resource_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_delete_instance_events
+    BEFORE DELETE ON instances
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_instance_events();
 
 
 -- #############################################################################
@@ -244,13 +270,13 @@ CREATE INDEX IF NOT EXISTS ix_schedule_status         ON schedule (status);
 -- ############################################################
 
 -- Accounts Cluster Count view
-CREATE VIEW accounts_with_cluster_count AS
+CREATE OR REPLACE VIEW accounts_with_cluster_count AS
 SELECT c.account_id, COUNT(*)::bigint AS cluster_count
 FROM clusters c
 GROUP BY c.account_id;
 
 -- Accounts Costs view
-CREATE VIEW accounts_with_costs AS
+CREATE OR REPLACE VIEW accounts_with_costs AS
 WITH base AS (
   SELECT a.id, e.date, e.amount
   FROM accounts a
@@ -274,7 +300,7 @@ LEFT JOIN base b ON b.id = a.id
 GROUP BY a.id;
 
 -- Accounts Full view
-CREATE VIEW accounts_full_view AS
+CREATE OR REPLACE VIEW accounts_full_view AS
 SELECT
   a.account_id,
   a.account_name,
@@ -299,13 +325,13 @@ CREATE MATERIALIZED VIEW m_accounts_full_view AS SELECT * FROM accounts_full_vie
 -- ############################################################
 
 -- Cluster Instances Count view
-CREATE VIEW clusters_with_instance_count AS
+CREATE OR REPLACE VIEW clusters_with_instance_count AS
 SELECT i.cluster_id, COUNT(*)::bigint AS instance_count
 FROM instances i
 GROUP BY i.cluster_id;
 
 -- clusters Costs view
-CREATE VIEW clusters_with_costs AS
+CREATE OR REPLACE VIEW clusters_with_costs AS
 WITH base AS (
   SELECT c.id, e.date, e.amount
   FROM clusters c
@@ -327,7 +353,7 @@ LEFT JOIN base b ON b.id = c.id
 GROUP BY c.id;
 
 -- clusters Full view
-CREATE VIEW clusters_full_view AS
+CREATE OR REPLACE VIEW clusters_full_view AS
 SELECT
   c.cluster_id,
   c.cluster_name,
@@ -355,7 +381,7 @@ LEFT JOIN clusters_with_costs         ac ON ac.id = c.id;
 CREATE MATERIALIZED VIEW m_clusters_full_view AS SELECT * FROM clusters_full_view;
 
 -- cluster tags view. Returns the cluster_id + every tag omitting repeated tags keys
-CREATE view clusters_tags AS
+CREATE OR REPLACE VIEW clusters_tags AS
 SELECT
     c.cluster_id,
     t.key,
@@ -363,6 +389,7 @@ SELECT
 FROM clusters   c
 JOIN instances  i ON i.cluster_id = c.id
 JOIN tags       t ON t.instance_id = i.id
+WHERE t.key != 'Name' AND t.key != 'MachineName'
 GROUP BY c.cluster_id, t.key
 HAVING COUNT(*) > 1;
 
@@ -373,7 +400,7 @@ HAVING COUNT(*) > 1;
 -- #############################################################################
 
 -- Instances Costs view
-CREATE VIEW instances_with_costs AS
+CREATE OR REPLACE VIEW instances_with_costs AS
 WITH base AS (
   SELECT i.id, e.date, e.amount
   FROM instances i
@@ -394,7 +421,7 @@ LEFT JOIN base b ON b.id = i.id
 GROUP BY i.id;
 
 -- Instances Full view
-CREATE VIEW instances_full_view AS
+CREATE OR REPLACE VIEW instances_full_view AS
 SELECT
   i.instance_id,
   i.instance_name,
@@ -418,7 +445,7 @@ LEFT JOIN instances_with_costs ic ON ic.id = i.id;
 CREATE MATERIALIZED VIEW m_instances_full_view AS SELECT * FROM instances_full_view;
 
 -- Instances Full view
-CREATE VIEW instances_full_view_with_tags AS
+CREATE OR REPLACE VIEW instances_full_view_with_tags AS
 SELECT
   i.instance_id,
   i.instance_name,
@@ -449,7 +476,7 @@ LEFT JOIN LATERAL (
 CREATE MATERIALIZED VIEW m_instances_full_view_with_tags AS SELECT * FROM instances_full_view_with_tags;
 
 -- Instances pending for expense update
-CREATE VIEW instances_pending_expense_update AS
+CREATE OR REPLACE VIEW instances_pending_expense_update AS
 SELECT
   a.account_id,
 	i.instance_id
@@ -490,7 +517,7 @@ WHERE
 -- #############################################################################
 
 -- Schedule with cluster and instances list view
-CREATE VIEW schedule_full_view AS
+CREATE OR REPLACE VIEW schedule_full_view AS
 SELECT
 	s.id,
 	s.type,
@@ -547,7 +574,7 @@ $$;
 -- #############################################################################
 
 -- View for Cluster Events
-CREATE VIEW cluster_events AS
+CREATE OR REPLACE VIEW cluster_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
@@ -559,12 +586,12 @@ SELECT
   ev.description,
   ev.severity
 FROM events ev
-LEFT JOIN clusters  c ON ev.resource_type = 'cluster'  AND c.id = ev.resource_id
-LEFT JOIN instances i ON ev.resource_type = 'instance' AND i.id = ev.resource_id
+LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
+LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
 ORDER BY event_timestamp DESC;
 
 -- View for System Events
-CREATE VIEW system_events AS
+CREATE OR REPLACE VIEW system_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
@@ -578,13 +605,13 @@ SELECT
   acc.account_id,
   acc.provider
 FROM events ev
-LEFT JOIN clusters  c ON ev.resource_type = 'cluster'  AND c.id = ev.resource_id
-LEFT JOIN instances i ON ev.resource_type = 'instance' AND i.id = ev.resource_id
+LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
+LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
 LEFT JOIN accounts acc ON acc.id = (
   CASE
-    WHEN ev.resource_type = 'cluster'
+    WHEN ev.resource_type = 'Cluster'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = ev.resource_id)
-    WHEN ev.resource_type = 'instance'
+    WHEN ev.resource_type = 'Instance'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = ev.resource_id))
   END
 )

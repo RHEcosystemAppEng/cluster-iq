@@ -50,7 +50,7 @@ func NewEventService(dbClient *dbclient.DBClient, logger *zap.Logger) *EventServ
 }
 
 // LogEvent creates a new events log entry and returns its ID.
-func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
+func (e *EventService) LogEvent(ctx context.Context, opts EventOptions) (int64, error) {
 	event := events.Event{
 		TriggeredBy:    opts.TriggeredBy,
 		Action:         opts.Action,
@@ -61,8 +61,7 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 		Severity:       opts.Severity,
 		EventTimestamp: time.Now().UTC(),
 	}
-	// TODO Fix replace TODO context by request's context
-	eventID, err := e.repo.CreateEvent(context.TODO(), event)
+	eventID, err := e.repo.CreateEvent(ctx, event)
 	e.logger.Debug("Tracking new event", zap.Int64("event_id", eventID))
 	if err != nil {
 		e.logger.Error("Failed to log event", zap.Error(err))
@@ -72,9 +71,8 @@ func (e *EventService) LogEvent(opts EventOptions) (int64, error) {
 }
 
 // UpdateEventStatus updates the result status of an existing event.
-func (e *EventService) UpdateEventStatus(eventID int64, result string) error {
-	// TODO Fix replace TODO context by request's context
-	err := e.repo.UpdateEventStatus(context.TODO(), eventID, result)
+func (e *EventService) UpdateEventStatus(ctx context.Context, eventID int64, result string) error {
+	err := e.repo.UpdateEventStatus(ctx, eventID, result)
 	if err != nil {
 		e.logger.Error("Failed to update event status", zap.Int64("event_id", eventID), zap.Error(err))
 		return err
@@ -83,8 +81,9 @@ func (e *EventService) UpdateEventStatus(eventID int64, result string) error {
 }
 
 // StartTracking begins tracking a new event and returns an EventTracker.
+// Uses context.Background() as events are tracked asynchronously from HTTP requests.
 func (e *EventService) StartTracking(opts *EventOptions) *EventTracker {
-	eventID, err := e.LogEvent(*opts)
+	eventID, err := e.LogEvent(context.Background(), *opts)
 	if err != nil {
 		e.logger.Error("Failed to log initial event", zap.Error(err))
 		return nil
@@ -103,16 +102,18 @@ type EventTracker struct {
 	logger  *zap.Logger
 }
 
-// Failed marks the tracked event status as failed.
+// Success marks the tracked event status as success.
+// Uses context.Background() as event updates happen asynchronously.
 func (t *EventTracker) Success() {
-	if err := t.service.UpdateEventStatus(t.eventID, ResultSuccess); err != nil {
+	if err := t.service.UpdateEventStatus(context.Background(), t.eventID, ResultSuccess); err != nil {
 		t.logger.Error("Failed to update event status", zap.Error(err))
 	}
 }
 
 // Failed marks the tracked event as failed.
+// Uses context.Background() as event updates happen asynchronously.
 func (t *EventTracker) Failed() {
-	if err := t.service.UpdateEventStatus(t.eventID, ResultFailed); err != nil {
+	if err := t.service.UpdateEventStatus(context.Background(), t.eventID, ResultFailed); err != nil {
 		t.logger.Error("Failed to update event status", zap.Error(err))
 	}
 }

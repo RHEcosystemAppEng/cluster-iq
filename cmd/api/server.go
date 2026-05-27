@@ -186,6 +186,11 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create gRPC client", zap.Error(err))
 	}
+	defer func() {
+		if err := agentClient.Close(); err != nil {
+			logger.Error("error closing gRPC client", zap.Error(err))
+		}
+	}()
 
 	// Initializing repositories
 	inventoryRepo := repositories.NewInventoryRepository(dbClient)

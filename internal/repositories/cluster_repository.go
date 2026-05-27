@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	dbclient "github.com/RHEcosystemAppEng/cluster-iq/internal/db_client"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
@@ -74,7 +75,7 @@ type ClusterRepository interface {
 	GetInstancesOnCluster(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error)
 	GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error)
 	CreateClusters(ctx context.Context, clusters []inventory.Cluster) error
-	UpdateCluster(ctx context.Context, cluster dto.ClusterDTORequest) error
+	UpdateCluster(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) error
 	UpdateClusterStatusByClusterID(ctx context.Context, status string, clusterID string) error
 	DeleteCluster(ctx context.Context, id string) error
 }
@@ -93,7 +94,7 @@ func NewClusterRepository(db *dbclient.DBClient) ClusterRepository {
 // - A slice of inventory.Cluster objects.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) ListClusters(ctx context.Context, opts models.ListOptions) ([]db.ClusterDBResponse, int, error) {
-	var clusters []db.ClusterDBResponse
+	clusters := []db.ClusterDBResponse{}
 
 	if err := r.db.SelectWithContext(ctx, &clusters, SelectClustersFullMView, opts, "cluster_id", "*"); err != nil {
 		return clusters, 0, fmt.Errorf("failed to list clusters: %w", err)
@@ -136,7 +137,7 @@ func (r *clusterRepositoryImpl) GetClusterByID(ctx context.Context, clusterID st
 		},
 	}
 
-	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullMView, opts, "*"); err != nil {
+	if err := r.db.GetWithContext(ctx, &cluster, SelectClustersFullView, opts, "*"); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -188,7 +189,7 @@ func (r *clusterRepositoryImpl) GetClusterRegion(ctx context.Context, clusterID 
 // - A slice of inventory.Tag objects representing the cluster's tags.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) GetClusterTags(ctx context.Context, clusterID string) ([]db.TagDBResponse, error) {
-	var result []db.TagDBResponse
+	result := []db.TagDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -239,7 +240,7 @@ func (r *clusterRepositoryImpl) GetClustersOnAccount(ctx context.Context, accoun
 // - A slice of inventory.Instance objects representing the instances in the cluster.
 // - An error if the query fails.
 func (r *clusterRepositoryImpl) GetInstancesOnCluster(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error) {
-	var instances []db.InstanceDBResponse
+	instances := []db.InstanceDBResponse{}
 
 	opts := models.ListOptions{
 		PageSize: 0,
@@ -294,10 +295,84 @@ func (r *clusterRepositoryImpl) CreateClusters(ctx context.Context, clusters []i
 	return nil
 }
 
-// UpdateCluster updates an existing cluster's details in the database.
-func (r *clusterRepositoryImpl) UpdateCluster(_ context.Context, _ dto.ClusterDTORequest) error {
-	// TODO
+// refreshClustersMView refreshes the clusters materialized view in a separate transaction.
+func (r *clusterRepositoryImpl) refreshClustersMView(ctx context.Context) error {
+	tx, txErr := r.db.NewTx(ctx)
+	if txErr != nil {
+		return fmt.Errorf("failed to create transaction for refresh: %w", txErr)
+	}
+
+	var err error
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.ExecContext(ctx, "REFRESH MATERIALIZED VIEW m_clusters_full_view"); err != nil {
+		return fmt.Errorf("refresh materialized view error: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit refresh error: %w", err)
+	}
+
 	return nil
+}
+
+// UpdateCluster updates mutable fields of an existing cluster in the database.
+// Only non-nil fields in the patch request will be updated.
+func (r *clusterRepositoryImpl) UpdateCluster(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) (err error) {
+	// Build dynamic UPDATE query with positional parameters
+	query := "UPDATE clusters SET "
+	args := make([]interface{}, 0)
+	updateFields := make([]string, 0)
+	argCount := 1
+
+	if patch.ConsoleLink != nil {
+		updateFields = append(updateFields, fmt.Sprintf("console_link = $%d", argCount))
+		args = append(args, *patch.ConsoleLink)
+		argCount++
+	}
+
+	if patch.Owner != nil {
+		updateFields = append(updateFields, fmt.Sprintf("owner = $%d", argCount))
+		args = append(args, *patch.Owner)
+		argCount++
+	}
+
+	// If no fields to update, return early
+	if len(updateFields) == 0 {
+		return nil
+	}
+
+	query += strings.Join(updateFields, ", ")
+	query += fmt.Sprintf(" WHERE cluster_id = $%d", argCount)
+	args = append(args, clusterID)
+
+	// Execute update in a transaction
+	tx, txErr := r.db.NewTx(ctx)
+	if txErr != nil {
+		return txErr
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, execErr := tx.ExecContext(ctx, query, args...); execErr != nil {
+		err = fmt.Errorf("exec UPDATE error: %w", execErr)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit UPDATE error: %w", err)
+	}
+
+	// Refresh materialized view after transaction commits
+	return r.refreshClustersMView(ctx)
 }
 
 // UpdateClusterStatusByClusterID updates the status of a cluster and all its instances in the database.

@@ -1,0 +1,74 @@
+# Based on official values.openshift.yaml from Vault Helm chart
+# with HA Raft configuration and AWS KMS Auto-Unseal
+
+global:
+  openshift: true
+
+injector:
+  enabled: false
+  
+  image:
+    repository: "registry.connect.redhat.com/hashicorp/vault-k8s"
+    tag: "1.7.0-ubi"
+
+  agentImage:
+    repository: "registry.connect.redhat.com/hashicorp/vault"
+    tag: "1.20.4-ubi"
+
+server:
+  image:
+    repository: "registry.connect.redhat.com/hashicorp/vault"
+    tag: "1.20.4-ubi"
+
+  ha:
+    enabled: true
+    replicas: 3
+    
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = true
+        listener "tcp" {
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          tls_disable = 1
+        }
+        storage "raft" {
+          path = "/vault/data"
+        }
+        seal "awskms" {
+          region     = "REPLACE_WITH_YOUR_REGION"
+          kms_key_id = "REPLACE_WITH_YOUR_KMS_KEY_ARN"
+        }
+        service_registration "kubernetes" {}
+
+  # AWS credentials from Kubernetes Secret
+  extraSecretEnvironmentVars:
+    - envName: AWS_ACCESS_KEY_ID
+      secretName: vault-kms-creds
+      secretKey: AWS_ACCESS_KEY_ID
+    - envName: AWS_SECRET_ACCESS_KEY
+      secretName: vault-kms-creds
+      secretKey: AWS_SECRET_ACCESS_KEY
+    - envName: AWS_REGION
+      secretName: vault-kms-creds
+      secretKey: AWS_REGION
+
+  readinessProbe:
+    path: "/v1/sys/health?standbyok=true&uninitcode=204"
+  
+  route:
+    enabled: false
+
+csi:
+  enabled: true
+  
+  image:
+    repository: "registry.connect.redhat.com/hashicorp/vault-csi-provider"
+    tag: "1.6.0-ubi"
+
+  agent:
+    image:
+      repository: "registry.connect.redhat.com/hashicorp/vault"
+      tag: "1.20.4-ubi"

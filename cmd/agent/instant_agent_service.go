@@ -40,7 +40,8 @@ type InstantAgentService struct {
 //   - *InstantAgentService: A pointer to the newly created AgentService instance.
 func NewInstantAgentService(cfg *config.InstantAgentServiceConfig, actionsChannel chan<- actions.Action, wg *sync.WaitGroup, logger *zap.Logger) *InstantAgentService {
 	// Listener config
-	lis, err := net.Listen("tcp", cfg.ListenURL)
+	lc := net.ListenConfig{}
+	lis, err := lc.Listen(context.Background(), "tcp", cfg.ListenURL)
 	if err != nil {
 		logger.Error("Error initializing gRPC AgentService on ClusterIQ Agent", zap.Error(err))
 		return nil
@@ -87,7 +88,7 @@ func (i *InstantAgentService) Start() error {
 
 	// Serving gRPC
 	if err := i.grpcServer.Serve(i.listener); err != nil {
-		logger.Fatal("failed to start server", zap.Error(err))
+		i.logger.Fatal("failed to start server", zap.Error(err))
 		return err
 	}
 	return nil
@@ -104,7 +105,7 @@ func (i *InstantAgentService) Start() error {
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerOnClusterRequest) (*pb.PowerOnClusterResponse, error) {
 	i.logger.Warn("Powering On Cluster",
-		zap.String("account_name", req.AccountId),
+		zap.String("account_id", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),
@@ -151,7 +152,7 @@ func (i *InstantAgentService) PowerOnCluster(ctx context.Context, req *pb.PowerO
 // - error: An error if the operation fails.
 func (i *InstantAgentService) PowerOffCluster(ctx context.Context, req *pb.PowerOffClusterRequest) (*pb.PowerOffClusterResponse, error) {
 	i.logger.Warn("Powering Off Cluster",
-		zap.String("account_name", req.AccountId),
+		zap.String("account_id", req.AccountId),
 		zap.String("region", req.Region),
 		zap.String("cluster_id", req.ClusterId),
 		zap.Strings("instances", req.InstancesIdList),

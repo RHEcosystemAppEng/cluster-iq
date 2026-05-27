@@ -155,7 +155,16 @@ func (h *InstanceHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Create(c.Request.Context(), *dto.ToInventoryInstanceList(newInstanceDTOs)); err != nil {
+	instances, err := dto.ToInventoryInstanceList(newInstanceDTOs)
+	if err != nil {
+		h.logger.Error("error converting instance DTOs", zap.Error(err))
+		c.JSON(http.StatusBadRequest, responsetypes.GenericErrorResponse{
+			Message: "Invalid instance data: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.service.Create(c.Request.Context(), *instances); err != nil {
 		h.logger.Error("error creating instances", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
 			Message: "Failed to create instances: " + err.Error(),

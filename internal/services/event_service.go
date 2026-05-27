@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/events"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/models"
@@ -40,12 +41,19 @@ func (s *eventServiceImpl) ListClusterEvents(ctx context.Context, opts models.Li
 	return s.repo.ListClusterEvents(ctx, opts)
 }
 
-// Add creates a new audit event.
+// Create creates a new audit event.
 func (s *eventServiceImpl) Create(ctx context.Context, event events.Event) (int64, error) {
-	return s.repo.CreateEvent(ctx, event)
+	id, err := s.repo.CreateEvent(ctx, event)
+	if err != nil {
+		return id, fmt.Errorf("create event: %w", err)
+	}
+	return id, nil
 }
 
-// UpdateStatus updates the status of an existing audit event.
+// Update updates the result of an existing audit event.
 func (s *eventServiceImpl) Update(ctx context.Context, eventID int64, result string) error {
-	return s.repo.UpdateEventStatus(ctx, eventID, result)
+	if err := s.repo.UpdateEventStatus(ctx, eventID, result); err != nil {
+		return fmt.Errorf("update event %d: %w", eventID, err)
+	}
+	return nil
 }

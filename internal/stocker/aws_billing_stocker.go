@@ -66,7 +66,7 @@ func (s *AWSBillingStocker) MakeStock() error {
 					if err != nil {
 						s.logger.Error("Error querying billing info for an instance",
 							zap.String("account", s.Account.AccountID),
-							zap.String("instance_name", instance.InstanceName),
+							zap.String("instance_id", instance.InstanceID),
 							zap.String("error", err.Error()),
 						)
 						// Continue to the next region even if an error occurs
@@ -91,7 +91,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 
 	s.logger.Debug("Getting expenses for instance",
 		zap.String("account", s.Account.AccountName),
-		zap.String("instance_name", instance.InstanceName),
+		zap.String("instance_id", instance.InstanceID),
 		zap.String("start_date", startDate),
 		zap.String("end_date", endDate),
 	)
@@ -106,7 +106,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 		Filter: &costexplorer.Expression{
 			Dimensions: &costexplorer.DimensionValues{
 				Key:    aws.String("RESOURCE_ID"),
-				Values: []*string{aws.String(instance.InstanceName)},
+				Values: []*string{aws.String(instance.InstanceID)},
 			},
 		},
 		Metrics: []*string{aws.String("UnblendedCost")},
@@ -117,7 +117,7 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	if err != nil {
 		s.logger.Error("Error getting cost and usage with resources",
 			zap.String("account", s.Account.AccountName),
-			zap.String("instance_name", instance.InstanceName),
+			zap.String("instance_id", instance.InstanceID),
 			zap.Error(err))
 		return err
 	}

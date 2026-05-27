@@ -243,7 +243,7 @@ SELECT
   (ARRAY['scanner','agent','api','scheduler','user'])[1 + floor(random()*5)],
   (ARRAY['scan','PowerOn','PowerOff','RestartCluster','Terminate'])[1 + floor(random()*5)],
   (1 + floor(random()*20))::int AS resource_id,
-  CASE WHEN random() < 0.6 THEN 'instance' ELSE 'cluster' END AS resource_type,
+  CASE WHEN random() < 0.6 THEN 'Instance'::RESOURCE_TYPE ELSE 'Cluster'::RESOURCE_TYPE END AS resource_type,
   (ARRAY['Pending','Running','Failed','Success','Unknown'])[1 + floor(random()*5)]::ACTION_STATUS AS result,
   'auto-generated dev event' AS description,
   (ARRAY['info','warning','error','notice'])[1 + floor(random()*4)] AS severity

@@ -45,6 +45,11 @@ available for every cloud provider:
 The following graph shows the architecture of this project:
 ![ClusterIQ architecture diagram](./doc/architecture.png)
 
+### Secrets Management (Optional)
+
+By default, Cluster IQ uses standard Kubernetes Secrets. For production environments, you can integrate with HashiCorp Vault.
+See [Vault Integration Guide](doc/vault/README.md) for detailed setup instructions.
+
 ## Installation
 ClusterIQ was designed to run in K8s/Openshift platforms, but it can also run in
 local using `podman-compose`.
@@ -152,7 +157,7 @@ For deploying ClusterIQ in local for development purposes, check the following
 
 ## DB Backup
 For backing up or restoring the ClusterIQ database, check the following
-[document](./doc/db-backup.md)
+[document](./doc/developers/db-backup.md)
 This document also describes how to manage data migration when a new release of
 ClusterIQ changes DB data structure.
 
@@ -165,8 +170,7 @@ Available configuration via Env Vars:
 | CIQ_AGENT_POLLING_SECONDS_INTERVAL   | integer (Default: 30)                                 | ClusterIQ Agent polling time (seconds)    |
 | CIQ_AGENT_URL                        | string (Default: "agent:50051")                       | ClusterIQ Agent listen URL                |
 | CIQ_API_LISTEN_URL                   | string (Default: "0.0.0.0:8080")                      | ClusterIQ API listen URL                  |
-| CIQ_API_URL                          | string (Default: "")                                  | ClusterIQ API public endpoint             |
-| CIQ_AGENT_LISTEN_URL                 | string (Default: "0.0.0.0:50051")                     | ClusterIQ Agent listen URL                |
+| CIQ_API_URL                          | string (Default: "")                                  | ClusterIQ API endpoint (used by Scanner)  |
 | CIQ_DB_URL                           | string (Default: "postgresql://pgsql:5432/clusteriq") | ClusterIQ DB URL                          |
 | CIQ_CREDS_FILE                       | string (Default: "")                                  | Cloud providers accounts credentials file |
 | CIQ_LOG_LEVEL                        | string (Default: "INFO")                              | ClusterIQ Logs verbosity mode             |

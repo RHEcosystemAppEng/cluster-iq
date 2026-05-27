@@ -22,7 +22,9 @@ type ClusterDTORequest struct {
 	Owner             string                   `json:"owner"`
 } // @name ClusterRequest
 
-func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
+// ToInventoryCluster converts a ClusterDTORequest to an inventory.Cluster.
+// Returns an error if the cluster cannot be created.
+func (c ClusterDTORequest) ToInventoryCluster() (*inventory.Cluster, error) {
 	cluster, err := inventory.NewCluster(
 		c.ClusterName,
 		c.InfraID,
@@ -32,25 +34,29 @@ func (c ClusterDTORequest) ToInventoryCluster() *inventory.Cluster {
 		c.Owner,
 	)
 	if err != nil {
-		// TODO: Propagate error
-		return nil
+		return nil, err
 	}
 
 	cluster.LastScanTimestamp = c.LastScanTimestamp
 	cluster.CreatedAt = c.CreatedAt
 	cluster.Status = c.Status
 	cluster.AccountID = c.AccountID
+	cluster.Age = c.Age
 
-	return cluster
+	return cluster, nil
 }
 
-func ToInventoryClusterList(dtos []ClusterDTORequest) *[]inventory.Cluster {
-	clusters := make([]inventory.Cluster, len(dtos))
-	for i, dto := range dtos {
-		clusters[i] = *dto.ToInventoryCluster()
+func ToInventoryClusterList(dtos []ClusterDTORequest) (*[]inventory.Cluster, error) {
+	clusters := make([]inventory.Cluster, 0, len(dtos))
+	for _, dto := range dtos {
+		cluster, err := dto.ToInventoryCluster()
+		if err != nil {
+			return nil, err
+		}
+		clusters = append(clusters, *cluster)
 	}
 
-	return &clusters
+	return &clusters, nil
 }
 
 func ToClusterDTORequest(cluster inventory.Cluster) *ClusterDTORequest {
@@ -101,3 +107,10 @@ type ClusterDTOResponse struct {
 	LastMonthCost         float64                  `json:"lastMonthCost"`
 	CurrentMonthSoFarCost float64                  `json:"currentMonthSoFarCost"`
 } // @name ClusterResponse
+
+// ClusterPatchRequest represents mutable fields for partial cluster updates.
+// Only fields present in the request will be updated (using pointers to distinguish null from empty).
+type ClusterPatchRequest struct {
+	ConsoleLink *string `json:"consoleLink,omitempty"`
+	Owner       *string `json:"owner,omitempty"`
+} // @name ClusterPatchRequest
