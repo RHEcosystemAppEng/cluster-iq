@@ -46,3 +46,9 @@ go.work.sum
 # IDE files
 .idea/
 .vscode/
+
+# Console (frontend)
+console/node_modules/
+console/dist/
+console/dist-ssr/
+console/coverage/

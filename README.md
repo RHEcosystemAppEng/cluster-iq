@@ -19,8 +19,8 @@ goal is to provide a continually updated inventory of clusters. This helps
 users efficiently identify and manage their clusters, offering a simplified
 approach to estimating costs and ensuring better resource management.
 
-ClusterIQ has a Web UI called [ClusterIQ Console](https://github.com/RHEcosystemAppEng/cluster-iq-console).
-Follow this [link](https://github.com/RHEcosystemAppEng/cluster-iq-console?tab=readme-ov-file#development-scripts) for installation instructions.
+ClusterIQ includes a Web UI (Console) under the `console/` directory.
+See the [Console](#console) section for development instructions.
 
 
 ## Supported cloud providers
@@ -215,6 +215,35 @@ make build-agent
 # Building in local
 make local-build-agent
 ```
+
+## Console
+
+The web console is a React/TypeScript application located under `console/`.
+It provides the ClusterIQ Web UI with cluster inventory views, cost tracking, and action management.
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) 18.x or higher
+- [npm](https://www.npmjs.com/) 8.x or higher
+
+### Development Commands
+```shell
+# Install console dependencies
+make console-install
+
+# Build console locally
+make console-build
+
+# Start console dev server (port 3000, proxies API to localhost:8081)
+make console-start-dev
+
+# Run console linters (prettier + eslint + tsc)
+make console-lint
+
+# Build console container image
+make build-console
+```
+
+For more details, see `console/README.md`.
 
 ## Extra Documentation
 

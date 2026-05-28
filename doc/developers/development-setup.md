@@ -2,12 +2,7 @@
 
 This guide describes how to build and deploy [ClusterIQ](https://github.com/RHEcosystemAppEng/cluster-iq) in a development environment. The setup uses container compose files and is intended for development purposes only.
 
-ClusterIQ consists of two repositories:
-
-* [Console Repo](https://github.com/RHEcosystemAppEng/cluster-iq-console) contains the web user interface.
-* [Main Repo](https://github.com/RHEcosystemAppEng/cluster-iq-console) contains the API and Scanner components.
-
-Each repository requires separate configuration and management.
+ClusterIQ is a monorepo containing both the backend (Go) and the web console (React/TypeScript) under the `console/` directory.
 
 ## Prerequisites
 
@@ -23,11 +18,12 @@ To temporarily disable SELinux:
 sudo setenforce 0
 ```
 
-[!NOTE] Use this command with caution and only in development environments.
+> [!NOTE] Use this command with caution and only in development environments.
 
 ## Build dependencies
 
-* [go v1.24](https://go.dev/dl/)
+* [Go v1.25](https://go.dev/dl/)
+* [Node.js 18.x](https://nodejs.org/) and npm
 * [podman](https://podman.io/docs/installation) or [docker](https://docs.docker.com/engine/install)
 * [podman-compose](https://github.com/containers/podman-compose?tab=readme-ov-file#installation) or [docker-compose](https://docs.docker.com/compose/install/)
 * [swag](https://github.com/swaggo/swag?tab=readme-ov-file#getting-started)
@@ -36,45 +32,30 @@ sudo setenforce 0
 
 Follow these steps to build the ClusterIQ components:
 
-1. Create and navigate to a common folder for both repos:
-
-    ```sh
-    WORKDIR=$(pwd)/cluster-iq-repos
-    mkdir -p $WORKDIR && cd $WORKDIR
-    ```
-
-2. Clone the repositories:
+1. Clone the repository:
 
     ```sh
     git clone git@github.com:RHEcosystemAppEng/cluster-iq.git
-    git clone git@github.com:RHEcosystemAppEng/cluster-iq-console.git
+    cd cluster-iq
     ```
 
-3. Validate required dependencies:
+2. Validate required dependencies:
 
     If you encounter an error, please ensure that you have installed all the necessary dependencies before proceeding.
 
     ```sh
-    cd ${WORKDIR}/cluster-iq
     make check-dependencies
     ```
 
-4. Build the container images:
+3. Build the container images (backend + console):
 
     ```sh
-    git checkout main
     make build
     ```
 
-    ```sh
-    cd ${WORKDIR}/cluster-iq-console
-    git checkout main
-    make build
-    ```
+4. Verify the container images:
 
-5. Verify the container images:
-
-   You should see the following images `cluster-iq-api`, `cluster-iq-scanner`, `cluster-iq-console`
+   You should see `cluster-iq-api`, `cluster-iq-scanner`, `cluster-iq-agent`, `cluster-iq-pgsql`, and `cluster-iq-console`.
 
     ```sh
     CONTAINER_ENGINE=$(which podman >/dev/null 2>&1 && echo podman || echo docker)
@@ -85,24 +66,35 @@ Follow these steps to build the ClusterIQ components:
 
 To manage your development environment:
 
-1. Change the working directory to `cluster-iq` repo
+1. Configure your [cloud account credentials](../../README.md#accounts-configuration).
 
-   ```sh
-   cd ${WORKDIR}/cluster-iq
-   ```
-
-2. Configure your [cloud account credentials](../README.md#accounts-configuration).
-3. Start the environment:
+2. Start the environment:
 
     ```sh
     make start-dev
     ```
 
-4. Stop the environment:
+    This starts all services (API, Scanner, Agent, Console, PostgreSQL) via compose.
+    - API: http://localhost:8081/api/v1/healthcheck
+    - Console: http://localhost:8080
+
+3. Stop the environment:
 
     ```sh
     make stop-dev
     ```
+
+## Console Development
+
+For working on the console frontend locally (with hot-reload):
+
+```sh
+make console-install     # Install npm dependencies
+make console-start-dev   # Start Vite dev server (port 3000, proxies API to localhost:8081)
+make console-lint        # Run prettier + eslint + tsc
+```
+
+See `console/README.md` for more details.
 
 ## API Documentation
 

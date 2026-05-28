@@ -1,10 +1,14 @@
 # ClusterIQ Console
 
-![Version](https://img.shields.io/badge/version-0.4.2-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![Version](https://img.shields.io/badge/version-0.5-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
 ---
 
-ClusterIQ Console provides a Web UI for the [ClusterIQ](https://github.com/RHEcosystemAppEng/cluster-iq) project.
+> **Note:** This directory is part of the [ClusterIQ](https://github.com/RHEcosystemAppEng/cluster-iq) monorepo.
+> Build and deploy instructions are available in the root [README](../README.md#console).
+> You can use the root Makefile targets (`make console-install`, `make console-build`, etc.) or run targets directly from this directory.
+
+ClusterIQ Console provides the Web UI for the ClusterIQ project.
 
 ## Deployment
 
@@ -18,9 +22,8 @@ This section explains how to deploy ClusterIQ Console.
 ### Quick-start (local)
 
 ```sh
-git clone git@github.com:RHEcosystemAppEng/cluster-iq-console.git
-cd cluster-iq-console
-npm install && npm run start
+# From the repository root
+make console-install && make console-start-dev
 ```
 
 ## Development scripts

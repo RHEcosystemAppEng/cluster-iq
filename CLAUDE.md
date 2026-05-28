@@ -10,6 +10,7 @@ This file provides guidance to Claude Code when working with this repository.
 1. **Scanner**: CronJob that discovers cloud resources using "Stocker" pattern
 2. **API Server**: REST API (Gin framework) for inventory queries and cluster operations
 3. **Agent**: gRPC service handling cluster power operations (instant, scheduled, recurring)
+4. **Console**: React/TypeScript web UI (PatternFly, Vite)
 
 **Repository Structure:**
 ```
@@ -23,6 +24,10 @@ internal/
   ├── services/         # Business logic
   ├── api/handlers/     # HTTP handlers
   └── models/           # DTO, DB, domain models
+console/                # Web UI (React/TypeScript/Vite/PatternFly)
+  ├── src/              # Application source code
+  ├── deployments/      # Console Containerfile
+  └── nginx/            # NGINX config template and startup script
 db/sql/                 # Schema definitions (init.sql, cron.sql)
 test/integration/       # Integration tests
 ```
@@ -53,6 +58,13 @@ make lint-staged        # Lint staged files only
 # Code Generation
 make generate-converters  # Goverter (DB to DTO)
 make swagger-doc         # OpenAPI docs
+
+# Console (frontend)
+make console-install     # Install npm dependencies
+make console-build       # Build console locally
+make console-start-dev   # Vite dev server (port 3000)
+make console-lint        # Run prettier + eslint + tsc
+make build-console       # Build console container image
 ```
 
 ## Architecture Patterns
@@ -111,12 +123,13 @@ go tool cover -html=coverage.out -o coverage.html    # Visual
 ## Development Workflow
 
 1. Make code changes
-2. Run `make lint-staged` before committing
+2. Run `make lint-staged` before committing (Go), `make console-lint` (Console)
 3. Run relevant tests: `make go-unit-tests`
 4. For API changes: update Swagger with `make swagger-doc`
 5. For DB changes: update `db/sql/init.sql` or add data migration in `doc/releases/`
 6. For protobuf changes: `make local-build-agent`
 7. For goverter changes: `make generate-converters`
+8. For console changes: run `make console-lint` and test in browser via `make console-start-dev`
 
 **Commit Convention:**
 - Use conventional commits format: `type(scope): brief description`

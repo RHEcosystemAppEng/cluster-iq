@@ -29,6 +29,35 @@ jobs:
           only-new-issues: true
           args: --whole-files
 
+  console-lint:
+    name: Console Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./console
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: console/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Code Prettier
+        run: make ts-prettier
+
+      - name: Code Linter
+        run: make ts-eslint
+
+      - name: TypeScript type check
+        run: make ts-tsc
+
   call-unit-tests:
     name: Go Unit tests
     needs:

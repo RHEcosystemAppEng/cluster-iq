@@ -1,31 +1,14 @@
 #
 # ClusterIQ Console Makefile
+#
+# This Makefile handles console-specific targets (npm/TypeScript).
+# Container image builds and compose orchestration are managed by the root Makefile.
+# From the repo root, use: make console-install, make console-build, make console-lint, etc.
 ################################################################################
 
-# Global Vars
-SHORT_COMMIT_HASH := $(shell git rev-parse --short=7 HEAD)
-
-# Binary vars
-CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
-K8S_CLI ?= $(shell which oc >/dev/null 2>&1 && echo oc || echo kubectl)
-
-# Container image registy vars
-REGISTRY ?= quay.io
-PROJECT_NAME ?= cluster-iq
-REGISTRY_REPO ?= ecosystem-appeng
-COMPOSE_NETWORK ?= compose_cluster_iq
-
-# Project directories
-DEPLOYMENTS_DIR ?= ./deployments
-
-# Images
-CONSOLE_IMG_NAME ?= $(PROJECT_NAME)-console
-CONSOLE_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(CONSOLE_IMG_NAME)
-
-
 # Standard targets
-all: ## Installs and run the Console on Local
-all: install build-local start-dev
+all: ## Installs dependencies and builds locally
+all: local-install local-build
 
 # Local working targets
 local-clean: ## Cleans project built (./dist)
@@ -46,31 +29,6 @@ local-start-dev: ## Starts the project in development mode
 	@echo "### [API-URL: $$VITE_CIQ_API_URL] ###"
 	@npm run start
 
-
-# Container based working targets
-clean: ## Removes the container image for the Console
-	@echo "### [Cleanning Container images] ###"
-	@$(CONTAINER_ENGINE) images | grep $(CONSOLE_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
-
-build: ## Builds the Console container image
-	@echo "### [Building Console container image] ###"
-	@$(CONTAINER_ENGINE) build -t $(CONSOLE_IMAGE):latest -f $(DEPLOYMENTS_DIR)/containerfiles/Containerfile .
-	@$(CONTAINER_ENGINE) tag $(CONSOLE_IMAGE):latest $(CONSOLE_IMAGE):$(SHORT_COMMIT_HASH)
-	@echo "Build Successful"
-
-
-# Development targets
-start-dev: ## Development env based on Docker/Podman Compose tool
-	@echo "### [Starting dev environment] ###"
-	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-devel.yaml up --build -d
-	@echo "### [Console: http://localhost:8080] ###"
-
-stop-dev: ## Stops the container based development env
-	@echo "### [Stopping dev environment] ###"
-	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-devel.yaml down
-
-restart-dev: ## Restarts the container based env
-restart-dev: stop-dev start-dev
 
 ts-prettier: ## Runs code prettier
 	@echo "### [Running Prettier] ###"

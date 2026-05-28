@@ -48,6 +48,10 @@ AGENT_PROTO_PATH ?= ./cmd/agent/proto/agent.proto
 PGSQL_IMG_NAME ?= $(PROJECT_NAME)-pgsql
 PGSQL_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(PGSQL_IMG_NAME)
 PGSQL_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-pgsql
+CONSOLE_DIR ?= ./console
+CONSOLE_IMG_NAME ?= $(PROJECT_NAME)-console
+CONSOLE_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(CONSOLE_IMG_NAME)
+CONSOLE_CONTAINERFILE ?= $(CONSOLE_DIR)/deployments/containerfiles/Containerfile
 
 # Standard targets
 all: ## Stop, build and start the development environment based on containers
@@ -89,10 +93,10 @@ local-build-agent: ## Build the agent binary
 # Container based working targets
 clean: ## Remove the container images
 	@echo "### [Cleaning Container images] ###"
-	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) -e $(AGENT_IMAGE) -e $(PGSQL_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
+	@-$(CONTAINER_ENGINE) images | grep -e $(SCANNER_IMAGE) -e $(API_IMAGE) -e $(AGENT_IMAGE) -e $(PGSQL_IMAGE) -e $(CONSOLE_IMAGE) | awk '{print $$3}' | xargs $(CONTAINER_ENGINE) rmi -f
 
 build: ## Build all container images
-build: build-api build-scanner build-agent build-pgsql
+build: build-api build-scanner build-agent build-pgsql build-console
 build-api: generate-converters ## Build the API container image
 	@echo "### [Building API container image] ###"
 	@$(CONTAINER_ENGINE) build \
@@ -129,12 +133,22 @@ build-pgsql: ## Build the PGSQL container image
 	@$(CONTAINER_ENGINE) tag $(PGSQL_IMAGE):latest $(PGSQL_IMAGE):$(SHORT_COMMIT_HASH)
 	@echo "Build Successful"
 
+build-console: ## Build the Console container image
+	@echo "### [Building Console container image] ###"
+	@$(CONTAINER_ENGINE) build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(SHORT_COMMIT_HASH) \
+		-t $(CONSOLE_IMAGE):latest -f $(CONSOLE_CONTAINERFILE) $(CONSOLE_DIR)
+	@$(CONTAINER_ENGINE) tag $(CONSOLE_IMAGE):latest $(CONSOLE_IMAGE):$(SHORT_COMMIT_HASH)
+	@echo "Build Successful"
+
 
 # Development targets
 start-dev: ## Start the container-based development environment
 	@echo "### [Starting dev environment] ###"
 	@$(CONTAINER_ENGINE)-compose -f $(DEPLOYMENTS_DIR)/compose/compose-devel.yaml up -d
 	@echo "### [Running dev environment] ###"
+	@echo "### [Console: http://localhost:8080 ] ###"
 	@echo "### [API: http://localhost:8081/api/v1/healthcheck ] ###"
 
 stop-dev: ## Stop the container-based development environment
@@ -205,6 +219,23 @@ swagger-doc: ## Generate Swagger documentation for ClusterIQ API
 	@echo "### [Generating Swagger Docs] ###"
 	@$(SWAGGER) fmt --exclude ./internal
 	@$(SWAGGER) init --generalInfo ./cmd/api/server.go --parseDependency --output ./cmd/api/docs
+
+
+# Console targets (delegated to console/Makefile)
+console-install: ## Install console dependencies
+	@$(MAKE) -C $(CONSOLE_DIR) local-install
+
+console-build: ## Build console locally
+	@$(MAKE) -C $(CONSOLE_DIR) local-build
+
+console-clean: ## Clean console build artifacts
+	@$(MAKE) -C $(CONSOLE_DIR) local-clean
+
+console-start-dev: ## Start console dev server
+	@$(MAKE) -C $(CONSOLE_DIR) local-start-dev
+
+console-lint: ## Run console linters (prettier + eslint + tsc)
+	@$(MAKE) -C $(CONSOLE_DIR) ts-test
 
 
 # Set the default target to "help"
