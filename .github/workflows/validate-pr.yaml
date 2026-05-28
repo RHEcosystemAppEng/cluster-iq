@@ -2,6 +2,9 @@ name: Pull Request Validation
 
 on:
   pull_request:
+    branches:
+      - main
+      - 'release-*'
 
 permissions:
   contents: read
@@ -29,14 +32,54 @@ jobs:
           only-new-issues: true
           args: --whole-files
 
+  govulncheck:
+    name: Go Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
   call-unit-tests:
     name: Go Unit tests
-    needs:
-      - golangci
     uses: "./.github/workflows/unit-tests.yaml"
 
   call-integration-tests:
     name: Integration tests
     needs:
+      - golangci
       - call-unit-tests
     uses: "./.github/workflows/integration-tests.yaml"
+
+  build-check:
+    name: Build ${{ matrix.component }}
+    needs:
+      - call-integration-tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - component: api
+            containerfile: deployments/containerfiles/Containerfile-api
+          - component: agent
+            containerfile: deployments/containerfiles/Containerfile-agent
+          - component: scanner
+            containerfile: deployments/containerfiles/Containerfile-scanner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build image (no push)
+        run: |
+          podman build \
+            --platform linux/amd64 \
+            -f ${{ matrix.containerfile }} .

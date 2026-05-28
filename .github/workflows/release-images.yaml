@@ -1,0 +1,66 @@
+name: Pre-release container images
+
+on:
+  push:
+    branches:
+      - 'release-*'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      BRANCH: ${{ steps.vars.outputs.BRANCH }}
+      SHA_SHORT: ${{ steps.vars.outputs.SHA_SHORT }}
+      IMAGE_TAG: ${{ steps.vars.outputs.IMAGE_TAG }}
+    steps:
+      - name: Determine image tag
+        id: vars
+        run: |
+          BRANCH=${GITHUB_REF##*/}
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE_TAG="${BRANCH}-${SHA_SHORT}"
+          echo "BRANCH=$BRANCH" >> $GITHUB_OUTPUT
+          echo "SHA_SHORT=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Image tag: $IMAGE_TAG"
+
+  build:
+    name: Build ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - component: api
+            containerfile: deployments/containerfiles/Containerfile-api
+          - component: agent
+            containerfile: deployments/containerfiles/Containerfile-agent
+          - component: scanner
+            containerfile: deployments/containerfiles/Containerfile-scanner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Login to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
+      - name: Build image
+        run: |
+          podman build \
+            --platform linux/amd64 \
+            --build-arg COMMIT=${{ needs.setup.outputs.SHA_SHORT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-${{ matrix.component }}:${{ needs.setup.outputs.IMAGE_TAG }} \
+            -f ${{ matrix.containerfile }} .
+
+      - name: Push image
+        run: |
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-${{ matrix.component }}:${{ needs.setup.outputs.IMAGE_TAG }}
+
+      - name: Logout from Quay.io
+        if: always()
+        run: |
+          podman logout quay.io
