@@ -108,6 +108,24 @@ go tool cover -func=coverage.out | grep -v "100.0%"  # Find uncovered
 go tool cover -html=coverage.out -o coverage.html    # Visual
 ```
 
+## Branching Model
+
+**Branch types:**
+- `main` — Always stable and fully functional. Tagged with version tags at release merge commits.
+- `release-X.Y` — Integration branch for a specific version. All features and fixes targeting that version are merged here, tested together, and then merged to `main` when ready.
+- `feature/...`, `bug/...`, `hotfix/...`, etc. — Development branches created in personal forks.
+
+**Workflow:**
+1. Contributors work on **forks**, creating `feature/`, `bug/`, etc. branches.
+2. PRs from forks target the corresponding `release-X.Y` branch — **never `main`** directly.
+3. Exception: `hotfix/...` branches may target `main` directly for critical production fixes.
+4. Once all work in a `release-X.Y` branch is validated, it is merged to `main` and tagged (e.g., `v0.6`).
+
+**Main branch protection:**
+- `main` must **always** be fully functional — every commit on `main` must build, pass tests, and be deployable.
+- Never merge incomplete or untested work to `main`.
+- All validation (build, lint, tests) must pass on the `release-X.Y` branch before merging to `main`.
+
 ## Development Workflow
 
 1. Make code changes
