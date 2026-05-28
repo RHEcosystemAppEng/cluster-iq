@@ -255,12 +255,37 @@ scanner:
     # Overrides the image tag whose default is the chart appVersion.
     tag: "latest"
 
+  service:
+    type: ClusterIP
+    port: 50052
+    name: scanner-grpc
+
   resources:
     requests:
       memory: "128Mi"
       cpu: "200m"
 
   skipNoOpenshiftInstances: true
+
+  startupProbe:
+    initialDelaySeconds: 0
+    periodSeconds: 1
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 5
+  livenessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 15
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+    terminationGracePeriodSeconds: 30
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 15
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
 
   #This section builds out the service account
   serviceAccount:

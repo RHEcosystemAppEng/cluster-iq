@@ -45,6 +45,7 @@ AGENT_IMG_NAME ?= $(PROJECT_NAME)-agent
 AGENT_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(AGENT_IMG_NAME)
 AGENT_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-agent
 AGENT_PROTO_PATH ?= ./cmd/agent/proto/agent.proto
+SCANNER_PROTO_PATH ?= ./cmd/scanner/proto/scanner.proto
 PGSQL_IMG_NAME ?= $(PROJECT_NAME)-pgsql
 PGSQL_IMAGE ?= $(REGISTRY)/$(REGISTRY_REPO)/$(PGSQL_IMG_NAME)
 PGSQL_CONTAINERFILE ?= ./$(DEPLOYMENTS_DIR)/containerfiles/Containerfile-pgsql
@@ -81,6 +82,8 @@ local-build-api: generate-converters swagger-doc ## Build the API binary
 
 local-build-scanner: ## Build the scanner binary
 	@echo "### [Building Scanner] ###"
+	@[ ! -d $(GENERATED_DIR) ] && { mkdir $(GENERATED_DIR); } || { exit 0; }
+	@$(PROTOC) --go_out=$(GENERATED_DIR) --go-grpc_out=$(GENERATED_DIR) $(SCANNER_PROTO_PATH)
 	@$(GO) build -o $(BIN_DIR)/scanners/scanner $(LDFLAGS) ./cmd/scanner
 
 local-build-agent: ## Build the agent binary

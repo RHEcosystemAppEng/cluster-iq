@@ -200,6 +200,7 @@ func main() {
 	expenseRepo := repositories.NewExpenseRepository(dbClient)
 	eventRepo := repositories.NewEventRepository(dbClient)
 	actionRepo := repositories.NewActionRepository(dbClient)
+	actionRunRepo := repositories.NewActionRunRepository(dbClient)
 
 	// Initializing services
 	inventoryService := services.NewInventoryService(inventoryRepo)
@@ -212,6 +213,7 @@ func main() {
 	expenseService := services.NewExpenseService(expenseRepo)
 	eventService := services.NewEventService(eventRepo)
 	actionService := services.NewActionService(actionRepo)
+	actionRunService := services.NewActionRunService(actionRunRepo)
 	overviewService := services.NewOverviewService(clusterRepo, instanceRepo, accountRepo)
 
 	// Initializing handlers
@@ -223,6 +225,7 @@ func main() {
 		ExpenseHandler:     handlers.NewExpenseHandler(expenseService, logger),
 		EventHandler:       handlers.NewEventHandler(eventService, logger),
 		ActionHandler:      handlers.NewActionHandler(actionService, logger),
+		ActionRunHandler:   handlers.NewActionRunHandler(actionRunService, logger),
 		OverviewHandler:    handlers.NewOverviewHandler(overviewService, logger),
 		HealthCheckHandler: handlers.NewHealthCheckHandler(dbClient, logger),
 	}

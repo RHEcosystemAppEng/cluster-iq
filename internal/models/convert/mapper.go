@@ -49,6 +49,10 @@ type Converter interface {
 	ToActionDTO(src db.ActionDBResponse) dto.ActionDTOResponse
 	ToActionDTOs(src []db.ActionDBResponse) []dto.ActionDTOResponse
 
+	// ActionRun
+	ToActionRunDTO(src db.ActionRunDBResponse) dto.ActionRunDTOResponse
+	ToActionRunDTOs(src []db.ActionRunDBResponse) []dto.ActionRunDTOResponse
+
 	// Instance
 	ToInstanceDTO(src db.InstanceDBResponse) dto.InstanceDTOResponse
 	ToInstanceDTOs(src []db.InstanceDBResponse) []dto.InstanceDTOResponse

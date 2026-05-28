@@ -58,6 +58,9 @@ func (e *AWSExecutor) ProcessAction(action actions.Action) error {
 	case actions.PowerOff:
 		return e.PowerOffCluster(target.GetInstances())
 
+	case actions.Scan:
+		return fmt.Errorf("scan operations are handled by the scanner service, not the cloud executor")
+
 	default: // No registered ActionOperation
 		return fmt.Errorf("cannot identify ActionOperation while processing an Action")
 	}

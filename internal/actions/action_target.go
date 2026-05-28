@@ -14,6 +14,15 @@ type ActionTarget struct {
 
 	// Instances is a list of instance IDs associated with the target cluster.
 	Instances []string `db:"instances"`
+
+	// TargetType indicates the resource type being targeted (Account, Cluster, Instance).
+	TargetType string `db:"target_type"`
+
+	// SelectAll when true, targets all resources of the given TargetType.
+	SelectAll bool `db:"select_all"`
+
+	// TargetAccountIDs lists account IDs for scan-type actions.
+	TargetAccountIDs []string `db:"target_account_ids"`
 }
 
 // NewActionTarget creates and returns a new instance of ActionTarget.

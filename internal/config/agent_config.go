@@ -10,6 +10,8 @@ type ExecutorAgentServiceConfig struct {
 	// APIURL refers to the ClusterIQ API Endpoint
 	APIURL string `env:"CIQ_API_URL,required"`
 	DBURL  string `env:"CIQ_DB_URL,required"`
+	// ScannerURL refers to the Scanner gRPC endpoint
+	ScannerURL string `env:"CIQ_SCANNER_URL" envDefault:"scanner:50052"`
 	// Credentials for accessing the cloud providers accounts
 	Credentials CloudCredentialsConfig
 }

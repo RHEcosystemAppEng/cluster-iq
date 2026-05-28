@@ -14,6 +14,7 @@ type APIHandlers struct {
 	ExpenseHandler     *handlers.ExpenseHandler
 	EventHandler       *handlers.EventHandler
 	ActionHandler      *handlers.ActionHandler
+	ActionRunHandler   *handlers.ActionRunHandler
 	OverviewHandler    *handlers.OverviewHandler
 	HealthCheckHandler *handlers.HealthCheckHandler
 }
@@ -30,6 +31,7 @@ func Setup(engine *gin.Engine, handlers APIHandlers) {
 		setupExpenseRoutes(baseGroup, handlers.ExpenseHandler)
 		setupEventRoutes(baseGroup, handlers.EventHandler)
 		setupActionRoutes(baseGroup, handlers.ActionHandler)
+		setupActionRunRoutes(baseGroup, handlers.ActionRunHandler)
 		setupOverviewRoutes(baseGroup, handlers.OverviewHandler)
 	}
 }
@@ -107,6 +109,16 @@ func setupActionRoutes(group *gin.RouterGroup, handler *handlers.ActionHandler) 
 		actions.PATCH("", handler.Update)
 		actions.PATCH("/:id/disable", handler.Disable)
 		actions.DELETE("/:id", handler.Delete)
+	}
+}
+
+func setupActionRunRoutes(group *gin.RouterGroup, handler *handlers.ActionRunHandler) {
+	actionRuns := group.Group("/action-runs")
+	{
+		actionRuns.GET("", handler.List)
+		actionRuns.GET("/:id", handler.Get)
+		actionRuns.POST("", handler.Create)
+		actionRuns.PATCH("/:id", handler.Update)
 	}
 }
 

@@ -45,3 +45,9 @@ type SystemEventListResponse struct {
 type ClusterEventListResponse struct {
 	responsetypes.ListResponse[ClusterEventDTOResponse]
 } // @name ClusterEventListResponse
+
+// ActionRunListResponse wraps a paginated list of ActionRunDTOResponse items
+// for OpenAPI schema generation.
+type ActionRunListResponse struct {
+	responsetypes.ListResponse[ActionRunDTOResponse]
+} // @name ActionRunListResponse

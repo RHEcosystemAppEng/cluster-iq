@@ -89,19 +89,22 @@ func ToModelActionList(dtos []ActionDTORequest) *[]actions.Action {
 // ActionDTOResponse represents the data transfer object for an action response,
 // containing action details including schedule, cron expression, and target resources.
 type ActionDTOResponse struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	Time        time.Time `json:"time"`
-	CronExp     string    `json:"cronExpression"`
-	Operation   string    `json:"operation"`
-	Status      string    `json:"status"`
-	Enabled     bool      `json:"enabled"`
-	ClusterID   string    `json:"clusterId"`
-	Region      string    `json:"region"`
-	AccountID   string    `json:"accountId"`
-	Instances   []string  `json:"instances"`
-	Requester   string    `json:"requester"`
-	Description *string   `json:"description"`
+	ID               string    `json:"id"`
+	Type             string    `json:"type"`
+	Time             time.Time `json:"time"`
+	CronExp          string    `json:"cronExpression"`
+	Operation        string    `json:"operation"`
+	Status           string    `json:"status"`
+	Enabled          bool      `json:"enabled"`
+	TargetType       string    `json:"targetType"`
+	SelectAll        bool      `json:"selectAll"`
+	ClusterID        string    `json:"clusterId"`
+	Region           string    `json:"region"`
+	AccountID        string    `json:"accountId"`
+	Instances        []string  `json:"instances"`
+	TargetAccountIDs []string  `json:"targetAccountIds"`
+	Requester        string    `json:"requester"`
+	Description      *string   `json:"description"`
 } // @name ActionResponse
 
 // ToModelAction converts ActionDTOResponse to actions.Action

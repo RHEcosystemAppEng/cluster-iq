@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package scanner;
+
+option go_package = "./scanner";
+
+// gRPC service for the Scanner
+service ScannerService {
+  rpc Scan (ScanRequest) returns (ScanResponse);
+  rpc Health (HealthRequest) returns (HealthResponse);
+}
+
+// Message for requesting a scan
+message ScanRequest {
+  int64 run_id = 1;
+  repeated string account_ids = 2;
+  bool select_all = 3;
+}
+
+// Message for answering to ScanRequests
+message ScanResponse {
+  int32 error = 1;
+  string message = 2;
+  int32 accounts_scanned = 3;
+}
+
+// Message for health check requests
+message HealthRequest {}
+
+// Message for health check responses
+message HealthResponse {
+  bool ready = 1;
+}

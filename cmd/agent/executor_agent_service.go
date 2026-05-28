@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
+	"github.com/RHEcosystemAppEng/cluster-iq/internal/clients"
 	cexec "github.com/RHEcosystemAppEng/cluster-iq/internal/cloud_executors"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/config"
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/credentials"
@@ -28,6 +29,8 @@ type ExecutorAgentService struct {
 	client         http.Client                // HTTP Client for retrieving the schedule from API
 	eventService   *eventservice.EventService // Service for handling audit logs
 	actionRepo     repositories.ActionRepository
+	scannerClient  *clients.ScannerGRPCClient // gRPC client for the Scanner service
+	actionRunRepo  repositories.ActionRunRepository
 }
 
 // NewExecutorAgentService creates and initializes a new AgentCron instance for managing the scheduled actions
@@ -57,6 +60,13 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 
 	eventService := eventservice.NewEventService(db, logger)
 	actionRepo := repositories.NewActionRepository(db)
+	actionRunRepo := repositories.NewActionRunRepository(db)
+
+	scannerClient, err := clients.NewScannerGRPCClient(cfg.ScannerURL, logger)
+	if err != nil {
+		logger.Error("Failed to create Scanner gRPC client", zap.Error(err))
+		return nil
+	}
 
 	eas := ExecutorAgentService{
 		cfg:            cfg,
@@ -66,9 +76,11 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 			logger: logger,
 			wg:     wg,
 		},
-		client:       client,
-		eventService: eventService,
-		actionRepo:   actionRepo,
+		client:        client,
+		eventService:  eventService,
+		actionRepo:    actionRepo,
+		scannerClient: scannerClient,
+		actionRunRepo: actionRunRepo,
 	}
 
 	// Reading credentials file and creating executors per account
@@ -198,6 +210,11 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 		zap.Any("requester", action.GetRequester()),
 	)
 
+	if action.GetActionOperation() == actions.Scan {
+		e.processScanAction(action)
+		return
+	}
+
 	// Initialize event tracker
 	tracker := e.eventService.StartTracking(&eventservice.EventOptions{
 		Action:       action.GetActionOperation(),
@@ -232,6 +249,50 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 	e.handleExecutionSuccess(action, tracker)
 
 	// For CronActions, reset status back to Pending so they can be rescheduled
+	e.resetCronActionStatus(action)
+}
+
+// processScanAction dispatches a Scan action to the Scanner gRPC service.
+func (e *ExecutorAgentService) processScanAction(action actions.Action) {
+	if !e.setActionStatus(action, actions.StatusRunning) {
+		return
+	}
+
+	target := action.GetTarget()
+
+	runID, err := e.actionRunRepo.Create(context.Background(), action.GetID())
+	if err != nil {
+		e.logger.Error("Failed to create action run for scan",
+			zap.String("action_id", action.GetID()), zap.Error(err))
+		e.setActionStatus(action, actions.StatusFailed)
+		return
+	}
+
+	resp, err := e.scannerClient.Scan(
+		context.Background(),
+		runID,
+		target.TargetAccountIDs,
+		target.SelectAll,
+	)
+	if err != nil {
+		e.logger.Error("Scanner gRPC call failed",
+			zap.String("action_id", action.GetID()), zap.Error(err))
+		e.setActionStatus(action, actions.StatusFailed)
+		return
+	}
+
+	if resp.Error != 0 {
+		e.logger.Error("Scanner returned error",
+			zap.String("action_id", action.GetID()),
+			zap.String("message", resp.Message))
+		e.setActionStatus(action, actions.StatusFailed)
+		return
+	}
+
+	e.logger.Info("Scan completed successfully",
+		zap.String("action_id", action.GetID()),
+		zap.Int32("accounts_scanned", resp.AccountsScanned))
+	e.setActionStatus(action, actions.StatusSuccess)
 	e.resetCronActionStatus(action)
 }
 
