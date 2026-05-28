@@ -74,11 +74,11 @@ helm upgrade --install cluster-iq deployments/helm/cluster-iq -n $APP_NS -f vaul
 **3. Verification**
 
 ```bash
-# Trigger a test job
-oc create job --from=cronjob/scanner scanner-test -n $APP_NS
+# Check scanner logs
+oc logs deployment/scanner -n $APP_NS
 
-# Check logs for success
-oc logs job/scanner-test -n $APP_NS
+# Verify credentials mount in scanner pod
+oc exec -n $APP_NS deployment/scanner -- ls -la /credentials
 
 # Verify credentials mount in agent pod
 oc exec -n $APP_NS deployment/agent -- ls -la /credentials

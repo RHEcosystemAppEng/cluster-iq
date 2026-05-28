@@ -2,7 +2,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/RHEcosystemAppEng/cluster-iq)](https://goreportcard.com/report/github.com/RHEcosystemAppEng/cluster-iq)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RHEcosystemAppEng/cluster-iq.svg)](https://pkg.go.dev/github.com/RHEcosystemAppEng/cluster-iq)
-![Version](https://img.shields.io/badge/version-0.5-blue)
+![Version](https://img.shields.io/badge/version-0.6-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ---
 [![Container image building](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/build-container-images.yaml/badge.svg)](https://github.com/RHEcosystemAppEng/cluster-iq/actions/workflows/build-container-images.yaml)
@@ -138,11 +138,8 @@ For more information about the supported parameters, check the [Configuration Se
     helm list -n $NAMESPACE
     ```
 
-6. Once every pod is up and running, trigger the scanner manually for
-   initializing the inventory
-   ```sh
-   oc create job --from=cronjob/scanner scanner-init -n $NAMESPACE
-   ```
+6. Once every pod is up and running, the scanner will automatically begin
+   discovering cloud resources.
 
 ### Uninstalling
 To uninstall ClusterIQ Helm chart, use the following commands
@@ -206,7 +203,7 @@ make local-build-api
 The Agent performs actions over the selected cloud resources. It only accepts
 incoming requests from the API.
 
-Currently, on release `v0.4`, the agent only supports Power On/Off clusters on AWS.
+The Agent supports Power On/Off operations for clusters on AWS, including instant, scheduled, and recurring actions.
 
 ```shell
 # Building in a container

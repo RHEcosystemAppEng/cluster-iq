@@ -1,6 +1,6 @@
 # ClusterIQ Console
 
-![Version](https://img.shields.io/badge/version-0.5-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![Version](https://img.shields.io/badge/version-0.6-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
 ---
 

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code when working with this repository.
 **ClusterIQ** is an inventory and cost estimation platform for OpenShift clusters across multi-cloud environments (currently AWS only). It provides automated discovery, cost tracking, and lifecycle management.
 
 **Architecture Components:**
-1. **Scanner**: CronJob that discovers cloud resources using "Stocker" pattern
+1. **Scanner**: Long-running gRPC service that discovers cloud resources using "Stocker" pattern
 2. **API Server**: REST API (Gin framework) for inventory queries and cluster operations
 3. **Agent**: gRPC service handling cluster power operations (instant, scheduled, recurring)
 4. **Console**: React/TypeScript web UI (PatternFly, Vite)
