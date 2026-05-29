@@ -1,3 +1,4 @@
+import React, { CSSProperties } from 'react';
 import { ActionTypes, ActionStatus, ActionOperations, ResultStatus } from '@app/types/types';
 import { ResourceStatusApi } from '@api';
 import { Label } from '@patternfly/react-core';
@@ -9,6 +10,45 @@ import {
   ExclamationCircleIcon,
   UnknownIcon,
 } from '@patternfly/react-icons';
+import { Link } from 'react-router-dom';
+
+const resourceBadgeStyle = (color: string): CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '1.5em',
+  height: '1.5em',
+  padding: '0 0.35em',
+  borderRadius: '50%',
+  backgroundColor: color,
+  color: '#fff',
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  lineHeight: 1,
+  verticalAlign: 'middle',
+});
+
+export function ResourceBadge({ label, color }: { label: string; color: string }) {
+  return <span style={resourceBadgeStyle(color)}>{label}</span>;
+}
+
+const resourceLabelStyle = (color: string): CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '0.1em 0.5em',
+  borderRadius: '0.75em',
+  backgroundColor: color,
+  color: '#fff',
+  fontSize: '0.75em',
+  fontWeight: 700,
+  lineHeight: 1,
+  verticalAlign: 'middle',
+});
+
+export function ResourceLabel({ label, color }: { label: string; color: string }) {
+  return <span style={resourceLabelStyle(color)}>{label}</span>;
+}
 
 export function renderActionStatusLabel(labelText: string | null | undefined) {
   switch (labelText) {
@@ -41,11 +81,11 @@ export function renderStatusLabel(labelText: string | null | undefined) {
 export function renderActionTypeLabel(labelText: string | null | undefined) {
   switch (labelText) {
     case ActionTypes.INSTANT_ACTION:
-      return <Label color="orange">Instant Action</Label>;
+      return <Label color="orange">Instant</Label>;
     case ActionTypes.SCHEDULED_ACTION:
-      return <Label color="green">Scheduled Action</Label>;
+      return <Label color="green">Scheduled</Label>;
     case ActionTypes.CRON_ACTION:
-      return <Label color="blue">Cron Action</Label>;
+      return <Label color="blue">Cron</Label>;
     default:
       return <Label color="grey">{labelText}</Label>;
   }
@@ -54,12 +94,45 @@ export function renderActionTypeLabel(labelText: string | null | undefined) {
 export function renderOperationLabel(labelText: string | null | undefined) {
   switch (labelText) {
     case ActionOperations.POWER_ON:
-      return <Label color="teal">{labelText}</Label>;
+      return <Label color="green">{labelText}</Label>;
     case ActionOperations.POWER_OFF:
-      return <Label color="purple">{labelText}</Label>;
+      return <Label color="red">{labelText}</Label>;
+    case ActionOperations.SCAN:
+      return <Label color="orange">{labelText}</Label>;
     default:
       return <Label color="grey">{labelText}</Label>;
   }
+}
+
+export function renderTargetLabel(
+  clusterId: string | undefined,
+  clusterName: string | undefined,
+  targetAccountIds: string[] | undefined,
+  targetAccountNames: string[] | undefined,
+  selectAll: boolean | undefined
+): React.ReactNode {
+  if (clusterId) {
+    return (
+      <>
+        <ResourceBadge label="C" color="#0066cc" />{' '}
+        <Link to={`/clusters/${clusterId}`}>{clusterName || clusterId}</Link>
+      </>
+    );
+  }
+  if (!selectAll && targetAccountIds?.length) {
+    const accId = targetAccountIds[0];
+    const accName = targetAccountNames?.[0];
+    return (
+      <>
+        <ResourceBadge label="A" color="#c9190b" /> <Link to={`/accounts/${accId}`}>{accName || accId}</Link>
+      </>
+    );
+  }
+  return (
+    <>
+      <ResourceBadge label="A" color="#c9190b" /> All Accounts
+    </>
+  );
 }
 
 export const getResultIcon = (result: ResultStatus) => {
