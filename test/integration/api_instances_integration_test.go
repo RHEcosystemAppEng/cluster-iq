@@ -451,7 +451,7 @@ func testPostInstancesWithTags(t *testing.T) {
 
 func testPostInstancesWrongValues(t *testing.T) {
 	expectedHTTPCode := http.StatusInternalServerError
-	expectedMsg := "Failed to create instances: create instances: named-exec INSERT error: pq: invalid input value for enum cloud_provider: \"PROVIDER\""
+	expectedMsg := "Failed to create instances: create instances: failed to insert instances: pq: invalid input value for enum cloud_provider: \"PROVIDER\""
 	payload := []dto.InstanceDTORequest{
 		{
 			InstanceID:        "error-instance",

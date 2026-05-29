@@ -1,0 +1,30 @@
+# Editor configuration, see http://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Go files use tabs
+[*.go]
+indent_style = tab
+indent_size = 4
+
+# Frontend files (TypeScript, JavaScript, CSS, HTML, JSON, YAML)
+[*.{ts,tsx,js,jsx,css,html,json,yaml,yml}]
+indent_style = space
+indent_size = 2
+
+# Makefiles require tabs
+[Makefile]
+indent_style = tab
+
+# Markdown and snapshots
+[*.md]
+max_line_length = off
+trim_trailing_whitespace = false
+
+[*.snap]
+max_line_length = off
+trim_trailing_whitespace = false

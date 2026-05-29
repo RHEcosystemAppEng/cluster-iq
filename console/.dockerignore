@@ -1,0 +1,10 @@
+.env
+.git
+.gitignore
+*.md
+dist
+Dockerfile
+Containerfile
+Makefile
+node_modules
+npm-debug.log

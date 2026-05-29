@@ -12,9 +12,9 @@ To create a database backup follow this steps:
    export NAMESPACE="<YOUR_CLUSTER_IQ_NAMESPACE>"
    ```
 
-2. Stop the Scanner Cronjob to prevent DB changes
+2. Stop the Scanner to prevent DB changes
    ```sh
-   oc patch cronjob scanner -p '{"spec" : {"suspend" : true }}' --type=merge -n $NAMESPACE
+   oc scale deployment scanner --replicas=0 -n $NAMESPACE
    ```
 
 3. Run a port-forward command to have access to the DB without exposing it
@@ -37,7 +37,7 @@ To create a database backup follow this steps:
 
 5. Resume Scanner execution
    ```sh
-   oc patch cronjob scanner -p '{"spec" : {"suspend" : false }}' --type=merge -n $NAMESPACE
+   oc scale deployment scanner --replicas=1 -n $NAMESPACE
    ```
 
 6. Stop port-forward process and check the backup file looks good.
@@ -53,9 +53,9 @@ To restore a database backup follow this steps:
    export NAMESPACE="<YOUR_CLUSTER_IQ_NAMESPACE>"
    ```
 
-2. Stop the Scanner Cronjob to prevent DB changes
+2. Stop the Scanner to prevent DB changes
    ```sh
-   oc patch cronjob scanner -p '{"spec" : {"suspend" : true }}' --type=merge -n $NAMESPACE
+   oc scale deployment scanner --replicas=0 -n $NAMESPACE
    ```
 
 3. Run a port-forward command to have access to the DB without exposing it
@@ -77,9 +77,9 @@ To restore a database backup follow this steps:
      --backup <PATH_TO_BACKUP_FILE>
    ```
 
-5. Resume scanner CronJob
+5. Resume Scanner execution
    ```sh
-   oc patch cronjob scanner -p '{"spec" : {"suspend" : false }}' --type=merge -n $NAMESPACE
+   oc scale deployment scanner --replicas=1 -n $NAMESPACE
    ```
 
 6. Stop port-forward process and check the database was correctly restored

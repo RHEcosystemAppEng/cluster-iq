@@ -15,6 +15,7 @@ This procedure does **NOT**:
 - Local Git repository is clean (`git status` shows no pending changes)
 - User has push permissions to the ClusterIQ repository
 - Go toolchain installed and configured
+- Node.js 18.x and npm installed (for console)
 - Helm CLI installed
 - GitHub Actions service available
 
@@ -39,14 +40,15 @@ This procedure does **NOT**:
 
   **Expected result:** no pending PRs or commits expected for this release
 
-* [ ] **P4** — Run unit tests and linters.
+* [ ] **P4** — Run unit tests and linters (backend + console).
   ```sh
   make clean build go-tests
+  make console-lint
   ```
-  **Expected result:** command exits with status `0`
+  **Expected result:** all commands exit with status `0`
   **DO NOT CONTINUE** if any error is reported
 
-* [ ] **P5** — Update the `./VERSION` file with the release version.
+* [ ] **P5** — Update the `./VERSION` file and `console/package.json` version with the release version.
 
   **Expected result:** `./VERSION` contains exactly `vX.Y.Z`
 

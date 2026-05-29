@@ -207,6 +207,55 @@ jobs:
         run: |
           podman logout quay.io
 
+  console:
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Login to Quay.io
+        run: |
+          echo "${{ secrets.QUAY_PASSWORD }}" | podman login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
+
+      - name: Container image building
+        run: |
+          echo "Building ClusterIQ Console (${{ needs.setup.outputs.BRANCH }}/${{ needs.setup.outputs.SHA_COMMIT }})"
+          podman build \
+            --platform linux/amd64 \
+            --build-arg VERSION=${{ needs.setup.outputs.GIT_TAG }} \
+            --build-arg COMMIT=${{ needs.setup.outputs.SHA_COMMIT }} \
+            -t quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.SHA_COMMIT }} \
+            -f ./console/deployments/containerfiles/Containerfile ./console
+
+      - name: Pushing Hash based image
+        run: |
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.SHA_COMMIT }}
+
+      - name: Tagging and Pushing Latest Image
+        if: ${{ needs.setup.outputs.LATEST_TAG != '' && needs.setup.outputs.LATEST_TAG != null }}
+        run: |
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.SHA_COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.LATEST_TAG }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.LATEST_TAG }}
+
+      - name: Tagging and Pushing GitTag based image
+        if: ${{ needs.setup.outputs.GIT_TAG != '' && needs.setup.outputs.GIT_TAG != null }}
+        run: |
+          echo "Building Tagged version image: ${{ needs.setup.outputs.GIT_TAG }}"
+          podman tag \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.SHA_COMMIT }} \
+            quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.GIT_TAG }}
+          podman push quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.GIT_TAG }}
+
+      - name: Logout from Quay.io
+        run: |
+          podman logout quay.io
+
   final:
     runs-on: ubuntu-latest
     needs:
@@ -214,9 +263,11 @@ jobs:
       - api
       - agent
       - scanner
+      - console
     steps:
       - name: Validating
         run: |
           podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-api:${{ needs.setup.outputs.SHA_COMMIT }}
           podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-agent:${{ needs.setup.outputs.SHA_COMMIT }}
           podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-scanner:${{ needs.setup.outputs.SHA_COMMIT }}
+          podman pull quay.io/${{ secrets.QUAY_ORG_NAME }}/cluster-iq-console:${{ needs.setup.outputs.SHA_COMMIT }}
