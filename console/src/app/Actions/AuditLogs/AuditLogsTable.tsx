@@ -12,6 +12,7 @@ import { AuditLogsTableProps } from './types';
 import { Link } from 'react-router-dom';
 import { useEvents } from '@app/hooks/useEvents';
 import { useTablePagination } from '@app/hooks/useTablePagination';
+import { resolveResourcePath } from '@app/utils/parseFuncs';
 
 const columnNames = {
   action: 'Action',
@@ -115,15 +116,11 @@ export const AuditLogsTable: React.FunctionComponent<AuditLogsTableProps> = ({
           {sortedData.map(event => (
             <Tr key={event.id}>
               <Td dataLabel={event.resourceId}>
-                <Link
-                  to={
-                    event.resourceType === 'instance'
-                      ? `/instances/${event.resourceId}`
-                      : `/clusters/${event.resourceId}`
-                  }
-                >
-                  {event.resourceId}
-                </Link>
+                {event.resourceId ? (
+                  <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId)}>{event.resourceId}</Link>
+                ) : (
+                  '-'
+                )}
               </Td>
               <Td>{renderOperationLabel(event.action)}</Td>
               <Td>

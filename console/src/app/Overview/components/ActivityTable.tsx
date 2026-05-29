@@ -37,9 +37,11 @@ export const ActivityTable: React.FunctionComponent<ActivityTableProps> = ({ eve
               {getResultIcon(event.result as ResultStatus)} {event.result}
             </Td>
             <Td>
-              <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId ?? '-')}>
-                {event.resourceId}
-              </Link>
+              {event.resourceId ? (
+                <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId)}>{event.resourceId}</Link>
+              ) : (
+                '-'
+              )}
             </Td>
             <Td>{event.triggeredBy}</Td>
           </Tr>
