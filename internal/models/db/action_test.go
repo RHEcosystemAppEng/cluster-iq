@@ -29,8 +29,8 @@ func testActionDBResponse_ToActionDTOResponse_WithValidFields(t *testing.T) {
 		Operation: "START",
 		Status:    "Pending",
 		Enabled:   true,
-		ClusterID: "cluster-1",
-		Region:    "eu-west-1",
+		ClusterID: sql.NullString{String: "cluster-1", Valid: true},
+		Region:    sql.NullString{String: "eu-west-1", Valid: true},
 		AccountID: "acc-1",
 		Instances: pq.StringArray{"i-1", "i-2"},
 	}
@@ -44,8 +44,8 @@ func testActionDBResponse_ToActionDTOResponse_WithValidFields(t *testing.T) {
 	assert.Equal(t, model.Operation, dto.Operation)
 	assert.Equal(t, model.Status, dto.Status)
 	assert.Equal(t, model.Enabled, dto.Enabled)
-	assert.Equal(t, model.ClusterID, dto.ClusterID)
-	assert.Equal(t, model.Region, dto.Region)
+	assert.Equal(t, model.ClusterID.String, dto.ClusterID)
+	assert.Equal(t, model.Region.String, dto.Region)
 	assert.Equal(t, model.AccountID, dto.AccountID)
 	assert.Equal(t, []string{"i-1", "i-2"}, dto.Instances)
 }
@@ -61,8 +61,8 @@ func testActionDBResponse_ToActionDTOResponse_WithInvalidFields(t *testing.T) {
 		Operation: "STOP",
 		Status:    "Failed",
 		Enabled:   false,
-		ClusterID: "cluster-2",
-		Region:    "us-east-1",
+		ClusterID: sql.NullString{String: "cluster-2", Valid: true},
+		Region:    sql.NullString{String: "us-east-1", Valid: true},
 		AccountID: "acc-2",
 		Instances: pq.StringArray{"i-9"},
 	}
@@ -79,8 +79,8 @@ func testActionDBResponse_ToActionDTOResponse_WithInvalidFields(t *testing.T) {
 	assert.Equal(t, model.Operation, dto.Operation)
 	assert.Equal(t, model.Status, dto.Status)
 	assert.Equal(t, model.Enabled, dto.Enabled)
-	assert.Equal(t, model.ClusterID, dto.ClusterID)
-	assert.Equal(t, model.Region, dto.Region)
+	assert.Equal(t, model.ClusterID.String, dto.ClusterID)
+	assert.Equal(t, model.Region.String, dto.Region)
 	assert.Equal(t, model.AccountID, dto.AccountID)
 	assert.Equal(t, []string{"i-9"}, dto.Instances)
 }
@@ -103,8 +103,8 @@ func testToActionDTOResponseList_Correct(t *testing.T) {
 			Operation: "START",
 			Status:    "Pending",
 			Enabled:   true,
-			ClusterID: "cluster-1",
-			Region:    "eu-west-1",
+			ClusterID: sql.NullString{String: "cluster-1", Valid: true},
+			Region:    sql.NullString{String: "eu-west-1", Valid: true},
 			AccountID: "acc-1",
 			Instances: pq.StringArray{"i-1"},
 		},
@@ -116,8 +116,8 @@ func testToActionDTOResponseList_Correct(t *testing.T) {
 			Operation: "STOP",
 			Status:    "Running",
 			Enabled:   false,
-			ClusterID: "cluster-2",
-			Region:    "us-east-1",
+			ClusterID: sql.NullString{String: "cluster-2", Valid: true},
+			Region:    sql.NullString{String: "us-east-1", Valid: true},
 			AccountID: "acc-2",
 			Instances: pq.StringArray{"i-2"},
 		},

@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -125,8 +126,8 @@ func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 			Description:    &desc,
 			Severity:       "Warning",
 		},
-		AccountID: "acc-1",
-		Provider:  "AWS",
+		AccountID: sql.NullString{String: "acc-1", Valid: true},
+		Provider:  sql.NullString{String: "AWS", Valid: true},
 	}
 
 	dto := conv.ToSystemEventDTO(model)
@@ -169,8 +170,8 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 				Result:         "Success",
 				Severity:       "Info",
 			},
-			AccountID: "acc-1",
-			Provider:  "AWS",
+			AccountID: sql.NullString{String: "acc-1", Valid: true},
+			Provider:  sql.NullString{String: "AWS", Valid: true},
 		},
 		{
 			ClusterEventDBResponse: db.ClusterEventDBResponse{
@@ -183,8 +184,8 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 				Result:         "Failed",
 				Severity:       "Error",
 			},
-			AccountID: "acc-2",
-			Provider:  "GCP",
+			AccountID: sql.NullString{String: "acc-2", Valid: true},
+			Provider:  sql.NullString{String: "GCP", Valid: true},
 		},
 	}
 

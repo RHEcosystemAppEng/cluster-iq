@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -24,6 +25,6 @@ type ClusterEventDBResponse struct {
 // extending ClusterEventDBResponse with account and provider information.
 type SystemEventDBResponse struct {
 	ClusterEventDBResponse
-	AccountID string `db:"account_id"`
-	Provider  string `db:"provider"`
+	AccountID sql.NullString `db:"account_id"`
+	Provider  sql.NullString `db:"provider"`
 }

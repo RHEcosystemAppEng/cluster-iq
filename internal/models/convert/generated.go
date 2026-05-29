@@ -47,11 +47,13 @@ func (c *ConverterImpl) ToActionDTO(source db.ActionDBResponse) dto.ActionDTORes
 	dtoActionDTOResponse.Enabled = source.Enabled
 	dtoActionDTOResponse.TargetType = source.TargetType
 	dtoActionDTOResponse.SelectAll = source.SelectAll
-	dtoActionDTOResponse.ClusterID = source.ClusterID
-	dtoActionDTOResponse.Region = source.Region
+	dtoActionDTOResponse.ClusterID = NullString(source.ClusterID)
+	dtoActionDTOResponse.ClusterName = NullString(source.ClusterName)
+	dtoActionDTOResponse.Region = NullString(source.Region)
 	dtoActionDTOResponse.AccountID = source.AccountID
 	dtoActionDTOResponse.Instances = StringArray(source.Instances)
 	dtoActionDTOResponse.TargetAccountIDs = StringArray(source.TargetAccountIDs)
+	dtoActionDTOResponse.TargetAccountNames = StringArray(source.TargetAccountNames)
 	return dtoActionDTOResponse
 }
 func (c *ConverterImpl) ToActionDTOs(source []db.ActionDBResponse) []dto.ActionDTOResponse {
@@ -195,8 +197,8 @@ func (c *ConverterImpl) ToInstanceDTOs(source []db.InstanceDBResponse) []dto.Ins
 func (c *ConverterImpl) ToSystemEventDTO(source db.SystemEventDBResponse) dto.SystemEventDTOResponse {
 	var dtoSystemEventDTOResponse dto.SystemEventDTOResponse
 	dtoSystemEventDTOResponse.ClusterEventDTOResponse = c.ToClusterEventDTO(source.ClusterEventDBResponse)
-	dtoSystemEventDTOResponse.AccountID = source.AccountID
-	dtoSystemEventDTOResponse.Provider = source.Provider
+	dtoSystemEventDTOResponse.AccountID = NullString(source.AccountID)
+	dtoSystemEventDTOResponse.Provider = NullString(source.Provider)
 	return dtoSystemEventDTOResponse
 }
 func (c *ConverterImpl) ToSystemEventDTOs(source []db.SystemEventDBResponse) []dto.SystemEventDTOResponse {
