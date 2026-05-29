@@ -580,6 +580,7 @@ SELECT
   t.target_type,
   t.select_all,
   c.cluster_id,
+  c.cluster_name,
   c.region,
   COALESCE(a_power.account_id, '') AS account_id,
   COALESCE(
@@ -593,7 +594,14 @@ SELECT
      JOIN accounts accs ON accs.id = ta_sub.account_id
      WHERE ta_sub.target_id = t.id),
     '{}'
-  ) AS target_account_ids
+  ) AS target_account_ids,
+  COALESCE(
+    (SELECT array_agg(DISTINCT accs.account_name ORDER BY accs.account_name)
+     FROM target_accounts ta_sub
+     JOIN accounts accs ON accs.id = ta_sub.account_id
+     WHERE ta_sub.target_id = t.id),
+    '{}'
+  ) AS target_account_names
 FROM schedule s
 JOIN targets t ON t.id = s.target
 LEFT JOIN target_clusters tc ON tc.target_id = t.id

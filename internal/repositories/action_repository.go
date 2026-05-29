@@ -187,6 +187,9 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 		case *actions.CronAction:
 			_, err = tx.ExecContext(ctx, InsertCronActionWithTargetQuery,
 				a.Expression, a.Operation, targetID, a.Status, a.Enabled)
+		case *actions.InstantAction:
+			_, err = tx.ExecContext(ctx, InsertInstantActionWithTargetQuery,
+				a.Operation, targetID, a.Status, a.Enabled)
 		default:
 			return fmt.Errorf("unsupported action type for batch create: %T", action)
 		}
