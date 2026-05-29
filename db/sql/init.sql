@@ -642,7 +642,7 @@ SELECT
   ev.event_timestamp,
   ev.triggered_by,
   ev.action,
-  COALESCE(c.cluster_id, i.instance_id) AS resource_id,
+  COALESCE(c.cluster_id, i.instance_id, a.account_id) AS resource_id,
   ev.resource_type,
   ev.result,
   ev.description,
@@ -650,6 +650,7 @@ SELECT
 FROM events ev
 LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
 LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
+LEFT JOIN accounts  a ON ev.resource_type = 'Account'::RESOURCE_TYPE  AND a.id = ev.resource_id
 ORDER BY event_timestamp DESC;
 
 -- View for System Events
@@ -659,7 +660,7 @@ SELECT
   ev.event_timestamp,
   ev.triggered_by,
   ev.action,
-  COALESCE(c.cluster_id, i.instance_id) AS resource_id,
+  COALESCE(c.cluster_id, i.instance_id, a.account_id) AS resource_id,
   ev.resource_type,
   ev.result,
   ev.description,
@@ -669,12 +670,15 @@ SELECT
 FROM events ev
 LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
 LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
+LEFT JOIN accounts  a ON ev.resource_type = 'Account'::RESOURCE_TYPE  AND a.id = ev.resource_id
 LEFT JOIN accounts acc ON acc.id = (
   CASE
     WHEN ev.resource_type = 'Cluster'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = ev.resource_id)
     WHEN ev.resource_type = 'Instance'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = ev.resource_id))
+    WHEN ev.resource_type = 'Account'::RESOURCE_TYPE
+    THEN ev.resource_id
   END
 )
 ORDER BY ev.event_timestamp DESC;

@@ -38,6 +38,8 @@ const (
 					THEN (SELECT id FROM clusters c WHERE c.cluster_id = :resource_id)
 					WHEN :resource_type = 'Instance'
 					THEN (SELECT id FROM instances i WHERE i.instance_id = :resource_id)
+					WHEN :resource_type = 'Account'
+					THEN (SELECT id FROM accounts a WHERE a.account_id = :resource_id)
 				END
 			),
 			:resource_type,

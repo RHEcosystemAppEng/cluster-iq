@@ -284,6 +284,21 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 
 		// managing actions based on type
 		switch t := action.(type) {
+		case *actions.InstantAction:
+			if _, exists := a.schedule[action.GetID()]; exists {
+				continue
+			}
+			a.logger.Info("Dispatching InstantAction for immediate execution", zap.String("action_id", t.GetID()))
+			a.schedule[t.GetID()] = scheduleItem{
+				cancel: func() {},
+				action: t,
+			}
+			go func() {
+				a.actionsChannel <- t
+				a.mutex.Lock()
+				delete(a.schedule, t.GetID())
+				a.mutex.Unlock()
+			}()
 		case *actions.ScheduledAction:
 			scheduledFunc(t)
 		case *actions.CronAction:

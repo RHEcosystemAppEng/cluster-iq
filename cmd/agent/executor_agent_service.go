@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/actions"
@@ -210,21 +211,31 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 		zap.Any("requester", action.GetRequester()),
 	)
 
+	target := action.GetTarget()
+
+	resourceType := inventory.ClusterResourceType
+	resourceID := target.ClusterID
 	if action.GetActionOperation() == actions.Scan {
-		e.processScanAction(action)
-		return
+		resourceType = inventory.AccountResourceType
+		if len(target.TargetAccountIDs) > 0 {
+			resourceID = target.TargetAccountIDs[0]
+		}
 	}
 
-	// Initialize event tracker
 	tracker := e.eventService.StartTracking(&eventservice.EventOptions{
 		Action:       action.GetActionOperation(),
 		Description:  action.GetDescription(),
-		ResourceID:   action.GetTarget().ClusterID,
-		ResourceType: inventory.ClusterResourceType,
+		ResourceID:   resourceID,
+		ResourceType: resourceType,
 		Result:       eventservice.ResultPending,
 		Severity:     eventservice.SeverityInfo,
 		TriggeredBy:  action.GetRequester(),
 	})
+
+	if action.GetActionOperation() == actions.Scan {
+		e.processScanAction(action, tracker)
+		return
+	}
 
 	// Mark as running
 	if !e.setActionStatus(action, actions.StatusRunning) {
@@ -233,7 +244,7 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 	}
 
 	// Get executor
-	executor := e.GetExecutor(action.GetTarget().AccountID)
+	executor := e.GetExecutor(target.AccountID)
 	if executor == nil {
 		e.handleMissingExecutor(action, tracker)
 		return
@@ -253,8 +264,9 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 }
 
 // processScanAction dispatches a Scan action to the Scanner gRPC service.
-func (e *ExecutorAgentService) processScanAction(action actions.Action) {
+func (e *ExecutorAgentService) processScanAction(action actions.Action, tracker *eventservice.EventTracker) {
 	if !e.setActionStatus(action, actions.StatusRunning) {
+		tracker.Failed()
 		return
 	}
 
@@ -265,8 +277,10 @@ func (e *ExecutorAgentService) processScanAction(action actions.Action) {
 		e.logger.Error("Failed to create action run for scan",
 			zap.String("action_id", action.GetID()), zap.Error(err))
 		e.setActionStatus(action, actions.StatusFailed)
+		tracker.Failed()
 		return
 	}
+	runIDStr := strconv.FormatInt(runID, 10)
 
 	resp, err := e.scannerClient.Scan(
 		context.Background(),
@@ -278,6 +292,8 @@ func (e *ExecutorAgentService) processScanAction(action actions.Action) {
 		e.logger.Error("Scanner gRPC call failed",
 			zap.String("action_id", action.GetID()), zap.Error(err))
 		e.setActionStatus(action, actions.StatusFailed)
+		_ = e.actionRunRepo.Update(context.Background(), runIDStr, "Failed", err.Error())
+		tracker.Failed()
 		return
 	}
 
@@ -286,6 +302,8 @@ func (e *ExecutorAgentService) processScanAction(action actions.Action) {
 			zap.String("action_id", action.GetID()),
 			zap.String("message", resp.Message))
 		e.setActionStatus(action, actions.StatusFailed)
+		_ = e.actionRunRepo.Update(context.Background(), runIDStr, "Failed", resp.Message)
+		tracker.Failed()
 		return
 	}
 
@@ -293,6 +311,8 @@ func (e *ExecutorAgentService) processScanAction(action actions.Action) {
 		zap.String("action_id", action.GetID()),
 		zap.Int32("accounts_scanned", resp.AccountsScanned))
 	e.setActionStatus(action, actions.StatusSuccess)
+	_ = e.actionRunRepo.Update(context.Background(), runIDStr, "Success", "")
+	tracker.Success()
 	e.resetCronActionStatus(action)
 }
 
