@@ -1,28 +1,27 @@
-import { startCluster, stopCluster, ResourceStatusApi } from '@api';
+import { api, ResourceStatusApi, ActionRequestApi } from '@api';
 import { Dropdown, DropdownItem, DropdownList, MenuToggle, MenuToggleElement } from '@patternfly/react-core';
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { ActionOperations } from '@app/types/types';
+import { ActionOperations, ActionTypes, ActionStatus } from '@app/types/types';
 import { ClusterActionConfirm } from './ClusterActionConfirm';
-import { useUser } from '@app/Contexts/UserContext.tsx';
+import { useUser } from '@app/Contexts/UserContext';
 
 interface ClusterDetailsDropdownProps {
   clusterStatus: ResourceStatusApi | null;
 }
 
 export const ClusterDetailsDropdown: React.FunctionComponent<ClusterDetailsDropdownProps> = () => {
+  const { userEmail } = useUser();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [actionOperation, setActionOperation] = React.useState<ActionOperations | null>(null);
 
   const { clusterID } = useParams();
-  const { userEmail } = useUser();
 
   const onSelect = (_event: React.MouseEvent<Element, MouseEvent> | undefined, value: string | number | undefined) => {
     const operation = value as ActionOperations;
 
     if (operation === ActionOperations.POWER_ON || operation === ActionOperations.POWER_OFF) {
-      // Open modal with selected operation
       setActionOperation(operation);
       setIsModalOpen(true);
     }
@@ -30,14 +29,17 @@ export const ClusterDetailsDropdown: React.FunctionComponent<ClusterDetailsDropd
     setIsOpen(false);
   };
 
-  const actionCreate = (clusterId: string, operation: string, userEmail: string, description: string) => {
-    if (operation === ActionOperations.POWER_ON) {
-      startCluster(clusterId, userEmail, description);
-    } else if (operation === ActionOperations.POWER_OFF) {
-      stopCluster(clusterId, userEmail, description);
-    } else {
-      console.error('Operation not supported for InstantAction');
-    }
+  const actionCreate = (clusterId: string, operation: string) => {
+    const actionRequest = {
+      clusterId,
+      enabled: true,
+      operation,
+      requester: userEmail || undefined,
+      status: ActionStatus.Pending,
+      type: ActionTypes.INSTANT_ACTION,
+    } as ActionRequestApi;
+
+    api.actions.actionsCreate([actionRequest]);
   };
 
   const resetModalState = () => {
@@ -72,7 +74,7 @@ export const ClusterDetailsDropdown: React.FunctionComponent<ClusterDetailsDropd
         isOpen={isModalOpen}
         onConfirm={() => {
           if (!clusterID || !actionOperation) return;
-          actionCreate(clusterID, actionOperation, userEmail!, 'instant-action');
+          actionCreate(clusterID, actionOperation);
           resetModalState();
         }}
         onClose={resetModalState}

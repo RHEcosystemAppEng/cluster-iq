@@ -45,11 +45,13 @@ export interface ActionRequestApi {
   accountId?: string;
   clusterId?: string;
   cronExpression?: string;
+  description?: string;
   enabled?: boolean;
   id?: string;
   instances?: string[];
   operation?: string;
   region?: string;
+  requester?: string;
   status?: string;
   time?: string;
   type?: string;
@@ -58,13 +60,17 @@ export interface ActionRequestApi {
 export interface ActionResponseApi {
   accountId?: string;
   clusterId?: string;
+  clusterName?: string;
   cronExpression?: string;
   enabled?: boolean;
   id?: string;
   instances?: string[];
   operation?: string;
   region?: string;
+  selectAll?: boolean;
   status?: string;
+  targetAccountIds?: string[];
+  targetAccountNames?: string[];
   time?: string;
   type?: string;
 }

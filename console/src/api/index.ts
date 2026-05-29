@@ -48,18 +48,6 @@ export const api = {
   schedule: new Schedule(http),
 };
 
-export const startCluster = (clusterID: string, userEmail?: string, description?: string) =>
-  http.instance.post(`/clusters/${clusterID}/power_on`, {
-    requester: userEmail || 'unknown',
-    description: description,
-  });
-
-export const stopCluster = (clusterID: string, userEmail?: string, description?: string) =>
-  http.instance.post(`/clusters/${clusterID}/power_off`, {
-    requester: userEmail || 'unknown',
-    description: description,
-  });
-
 export type {
   ClusterResponseApi,
   InstanceResponseApi,

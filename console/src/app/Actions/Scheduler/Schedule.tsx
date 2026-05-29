@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModalPowerManagement } from './components/ModalPowerManagement';
+import { ModalCreateAction } from './components/ModalCreateAction';
 import { Flex, FlexItem, Button, PageSection, Panel, Content } from '@patternfly/react-core';
 import ScheduleActionsTable from './components/ActionsTable';
 import ScheduleActionsTableToolbar from './components/ActionsToolBar';
@@ -70,11 +70,7 @@ const Scheduler: React.FunctionComponent = () => {
             reloadFlag={reloadFlag}
           />
         </Panel>
-        <ModalPowerManagement
-          isOpen={isModalOpen}
-          onClose={resetModalState}
-          onCreated={() => setReloadFlag(k => k + 1)}
-        />
+        <ModalCreateAction isOpen={isModalOpen} onClose={resetModalState} onCreated={() => setReloadFlag(k => k + 1)} />
       </PageSection>
     </React.Fragment>
   );

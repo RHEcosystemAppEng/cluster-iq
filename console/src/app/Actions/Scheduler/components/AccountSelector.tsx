@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Button,
   FormGroup,
+  Popover,
   Select,
   SelectOption,
   MenuToggle,
@@ -10,14 +11,18 @@ import {
   TextInputGroupUtilities,
   Tooltip,
 } from '@patternfly/react-core';
+import { HelpIcon } from '@patternfly/react-icons';
 import { AccountResponseApi } from '@api';
 import TimesIcon from '@patternfly/react-icons/dist/esm/icons/times-icon';
+
+export const ALL_ACCOUNTS_ID = '__all__';
 
 interface AccountTypeaheadSelectProps {
   accounts: AccountResponseApi[];
   selectedAccount: AccountResponseApi | null;
   onSelectAccount: (account: AccountResponseApi | null) => void;
   onClearAccount: () => void;
+  showAllOption?: boolean;
 }
 
 export const AccountTypeaheadSelect: React.FunctionComponent<AccountTypeaheadSelectProps> = ({
@@ -25,34 +30,66 @@ export const AccountTypeaheadSelect: React.FunctionComponent<AccountTypeaheadSel
   selectedAccount,
   onSelectAccount,
   onClearAccount,
+  showAllOption = false,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState('');
 
   const safeAccounts = React.useMemo(() => (Array.isArray(accounts) ? accounts : []), [accounts]);
 
+  const allAccountsEntry: AccountResponseApi = React.useMemo(
+    () => ({ accountId: ALL_ACCOUNTS_ID, accountName: 'All Accounts' }),
+    []
+  );
+
   const filteredAccounts = React.useMemo(() => {
     const q = inputValue.trim().toLowerCase();
-    if (!q) return safeAccounts;
+    const filtered = q
+      ? safeAccounts.filter(a => {
+          const haystack = `${a.accountName ?? ''} ${a.accountId ?? ''}`.toLowerCase();
+          return haystack.includes(q);
+        })
+      : safeAccounts;
 
-    return safeAccounts.filter(a => {
-      const haystack = `${a.accountName ?? ''} ${a.accountId ?? ''}`.toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [safeAccounts, inputValue]);
+    if (showAllOption) {
+      const allMatches = !q || 'all accounts'.includes(q);
+      return allMatches ? [allAccountsEntry, ...filtered] : filtered;
+    }
+    return filtered;
+  }, [safeAccounts, inputValue, showAllOption, allAccountsEntry]);
 
   const onSelect = (_event?: React.MouseEvent<Element>, value?: string | number) => {
     const id = String(value ?? '');
-    const acc = safeAccounts.find(a => a.accountId === id) ?? null;
+    const acc =
+      (showAllOption && id === ALL_ACCOUNTS_ID ? allAccountsEntry : null) ??
+      safeAccounts.find(a => a.accountId === id) ??
+      null;
 
-    // Keep input in sync with selection for a predictable UX
-    setInputValue(acc ? `${acc.accountName} (${acc.accountId})` : '');
+    setInputValue(
+      acc ? (acc.accountId === ALL_ACCOUNTS_ID ? (acc.accountName ?? '') : `${acc.accountName} (${acc.accountId})`) : ''
+    );
     onSelectAccount(acc);
     setIsOpen(false);
   };
 
   return (
-    <FormGroup label="Account" isRequired fieldId="account-typeahead">
+    <FormGroup
+      label="Account"
+      isRequired
+      fieldId="account-typeahead"
+      labelHelp={
+        <Popover
+          headerContent="Account"
+          bodyContent={
+            showAllOption
+              ? 'Select a specific account or "All Accounts" to target every account.'
+              : 'The cloud provider account where the target cluster is hosted.'
+          }
+        >
+          <Button variant="plain" aria-label="Account help" icon={<HelpIcon />} />
+        </Popover>
+      }
+    >
       <Select
         id="account-typeahead"
         isOpen={isOpen}
@@ -106,12 +143,14 @@ export const AccountTypeaheadSelect: React.FunctionComponent<AccountTypeaheadSel
             <SelectOption key={acc.accountId} value={acc.accountId}>
               <div>
                 <div>{acc.accountName}</div>
-                <div
-                  className="pf-v6-u-font-size-sm pf-v6-u-font-family-mono"
-                  style={{ color: 'var(--pf-t--global--text--color--subtle)' }}
-                >
-                  {acc.accountId}
-                </div>
+                {acc.accountId !== ALL_ACCOUNTS_ID && (
+                  <div
+                    className="pf-v6-u-font-size-sm pf-v6-u-font-family-mono"
+                    style={{ color: 'var(--pf-t--global--text--color--subtle)' }}
+                  >
+                    {acc.accountId}
+                  </div>
+                )}
               </div>
             </SelectOption>
           ))
