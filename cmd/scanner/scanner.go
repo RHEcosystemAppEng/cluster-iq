@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -35,8 +36,6 @@ const (
 	apiClusterEndpoint   = "/clusters"
 	apiInstanceEndpoint  = "/instances"
 	apiExpenseEndpoint   = "/expenses"
-	apiActionRunEndpoint = "/action-runs"
-
 	// apiRequestTimeout defines the timeout for HTTP POST requests to the API
 	apiRequestTimeout = 60 * time.Second
 )
@@ -110,6 +109,58 @@ func (s *Scanner) loadAccounts() error {
 	return nil
 }
 
+// waitForAPI blocks until the API server responds to /healthcheck.
+func (s *Scanner) waitForAPI() {
+	url := fmt.Sprintf("%s/healthcheck", APIURL)
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err == nil {
+			resp, err := client.Do(req)
+			if resp != nil {
+				resp.Body.Close()
+			}
+			if err == nil && resp.StatusCode == http.StatusOK {
+				cancel()
+				s.logger.Info("API server is ready")
+				return
+			}
+		}
+		cancel()
+		s.logger.Info("Waiting for API server...", zap.String("url", url))
+		time.Sleep(3 * time.Second)
+	}
+}
+
+// seedAccounts posts account records from the credentials file to the API
+// so they are available in the console before the first scan runs.
+func (s *Scanner) seedAccounts() error {
+	var accounts []dto.AccountDTORequest
+	for _, ac := range s.allAccounts {
+		accounts = append(accounts, dto.AccountDTORequest{
+			AccountID:   ac.ID,
+			AccountName: ac.Name,
+			Provider:    ac.Provider,
+		})
+	}
+
+	b, err := json.Marshal(accounts)
+	if err != nil {
+		return fmt.Errorf("failed to marshal seed accounts: %w", err)
+	}
+
+	if err := postData(apiAccountEndpoint, b); err != nil {
+		return fmt.Errorf("failed to seed accounts: %w", err)
+	}
+
+	if err := refreshInventory(s.logger); err != nil {
+		return fmt.Errorf("failed to refresh materialized views after seed: %w", err)
+	}
+
+	s.logger.Info("Seeded accounts into database", zap.Int("count", len(accounts)))
+	return nil
+}
+
 // buildInventory creates an Inventory from the given account configs.
 func (s *Scanner) buildInventory(configs []credentials.AccountConfig) (*inventory.Inventory, error) {
 	inv := inventory.NewInventory()
@@ -129,9 +180,10 @@ func (s *Scanner) buildInventory(configs []credentials.AccountConfig) (*inventor
 }
 
 // nolint:cyclop
-func (s *Scanner) createStockers(inv *inventory.Inventory) ([]stocker.Stocker, []stocker.Stocker) {
+func (s *Scanner) createStockers(inv *inventory.Inventory) ([]stocker.Stocker, []stocker.Stocker, []error) {
 	var stockers []stocker.Stocker
 	var billingStockers []stocker.Stocker
+	var errs []error
 
 	for _, account := range inv.Accounts {
 		switch account.Provider {
@@ -141,12 +193,13 @@ func (s *Scanner) createStockers(inv *inventory.Inventory) ([]stocker.Stocker, [
 			if err != nil {
 				s.logger.Error("Failed to create AWS stocker; skipping this account",
 					zap.String("account", account.AccountName), zap.Error(err))
+				errs = append(errs, fmt.Errorf("account %s: %w", account.AccountName, err))
 				continue
 			}
 			stockers = append(stockers, awsStocker)
 
 			if account.IsBillingEnabled() {
-				s.logger.Warn("Enabled AWS Billing Stocker", zap.String("account_id", account.AccountID), zap.String("account_name", account.AccountName))
+				s.logger.Info("Enabled AWS Billing Stocker", zap.String("account_id", account.AccountID), zap.String("account_name", account.AccountName))
 				instancesToScan, err := getInstancesForBillingUpdate(s.cfg.APIURL, account.AccountID, s.logger)
 				if err != nil {
 					s.logger.Error("Failed to retrieve instances for billing",
@@ -185,7 +238,7 @@ func (s *Scanner) createStockers(inv *inventory.Inventory) ([]stocker.Stocker, [
 		zap.Int("registeredStockers", len(stockers)),
 		zap.Int("skippedAccounts", len(inv.Accounts)-len(stockers)))
 
-	return stockers, billingStockers
+	return stockers, billingStockers, errs
 }
 
 func runStockers(stockers []stocker.Stocker, billingStockers []stocker.Stocker, l *zap.Logger) error {
@@ -283,9 +336,9 @@ func (s *Scanner) ExecuteScan(accountIDs []string, selectAll bool) (int, error) 
 		return 0, fmt.Errorf("failed to build inventory: %w", err)
 	}
 
-	stockers, billingStockers := s.createStockers(inv)
+	stockers, billingStockers, stockerErrors := s.createStockers(inv)
 	if len(stockers) == 0 {
-		return 0, fmt.Errorf("no valid stockers created")
+		return 0, fmt.Errorf("no valid stockers created: %w", errors.Join(stockerErrors...))
 	}
 
 	if err := runStockers(stockers, billingStockers, s.logger); err != nil {
@@ -310,9 +363,6 @@ func (s *Scanner) Scan(_ context.Context, req *pb.ScanRequest) (*pb.ScanResponse
 	scanned, err := s.ExecuteScan(req.AccountIds, req.SelectAll)
 	if err != nil {
 		s.logger.Error("Scan failed", zap.Error(err))
-		if req.RunId > 0 {
-			s.updateRunStatus(req.RunId, "Failed", err.Error())
-		}
 		return &pb.ScanResponse{
 			Error:           1,
 			Message:         err.Error(),
@@ -321,10 +371,6 @@ func (s *Scanner) Scan(_ context.Context, req *pb.ScanRequest) (*pb.ScanResponse
 	}
 
 	s.logger.Info("Scan completed successfully", zap.Int("accounts_scanned", scanned))
-	if req.RunId > 0 {
-		s.updateRunStatus(req.RunId, "Success", "")
-	}
-
 	return &pb.ScanResponse{
 		Error:           0,
 		Message:         "Scan completed successfully",
@@ -335,40 +381,6 @@ func (s *Scanner) Scan(_ context.Context, req *pb.ScanRequest) (*pb.ScanResponse
 // Health reports the scanner's readiness.
 func (s *Scanner) Health(_ context.Context, _ *pb.HealthRequest) (*pb.HealthResponse, error) {
 	return &pb.HealthResponse{Ready: true}, nil
-}
-
-func (s *Scanner) updateRunStatus(runID int64, status string, errorMsg string) {
-	payload := map[string]string{
-		"status":   status,
-		"errorMsg": errorMsg,
-	}
-	b, err := json.Marshal(payload)
-	if err != nil {
-		s.logger.Error("Failed to marshal run status", zap.Error(err))
-		return
-	}
-
-	url := fmt.Sprintf("%s%s/%d", APIURL, apiActionRunEndpoint, runID)
-	ctx, cancel := context.WithTimeout(context.Background(), apiRequestTimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, url, bytes.NewBuffer(b))
-	if err != nil {
-		s.logger.Error("Failed to create run status request", zap.Error(err))
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil {
-		s.logger.Error("Failed to update run status", zap.Int64("run_id", runID), zap.Error(err))
-		return
-	}
-
-	s.logger.Info("Updated action run status", zap.Int64("run_id", runID), zap.String("status", status))
 }
 
 // startGRPCServer initializes and starts the gRPC server.
@@ -497,11 +509,18 @@ func postScannerInventory(inv *inventory.Inventory, l *zap.Logger) error {
 
 	l.Info("Inventory posted correctly")
 
-	if err := postData(apiInventoryEndpoint, []byte{}); err != nil {
+	if err := refreshInventory(l); err != nil {
 		return err
 	}
 
-	l.Info("Inventory refreshed correctly")
+	return nil
+}
+
+func refreshInventory(l *zap.Logger) error {
+	if err := postData(apiInventoryEndpoint, []byte{}); err != nil {
+		return err
+	}
+	l.Info("Inventory refreshed")
 	return nil
 }
 
@@ -522,10 +541,14 @@ func postData(path string, b []byte) error {
 	if err != nil {
 		return err
 	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("API returned HTTP %d for %s", response.StatusCode, path)
+	}
 	return nil
 }
 
-func getInstancesForBillingUpdate(apiURL string, accountID string, l *zap.Logger) ([]inventory.Instance, error) {
+func getInstancesForBillingUpdate(apiURL string, accountID string, l *zap.Logger) ([]string, error) {
 	l.Debug("Fetching instances for update billing from backend")
 
 	requestURL := apiURL + apiAccountEndpoint + "/" + accountID + "/expense_update"
@@ -553,24 +576,15 @@ func getInstancesForBillingUpdate(apiURL string, accountID string, l *zap.Logger
 		return nil, err
 	}
 
-	var response responsetypes.ListResponse[dto.InstanceDTOResponse]
+	var response responsetypes.ListResponse[string]
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		l.Error("Failed to unmarshal instances JSON", zap.Error(err))
+		l.Error("Failed to unmarshal instance IDs JSON", zap.Error(err))
 		return nil, err
 	}
 
-	if response.Count == 0 {
-		return nil, fmt.Errorf("no instances for billing update")
-	}
-
-	l.Debug("Successfully fetched instances from backend", zap.Int("instances_num", response.Count))
-
-	var instances []inventory.Instance
-	for _, instance := range response.Items {
-		instances = append(instances, *instance.ToInventoryInstance())
-	}
-	return instances, nil
+	l.Debug("Successfully fetched instance IDs from backend", zap.Int("instances_num", response.Count))
+	return response.Items, nil
 }
 
 func main() {
@@ -593,6 +607,11 @@ func main() {
 
 	if err := scan.loadAccounts(); err != nil {
 		logger.Fatal("Failed to load cloud accounts", zap.Error(err))
+	}
+
+	scan.waitForAPI()
+	if err := scan.seedAccounts(); err != nil {
+		logger.Warn("Failed to seed accounts", zap.Error(err))
 	}
 
 	// Signal handling for graceful shutdown

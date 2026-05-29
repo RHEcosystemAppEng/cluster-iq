@@ -19,19 +19,17 @@ type AWSBillingStocker struct {
 	logger *zap.Logger
 	// AWS connection interface
 	conn *cp.AWSConnection
-	// List of instances to obtain its expenses
-	Instances []inventory.Instance
+	// List of instance IDs to obtain their expenses
+	InstanceIDs []string
 }
 
 // NewAWSBillingStocker create and returns a pointer to a new AWSBillingStocker instance
-func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instances []inventory.Instance) *AWSBillingStocker {
-	// Check if there are instances to get billing information
-	if len(instances) == 0 {
-		logger.Error("No instances to get billing information")
+func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instanceIDs []string) *AWSBillingStocker {
+	if len(instanceIDs) == 0 {
+		logger.Info("No instances pending billing update, skipping billing stocker")
 		return nil
 	}
 
-	// Leaving the region empty forces to the AWSConnection to use the default region until a new one is configured
 	conn, err := cp.NewAWSConnection(account.User(), account.Password(), "", cp.WithCostExplorer())
 	if err != nil {
 		logger.Error("Error creating a new AWSBillingStocker", zap.String("account", account.AccountName), zap.Error(err))
@@ -39,10 +37,10 @@ func NewAWSBillingStocker(account *inventory.Account, logger *zap.Logger, instan
 	}
 
 	return &AWSBillingStocker{
-		Account:   account,
-		logger:    logger,
-		Instances: instances,
-		conn:      conn,
+		Account:     account,
+		logger:      logger,
+		InstanceIDs: instanceIDs,
+		conn:        conn,
 	}
 }
 
@@ -59,9 +57,9 @@ func (s *AWSBillingStocker) MakeStock() error {
 		cluster := s.Account.Clusters[i]
 		for j := range cluster.Instances {
 			instance := &cluster.Instances[j]
-			for _, targetInstance := range s.Instances {
-				if targetInstance.InstanceID == instance.InstanceID {
-					s.logger.Info("Getting expenses for instance", zap.String("instance_id", targetInstance.InstanceID))
+			for _, targetID := range s.InstanceIDs {
+				if targetID == instance.InstanceID {
+					s.logger.Info("Getting expenses for instance", zap.String("instance_id", targetID))
 					err := s.getInstanceExpenses(instance)
 					if err != nil {
 						s.logger.Error("Error querying billing info for an instance",
@@ -69,7 +67,6 @@ func (s *AWSBillingStocker) MakeStock() error {
 							zap.String("instance_id", instance.InstanceID),
 							zap.String("error", err.Error()),
 						)
-						// Continue to the next region even if an error occurs
 						continue
 					}
 					break
