@@ -1,6 +1,6 @@
 import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
 import { parseNumberToCurrency, parseScanTimestamp } from '@app/utils/parseFuncs';
-import { renderStatusLabel } from '@app/utils/renderUtils';
+import { renderStatusLabel, ResourceLabel } from '@app/utils/renderUtils';
 import { ClusterResponseApi, TagResponseApi } from '@api';
 import {
   Flex,
@@ -12,7 +12,6 @@ import {
   DescriptionListDescription,
   TabContentBody,
   PageSection,
-  Label,
   Divider,
   Tabs,
   Tab,
@@ -117,7 +116,7 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
               <DescriptionListGroup name="Timestamps">
                 <DescriptionListTerm>Created at</DescriptionListTerm>
                 <DescriptionListDescription>{parseScanTimestamp(cluster?.createdAt)}</DescriptionListDescription>
-                <DescriptionListTerm>Last scanned at</DescriptionListTerm>
+                <DescriptionListTerm>Last scan</DescriptionListTerm>
                 <DescriptionListDescription>
                   {parseScanTimestamp(cluster?.lastScanTimestamp)}
                 </DescriptionListDescription>
@@ -184,12 +183,8 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
           flexWrap={{ default: 'nowrap' }}
         >
           <FlexItem>
-            <Label color="blue">Cluster</Label>
-          </FlexItem>
-
-          <FlexItem>
             <Title headingLevel="h1" size="2xl">
-              {clusterID}
+              <ResourceLabel label="Cluster" color="#0066cc" /> {cluster?.clusterName || clusterID}
             </Title>
           </FlexItem>
 

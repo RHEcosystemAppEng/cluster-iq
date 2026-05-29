@@ -3,7 +3,6 @@ import React from 'react';
 
 export interface AccountsHeaderProps {
   accountName: string;
-  label: string;
 }
 
 export interface AccountsTabsProps {
