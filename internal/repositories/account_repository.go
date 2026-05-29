@@ -50,7 +50,7 @@ type AccountRepository interface {
 	CountAccounts(ctx context.Context, opts models.ListOptions) (int, error)
 	GetAccountByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
-	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
+	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstancePendingExpenseDB, error)
 	GetScannerTimestamp(ctx context.Context) (time.Time, error)
 	CreateAccount(ctx context.Context, accounts []inventory.Account) error
 	UpdateAccount(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
@@ -153,10 +153,6 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 		return clusters, err
 	}
 
-	if len(clusters) == 0 {
-		return clusters, ErrNoClustersInAccount
-	}
-
 	return clusters, nil
 }
 
@@ -167,8 +163,8 @@ func (r *accountRepositoryImpl) GetAccountClustersByID(ctx context.Context, acco
 // Returns:
 // - A slice of inventory.Instance objects.
 // - An error if the query fails.
-func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error) {
-	instances := []db.InstanceDBResponse{}
+func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstancePendingExpenseDB, error) {
+	instances := []db.InstancePendingExpenseDB{}
 
 	opts := models.ListOptions{
 		PageSize: 0,

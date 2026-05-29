@@ -16,7 +16,7 @@ type AccountService interface {
 	List(ctx context.Context, options models.ListOptions) ([]db.AccountDBResponse, int, error)
 	GetByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
-	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error)
+	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstancePendingExpenseDB, error)
 	Create(ctx context.Context, accounts []inventory.Account) error
 	Update(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
 	Delete(ctx context.Context, accountID string) error
@@ -57,7 +57,7 @@ func (s *accountServiceImpl) GetAccountClustersByID(ctx context.Context, account
 }
 
 // GetExpenseUpdateInstances retrieves instances with outdated billing information.
-func (s *accountServiceImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstanceDBResponse, error) {
+func (s *accountServiceImpl) GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstancePendingExpenseDB, error) {
 	instances, err := s.repo.GetExpenseUpdateInstances(ctx, accountID)
 	if err != nil {
 		return instances, fmt.Errorf("get expense update instances for account %s: %w", accountID, err)

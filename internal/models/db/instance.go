@@ -26,3 +26,9 @@ type InstanceDBResponse struct {
 	CurrentMonthSoFarCost float64                  `db:"current_month_so_far_cost"`
 	Tags                  TagDBResponses           `db:"tags_json"`
 }
+
+// InstancePendingExpenseDB maps the instances_pending_expense_update view.
+type InstancePendingExpenseDB struct {
+	AccountID  string `db:"account_id"`
+	InstanceID string `db:"instance_id"`
+}

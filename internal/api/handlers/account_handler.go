@@ -176,12 +176,10 @@ func (h *AccountHandler) GetAccountClustersByID(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Account ID"
-//	@Success		200	{object}	dto.InstanceListResponse
+//	@Success		200	{object}	responsetypes.ListResponse[string]
 //	@Failure		404	{object}	responsetypes.GenericErrorResponse
 //	@Failure		500	{object}	responsetypes.GenericErrorResponse
 //	@Router			/accounts/{id}/expense_update [get]
-//
-// NOTE: Align the documented route with the actual router configuration.
 func (h *AccountHandler) GetExpensesUpdateInstances(c *gin.Context) {
 	accountID := c.Param("id")
 
@@ -201,8 +199,12 @@ func (h *AccountHandler) GetExpensesUpdateInstances(c *gin.Context) {
 		return
 	}
 
-	response := responsetypes.NewListResponse((&convert.ConverterImpl{}).ToInstanceDTOs(instances), len(instances))
+	instanceIDs := make([]string, len(instances))
+	for i, inst := range instances {
+		instanceIDs[i] = inst.InstanceID
+	}
 
+	response := responsetypes.NewListResponse(instanceIDs, len(instanceIDs))
 	c.JSON(http.StatusOK, response)
 }
 
