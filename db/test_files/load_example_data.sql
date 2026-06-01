@@ -246,7 +246,7 @@ $$;
 
 -- Generating events
 INSERT INTO events (
-  event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity
+  event_timestamp, requester, action, resource_id, resource_type, result, description, severity
 )
 SELECT
   now() - (random() * interval '10 days') AS event_timestamp,

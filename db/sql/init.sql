@@ -193,13 +193,14 @@ CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
 CREATE TABLE IF NOT EXISTS events (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   event_timestamp         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  triggered_by            TEXT NOT NULL,
+  requester               TEXT NOT NULL,
   action                  TEXT NOT NULL,
   resource_id             BIGINT,
   resource_type           RESOURCE_TYPE NOT NULL,
   result                  ACTION_STATUS NOT NULL,
   description             TEXT NULL,
   severity                TEXT DEFAULT 'info'::TEXT NOT NULL,
+  schedule_id             BIGINT NULL,
   PRIMARY KEY (id, event_timestamp)
 ) PARTITION BY RANGE (event_timestamp);
 
@@ -283,6 +284,8 @@ CREATE TABLE IF NOT EXISTS schedule (
   target                  BIGINT REFERENCES targets(id) ON DELETE CASCADE NOT NULL,
   status                  ACTION_STATUS DEFAULT 'Unknown' NOT NULL,
   enabled                 BOOLEAN DEFAULT false,
+  requester               TEXT,
+  description             TEXT,
   PRIMARY KEY (id),
   CONSTRAINT chk_schedule_time_or_cron CHECK ((time IS NOT NULL) <> (cron_exp IS NOT NULL))
 );
@@ -577,6 +580,8 @@ SELECT
   s.operation,
   s.status,
   s.enabled,
+  s.requester,
+  s.description,
   t.target_type,
   t.select_all,
   c.cluster_id,
@@ -648,13 +653,14 @@ CREATE OR REPLACE VIEW cluster_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
-  ev.triggered_by,
+  ev.requester,
   ev.action,
   COALESCE(c.cluster_id, i.instance_id, a.account_id) AS resource_id,
   ev.resource_type,
   ev.result,
   ev.description,
-  ev.severity
+  ev.severity,
+  ev.schedule_id
 FROM events ev
 LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
 LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
@@ -666,14 +672,17 @@ CREATE OR REPLACE VIEW system_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
-  ev.triggered_by,
+  ev.requester,
   ev.action,
   COALESCE(c.cluster_id, i.instance_id, a.account_id) AS resource_id,
+  COALESCE(c.cluster_name, i.instance_name, a.account_name) AS resource_name,
   ev.resource_type,
   ev.result,
   ev.description,
   ev.severity,
+  ev.schedule_id,
   acc.account_id,
+  acc.account_name,
   acc.provider
 FROM events ev
 LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
