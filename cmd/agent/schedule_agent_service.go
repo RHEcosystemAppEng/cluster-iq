@@ -271,41 +271,45 @@ func (a *ScheduleAgentService) ScheduleNewActions(newSchedule []actions.Action) 
 
 	// Checking the entire new schedule to schedule or reschedule actions
 	for _, action := range newSchedule {
-		var scheduledFunc func(*actions.ScheduledAction)
-		var cronFunc func(*actions.CronAction)
+		a.dispatchActionLocked(action)
+	}
+}
 
-		if _, exists := a.schedule[action.GetID()]; !exists { // Schedule new actions
-			scheduledFunc = a.scheduleNewScheduledAction
-			cronFunc = a.scheduleNewCronAction
-		} else { // Reschedule actions
-			scheduledFunc = a.rescheduleScheduledAction
-			cronFunc = a.rescheduleCronAction
-		}
+// dispatchActionLocked schedules, reschedules, or dispatches a single action.
+// Must be called with a.mutex held.
+func (a *ScheduleAgentService) dispatchActionLocked(action actions.Action) {
+	_, exists := a.schedule[action.GetID()]
 
-		// managing actions based on type
-		switch t := action.(type) {
-		case *actions.InstantAction:
-			if _, exists := a.schedule[action.GetID()]; exists {
-				continue
-			}
-			a.logger.Info("Dispatching InstantAction for immediate execution", zap.String("action_id", t.GetID()))
-			a.schedule[t.GetID()] = scheduleItem{
-				cancel: func() {},
-				action: t,
-			}
-			go func() {
-				a.actionsChannel <- t
-				a.mutex.Lock()
-				delete(a.schedule, t.GetID())
-				a.mutex.Unlock()
-			}()
-		case *actions.ScheduledAction:
-			scheduledFunc(t)
-		case *actions.CronAction:
-			cronFunc(t)
-		default:
-			a.logger.Error("Unknown action type", zap.String("action_id", action.GetID()))
+	switch t := action.(type) {
+	case *actions.InstantAction:
+		if exists {
+			return
 		}
+		a.logger.Info("Dispatching InstantAction for immediate execution", zap.String("action_id", t.GetID()))
+		a.schedule[t.GetID()] = scheduleItem{
+			cancel: func() {},
+			action: t,
+		}
+		go func() {
+			a.actionsChannel <- t
+			a.mutex.Lock()
+			delete(a.schedule, t.GetID())
+			a.mutex.Unlock()
+		}()
+	case *actions.ScheduledAction:
+		if !exists {
+			a.scheduleNewScheduledAction(t)
+		} else {
+			a.rescheduleScheduledAction(t)
+		}
+	case *actions.CronAction:
+		if !exists {
+			a.scheduleNewCronAction(t)
+		} else {
+			a.rescheduleCronAction(t)
+		}
+	default:
+		a.logger.Error("Unknown action type", zap.String("action_id", action.GetID()))
 	}
 }
 
