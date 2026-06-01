@@ -27,7 +27,7 @@ func testEventDTORequest_ToModelEvent_Correct(t *testing.T) {
 		EventTimestamp: now,
 		Result:         "Success",
 		Severity:       "Info",
-		TriggeredBy:    "scanner",
+		Requester:    "scanner",
 		Description:    &desc,
 	}
 
@@ -42,7 +42,7 @@ func testEventDTORequest_ToModelEvent_Correct(t *testing.T) {
 	assert.Equal(t, dto.ResourceType, event.ResourceType)
 	assert.Equal(t, dto.Result, event.Result)
 	assert.Equal(t, dto.Severity, event.Severity)
-	assert.Equal(t, dto.TriggeredBy, event.TriggeredBy)
+	assert.Equal(t, dto.Requester, event.Requester)
 }
 
 // TestEventDTORequest_ToModelEvent_NilDescription verifies nil description handling.
@@ -61,7 +61,7 @@ func testEventDTORequest_ToModelEvent_NilDescription(t *testing.T) {
 		EventTimestamp: now,
 		Result:         "Failed",
 		Severity:       "Error",
-		TriggeredBy:    "agent",
+		Requester:    "agent",
 		Description:    nil,
 	}
 
@@ -90,7 +90,7 @@ func testClusterEventDTOResponse_Struct(t *testing.T) {
 		EventTimestamp: now,
 		Result:         "Success",
 		Severity:       "Info",
-		TriggeredBy:    "api",
+		Requester:    "api",
 		Description:    &desc,
 	}
 
@@ -101,7 +101,7 @@ func testClusterEventDTOResponse_Struct(t *testing.T) {
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, actions.StatusSuccess, dto.Result)
 	assert.Equal(t, "Info", dto.Severity)
-	assert.Equal(t, "api", dto.TriggeredBy)
+	assert.Equal(t, "api", dto.Requester)
 	assert.Equal(t, &desc, dto.Description)
 }
 
@@ -119,7 +119,7 @@ func testSystemEventDTOResponse_Struct(t *testing.T) {
 			EventTimestamp: now,
 			Result:         "Failed",
 			Severity:       "Error",
-			TriggeredBy:    "scheduler",
+			Requester:    "scheduler",
 			Description:    &desc,
 		},
 		AccountID: "acc-1",
@@ -133,7 +133,7 @@ func testSystemEventDTOResponse_Struct(t *testing.T) {
 	assert.Equal(t, now, dto.EventTimestamp)
 	assert.Equal(t, actions.StatusFailed, dto.Result)
 	assert.Equal(t, "Error", dto.Severity)
-	assert.Equal(t, "scheduler", dto.TriggeredBy)
+	assert.Equal(t, "scheduler", dto.Requester)
 	assert.Equal(t, &desc, dto.Description)
 	assert.Equal(t, "acc-1", dto.AccountID)
 	assert.Equal(t, "AWS", dto.Provider)

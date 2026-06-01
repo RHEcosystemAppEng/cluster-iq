@@ -31,7 +31,7 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) 
 	model := db.ClusterEventDBResponse{
 		ID:             1,
 		EventTimestamp: now,
-		TriggeredBy:    "api",
+		Requester:    "api",
 		Action:         "START",
 		ResourceID:     &resID,
 		ResourceType:   inventory.ClusterResourceType,
@@ -44,7 +44,7 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_Correct(t *testing.T) 
 
 	assert.Equal(t, model.ID, dto.ID)
 	assert.Equal(t, model.EventTimestamp, dto.EventTimestamp)
-	assert.Equal(t, model.TriggeredBy, dto.TriggeredBy)
+	assert.Equal(t, model.Requester, dto.Requester)
 	assert.Equal(t, model.Action, dto.Action)
 	assert.Equal(t, model.ResourceID, dto.ResourceID)
 	assert.Equal(t, model.ResourceType, dto.ResourceType)
@@ -61,7 +61,7 @@ func testClusterEventDBResponse_ToClusterEventDTOResponse_NilDescription(t *test
 	model := db.ClusterEventDBResponse{
 		ID:             2,
 		EventTimestamp: now,
-		TriggeredBy:    "scanner",
+		Requester:    "scanner",
 		Action:         "STOP",
 		ResourceID:     &resID,
 		ResourceType:   inventory.ClusterResourceType,
@@ -90,8 +90,8 @@ func testToClusterEventDTOResponseList_Correct(t *testing.T) {
 	c1 := "c1"
 	c2 := "c2"
 	models := []db.ClusterEventDBResponse{
-		{ID: 1, EventTimestamp: now, TriggeredBy: "api", Action: "START", ResourceID: &c1, ResourceType: inventory.ClusterResourceType, Result: "Success", Severity: "Info"},
-		{ID: 2, EventTimestamp: now.Add(-time.Minute), TriggeredBy: "agent", Action: "STOP", ResourceID: &c2, ResourceType: inventory.ClusterResourceType, Result: "Failed", Severity: "Error"},
+		{ID: 1, EventTimestamp: now, Requester: "api", Action: "START", ResourceID: &c1, ResourceType: inventory.ClusterResourceType, Result: "Success", Severity: "Info"},
+		{ID: 2, EventTimestamp: now.Add(-time.Minute), Requester: "agent", Action: "STOP", ResourceID: &c2, ResourceType: inventory.ClusterResourceType, Result: "Failed", Severity: "Error"},
 	}
 
 	dtos := conv.ToClusterEventDTOs(models)
@@ -114,34 +114,41 @@ func testSystemEventDBResponse_ToSystemEventDTOResponse_Correct(t *testing.T) {
 	resID := "cluster-10"
 	conv := &convert.ConverterImpl{}
 
+	schedID := int64(42)
 	model := db.SystemEventDBResponse{
 		ClusterEventDBResponse: db.ClusterEventDBResponse{
 			ID:             10,
 			EventTimestamp: now,
-			TriggeredBy:    "scheduler",
+			Requester:    "scheduler",
 			Action:         "START",
 			ResourceID:     &resID,
 			ResourceType:   inventory.ClusterResourceType,
 			Result:         "Pending",
 			Description:    &desc,
 			Severity:       "Warning",
+			ScheduleID:     &schedID,
 		},
-		AccountID: sql.NullString{String: "acc-1", Valid: true},
-		Provider:  sql.NullString{String: "AWS", Valid: true},
+		ResourceName: sql.NullString{String: "my-cluster", Valid: true},
+		AccountID:    sql.NullString{String: "acc-1", Valid: true},
+		AccountName:  sql.NullString{String: "My Account", Valid: true},
+		Provider:     sql.NullString{String: "AWS", Valid: true},
 	}
 
 	dto := conv.ToSystemEventDTO(model)
 
 	assert.Equal(t, int64(10), dto.ID)
 	assert.Equal(t, now, dto.EventTimestamp)
-	assert.Equal(t, "scheduler", dto.TriggeredBy)
+	assert.Equal(t, "scheduler", dto.Requester)
 	assert.Equal(t, "START", dto.Action)
 	assert.Equal(t, &resID, dto.ResourceID)
 	assert.Equal(t, inventory.ClusterResourceType, dto.ResourceType)
 	assert.Equal(t, actions.StatusPending, dto.Result)
 	assert.Equal(t, &desc, dto.Description)
 	assert.Equal(t, "Warning", dto.Severity)
+	assert.Equal(t, &schedID, dto.ScheduleID)
+	assert.Equal(t, "my-cluster", dto.ResourceName)
 	assert.Equal(t, "acc-1", dto.AccountID)
+	assert.Equal(t, "My Account", dto.AccountName)
 	assert.Equal(t, "AWS", dto.Provider)
 }
 
@@ -163,29 +170,33 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 			ClusterEventDBResponse: db.ClusterEventDBResponse{
 				ID:             1,
 				EventTimestamp: now,
-				TriggeredBy:    "api",
+				Requester:    "api",
 				Action:         "START",
 				ResourceID:     &sc1,
 				ResourceType:   inventory.ClusterResourceType,
 				Result:         "Success",
 				Severity:       "Info",
 			},
-			AccountID: sql.NullString{String: "acc-1", Valid: true},
-			Provider:  sql.NullString{String: "AWS", Valid: true},
+			ResourceName: sql.NullString{String: "cluster-a", Valid: true},
+			AccountID:    sql.NullString{String: "acc-1", Valid: true},
+			AccountName:  sql.NullString{String: "Account 1", Valid: true},
+			Provider:     sql.NullString{String: "AWS", Valid: true},
 		},
 		{
 			ClusterEventDBResponse: db.ClusterEventDBResponse{
 				ID:             2,
 				EventTimestamp: now.Add(-time.Minute),
-				TriggeredBy:    "agent",
+				Requester:    "agent",
 				Action:         "STOP",
 				ResourceID:     &sc2,
 				ResourceType:   inventory.ClusterResourceType,
 				Result:         "Failed",
 				Severity:       "Error",
 			},
-			AccountID: sql.NullString{String: "acc-2", Valid: true},
-			Provider:  sql.NullString{String: "GCP", Valid: true},
+			ResourceName: sql.NullString{String: "cluster-b", Valid: true},
+			AccountID:    sql.NullString{String: "acc-2", Valid: true},
+			AccountName:  sql.NullString{String: "Account 2", Valid: true},
+			Provider:     sql.NullString{String: "GCP", Valid: true},
 		},
 	}
 
@@ -193,9 +204,13 @@ func testToSystemEventDTOResponseList_Correct(t *testing.T) {
 
 	assert.Len(t, dtos, 2)
 	assert.Equal(t, int64(1), dtos[0].ID)
+	assert.Equal(t, "cluster-a", dtos[0].ResourceName)
 	assert.Equal(t, "acc-1", dtos[0].AccountID)
+	assert.Equal(t, "Account 1", dtos[0].AccountName)
 	assert.Equal(t, "AWS", dtos[0].Provider)
 	assert.Equal(t, int64(2), dtos[1].ID)
+	assert.Equal(t, "cluster-b", dtos[1].ResourceName)
 	assert.Equal(t, "acc-2", dtos[1].AccountID)
+	assert.Equal(t, "Account 2", dtos[1].AccountName)
 	assert.Equal(t, "GCP", dtos[1].Provider)
 }
