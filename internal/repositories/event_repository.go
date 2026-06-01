@@ -21,16 +21,17 @@ const (
 	InsertEventQuery = `
 		INSERT INTO events(
 			event_timestamp,
-			triggered_by,
+			requester,
 			action,
 			resource_id,
 			resource_type,
 			result,
 			description,
-			severity
+			severity,
+			schedule_id
 		) VALUES (
 			CURRENT_TIMESTAMP,
-			:triggered_by,
+			:requester,
 			:action,
 			(
 				CASE
@@ -45,7 +46,8 @@ const (
 			:resource_type,
 			:result,
 			:description,
-			:severity
+			:severity,
+			:schedule_id
 		) RETURNING id
 	`
 	// UpdateEventStatusQuery updates the result status of an audit log entry based on its ID.

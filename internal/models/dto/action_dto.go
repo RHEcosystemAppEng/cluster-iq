@@ -123,10 +123,13 @@ type ActionDTOResponse struct {
 // ToModelAction converts ActionDTOResponse to actions.Action
 func (a ActionDTOResponse) ToModelAction() actions.Action {
 	target := actions.ActionTarget{
-		AccountID: a.AccountID,
-		Region:    a.Region,
-		ClusterID: a.ClusterID,
-		Instances: a.Instances,
+		AccountID:        a.AccountID,
+		Region:           a.Region,
+		ClusterID:        a.ClusterID,
+		Instances:        a.Instances,
+		TargetType:       a.TargetType,
+		SelectAll:        a.SelectAll,
+		TargetAccountIDs: a.TargetAccountIDs,
 	}
 
 	switch actions.ActionType(a.Type) {

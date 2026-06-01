@@ -32,7 +32,8 @@ type EventOptions struct {
 	ResourceType string
 	Result       string
 	Severity     string
-	TriggeredBy  string
+	Requester    string
+	ScheduleID   *int64
 }
 
 // EventService to write events from every clusteriq component
@@ -52,7 +53,7 @@ func NewEventService(dbClient *dbclient.DBClient, logger *zap.Logger) *EventServ
 // LogEvent creates a new events log entry and returns its ID.
 func (e *EventService) LogEvent(ctx context.Context, opts EventOptions) (int64, error) {
 	event := events.Event{
-		TriggeredBy:    opts.TriggeredBy,
+		Requester:      opts.Requester,
 		Action:         opts.Action,
 		ResourceID:     opts.ResourceID,
 		ResourceType:   opts.ResourceType,
@@ -60,6 +61,7 @@ func (e *EventService) LogEvent(ctx context.Context, opts EventOptions) (int64, 
 		Description:    opts.Description,
 		Severity:       opts.Severity,
 		EventTimestamp: time.Now().UTC(),
+		ScheduleID:     opts.ScheduleID,
 	}
 	eventID, err := e.repo.CreateEvent(ctx, event)
 	e.logger.Debug("Tracking new event", zap.Int64("event_id", eventID))

@@ -41,20 +41,20 @@ const (
 	LinkTargetAccountQuery = `INSERT INTO target_accounts (target_id, account_id) SELECT $1, id FROM accounts WHERE account_id = $2`
 
 	InsertScheduledActionWithTargetQuery = `
-		INSERT INTO schedule (type, time, operation, target, status, enabled)
-		VALUES ('scheduled_action', $1, $2, $3, $4, $5)
+		INSERT INTO schedule (type, time, operation, target, status, enabled, requester, description)
+		VALUES ('scheduled_action', $1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
 	InsertCronActionWithTargetQuery = `
-		INSERT INTO schedule (type, cron_exp, operation, target, status, enabled)
-		VALUES ('cron_action', $1, $2, $3, $4, $5)
+		INSERT INTO schedule (type, cron_exp, operation, target, status, enabled, requester, description)
+		VALUES ('cron_action', $1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
 	InsertInstantActionWithTargetQuery = `
-		INSERT INTO schedule (type, time, operation, target, status, enabled)
-		VALUES ('instant_action', NOW(), $1, $2, $3, $4)
+		INSERT INTO schedule (type, time, operation, target, status, enabled, requester, description)
+		VALUES ('instant_action', NOW(), $1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
@@ -183,13 +183,13 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 		switch a := action.(type) {
 		case *actions.ScheduledAction:
 			_, err = tx.ExecContext(ctx, InsertScheduledActionWithTargetQuery,
-				a.When, a.Operation, targetID, a.Status, a.Enabled)
+				a.When, a.Operation, targetID, a.Status, a.Enabled, a.Requester, a.Description)
 		case *actions.CronAction:
 			_, err = tx.ExecContext(ctx, InsertCronActionWithTargetQuery,
-				a.Expression, a.Operation, targetID, a.Status, a.Enabled)
+				a.Expression, a.Operation, targetID, a.Status, a.Enabled, a.Requester, a.Description)
 		case *actions.InstantAction:
 			_, err = tx.ExecContext(ctx, InsertInstantActionWithTargetQuery,
-				a.Operation, targetID, a.Status, a.Enabled)
+				a.Operation, targetID, a.Status, a.Enabled, a.Requester, a.Description)
 		default:
 			return fmt.Errorf("unsupported action type for batch create: %T", action)
 		}
@@ -220,6 +220,7 @@ func (r *actionRepositoryImpl) CreateAction(ctx context.Context, action actions.
 	var scheduleID int64
 	err = tx.QueryRowContext(ctx, InsertInstantActionWithTargetQuery,
 		action.GetActionOperation(), targetID, action.(*actions.InstantAction).Status, action.(*actions.InstantAction).Enabled,
+		action.GetRequester(), action.GetDescription(),
 	).Scan(&scheduleID)
 	if err != nil {
 		return -1, fmt.Errorf("failed to insert action: %w", err)

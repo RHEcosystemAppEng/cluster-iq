@@ -25,4 +25,6 @@ type ActionDBResponse struct {
 	Instances          pq.StringArray `db:"instances"`
 	TargetAccountIDs   pq.StringArray `db:"target_account_ids"`
 	TargetAccountNames pq.StringArray `db:"target_account_names"`
+	Requester          sql.NullString `db:"requester"`
+	Description        sql.NullString `db:"description"`
 }

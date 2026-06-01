@@ -16,7 +16,7 @@ type EventDTORequest struct {
 	EventTimestamp time.Time `json:"timestamp"`
 	Result         string    `json:"result"`
 	Severity       string    `json:"severity"`
-	TriggeredBy    string    `json:"triggeredBy"`
+	Requester      string    `json:"requester"`
 	Description    *string   `json:"description,omitempty"`
 } // @name EventRequest
 
@@ -30,7 +30,7 @@ func (e EventDTORequest) ToModelEvent() *events.Event {
 		ResourceType:   e.ResourceType,
 		Result:         e.Result,
 		Severity:       e.Severity,
-		TriggeredBy:    e.TriggeredBy,
+		Requester:      e.Requester,
 	}
 } // @name EventResponse
 
@@ -43,13 +43,16 @@ type ClusterEventDTOResponse struct {
 	EventTimestamp time.Time            `json:"timestamp"`
 	Result         actions.ActionStatus `json:"result"`
 	Severity       string               `json:"severity"`
-	TriggeredBy    string               `json:"triggeredBy"`
+	Requester      string               `json:"requester"`
 	Description    *string              `json:"description,omitempty"`
+	ScheduleID     *int64               `json:"scheduleId,omitempty"`
 } // @name ClusterEventResponse
 
 // SystemEvent represents a system-level event, extending a cluster event with account details.
 type SystemEventDTOResponse struct {
 	ClusterEventDTOResponse
-	AccountID string `json:"accountId"`
-	Provider  string `json:"provider"`
+	ResourceName string `json:"resourceName"`
+	AccountID    string `json:"accountId"`
+	AccountName  string `json:"accountName"`
+	Provider     string `json:"provider"`
 } // @name SystemEventResponse

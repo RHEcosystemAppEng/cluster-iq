@@ -29,7 +29,7 @@ func NewEventHandler(service services.EventService, logger *zap.Logger) *EventHa
 
 // systemEventFilterParams defines the supported filter parameters
 type systemEventFilterParams struct {
-	TriggeredBy  string `form:"triggered_by"`
+	Requester    string `form:"requester"`
 	ActionName   string `form:"action"`
 	ResourceType string `form:"resource_type"`
 	Result       string `form:"result"`
@@ -39,8 +39,8 @@ type systemEventFilterParams struct {
 // toRepoFilters maps bound query params to repository filters.
 func (f *systemEventFilterParams) toRepoFilters() map[string]interface{} {
 	filters := make(map[string]interface{})
-	if f.TriggeredBy != "" {
-		filters["triggered_by"] = f.TriggeredBy
+	if f.Requester != "" {
+		filters["requester"] = f.Requester
 	}
 	if f.ActionName != "" {
 		filters["action"] = f.ActionName
@@ -71,7 +71,7 @@ type listSystemEventsRequest struct {
 //	@Produce		json
 //	@Param			page			query		int		false	"Page number"		default(1)
 //	@Param			page_size		query		int		false	"Items per page"	default(10)
-//	@Param			triggered_by	query		string	false	"Triggered by"
+//	@Param			requester		query		string	false	"Requester"
 //	@Param			action			query		string	false	"Action"
 //	@Param			resource_type	query		string	false	"Resource type"
 //	@Param			result			query		string	false	"Result"

@@ -222,6 +222,11 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 		}
 	}
 
+	var scheduleID *int64
+	if sid, err := strconv.ParseInt(action.GetID(), 10, 64); err == nil {
+		scheduleID = &sid
+	}
+
 	tracker := e.eventService.StartTracking(&eventservice.EventOptions{
 		Action:       action.GetActionOperation(),
 		Description:  action.GetDescription(),
@@ -229,7 +234,8 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 		ResourceType: resourceType,
 		Result:       eventservice.ResultPending,
 		Severity:     eventservice.SeverityInfo,
-		TriggeredBy:  action.GetRequester(),
+		Requester:    action.GetRequester(),
+		ScheduleID:   scheduleID,
 	})
 
 	if action.GetActionOperation() == actions.Scan {
