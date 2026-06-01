@@ -29,7 +29,7 @@ export const ClusterDetailsDropdown: React.FunctionComponent<ClusterDetailsDropd
     setIsOpen(false);
   };
 
-  const actionCreate = (clusterId: string, operation: string) => {
+  const actionCreate = async (clusterId: string, operation: string) => {
     const actionRequest = {
       clusterId,
       enabled: true,
@@ -39,7 +39,11 @@ export const ClusterDetailsDropdown: React.FunctionComponent<ClusterDetailsDropd
       type: ActionTypes.INSTANT_ACTION,
     } as ActionRequestApi;
 
-    api.actions.actionsCreate([actionRequest]);
+    try {
+      await api.actions.actionsCreate([actionRequest]);
+    } catch (error) {
+      console.error('Failed to create action:', error);
+    }
   };
 
   const resetModalState = () => {

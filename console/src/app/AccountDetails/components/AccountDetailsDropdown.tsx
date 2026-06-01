@@ -23,7 +23,7 @@ export const AccountDetailsDropdown: React.FunctionComponent<AccountDetailsDropd
     setIsOpen(false);
   };
 
-  const actionCreate = () => {
+  const actionCreate = async () => {
     const actionRequest = {
       accountId,
       description: `Scan ${accountName} account`,
@@ -34,7 +34,11 @@ export const AccountDetailsDropdown: React.FunctionComponent<AccountDetailsDropd
       type: ActionTypes.INSTANT_ACTION,
     } as ActionRequestApi;
 
-    api.actions.actionsCreate([actionRequest]);
+    try {
+      await api.actions.actionsCreate([actionRequest]);
+    } catch (error) {
+      console.error('Failed to create scan action:', error);
+    }
   };
 
   return (
