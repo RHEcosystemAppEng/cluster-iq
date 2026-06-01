@@ -38,6 +38,10 @@ const (
 	apiExpenseEndpoint   = "/expenses"
 	// apiRequestTimeout defines the timeout for HTTP POST requests to the API
 	apiRequestTimeout = 60 * time.Second
+	// apiHealthcheckTimeout defines the timeout for each healthcheck attempt
+	apiHealthcheckTimeout = 5 * time.Second
+	// apiHealthcheckRetryInterval defines how long to wait between healthcheck retries
+	apiHealthcheckRetryInterval = 3 * time.Second
 )
 
 var (
@@ -113,7 +117,7 @@ func (s *Scanner) loadAccounts() error {
 func (s *Scanner) waitForAPI() {
 	url := fmt.Sprintf("%s/healthcheck", APIURL)
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), apiHealthcheckTimeout)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err == nil {
 			resp, err := client.Do(req)
@@ -128,7 +132,7 @@ func (s *Scanner) waitForAPI() {
 		}
 		cancel()
 		s.logger.Info("Waiting for API server...", zap.String("url", url))
-		time.Sleep(3 * time.Second)
+		time.Sleep(apiHealthcheckRetryInterval)
 	}
 }
 
