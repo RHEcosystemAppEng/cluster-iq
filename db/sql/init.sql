@@ -26,7 +26,8 @@ CREATE TYPE RESOURCE_TYPE AS ENUM (
 -- Supported values of Action Operations
 CREATE TYPE ACTION_OPERATION AS ENUM (
   'PowerOn',
-  'PowerOff'
+  'PowerOff',
+  'Scan'
 );
 
 -- Supported values of action types
@@ -192,13 +193,14 @@ CREATE TABLE expenses_default PARTITION OF expenses DEFAULT;
 CREATE TABLE IF NOT EXISTS events (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
   event_timestamp         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  triggered_by            TEXT NOT NULL,
+  requester               TEXT NOT NULL,
   action                  TEXT NOT NULL,
   resource_id             BIGINT,
   resource_type           RESOURCE_TYPE NOT NULL,
   result                  ACTION_STATUS NOT NULL,
   description             TEXT NULL,
   severity                TEXT DEFAULT 'info'::TEXT NOT NULL,
+  schedule_id             BIGINT NULL,
   PRIMARY KEY (id, event_timestamp)
 ) PARTITION BY RANGE (event_timestamp);
 
@@ -238,6 +240,37 @@ CREATE TRIGGER trg_delete_instance_events
 
 
 -- #############################################################################
+-- ## Targets definition ##
+-- #############################################################################
+\! echo '## Creating Targets tables'
+
+CREATE TABLE IF NOT EXISTS targets (
+  id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  target_type             RESOURCE_TYPE NOT NULL,
+  select_all              BOOLEAN DEFAULT false,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS target_accounts (
+  target_id               BIGINT REFERENCES targets(id) ON DELETE CASCADE NOT NULL,
+  account_id              INTEGER REFERENCES accounts(id) ON DELETE CASCADE NOT NULL,
+  PRIMARY KEY (target_id, account_id)
+);
+
+CREATE TABLE IF NOT EXISTS target_clusters (
+  target_id               BIGINT REFERENCES targets(id) ON DELETE CASCADE NOT NULL,
+  cluster_id              BIGINT REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
+  PRIMARY KEY (target_id, cluster_id)
+);
+
+CREATE TABLE IF NOT EXISTS target_instances (
+  target_id               BIGINT REFERENCES targets(id) ON DELETE CASCADE NOT NULL,
+  instance_id             BIGINT REFERENCES instances(id) ON DELETE CASCADE NOT NULL,
+  PRIMARY KEY (target_id, instance_id)
+);
+
+
+-- #############################################################################
 -- ## Actions and Scheduling definition ##
 -- #############################################################################
 \! echo '## Creating Schedule table'
@@ -248,15 +281,36 @@ CREATE TABLE IF NOT EXISTS schedule (
   time                    TIMESTAMP WITH TIME ZONE,
   cron_exp                TEXT,
   operation               ACTION_OPERATION NOT NULL,
-  target                  INTEGER REFERENCES clusters(id) ON DELETE CASCADE NOT NULL,
+  target                  BIGINT REFERENCES targets(id) ON DELETE CASCADE NOT NULL,
   status                  ACTION_STATUS DEFAULT 'Unknown' NOT NULL,
   enabled                 BOOLEAN DEFAULT false,
-	PRIMARY KEY (id),
+  requester               TEXT,
+  description             TEXT,
+  PRIMARY KEY (id),
   CONSTRAINT chk_schedule_time_or_cron CHECK ((time IS NOT NULL) <> (cron_exp IS NOT NULL))
 );
 
 CREATE INDEX IF NOT EXISTS ix_schedule_target_enabled ON schedule (target, enabled);
 CREATE INDEX IF NOT EXISTS ix_schedule_status         ON schedule (status);
+
+
+-- #############################################################################
+-- ## Action Runs (execution history) ##
+-- #############################################################################
+\! echo '## Creating Action Runs table'
+
+CREATE TABLE IF NOT EXISTS action_runs (
+  id                      BIGINT GENERATED ALWAYS AS IDENTITY NOT NULL,
+  schedule_id             BIGINT REFERENCES schedule(id) ON DELETE CASCADE NOT NULL,
+  started_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  finished_at             TIMESTAMP WITH TIME ZONE,
+  status                  ACTION_STATUS NOT NULL DEFAULT 'Running',
+  error_msg               TEXT,
+  PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_action_runs_schedule ON action_runs (schedule_id);
+CREATE INDEX IF NOT EXISTS ix_action_runs_status   ON action_runs (status);
 
 
 
@@ -516,29 +570,50 @@ WHERE
 -- ## Schedule
 -- #############################################################################
 
--- Schedule with cluster and instances list view
+-- Schedule with target details view
 CREATE OR REPLACE VIEW schedule_full_view AS
 SELECT
-	s.id,
-	s.type,
-	s.time,
-	s.cron_exp,
-	s.operation,
-	s.status,
-	s.enabled,
-	c.cluster_id,
-	c.region,
-	a.account_id,
-	COALESCE(
-		array_agg(DISTINCT i.instance_id ORDER BY i.instance_id),
-		'{}'
-	) AS instances
-FROM
-	schedule s
-JOIN clusters c ON c.id = s.target
+  s.id,
+  s.type,
+  s.time,
+  s.cron_exp,
+  s.operation,
+  s.status,
+  s.enabled,
+  s.requester,
+  s.description,
+  t.target_type,
+  t.select_all,
+  c.cluster_id,
+  c.cluster_name,
+  c.region,
+  COALESCE(a_power.account_id, '') AS account_id,
+  COALESCE(
+    array_agg(DISTINCT i.instance_id ORDER BY i.instance_id)
+      FILTER (WHERE i.instance_id IS NOT NULL),
+    '{}'
+  ) AS instances,
+  COALESCE(
+    (SELECT array_agg(DISTINCT accs.account_id ORDER BY accs.account_id)
+     FROM target_accounts ta_sub
+     JOIN accounts accs ON accs.id = ta_sub.account_id
+     WHERE ta_sub.target_id = t.id),
+    '{}'
+  ) AS target_account_ids,
+  COALESCE(
+    (SELECT array_agg(DISTINCT accs.account_name ORDER BY accs.account_name)
+     FROM target_accounts ta_sub
+     JOIN accounts accs ON accs.id = ta_sub.account_id
+     WHERE ta_sub.target_id = t.id),
+    '{}'
+  ) AS target_account_names
+FROM schedule s
+JOIN targets t ON t.id = s.target
+LEFT JOIN target_clusters tc ON tc.target_id = t.id
+LEFT JOIN clusters c ON c.id = tc.cluster_id
 LEFT JOIN instances i ON i.cluster_id = c.id
-JOIN accounts a ON c.account_id = a.id
-GROUP BY a.account_id, s.id, c.id
+LEFT JOIN accounts a_power ON a_power.id = c.account_id
+GROUP BY s.id, t.id, c.id, a_power.account_id
 ORDER BY s.id;
 
 
@@ -578,16 +653,18 @@ CREATE OR REPLACE VIEW cluster_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
-  ev.triggered_by,
+  ev.requester,
   ev.action,
-  COALESCE(c.cluster_id, i.instance_id) AS resource_id,
+  COALESCE(c.cluster_id, i.instance_id, a.account_id) AS resource_id,
   ev.resource_type,
   ev.result,
   ev.description,
-  ev.severity
+  ev.severity,
+  ev.schedule_id
 FROM events ev
 LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
 LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
+LEFT JOIN accounts  a ON ev.resource_type = 'Account'::RESOURCE_TYPE  AND a.id = ev.resource_id
 ORDER BY event_timestamp DESC;
 
 -- View for System Events
@@ -595,24 +672,30 @@ CREATE OR REPLACE VIEW system_events AS
 SELECT
   ev.id,
   ev.event_timestamp,
-  ev.triggered_by,
+  ev.requester,
   ev.action,
-  COALESCE(c.cluster_id, i.instance_id) AS resource_id,
+  COALESCE(c.cluster_id, i.instance_id, a.account_id) AS resource_id,
+  COALESCE(c.cluster_name, i.instance_name, a.account_name) AS resource_name,
   ev.resource_type,
   ev.result,
   ev.description,
   ev.severity,
+  ev.schedule_id,
   acc.account_id,
+  acc.account_name,
   acc.provider
 FROM events ev
 LEFT JOIN clusters  c ON ev.resource_type = 'Cluster'::RESOURCE_TYPE  AND c.id = ev.resource_id
 LEFT JOIN instances i ON ev.resource_type = 'Instance'::RESOURCE_TYPE AND i.id = ev.resource_id
+LEFT JOIN accounts  a ON ev.resource_type = 'Account'::RESOURCE_TYPE  AND a.id = ev.resource_id
 LEFT JOIN accounts acc ON acc.id = (
   CASE
     WHEN ev.resource_type = 'Cluster'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = ev.resource_id)
     WHEN ev.resource_type = 'Instance'::RESOURCE_TYPE
     THEN (SELECT c.account_id FROM clusters c WHERE c.id = (SELECT i.cluster_id FROM instances i WHERE i.id = ev.resource_id))
+    WHEN ev.resource_type = 'Account'::RESOURCE_TYPE
+    THEN ev.resource_id
   END
 )
 ORDER BY ev.event_timestamp DESC;

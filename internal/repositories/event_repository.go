@@ -21,16 +21,17 @@ const (
 	InsertEventQuery = `
 		INSERT INTO events(
 			event_timestamp,
-			triggered_by,
+			requester,
 			action,
 			resource_id,
 			resource_type,
 			result,
 			description,
-			severity
+			severity,
+			schedule_id
 		) VALUES (
 			CURRENT_TIMESTAMP,
-			:triggered_by,
+			:requester,
 			:action,
 			(
 				CASE
@@ -38,12 +39,15 @@ const (
 					THEN (SELECT id FROM clusters c WHERE c.cluster_id = :resource_id)
 					WHEN :resource_type = 'Instance'
 					THEN (SELECT id FROM instances i WHERE i.instance_id = :resource_id)
+					WHEN :resource_type = 'Account'
+					THEN (SELECT id FROM accounts a WHERE a.account_id = :resource_id)
 				END
 			),
 			:resource_type,
 			:result,
 			:description,
-			:severity
+			:severity,
+			:schedule_id
 		) RETURNING id
 	`
 	// UpdateEventStatusQuery updates the result status of an audit log entry based on its ID.

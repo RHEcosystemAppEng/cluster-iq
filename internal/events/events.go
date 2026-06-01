@@ -25,5 +25,7 @@ type Event struct {
 	// Log severity level (e.g., "info", "warning", "error").
 	Severity string `db:"severity"`
 	// User or system entity responsible for the action.
-	TriggeredBy string `db:"triggered_by"`
+	Requester string `db:"requester"`
+	// ID of the scheduled action that generated this event.
+	ScheduleID *int64 `db:"schedule_id"`
 }

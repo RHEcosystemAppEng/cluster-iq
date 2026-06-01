@@ -45,11 +45,13 @@ export interface ActionRequestApi {
   accountId?: string;
   clusterId?: string;
   cronExpression?: string;
+  description?: string;
   enabled?: boolean;
   id?: string;
   instances?: string[];
   operation?: string;
   region?: string;
+  requester?: string;
   status?: string;
   time?: string;
   type?: string;
@@ -58,13 +60,20 @@ export interface ActionRequestApi {
 export interface ActionResponseApi {
   accountId?: string;
   clusterId?: string;
+  clusterName?: string;
   cronExpression?: string;
+  description?: string;
   enabled?: boolean;
   id?: string;
   instances?: string[];
   operation?: string;
   region?: string;
+  requester?: string;
+  selectAll?: boolean;
   status?: string;
+  targetAccountIds?: string[];
+  targetAccountNames?: string[];
+  targetType?: string;
   time?: string;
   type?: string;
 }
@@ -90,7 +99,7 @@ export interface ClusterEventResponseApi {
   result?: ResultStatus;
   severity?: string;
   timestamp?: string;
-  triggeredBy?: string;
+  requester?: string;
 }
 
 export interface ClusterListResponseApi {
@@ -149,7 +158,7 @@ export interface EventRequestApi {
   result?: string;
   severity?: string;
   timestamp?: string;
-  triggeredBy?: string;
+  requester?: string;
 }
 
 export interface ExpenseListResponseApi {
@@ -297,13 +306,16 @@ export interface SystemEventResponseApi {
   id?: number;
   action?: string;
   resourceId?: string;
+  resourceName?: string;
   resourceType?: string;
   timestamp?: string;
   result?: ResultStatus;
   severity?: string;
-  triggeredBy?: string;
+  requester?: string;
   description?: string;
+  scheduleId?: number;
   accountId?: string;
+  accountName?: string;
   provider?: string;
 }
 

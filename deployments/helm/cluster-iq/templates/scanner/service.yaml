@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scanner
+  labels:
+    {{- include "cluster-iq.labels" . | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "scanner" | nindent 4 }}
+spec:
+  type: {{ .Values.scanner.service.type }}
+  ports:
+    - port: {{ .Values.scanner.service.port }}
+      targetPort: {{ .Values.scanner.service.name }}
+      protocol: TCP
+      name: {{ .Values.scanner.service.name }}
+  selector:
+    {{- include "cluster-iq.selectorLabels" . | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "scanner" | nindent 4 }}

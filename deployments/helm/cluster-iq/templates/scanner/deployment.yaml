@@ -1,0 +1,64 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scanner
+  labels:
+    {{- include "cluster-iq.labels" . | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "scanner" | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "cluster-iq.selectorLabels" . | nindent 6 }}
+      {{- include "cluster-iq.componentLabels" "scanner" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cluster-iq.labels" . | nindent 8 }}
+        {{- include "cluster-iq.componentLabels" "scanner" | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "cluster-iq.scannerServiceAccountName" . }}
+      containers:
+        - name: scanner
+          image: "{{ .Values.scanner.image.repository }}:{{ .Values.scanner.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.scanner.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: scanner
+          ports:
+            - name: {{ .Values.scanner.service.name }}
+              containerPort: {{ .Values.scanner.service.port }}
+              protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.scanner.service.port }}
+            {{- toYaml .Values.scanner.startupProbe | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.scanner.service.port }}
+            {{- toYaml .Values.scanner.readinessProbe | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.scanner.service.port }}
+            {{- toYaml .Values.scanner.livenessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.scanner.resources | nindent 12 }}
+          volumeMounts:
+            - name: credentials
+              readOnly: true
+              mountPath: /credentials
+      volumes:
+        {{- if .Values.vault.enabled }}
+        - name: credentials
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "cluster-iq-credentials-scanner"
+        {{- else }}
+        - name: credentials
+          secret:
+            secretName: credentials
+            optional: false
+        {{- end }}

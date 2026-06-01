@@ -1,9 +1,15 @@
-import { renderActionTypeLabel, renderOperationLabel, renderActionStatusLabel } from '@app/utils/renderUtils';
+import {
+  renderActionTypeLabel,
+  renderOperationLabel,
+  renderActionStatusLabel,
+  renderTargetLabel,
+} from '@app/utils/renderUtils';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { Label } from '@patternfly/react-core';
 import React, { useEffect, useMemo } from 'react';
 import { ActionStatus, ActionOperations, ActionTypes } from '@app/types/types';
-import { Link } from 'react-router-dom';
+import { parseScanTimestamp } from '@app/utils/parseFuncs';
+import cronstrue from 'cronstrue';
 import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
 import { TablePagination } from '@app/components/common/TablesPagination';
 import { ActionsColumn } from '@patternfly/react-table';
@@ -64,13 +70,12 @@ export const ScheduleActionsTable: React.FunctionComponent<{
   const columnNames = {
     id: 'ID',
     type: 'Action Type',
-    time: 'Time',
-    cronExpression: 'Cron Expression',
+    schedule: 'Schedule',
     operation: 'Operation',
     status: 'Status',
-    clusterId: 'Cluster ID',
-    accountId: 'Account ID',
-    region: 'Region',
+    target: 'Target',
+    requester: 'Requester',
+    description: 'Description',
     enabled: 'Enabled',
   };
 
@@ -84,13 +89,12 @@ export const ScheduleActionsTable: React.FunctionComponent<{
             <Tr>
               <Th>{columnNames.id}</Th>
               <Th>{columnNames.type}</Th>
-              <Th>{columnNames.time}</Th>
-              <Th>{columnNames.cronExpression}</Th>
+              <Th>{columnNames.schedule}</Th>
               <Th>{columnNames.operation}</Th>
               <Th>{columnNames.status}</Th>
-              <Th>{columnNames.clusterId}</Th>
-              <Th>{columnNames.region}</Th>
-              <Th>{columnNames.accountId}</Th>
+              <Th>{columnNames.target}</Th>
+              <Th>{columnNames.requester}</Th>
+              <Th>{columnNames.description}</Th>
               <Th>{columnNames.enabled}</Th>
             </Tr>
           </Thead>
@@ -99,21 +103,26 @@ export const ScheduleActionsTable: React.FunctionComponent<{
               <Tr key={action.id}>
                 <Td dataLabel={columnNames.id}>{action.id}</Td>
                 <Td dataLabel={columnNames.type}>{renderActionTypeLabel(action.type)}</Td>
-                <Td dataLabel={columnNames.time}>{action.type !== ActionTypes.CRON_ACTION ? action.time : '-'}</Td>
-                <Td dataLabel={columnNames.cronExpression}>
-                  {action.type === ActionTypes.CRON_ACTION ? action.cronExpression : '-'}
+                <Td dataLabel={columnNames.schedule}>
+                  {action.type === ActionTypes.CRON_ACTION
+                    ? `${action.cronExpression} (${cronstrue.toString(action.cronExpression ?? '', { use24HourTimeFormat: true })})`
+                    : parseScanTimestamp(action.time)}
                 </Td>
                 <Td dataLabel={columnNames.operation}>{renderOperationLabel(action.operation)}</Td>
                 <Td dataLabel={columnNames.status}>{renderActionStatusLabel(action.status)}</Td>
-                <Td dataLabel={columnNames.clusterId}>
-                  <Link to={`/clusters/${action.clusterId}`}>{action.clusterId}</Link>
+                <Td dataLabel={columnNames.target}>
+                  {renderTargetLabel(
+                    action.clusterId,
+                    action.clusterName,
+                    action.targetAccountIds,
+                    action.targetAccountNames,
+                    action.selectAll
+                  )}
                 </Td>
-                <Td dataLabel={columnNames.region}>{action.region}</Td>
-                <Td dataLabel={columnNames.accountId}>
-                  <Link to={`/accounts/${action.accountId}`}>{action.accountId}</Link>
-                </Td>
+                <Td dataLabel={columnNames.requester}>{action.requester || '-'}</Td>
+                <Td dataLabel={columnNames.description}>{action.description || '-'}</Td>
                 <Td dataLabel={columnNames.enabled}>
-                  {action.enabled ? <Label color="green">Enabled</Label> : <Label color="red">Disabled</Label>}
+                  {action.enabled ? <Label color="green">Yes</Label> : <Label color="red">No</Label>}
                 </Td>
                 <Td isActionCell aria-label="Row actions">
                   <ActionsColumn items={rowActions(action, invalidateScheduleActions)} />

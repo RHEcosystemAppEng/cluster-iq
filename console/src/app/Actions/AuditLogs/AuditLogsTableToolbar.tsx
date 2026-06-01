@@ -22,7 +22,7 @@ import { ActionOperations, ResultStatus } from '@app/types/types';
 import { usePopperContainer } from '@app/hooks/usePopperContainer';
 import { ProviderApi } from '@api';
 
-type AttributeMenuOption = 'Account' | 'Provider' | 'Action' | 'Result' | 'TriggeredBy';
+type AttributeMenuOption = 'Account' | 'Provider' | 'Action' | 'Result' | 'Requester';
 
 export const AuditLogsTableToolbar: React.FunctionComponent<AuditLogsTableToolbarProps> = ({
   searchValue,
@@ -31,22 +31,22 @@ export const AuditLogsTableToolbar: React.FunctionComponent<AuditLogsTableToolba
   setAction,
   result,
   setResult,
-  triggered_by,
-  setTriggeredBy,
+  requester,
+  setRequester,
   providerSelections,
   setProviderSelections,
 }) => {
   const debouncedSearch = React.useMemo(() => debounce(setSearchValue, 300), [setSearchValue]);
-  const debouncedTriggeredBy = React.useMemo(() => debounce(setTriggeredBy, 300), [setTriggeredBy]);
+  const debouncedRequester = React.useMemo(() => debounce(setRequester, 300), [setRequester]);
   const debouncedResult = React.useMemo(() => debounce(setResult, 300), [setResult]);
 
   React.useEffect(() => {
     return () => {
       debouncedSearch.cancel();
-      debouncedTriggeredBy.cancel();
+      debouncedRequester.cancel();
       debouncedResult.cancel();
     };
-  }, [debouncedSearch, debouncedTriggeredBy, debouncedResult]);
+  }, [debouncedSearch, debouncedRequester, debouncedResult]);
 
   // Set up name search input
   const searchInput = (
@@ -58,12 +58,12 @@ export const AuditLogsTableToolbar: React.FunctionComponent<AuditLogsTableToolba
     />
   );
   // Set up triggered by search input
-  const triggeredByInput = (
+  const requesterInput = (
     <SearchInput
       placeholder="Filter by user"
-      value={searchValue}
-      onChange={(_event, value) => debouncedTriggeredBy(value)}
-      onClear={() => debouncedTriggeredBy('')}
+      value={requester}
+      onChange={(_event, value) => debouncedRequester(value)}
+      onClear={() => debouncedRequester('')}
     />
   );
 
@@ -518,7 +518,7 @@ export const AuditLogsTableToolbar: React.FunctionComponent<AuditLogsTableToolba
           <MenuItem itemId="Action">Action</MenuItem>
           <MenuItem itemId="Result">Result</MenuItem>
           <MenuItem itemId="Provider">Provider</MenuItem>
-          <MenuItem itemId="TriggeredBy">Triggered by</MenuItem>
+          <MenuItem itemId="Requester">Requester</MenuItem>
         </MenuList>
       </MenuContent>
     </Menu>
@@ -545,7 +545,7 @@ export const AuditLogsTableToolbar: React.FunctionComponent<AuditLogsTableToolba
         setProviderSelections(null);
         setAction(null);
         setResult(null);
-        setTriggeredBy('');
+        setRequester('');
       }}
     >
       <ToolbarContent>
@@ -562,13 +562,13 @@ export const AuditLogsTableToolbar: React.FunctionComponent<AuditLogsTableToolba
               {searchInput}
             </ToolbarFilter>
             <ToolbarFilter
-              labels={triggered_by !== '' ? [triggered_by] : []}
-              deleteLabel={() => setTriggeredBy('')}
-              deleteLabelGroup={() => setTriggeredBy('')}
-              categoryName="TriggeredBy"
-              showToolbarItem={activeAttributeMenu === 'TriggeredBy'}
+              labels={requester !== '' ? [requester] : []}
+              deleteLabel={() => setRequester('')}
+              deleteLabelGroup={() => setRequester('')}
+              categoryName="Requester"
+              showToolbarItem={activeAttributeMenu === 'Requester'}
             >
-              {triggeredByInput}
+              {requesterInput}
             </ToolbarFilter>
             <ToolbarFilter
               labels={result || []}

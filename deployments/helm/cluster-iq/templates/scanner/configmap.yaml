@@ -4,9 +4,10 @@ metadata:
   name: scanner
   labels:
     {{- include "cluster-iq.labels" . | nindent 4 }}
-    {{- include "cluster-iq.componentLabels" "api" | nindent 4 }}
+    {{- include "cluster-iq.componentLabels" "scanner" | nindent 4 }}
 data:
   CIQ_API_URL: 'http://api.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.api.service.port }}/api/v1'
+  CIQ_SCANNER_LISTEN_URL: '0.0.0.0:{{ .Values.scanner.service.port }}'
   CIQ_CREDS_FILE: /credentials/credentials
   CIQ_LOG_LEVEL: {{ .Values.scanner.logLevel }}
   CIQ_SKIP_NO_OPENSHIFT_INSTANCES: "{{ .Values.scanner.skipNoOpenshiftInstances }}"

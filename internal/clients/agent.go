@@ -64,6 +64,8 @@ func (a APIGRPCClient) ProcessInstantAction(ctx context.Context, action *actions
 		return a.PowerOffCluster(ctx, action)
 	case actions.PowerOn:
 		return a.PowerOnCluster(ctx, action)
+	case actions.Scan:
+		return fmt.Errorf("scan operations are handled by the scanner service, not the agent")
 	default:
 		return fmt.Errorf("received InstantAction with unknown Operation")
 	}

@@ -2,7 +2,7 @@ import { parseISO, format } from 'date-fns';
 import { createParser } from 'nuqs';
 
 export function parseScanTimestamp(ts: string | undefined) {
-  if (!ts) return 'N/A';
+  if (!ts || ts.startsWith('0001-01-01')) return 'Never';
   return format(parseISO(ts), 'HH:mm:ss - dd/MM/yyyy');
 }
 
@@ -15,15 +15,18 @@ export function parseNumberToCurrency(value: number | undefined) {
 }
 
 export function resolveResourcePath(resourceType: string, resourceName: string): string {
-  if (resourceType === 'cluster') {
+  if (resourceType === 'Cluster') {
     return `/clusters/${resourceName}`;
   }
 
-  if (resourceType === 'instance') {
+  if (resourceType === 'Instance') {
     return `/instances/${resourceName}`;
   }
 
-  // Fallback / defensive default
+  if (resourceType === 'Account') {
+    return `/accounts/${resourceName}`;
+  }
+
   return '#';
 }
 

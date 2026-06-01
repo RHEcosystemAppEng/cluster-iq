@@ -11,11 +11,11 @@ const filterParams = {
   action: parseAsArrayOf(parseAsStringEnum<ActionOperations>(Object.values(ActionOperations))).withDefault([]),
   provider: parseAsArrayOf(parseAsStringEnum<ProviderApi>(Object.values(ProviderApi))).withDefault([]),
   result: parseAsArrayOf(parseAsStringEnum<ResultStatus>(Object.values(ResultStatus))).withDefault([]),
-  triggered_by: parseAsString.withDefault(''),
+  requester: parseAsString.withDefault(''),
 };
 
 const AuditLogs: React.FunctionComponent = () => {
-  const [{ accountName, action, provider, result, triggered_by }, setQuery] = useQueryStates(filterParams);
+  const [{ accountName, action, provider, result, requester }, setQuery] = useQueryStates(filterParams);
 
   return (
     <React.Fragment>
@@ -33,8 +33,8 @@ const AuditLogs: React.FunctionComponent = () => {
             setAction={value => setQuery({ action: value || [] })}
             result={result}
             setResult={value => setQuery({ result: value })}
-            triggered_by={triggered_by}
-            setTriggeredBy={value => setQuery({ triggered_by: value })}
+            requester={requester}
+            setRequester={value => setQuery({ requester: value })}
             providerSelections={provider}
             setProviderSelections={value => setQuery({ provider: value || [] })}
           />
@@ -43,7 +43,7 @@ const AuditLogs: React.FunctionComponent = () => {
             action={action}
             provider={provider}
             result={result}
-            triggered_by={triggered_by}
+            requester={requester}
           />
         </Panel>
       </PageSection>

@@ -3,7 +3,7 @@
 BEGIN;
 
 -- Limpia datos previos (si los hubiera)
-TRUNCATE expenses, tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
+TRUNCATE action_runs, schedule, targets, expenses, tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
 -- Inserta 3 cuentas (una por proveedor) y guarda sus IDs
 WITH ins AS (
   INSERT INTO accounts (account_id, account_name, provider, last_scan_ts)
@@ -204,39 +204,49 @@ BEGIN
 END
 $$;
 
--- Generating scheduled actions
-INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
-SELECT 
-    'scheduled_action'::ACTION_TYPE,
-    now() + (g * interval '1 day') AS time,
-    NULL,
-    (ARRAY['PowerOn','PowerOff'])[1 + (random()*1)::int]::ACTION_OPERATION,
-    c.id AS target,
-    'Pending'::ACTION_STATUS,
-    (random() > 0.5) AS enabled
-FROM generate_series(1,3) g
-JOIN LATERAL (
-  SELECT id FROM clusters ORDER BY random() LIMIT 1
-) c ON true;
+-- Generating scheduled actions (with targets)
+DO $$
+DECLARE
+  v_target_id BIGINT;
+  v_cluster_id BIGINT;
+  v_operation ACTION_OPERATION;
+BEGIN
+  FOR g IN 1..3 LOOP
+    SELECT id INTO v_cluster_id FROM clusters ORDER BY random() LIMIT 1;
+    v_operation := (ARRAY['PowerOn','PowerOff'])[1 + (random()*1)::int]::ACTION_OPERATION;
 
--- Generating cron-based action
-INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
-SELECT 
-    'cron_action'::ACTION_TYPE,
-    NULL,
-		(ARRAY['0 6 * * *', '0 0 * * 0', '*/30 * * * *'])[g] AS cron_exp,
-    (ARRAY['PowerOn','PowerOff'])[1 + (random()*1)::int]::ACTION_OPERATION,
-    c.id AS target,
-    'Pending'::ACTION_STATUS,
-    (random() > 0.5) AS enabled
-FROM generate_series(1,3) g
-JOIN LATERAL (
-  SELECT id FROM clusters ORDER BY random() LIMIT 1
-) c ON true;
+    INSERT INTO targets (target_type, select_all) VALUES ('Cluster', false) RETURNING id INTO v_target_id;
+    INSERT INTO target_clusters (target_id, cluster_id) VALUES (v_target_id, v_cluster_id);
+    INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
+    VALUES ('scheduled_action', now() + (g * interval '1 day'), NULL, v_operation, v_target_id, 'Pending', (random() > 0.5));
+  END LOOP;
+END
+$$;
+
+-- Generating cron-based actions (with targets)
+DO $$
+DECLARE
+  v_target_id BIGINT;
+  v_cluster_id BIGINT;
+  v_operation ACTION_OPERATION;
+  v_cron TEXT;
+BEGIN
+  FOR g IN 1..3 LOOP
+    SELECT id INTO v_cluster_id FROM clusters ORDER BY random() LIMIT 1;
+    v_operation := (ARRAY['PowerOn','PowerOff'])[1 + (random()*1)::int]::ACTION_OPERATION;
+    v_cron := (ARRAY['0 6 * * *', '0 0 * * 0', '*/30 * * * *'])[g];
+
+    INSERT INTO targets (target_type, select_all) VALUES ('Cluster', false) RETURNING id INTO v_target_id;
+    INSERT INTO target_clusters (target_id, cluster_id) VALUES (v_target_id, v_cluster_id);
+    INSERT INTO schedule (type, time, cron_exp, operation, target, status, enabled)
+    VALUES ('cron_action', NULL, v_cron, v_operation, v_target_id, 'Pending', (random() > 0.5));
+  END LOOP;
+END
+$$;
 
 -- Generating events
 INSERT INTO events (
-  event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity
+  event_timestamp, requester, action, resource_id, resource_type, result, description, severity
 )
 SELECT
   now() - (random() * interval '10 days') AS event_timestamp,

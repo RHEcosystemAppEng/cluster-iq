@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { renderStatusLabel } from '@app/utils/renderUtils';
+import { renderStatusLabel, ResourceLabel } from '@app/utils/renderUtils';
 import { parseScanTimestamp, parseNumberToCurrency } from 'src/app/utils/parseFuncs';
 import { useParams } from 'react-router-dom';
 import {
@@ -14,9 +14,9 @@ import {
   DescriptionListGroup,
   DescriptionListTerm,
   DescriptionListDescription,
-  Label,
   Flex,
   FlexItem,
+  Label,
   LabelGroup,
   Bullseye,
   Spinner,
@@ -100,7 +100,7 @@ const ServerDetails: React.FunctionComponent = () => {
               <DescriptionListGroup>
                 <DescriptionListTerm>Labels</DescriptionListTerm>
                 <LabelGroupOverflow labels={instanceData?.tags || []} />
-                <DescriptionListTerm>Last scanned at</DescriptionListTerm>
+                <DescriptionListTerm>Last scan</DescriptionListTerm>
                 <DescriptionListDescription>
                   {parseScanTimestamp(instanceData?.lastScanTimestamp)}
                 </DescriptionListDescription>
@@ -131,20 +131,9 @@ const ServerDetails: React.FunctionComponent = () => {
     <React.Fragment>
       {/* Page header */}
       <PageSection hasBodyWrapper={false}>
-        <Flex
-          spaceItems={{ default: 'spaceItemsMd' }}
-          alignItems={{ default: 'alignItemsFlexStart' }}
-          flexWrap={{ default: 'nowrap' }}
-        >
-          <FlexItem>
-            <Label color="blue">Server</Label>
-          </FlexItem>
-          <FlexItem>
-            <Title headingLevel="h1" size="2xl">
-              {instanceID}
-            </Title>
-          </FlexItem>
-        </Flex>
+        <Title headingLevel="h1" size="2xl">
+          <ResourceLabel label="Instance" color="#4cb140" /> {instanceData?.instanceName || instanceID}
+        </Title>
         {/* Page tabs */}
       </PageSection>
       <PageSection hasBodyWrapper={false} type="tabs">

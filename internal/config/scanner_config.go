@@ -6,6 +6,7 @@ import env "github.com/caarlos0/env/v11"
 type ScannerConfig struct {
 	CloudCredentialsConfig
 	APIURL                   string `env:"CIQ_API_URL,required"`
+	ListenURL                string `env:"CIQ_SCANNER_LISTEN_URL" envDefault:"0.0.0.0:50052"`
 	SkipNoOpenShiftInstances bool   `env:"CIQ_SKIP_NO_OPENSHIFT_INSTANCES" envDefault:"true"`
 }
 

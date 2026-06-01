@@ -1,8 +1,10 @@
-import { Flex, FlexItem, Label, PageSection, Title } from '@patternfly/react-core';
+import { Flex, FlexItem, PageSection, Title } from '@patternfly/react-core';
 import { AccountsHeaderProps } from './types';
+import { ResourceLabel } from '@app/utils/renderUtils';
+import { AccountDetailsDropdown } from './AccountDetailsDropdown';
 import React from 'react';
 
-export const AccountsHeader: React.FunctionComponent<AccountsHeaderProps> = ({ accountName, label }) => {
+export const AccountsHeader: React.FunctionComponent<AccountsHeaderProps> = ({ accountName, accountId }) => {
   return (
     <PageSection hasBodyWrapper={false}>
       <Flex
@@ -11,12 +13,12 @@ export const AccountsHeader: React.FunctionComponent<AccountsHeaderProps> = ({ a
         flexWrap={{ default: 'nowrap' }}
       >
         <FlexItem>
-          <Label color="blue">{label}</Label>
-        </FlexItem>
-        <FlexItem>
           <Title headingLevel="h1" size="2xl">
-            {accountName}
+            <ResourceLabel label="Account" color="#c9190b" /> {accountName}
           </Title>
+        </FlexItem>
+        <FlexItem align={{ default: 'alignRight' }}>
+          <AccountDetailsDropdown accountId={accountId} accountName={accountName} />
         </FlexItem>
       </Flex>
     </PageSection>

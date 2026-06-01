@@ -32,6 +32,17 @@ func (a ActionDTORequest) ToModelAction() actions.Action {
 		Instances: a.Instances,
 	}
 
+	if actions.ActionOperation(a.Operation) == actions.Scan {
+		target.TargetType = "Account"
+		if a.AccountID != "" {
+			target.TargetAccountIDs = []string{a.AccountID}
+		} else {
+			target.SelectAll = true
+		}
+	} else {
+		target.TargetType = "Cluster"
+	}
+
 	switch actions.ActionType(a.Type) {
 	case actions.ScheduledActionType:
 		action := actions.NewScheduledAction(
@@ -89,28 +100,36 @@ func ToModelActionList(dtos []ActionDTORequest) *[]actions.Action {
 // ActionDTOResponse represents the data transfer object for an action response,
 // containing action details including schedule, cron expression, and target resources.
 type ActionDTOResponse struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	Time        time.Time `json:"time"`
-	CronExp     string    `json:"cronExpression"`
-	Operation   string    `json:"operation"`
-	Status      string    `json:"status"`
-	Enabled     bool      `json:"enabled"`
-	ClusterID   string    `json:"clusterId"`
-	Region      string    `json:"region"`
-	AccountID   string    `json:"accountId"`
-	Instances   []string  `json:"instances"`
-	Requester   string    `json:"requester"`
-	Description *string   `json:"description"`
+	ID                 string    `json:"id"`
+	Type               string    `json:"type"`
+	Time               time.Time `json:"time"`
+	CronExp            string    `json:"cronExpression"`
+	Operation          string    `json:"operation"`
+	Status             string    `json:"status"`
+	Enabled            bool      `json:"enabled"`
+	TargetType         string    `json:"targetType"`
+	SelectAll          bool      `json:"selectAll"`
+	ClusterID          string    `json:"clusterId"`
+	ClusterName        string    `json:"clusterName"`
+	Region             string    `json:"region"`
+	AccountID          string    `json:"accountId"`
+	Instances          []string  `json:"instances"`
+	TargetAccountIDs   []string  `json:"targetAccountIds"`
+	TargetAccountNames []string  `json:"targetAccountNames"`
+	Requester          string    `json:"requester"`
+	Description        *string   `json:"description"`
 } // @name ActionResponse
 
 // ToModelAction converts ActionDTOResponse to actions.Action
 func (a ActionDTOResponse) ToModelAction() actions.Action {
 	target := actions.ActionTarget{
-		AccountID: a.AccountID,
-		Region:    a.Region,
-		ClusterID: a.ClusterID,
-		Instances: a.Instances,
+		AccountID:        a.AccountID,
+		Region:           a.Region,
+		ClusterID:        a.ClusterID,
+		Instances:        a.Instances,
+		TargetType:       a.TargetType,
+		SelectAll:        a.SelectAll,
+		TargetAccountIDs: a.TargetAccountIDs,
 	}
 
 	switch actions.ActionType(a.Type) {

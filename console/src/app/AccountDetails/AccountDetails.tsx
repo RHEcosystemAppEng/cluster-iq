@@ -30,7 +30,7 @@ const AccountDetails: React.FunctionComponent = () => {
 
   return (
     <React.Fragment>
-      <AccountsHeader accountName={accountData?.accountName || accountId} label="Account" />
+      <AccountsHeader accountName={accountData?.accountName || accountId} accountId={accountId} />
       <AccountsTabs
         detailsTabContent={<AccountDetailsContent loading={loading} accountData={accountData} />}
         clustersTabContent={<AccountClusters />}

@@ -1,7 +1,7 @@
 BEGIN;
 
 -- Cleaning
-TRUNCATE expenses, tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
+TRUNCATE action_runs, schedule, targets, expenses, tags, instances, clusters, accounts RESTART IDENTITY CASCADE;
 
 -- ## Accounts ##
 INSERT INTO accounts (account_id, account_name, provider, last_scan_ts, created_at) VALUES
@@ -70,17 +70,35 @@ INSERT INTO expenses (instance_id, date, amount) VALUES
   (12,'2025-07-30',1.10),(12,'2025-07-31',1.15),(12,'2025-08-01',1.20),(12,'2025-08-02',1.25),(12,'2025-08-03',1.30);
 
 
-INSERT INTO events (event_timestamp, triggered_by, action, resource_id, resource_type, result, description, severity) VALUES
+INSERT INTO events (event_timestamp, requester, action, resource_id, resource_type, result, description, severity) VALUES
   ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '1', 'Cluster', 'Success', 'integration test event', 'info'),
   ('2025-08-02 12:00:00+00', 'cluster-iq-tester', 'test', '10', 'Instance', 'Pending', 'integration test event', 'critical');
 
 
+-- ## Targets (for schedule entries) ##
+INSERT INTO targets (target_type, select_all) VALUES
+  ('Cluster', false),
+  ('Cluster', false),
+  ('Cluster', false);
+
+INSERT INTO target_clusters (target_id, cluster_id) VALUES
+  (1, 1),
+  (2, 2),
+  (3, 4);
+
 INSERT INTO schedule (type, time, operation, target, status, enabled) VALUES
   ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOff', 1, 'Pending', 't'),
-  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOn', 4, 'Pending', 'f');
+  ('scheduled_action', '1970-01-01 00:00:00+000', 'PowerOn', 3, 'Pending', 'f');
 
 INSERT INTO schedule (type, cron_exp, operation, target, status, enabled) VALUES
   ('scheduled_action', '30 */12 * 6 *', 'PowerOff', 2, 'Pending', 'f');
+
+-- ## Action Runs ##
+INSERT INTO action_runs (schedule_id, status) VALUES
+  (1, 'Running');
+
+INSERT INTO action_runs (schedule_id, status, finished_at, error_msg) VALUES
+  (2, 'Success', '2025-08-02 13:00:00+00', NULL);
 
 
 COMMIT;

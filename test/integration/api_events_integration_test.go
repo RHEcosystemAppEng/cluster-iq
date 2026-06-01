@@ -102,7 +102,7 @@ func testPostEvents(t *testing.T) {
 		EventTimestamp: time.Now(),
 		Result:         "Pending",
 		Severity:       "info",
-		TriggeredBy:    "tester",
+		Requester:    "tester",
 		Description:    nil,
 	}
 	b, err := json.Marshal(event)
@@ -148,7 +148,7 @@ func testUpdateEvent(t *testing.T) {
 		EventTimestamp: time.Now(),
 		Result:         "Success",
 		Severity:       "info",
-		TriggeredBy:    "tester",
+		Requester:    "tester",
 		Description:    nil,
 	}
 	b, err := json.Marshal(event)

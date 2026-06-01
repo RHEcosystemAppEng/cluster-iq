@@ -45,10 +45,17 @@ func (c *ConverterImpl) ToActionDTO(source db.ActionDBResponse) dto.ActionDTORes
 	dtoActionDTOResponse.Operation = source.Operation
 	dtoActionDTOResponse.Status = source.Status
 	dtoActionDTOResponse.Enabled = source.Enabled
-	dtoActionDTOResponse.ClusterID = source.ClusterID
-	dtoActionDTOResponse.Region = source.Region
+	dtoActionDTOResponse.TargetType = source.TargetType
+	dtoActionDTOResponse.SelectAll = source.SelectAll
+	dtoActionDTOResponse.ClusterID = NullString(source.ClusterID)
+	dtoActionDTOResponse.ClusterName = NullString(source.ClusterName)
+	dtoActionDTOResponse.Region = NullString(source.Region)
 	dtoActionDTOResponse.AccountID = source.AccountID
 	dtoActionDTOResponse.Instances = StringArray(source.Instances)
+	dtoActionDTOResponse.TargetAccountIDs = StringArray(source.TargetAccountIDs)
+	dtoActionDTOResponse.TargetAccountNames = StringArray(source.TargetAccountNames)
+	dtoActionDTOResponse.Requester = NullString(source.Requester)
+	dtoActionDTOResponse.Description = NullStringPtr(source.Description)
 	return dtoActionDTOResponse
 }
 func (c *ConverterImpl) ToActionDTOs(source []db.ActionDBResponse) []dto.ActionDTOResponse {
@@ -60,6 +67,26 @@ func (c *ConverterImpl) ToActionDTOs(source []db.ActionDBResponse) []dto.ActionD
 		}
 	}
 	return dtoActionDTOResponseList
+}
+func (c *ConverterImpl) ToActionRunDTO(source db.ActionRunDBResponse) dto.ActionRunDTOResponse {
+	var dtoActionRunDTOResponse dto.ActionRunDTOResponse
+	dtoActionRunDTOResponse.ID = source.ID
+	dtoActionRunDTOResponse.ScheduleID = source.ScheduleID
+	dtoActionRunDTOResponse.StartedAt = NullTime(source.StartedAt)
+	dtoActionRunDTOResponse.FinishedAt = NullTime(source.FinishedAt)
+	dtoActionRunDTOResponse.Status = source.Status
+	dtoActionRunDTOResponse.ErrorMsg = NullString(source.ErrorMsg)
+	return dtoActionRunDTOResponse
+}
+func (c *ConverterImpl) ToActionRunDTOs(source []db.ActionRunDBResponse) []dto.ActionRunDTOResponse {
+	var dtoActionRunDTOResponseList []dto.ActionRunDTOResponse
+	if source != nil {
+		dtoActionRunDTOResponseList = make([]dto.ActionRunDTOResponse, len(source))
+		for i := 0; i < len(source); i++ {
+			dtoActionRunDTOResponseList[i] = c.ToActionRunDTO(source[i])
+		}
+	}
+	return dtoActionRunDTOResponseList
 }
 func (c *ConverterImpl) ToClusterDTO(source db.ClusterDBResponse) dto.ClusterDTOResponse {
 	var dtoClusterDTOResponse dto.ClusterDTOResponse
@@ -105,10 +132,14 @@ func (c *ConverterImpl) ToClusterEventDTO(source db.ClusterEventDBResponse) dto.
 	dtoClusterEventDTOResponse.EventTimestamp = Time(source.EventTimestamp)
 	dtoClusterEventDTOResponse.Result = actions.ActionStatus(source.Result)
 	dtoClusterEventDTOResponse.Severity = source.Severity
-	dtoClusterEventDTOResponse.TriggeredBy = source.TriggeredBy
+	dtoClusterEventDTOResponse.Requester = source.Requester
 	if source.Description != nil {
 		xstring2 := *source.Description
 		dtoClusterEventDTOResponse.Description = &xstring2
+	}
+	if source.ScheduleID != nil {
+		xint64 := *source.ScheduleID
+		dtoClusterEventDTOResponse.ScheduleID = &xint64
 	}
 	return dtoClusterEventDTOResponse
 }
@@ -172,8 +203,10 @@ func (c *ConverterImpl) ToInstanceDTOs(source []db.InstanceDBResponse) []dto.Ins
 func (c *ConverterImpl) ToSystemEventDTO(source db.SystemEventDBResponse) dto.SystemEventDTOResponse {
 	var dtoSystemEventDTOResponse dto.SystemEventDTOResponse
 	dtoSystemEventDTOResponse.ClusterEventDTOResponse = c.ToClusterEventDTO(source.ClusterEventDBResponse)
-	dtoSystemEventDTOResponse.AccountID = source.AccountID
-	dtoSystemEventDTOResponse.Provider = source.Provider
+	dtoSystemEventDTOResponse.ResourceName = NullString(source.ResourceName)
+	dtoSystemEventDTOResponse.AccountID = NullString(source.AccountID)
+	dtoSystemEventDTOResponse.AccountName = NullString(source.AccountName)
+	dtoSystemEventDTOResponse.Provider = NullString(source.Provider)
 	return dtoSystemEventDTOResponse
 }
 func (c *ConverterImpl) ToSystemEventDTOs(source []db.SystemEventDBResponse) []dto.SystemEventDTOResponse {

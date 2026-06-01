@@ -18,6 +18,7 @@ export enum ActionStatus {
 export enum ActionOperations {
   POWER_ON = 'PowerOn',
   POWER_OFF = 'PowerOff',
+  SCAN = 'Scan',
 }
 
 export enum ActionTypes {

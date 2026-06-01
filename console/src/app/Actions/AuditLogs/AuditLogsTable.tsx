@@ -3,7 +3,13 @@ import { ActionOperations, ResultStatus } from '@app/types/types';
 import { SystemEventResponseApi } from '@api';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import React, { useMemo } from 'react';
-import { getResultIcon, renderOperationLabel } from '@app/utils/renderUtils';
+import {
+  renderOperationLabel,
+  renderActionStatusLabel,
+  renderResourceBadge,
+  ResourceBadge,
+} from '@app/utils/renderUtils';
+import { parseScanTimestamp, resolveResourcePath } from '@app/utils/parseFuncs';
 import { useTableSort } from '@app/hooks/useTableSort.tsx';
 import { EmptyState } from '@patternfly/react-core';
 import { TablePagination } from '@app/components/common/TablesPagination';
@@ -14,13 +20,12 @@ import { useEvents } from '@app/hooks/useEvents';
 import { useTablePagination } from '@app/hooks/useTablePagination';
 
 const columnNames = {
-  action: 'Action',
-  result: 'Result',
+  scheduledAction: 'Action',
+  operation: 'Operation',
   resource: 'Resource',
-  account: 'Account',
-  provider: 'Provider',
-  triggeredBy: 'Triggered By',
   description: 'Description',
+  status: 'Status',
+  requester: 'Requester',
   date: 'Date',
 };
 
@@ -33,7 +38,7 @@ export const AuditLogsTable: React.FunctionComponent<AuditLogsTableProps> = ({
   action,
   provider,
   result,
-  triggered_by,
+  requester,
 }) => {
   const { data: allEvents = [], isLoading } = useEvents();
 
@@ -58,38 +63,35 @@ export const AuditLogsTable: React.FunctionComponent<AuditLogsTableProps> = ({
       filteredResult = filteredResult.filter(event => result.includes(event.result as ResultStatus));
     }
 
-    if (triggered_by) {
-      filteredResult = filteredResult.filter(event =>
-        event.triggeredBy?.toLowerCase().includes(triggered_by.toLowerCase())
-      );
+    if (requester) {
+      filteredResult = filteredResult.filter(event => event.requester?.toLowerCase().includes(requester.toLowerCase()));
     }
 
     return filteredResult;
-  }, [allEvents, accountName, action, provider, result, triggered_by]);
+  }, [allEvents, accountName, action, provider, result, requester]);
 
   const { page, perPage, setPage, setPerPage, paginatedData, totalItems } = useTablePagination({
     data: filtered,
-    filterDeps: [accountName, action, provider, result, triggered_by],
+    filterDeps: [accountName, action, provider, result, requester],
   });
 
   const getSortableRowValues = (event: SystemEventResponseApi): (string | number | null)[] => {
-    const { action, result, resourceId, accountId, provider, triggeredBy, description, timestamp } = event;
+    const { timestamp, action, resourceId, result, requester, scheduleId, description } = event;
     return [
-      action ?? null,
-      result ?? null,
-      resourceId ?? null,
-      accountId ?? null,
-      provider ?? null,
-      triggeredBy ?? null,
-      description ?? null,
       timestamp ?? null,
+      action ?? null,
+      resourceId ?? null,
+      result ?? null,
+      requester ?? null,
+      scheduleId ?? null,
+      description ?? null,
     ];
   };
 
   const { sortedData, getSortParams } = useTableSort<SystemEventResponseApi>(
     paginatedData,
     getSortableRowValues,
-    7,
+    0,
     'desc'
   );
 
@@ -101,41 +103,42 @@ export const AuditLogsTable: React.FunctionComponent<AuditLogsTableProps> = ({
       <Table aria-label="Events table">
         <Thead>
           <Tr>
+            <Th sort={getSortParams(0)}>{columnNames.date}</Th>
+            <Th sort={getSortParams(1)}>{columnNames.operation}</Th>
             <Th sort={getSortParams(2)}>{columnNames.resource}</Th>
-            <Th sort={getSortParams(0)}>{columnNames.action}</Th>
-            <Th sort={getSortParams(3)}>{columnNames.account}</Th>
-            <Th sort={getSortParams(4)}>{columnNames.provider}</Th>
-            <Th sort={getSortParams(5)}>{columnNames.triggeredBy}</Th>
+            <Th sort={getSortParams(3)}>{columnNames.status}</Th>
+            <Th sort={getSortParams(4)}>{columnNames.requester}</Th>
+            <Th sort={getSortParams(5)}>{columnNames.scheduledAction}</Th>
             <Th>{columnNames.description}</Th>
-            <Th sort={getSortParams(1)}>{columnNames.result}</Th>
-            <Th sort={getSortParams(7)}>{columnNames.date}</Th>
           </Tr>
         </Thead>
         <Tbody>
           {sortedData.map(event => (
             <Tr key={event.id}>
-              <Td dataLabel={event.resourceId}>
-                <Link
-                  to={
-                    event.resourceType === 'instance'
-                      ? `/instances/${event.resourceId}`
-                      : `/clusters/${event.resourceId}`
-                  }
-                >
-                  {event.resourceId}
-                </Link>
+              <Td dataLabel={columnNames.date}>{parseScanTimestamp(event.timestamp)}</Td>
+              <Td dataLabel={columnNames.operation}>{renderOperationLabel(event.action)}</Td>
+              <Td dataLabel={columnNames.resource}>
+                {event.resourceId ? (
+                  <>
+                    {renderResourceBadge(event.resourceType)}{' '}
+                    <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId)}>
+                      {event.resourceName || event.resourceId}
+                    </Link>
+                  </>
+                ) : event.action === ActionOperations.SCAN ? (
+                  <>
+                    <ResourceBadge label="A" color="#c9190b" /> All Accounts
+                  </>
+                ) : (
+                  '-'
+                )}
               </Td>
-              <Td>{renderOperationLabel(event.action)}</Td>
-              <Td>
-                <Link to={`/accounts/${event.accountId}`}>{event.accountId}</Link>
+              <Td dataLabel={columnNames.status}>{renderActionStatusLabel(event.result)}</Td>
+              <Td dataLabel={columnNames.requester}>{event.requester}</Td>
+              <Td dataLabel={columnNames.scheduledAction}>
+                {event.scheduleId ? <Link to="/actions/scheduler">#{event.scheduleId}</Link> : '-'}
               </Td>
-              <Td>{event.provider}</Td>
-              <Td>{event.triggeredBy}</Td>
-              <Td>{event.description}</Td>
-              <Td>
-                {getResultIcon(event.result as ResultStatus)} {event.result}
-              </Td>
-              <Td>{event.timestamp}</Td>
+              <Td dataLabel={columnNames.description}>{event.description}</Td>
             </Tr>
           ))}
         </Tbody>

@@ -10,6 +10,9 @@ const (
 
 	// PowerOffCluster represents an action to power off a cluster.
 	PowerOff ActionOperation = "PowerOff"
+
+	// Scan represents an action to scan cloud accounts for resource discovery.
+	Scan ActionOperation = "Scan"
 )
 
 func NewPowerOnClusterAction(target ActionTarget, requester string, description *string) *InstantAction {

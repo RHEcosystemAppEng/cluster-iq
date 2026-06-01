@@ -18,6 +18,7 @@ export const TablePagination: React.FC<PaginationProps> = ({
 }) => {
   return (
     <Pagination
+      style={{ marginTop: '1rem' }}
       itemCount={itemCount}
       page={page}
       perPage={perPage}

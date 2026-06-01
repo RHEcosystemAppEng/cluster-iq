@@ -3,10 +3,15 @@ import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { EmptyState } from '@patternfly/react-core';
 import { SystemEventResponseApi } from '@api';
 import { Link } from 'react-router-dom';
-import { resolveResourcePath } from '@app/utils/parseFuncs';
+import { parseScanTimestamp, resolveResourcePath } from '@app/utils/parseFuncs';
 import { InboxIcon } from '@patternfly/react-icons';
-import { getResultIcon } from '@app/utils/renderUtils';
-import { ResultStatus } from '@app/types/types';
+import {
+  renderOperationLabel,
+  renderActionStatusLabel,
+  renderResourceBadge,
+  ResourceBadge,
+} from '@app/utils/renderUtils';
+import { ActionOperations } from '@app/types/types';
 
 interface ActivityTableProps {
   events: SystemEventResponseApi[];
@@ -21,27 +26,36 @@ export const ActivityTable: React.FunctionComponent<ActivityTableProps> = ({ eve
     <Table aria-label="Recent events table" variant="compact">
       <Thead>
         <Tr>
-          <Th>Time</Th>
-          <Th>Action</Th>
-          <Th>Result</Th>
+          <Th>Date</Th>
+          <Th>Operation</Th>
           <Th>Resource</Th>
-          <Th>Triggered By</Th>
+          <Th>Status</Th>
+          <Th>Requester</Th>
         </Tr>
       </Thead>
       <Tbody>
         {events.map(event => (
           <Tr key={event.id}>
-            <Td>{event.timestamp ? new Date(event.timestamp).toLocaleString('es-ES') : '-'}</Td>
-            <Td>{event.action}</Td>
+            <Td>{parseScanTimestamp(event.timestamp)}</Td>
+            <Td>{renderOperationLabel(event.action)}</Td>
             <Td>
-              {getResultIcon(event.result as ResultStatus)} {event.result}
+              {event.resourceId ? (
+                <>
+                  {renderResourceBadge(event.resourceType)}{' '}
+                  <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId)}>
+                    {event.resourceName || event.resourceId}
+                  </Link>
+                </>
+              ) : event.action === ActionOperations.SCAN ? (
+                <>
+                  <ResourceBadge label="A" color="#c9190b" /> All Accounts
+                </>
+              ) : (
+                '-'
+              )}
             </Td>
-            <Td>
-              <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId ?? '-')}>
-                {event.resourceId}
-              </Link>
-            </Td>
-            <Td>{event.triggeredBy}</Td>
+            <Td>{renderActionStatusLabel(event.result)}</Td>
+            <Td>{event.requester}</Td>
           </Tr>
         ))}
       </Tbody>

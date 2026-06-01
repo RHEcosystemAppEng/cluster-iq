@@ -93,7 +93,7 @@ func TestLogEvent(t *testing.T) {
 func testLogEvent_Success(t *testing.T) {
 	desc := "something happened"
 	opts := EventOptions{
-		TriggeredBy:  "scanner",
+		Requester:  "scanner",
 		Action:       actions.ActionOperation("START"),
 		ResourceID:   "cluster-1",
 		ResourceType: inventory.ClusterResourceType,
@@ -121,7 +121,7 @@ func testLogEvent_Success(t *testing.T) {
 	assert.NotNil(t, repo.lastCreateEventCtx)
 
 	ev := repo.lastCreateEventEvent
-	assert.Equal(t, opts.TriggeredBy, ev.TriggeredBy)
+	assert.Equal(t, opts.Requester, ev.Requester)
 	assert.Equal(t, opts.Action, ev.Action)
 	assert.Equal(t, opts.ResourceID, ev.ResourceID)
 	assert.Equal(t, opts.ResourceType, ev.ResourceType)
@@ -136,7 +136,7 @@ func testLogEvent_Success(t *testing.T) {
 
 func testLogEvent_RepoError(t *testing.T) {
 	opts := EventOptions{
-		TriggeredBy:  "api",
+		Requester:  "api",
 		Action:       actions.ActionOperation("STOP"),
 		ResourceID:   "cluster-1",
 		ResourceType: inventory.ClusterResourceType,
@@ -208,7 +208,7 @@ func TestStartTracking(t *testing.T) {
 
 func testStartTracking_Success(t *testing.T) {
 	opts := &EventOptions{
-		TriggeredBy:  "agent",
+		Requester:  "agent",
 		Action:       actions.ActionOperation("START"),
 		ResourceID:   "cluster-1",
 		ResourceType: inventory.ClusterResourceType,
@@ -234,7 +234,7 @@ func testStartTracking_Success(t *testing.T) {
 
 func testStartTracking_LogEventError(t *testing.T) {
 	opts := &EventOptions{
-		TriggeredBy:  "agent",
+		Requester:  "agent",
 		Action:       actions.ActionOperation("STOP"),
 		ResourceID:   "cluster-1",
 		ResourceType: inventory.ClusterResourceType,

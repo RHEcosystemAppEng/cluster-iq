@@ -33,60 +33,31 @@ const (
 			enabled = false
 		WHERE id = $1
 	`
-	// InsertAction inserts a new action returning the ID
-	InsertActionsQuery = `
-		INSERT INTO schedule (
-			type,
-			time,
-			operation,
-			target,
-			status,
-			enabled
-		) VALUES (
-			:type,
-			(SELECT now()),
-			:operation,
-			(SELECT id FROM clusters WHERE cluster_id = :target.cluster_id),
-			:status,
-			:enabled
-		) RETURNING id
+
+	InsertTargetQuery = `INSERT INTO targets (target_type, select_all) VALUES ($1, $2) RETURNING id`
+
+	LinkTargetClusterQuery = `INSERT INTO target_clusters (target_id, cluster_id) SELECT $1, id FROM clusters WHERE cluster_id = $2`
+
+	LinkTargetAccountQuery = `INSERT INTO target_accounts (target_id, account_id) SELECT $1, id FROM accounts WHERE account_id = $2`
+
+	InsertScheduledActionWithTargetQuery = `
+		INSERT INTO schedule (type, time, operation, target, status, enabled, requester, description)
+		VALUES ('scheduled_action', $1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
 	`
-	// InsertScheduledActionQuery inserts new scheduled actions on the DB
-	InsertScheduledActionsQuery = `
-		INSERT INTO schedule (
-			type,
-			time,
-			operation,
-			target,
-			status,
-			enabled
-		) VALUES (
-			'scheduled_action',
-			:time,
-			:operation,
-			(SELECT id FROM clusters WHERE cluster_id=:target.cluster_id),
-			:status,
-			:enabled
-		)
+
+	InsertCronActionWithTargetQuery = `
+		INSERT INTO schedule (type, cron_exp, operation, target, status, enabled, requester, description)
+		VALUES ('cron_action', $1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
 	`
-	// InsertCronActionQuery inserts new Cron actions on the DB
-	InsertCronActionsQuery = `
-		INSERT INTO schedule (
-			type,
-			cron_exp,
-			operation,
-			target,
-			status,
-			enabled
-		) VALUES (
-			'cron_action',
-			:cron_exp,
-			:operation,
-			(SELECT id FROM clusters WHERE cluster_id=:target.cluster_id),
-			:status,
-			:enabled
-		)
+
+	InsertInstantActionWithTargetQuery = `
+		INSERT INTO schedule (type, time, operation, target, status, enabled, requester, description)
+		VALUES ('instant_action', NOW(), $1, $2, $3, $4, $5, $6)
+		RETURNING id
 	`
+
 	// UpdateActionQuery updates a single action on the DB
 	UpdateActionQuery = `
 		UPDATE schedule
@@ -192,11 +163,7 @@ func (r *actionRepositoryImpl) GetByID(ctx context.Context, actionID string) (db
 //
 // Returns:
 //   - An error if the insert fails
-//
-// TODO: Temporal fix returning TX from DBClient to manage both insertions in the same sql transaction
 func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.Action) (err error) {
-	schedActions, cronActions := actions.SplitActionsByType(newActions)
-
 	tx, err := r.db.NewTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -207,33 +174,97 @@ func (r *actionRepositoryImpl) Create(ctx context.Context, newActions []actions.
 		}
 	}()
 
-	// Writing Scheduled Actions
-	if len(schedActions) > 0 {
-		if _, err := tx.NamedExecContext(ctx, InsertScheduledActionsQuery, schedActions); err != nil {
-			return fmt.Errorf("failed to insert scheduled actions: %w", err)
+	for _, action := range newActions {
+		targetID, targetErr := createTargetForAction(ctx, tx, action)
+		if targetErr != nil {
+			return fmt.Errorf("failed to create target: %w", targetErr)
+		}
+
+		switch a := action.(type) {
+		case *actions.ScheduledAction:
+			_, err = tx.ExecContext(ctx, InsertScheduledActionWithTargetQuery,
+				a.When, a.Operation, targetID, a.Status, a.Enabled, a.Requester, a.Description)
+		case *actions.CronAction:
+			_, err = tx.ExecContext(ctx, InsertCronActionWithTargetQuery,
+				a.Expression, a.Operation, targetID, a.Status, a.Enabled, a.Requester, a.Description)
+		case *actions.InstantAction:
+			_, err = tx.ExecContext(ctx, InsertInstantActionWithTargetQuery,
+				a.Operation, targetID, a.Status, a.Enabled, a.Requester, a.Description)
+		default:
+			return fmt.Errorf("unsupported action type for batch create: %T", action)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to insert schedule: %w", err)
 		}
 	}
 
-	// Writing Cron Actions
-	if len(cronActions) > 0 {
-		if _, err := tx.NamedExecContext(ctx, InsertCronActionsQuery, cronActions); err != nil {
-			return fmt.Errorf("failed to insert cron actions: %w", err)
-		}
-	}
-
-	// Commit the transaction
 	return tx.Commit()
 }
 
-// AddEvent inserts a new audit event into the database and returns the event ID.
 func (r *actionRepositoryImpl) CreateAction(ctx context.Context, action actions.Action) (int64, error) {
-	var returnedValue int64
-	returnedValue, err := r.db.InsertWithReturnWithContext(ctx, InsertActionsQuery, action)
+	tx, err := r.db.NewTx(ctx)
 	if err != nil {
-		return -1, err
+		return -1, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	targetID, err := createTargetForAction(ctx, tx, action)
+	if err != nil {
+		return -1, fmt.Errorf("failed to create target: %w", err)
 	}
 
-	return returnedValue, nil
+	var scheduleID int64
+	err = tx.QueryRowContext(ctx, InsertInstantActionWithTargetQuery,
+		action.GetActionOperation(), targetID, action.(*actions.InstantAction).Status, action.(*actions.InstantAction).Enabled,
+		action.GetRequester(), action.GetDescription(),
+	).Scan(&scheduleID)
+	if err != nil {
+		return -1, fmt.Errorf("failed to insert action: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return -1, fmt.Errorf("failed to commit action: %w", err)
+	}
+
+	return scheduleID, nil
+}
+
+func createTargetForAction(ctx context.Context, tx interface {
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+}, action actions.Action) (int64, error) {
+	target := action.GetTarget()
+
+	targetType := target.TargetType
+	if targetType == "" {
+		targetType = "Cluster"
+	}
+
+	var targetID int64
+	if err := tx.QueryRowContext(ctx, InsertTargetQuery, targetType, target.SelectAll).Scan(&targetID); err != nil {
+		return 0, fmt.Errorf("failed to insert target: %w", err)
+	}
+
+	switch targetType {
+	case "Cluster":
+		if target.ClusterID != "" {
+			if _, err := tx.ExecContext(ctx, LinkTargetClusterQuery, targetID, target.ClusterID); err != nil {
+				return 0, fmt.Errorf("failed to link target cluster: %w", err)
+			}
+		}
+	case "Account":
+		for _, accountID := range target.TargetAccountIDs {
+			if _, err := tx.ExecContext(ctx, LinkTargetAccountQuery, targetID, accountID); err != nil {
+				return 0, fmt.Errorf("failed to link target account: %w", err)
+			}
+		}
+	}
+
+	return targetID, nil
 }
 
 // Delete removes an actions.ScheduledAction action from the DB based on its ID

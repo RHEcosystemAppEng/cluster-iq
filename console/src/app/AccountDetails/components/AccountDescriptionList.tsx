@@ -36,7 +36,7 @@ export const AccountDescriptionList: React.FunctionComponent<AccountDescriptionL
 
       <DescriptionListGroup></DescriptionListGroup>
       <DescriptionListGroup>
-        <DescriptionListTerm>Last scanned at</DescriptionListTerm>
+        <DescriptionListTerm>Last scan</DescriptionListTerm>
         <DescriptionListDescription>{parseScanTimestamp(account.lastScanTimestamp)}</DescriptionListDescription>
         <DescriptionListTerm>Created at (in ClusterIQ)</DescriptionListTerm>
         <DescriptionListDescription>{parseScanTimestamp(account.createdAt)}</DescriptionListDescription>

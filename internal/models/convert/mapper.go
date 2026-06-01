@@ -16,6 +16,7 @@ import (
 // goverter:extend Time
 // goverter:extend NullTime
 // goverter:extend NullString
+// goverter:extend NullStringPtr
 // goverter:extend StringArray
 // goverter:extend TagDBResponsesToDTO
 type Converter interface {
@@ -45,9 +46,12 @@ type Converter interface {
 	ToSystemEventDTOs(src []db.SystemEventDBResponse) []dto.SystemEventDTOResponse
 
 	// Action
-	// goverter:ignore Requester Description
 	ToActionDTO(src db.ActionDBResponse) dto.ActionDTOResponse
 	ToActionDTOs(src []db.ActionDBResponse) []dto.ActionDTOResponse
+
+	// ActionRun
+	ToActionRunDTO(src db.ActionRunDBResponse) dto.ActionRunDTOResponse
+	ToActionRunDTOs(src []db.ActionRunDBResponse) []dto.ActionRunDTOResponse
 
 	// Instance
 	ToInstanceDTO(src db.InstanceDBResponse) dto.InstanceDTOResponse
@@ -73,6 +77,14 @@ func NullString(s sql.NullString) string {
 		return s.String
 	}
 	return ""
+}
+
+// NullStringPtr handles sql.NullString to *string conversion
+func NullStringPtr(s sql.NullString) *string {
+	if s.Valid {
+		return &s.String
+	}
+	return nil
 }
 
 // StringArray handles pq.StringArray to []string conversion
