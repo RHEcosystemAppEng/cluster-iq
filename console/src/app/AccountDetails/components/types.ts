@@ -3,6 +3,7 @@ import React from 'react';
 
 export interface AccountsHeaderProps {
   accountName: string;
+  accountId: string;
 }
 
 export interface AccountsTabsProps {
