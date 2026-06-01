@@ -18,7 +18,7 @@ const columnNames = {
   action: 'Action',
   result: 'Result',
   severity: 'Severity',
-  loggedBy: 'Logged by',
+  requester: 'Requester',
   description: 'Description',
   date: 'Date',
 };
@@ -35,7 +35,7 @@ const TableEvents: React.FunctionComponent<TableEventsProps> = ({ data, getSortP
           <Th sort={getSortParams(0)}>{columnNames.action}</Th>
           <Th sort={getSortParams(1)}>{columnNames.result}</Th>
           <Th sort={getSortParams(2)}>{columnNames.severity}</Th>
-          <Th sort={getSortParams(3)}>{columnNames.loggedBy}</Th>
+          <Th sort={getSortParams(3)}>{columnNames.requester}</Th>
           <Th>{columnNames.description}</Th>
           <Th sort={getSortParams(5)}>{columnNames.date}</Th>
         </Tr>
@@ -48,7 +48,7 @@ const TableEvents: React.FunctionComponent<TableEventsProps> = ({ data, getSortP
               {getResultIcon(event.result as ResultStatus)} {event.result}
             </Td>
             <Td>{event.severity}</Td>
-            <Td>{event.triggeredBy}</Td>
+            <Td>{event.requester}</Td>
             <Td>{event.description}</Td>
             <Td>{event.timestamp}</Td>
           </Tr>
@@ -101,8 +101,8 @@ export const ClusterDetailsEvents: React.FunctionComponent = () => {
   console.log('Rendered events data:', data);
 
   const getSortableRowValues = (event: SystemEventResponseApi): (string | number | null)[] => {
-    const { action, result, severity, triggeredBy, description: description, timestamp } = event;
-    return [action, result, severity, triggeredBy, description ?? null, timestamp];
+    const { action, result, severity, requester, description: description, timestamp } = event;
+    return [action, result, severity, requester, description ?? null, timestamp];
   };
 
   const { sortedData, getSortParams } = useTableSort<SystemEventResponseApi>(data, getSortableRowValues, 5, 'desc');

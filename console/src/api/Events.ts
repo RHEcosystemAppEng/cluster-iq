@@ -53,8 +53,8 @@ export class Events<SecurityDataType = unknown> {
       result?: string;
       /** Severity */
       severity?: string;
-      /** Triggered by */
-      triggered_by?: string;
+      /** Requester */
+      requester?: string;
     },
     params: RequestParams = {}
   ) =>

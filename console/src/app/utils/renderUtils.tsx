@@ -9,6 +9,9 @@ import {
   ExclamationTriangleIcon,
   ExclamationCircleIcon,
   UnknownIcon,
+  AwsIcon,
+  GoogleIcon,
+  AzureIcon,
 } from '@patternfly/react-icons';
 import { Link } from 'react-router-dom';
 
@@ -94,9 +97,9 @@ export function renderActionTypeLabel(labelText: string | null | undefined) {
 export function renderOperationLabel(labelText: string | null | undefined) {
   switch (labelText) {
     case ActionOperations.POWER_ON:
-      return <Label color="green">{labelText}</Label>;
+      return <Label color="teal">{labelText}</Label>;
     case ActionOperations.POWER_OFF:
-      return <Label color="red">{labelText}</Label>;
+      return <Label color="purple">{labelText}</Label>;
     case ActionOperations.SCAN:
       return <Label color="orange">{labelText}</Label>;
     default:
@@ -157,3 +160,30 @@ export const getResultIcon = (result: ResultStatus) => {
     }[result] || <UnknownIcon color="gray" title="Unknown" />
   );
 };
+
+const providerIconStyle: CSSProperties = { fontSize: '2.0em', verticalAlign: 'middle' };
+
+export function renderProviderIcon(provider: string | null | undefined): React.ReactNode {
+  switch (provider) {
+    case 'AWS':
+      return <AwsIcon title="AWS" style={providerIconStyle} />;
+    case 'GCP':
+      return <GoogleIcon title="GCP" style={providerIconStyle} />;
+    case 'Azure':
+      return <AzureIcon title="Azure" style={providerIconStyle} />;
+    default:
+      return provider || '-';
+  }
+}
+
+const RESOURCE_BADGE_MAP: Record<string, { label: string; color: string }> = {
+  Cluster: { label: 'C', color: '#0066cc' },
+  Instance: { label: 'I', color: '#4cb140' },
+  Account: { label: 'A', color: '#c9190b' },
+};
+
+export function renderResourceBadge(resourceType: string | undefined): React.ReactNode {
+  const badge = RESOURCE_BADGE_MAP[resourceType ?? ''];
+  if (!badge) return null;
+  return <ResourceBadge label={badge.label} color={badge.color} />;
+}

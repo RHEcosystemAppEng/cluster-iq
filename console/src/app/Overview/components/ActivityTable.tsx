@@ -5,7 +5,7 @@ import { SystemEventResponseApi } from '@api';
 import { Link } from 'react-router-dom';
 import { resolveResourcePath } from '@app/utils/parseFuncs';
 import { InboxIcon } from '@patternfly/react-icons';
-import { getResultIcon } from '@app/utils/renderUtils';
+import { getResultIcon, renderResourceBadge } from '@app/utils/renderUtils';
 import { ResultStatus } from '@app/types/types';
 
 interface ActivityTableProps {
@@ -25,7 +25,7 @@ export const ActivityTable: React.FunctionComponent<ActivityTableProps> = ({ eve
           <Th>Action</Th>
           <Th>Result</Th>
           <Th>Resource</Th>
-          <Th>Triggered By</Th>
+          <Th>Requester</Th>
         </Tr>
       </Thead>
       <Tbody>
@@ -38,12 +38,17 @@ export const ActivityTable: React.FunctionComponent<ActivityTableProps> = ({ eve
             </Td>
             <Td>
               {event.resourceId ? (
-                <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId)}>{event.resourceId}</Link>
+                <>
+                  {renderResourceBadge(event.resourceType)}{' '}
+                  <Link to={resolveResourcePath(event.resourceType ?? '-', event.resourceId)}>
+                    {event.resourceName || event.resourceId}
+                  </Link>
+                </>
               ) : (
                 '-'
               )}
             </Td>
-            <Td>{event.triggeredBy}</Td>
+            <Td>{event.requester}</Td>
           </Tr>
         ))}
       </Tbody>

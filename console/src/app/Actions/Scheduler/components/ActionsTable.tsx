@@ -8,6 +8,8 @@ import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { Label } from '@patternfly/react-core';
 import React, { useEffect, useMemo } from 'react';
 import { ActionStatus, ActionOperations, ActionTypes } from '@app/types/types';
+import { parseScanTimestamp } from '@app/utils/parseFuncs';
+import cronstrue from 'cronstrue';
 import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
 import { TablePagination } from '@app/components/common/TablesPagination';
 import { ActionsColumn } from '@patternfly/react-table';
@@ -66,12 +68,14 @@ export const ScheduleActionsTable: React.FunctionComponent<{
   });
 
   const columnNames = {
+    id: 'ID',
     type: 'Action Type',
-    time: 'Time',
-    cronExpression: 'Cron Expression',
+    schedule: 'Schedule',
     operation: 'Operation',
     status: 'Status',
     target: 'Target',
+    requester: 'Requester',
+    description: 'Description',
     enabled: 'Enabled',
   };
 
@@ -83,22 +87,26 @@ export const ScheduleActionsTable: React.FunctionComponent<{
         <Table aria-label="ScheduleActions table">
           <Thead>
             <Tr>
+              <Th>{columnNames.id}</Th>
               <Th>{columnNames.type}</Th>
-              <Th>{columnNames.time}</Th>
-              <Th>{columnNames.cronExpression}</Th>
+              <Th>{columnNames.schedule}</Th>
               <Th>{columnNames.operation}</Th>
               <Th>{columnNames.status}</Th>
               <Th>{columnNames.target}</Th>
+              <Th>{columnNames.requester}</Th>
+              <Th>{columnNames.description}</Th>
               <Th>{columnNames.enabled}</Th>
             </Tr>
           </Thead>
           <Tbody>
             {paginatedData.map(action => (
               <Tr key={action.id}>
+                <Td dataLabel={columnNames.id}>{action.id}</Td>
                 <Td dataLabel={columnNames.type}>{renderActionTypeLabel(action.type)}</Td>
-                <Td dataLabel={columnNames.time}>{action.type !== ActionTypes.CRON_ACTION ? action.time : '-'}</Td>
-                <Td dataLabel={columnNames.cronExpression}>
-                  {action.type === ActionTypes.CRON_ACTION ? action.cronExpression : '-'}
+                <Td dataLabel={columnNames.schedule}>
+                  {action.type === ActionTypes.CRON_ACTION
+                    ? `${action.cronExpression} (${cronstrue.toString(action.cronExpression ?? '', { use24HourTimeFormat: true })})`
+                    : parseScanTimestamp(action.time)}
                 </Td>
                 <Td dataLabel={columnNames.operation}>{renderOperationLabel(action.operation)}</Td>
                 <Td dataLabel={columnNames.status}>{renderActionStatusLabel(action.status)}</Td>
@@ -111,8 +119,10 @@ export const ScheduleActionsTable: React.FunctionComponent<{
                     action.selectAll
                   )}
                 </Td>
+                <Td dataLabel={columnNames.requester}>{action.requester || '-'}</Td>
+                <Td dataLabel={columnNames.description}>{action.description || '-'}</Td>
                 <Td dataLabel={columnNames.enabled}>
-                  {action.enabled ? <Label color="green">Enabled</Label> : <Label color="red">Disabled</Label>}
+                  {action.enabled ? <Label color="green">Yes</Label> : <Label color="red">No</Label>}
                 </Td>
                 <Td isActionCell aria-label="Row actions">
                   <ActionsColumn items={rowActions(action, invalidateScheduleActions)} />
