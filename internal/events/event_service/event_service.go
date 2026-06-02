@@ -16,6 +16,7 @@ const (
 	ResultSuccess = "Success"
 	ResultFailed  = "Failed"
 	ResultPending = "Pending"
+	ResultRunning = "Running"
 )
 
 // Event severity levels
@@ -102,6 +103,14 @@ type EventTracker struct {
 	eventID int64
 	service *EventService
 	logger  *zap.Logger
+}
+
+// Running marks the tracked event as in progress.
+// Uses context.Background() as event updates happen asynchronously.
+func (t *EventTracker) Running() {
+	if err := t.service.UpdateEventStatus(context.Background(), t.eventID, ResultRunning); err != nil {
+		t.logger.Error("Failed to update event status", zap.Error(err))
+	}
 }
 
 // Success marks the tracked event status as success.

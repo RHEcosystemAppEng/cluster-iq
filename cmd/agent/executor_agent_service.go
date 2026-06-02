@@ -248,6 +248,7 @@ func (e *ExecutorAgentService) processAction(action actions.Action) {
 		tracker.Failed()
 		return
 	}
+	tracker.Running()
 
 	// Get executor
 	executor := e.GetExecutor(target.AccountID)
@@ -275,6 +276,7 @@ func (e *ExecutorAgentService) processScanAction(action actions.Action, tracker 
 		tracker.Failed()
 		return
 	}
+	tracker.Running()
 
 	target := action.GetTarget()
 
