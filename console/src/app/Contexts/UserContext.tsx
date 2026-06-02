@@ -18,10 +18,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetch(window.location.href)
       .then(response => {
         const email = response.headers.get('gap-auth');
-        if (email) {
-          setUserEmail(email);
-          console.log('User email:', email);
-        }
+        setUserEmail(email || 'clusteriq@dev');
+        console.log('User email:', email || 'clusteriq@dev (fallback)');
       })
       .catch(error => console.error('Error fetching headers:', error));
   }, []);
