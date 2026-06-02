@@ -255,12 +255,44 @@ func testStartTracking_LogEventError(t *testing.T) {
 	assert.Nil(t, tracker)
 }
 
-// TestEventTracker verifies EventTracker updates status to Success/Failed and handles repo errors.
+// TestEventTracker verifies EventTracker updates status to Running/Success/Failed and handles repo errors.
 func TestEventTracker(t *testing.T) {
+	t.Run("Tracker Running update ok", func(t *testing.T) { testEventTracker_Running_OK(t) })
+	t.Run("Tracker Running update error", func(t *testing.T) { testEventTracker_Running_Error(t) })
 	t.Run("Tracker Success update ok", func(t *testing.T) { testEventTracker_Success_OK(t) })
 	t.Run("Tracker Success update error", func(t *testing.T) { testEventTracker_Success_Error(t) })
 	t.Run("Tracker Failed update ok", func(t *testing.T) { testEventTracker_Failed_OK(t) })
 	t.Run("Tracker Failed update error", func(t *testing.T) { testEventTracker_Failed_Error(t) })
+}
+
+func testEventTracker_Running_OK(t *testing.T) {
+	repo := &mockEventRepo{
+		updateEventStatusFn: func(ctx context.Context, eventID int64, result string) error {
+			return nil
+		},
+	}
+
+	svc := &EventService{repo: repo, logger: zap.NewNop()}
+	tracker := &EventTracker{eventID: 1, service: svc, logger: zap.NewNop()}
+
+	assert.NotPanics(t, func() { tracker.Running() })
+	assert.Equal(t, 1, repo.updateEventStatusCalls)
+	assert.Equal(t, ResultRunning, repo.lastUpdateStatusResult)
+}
+
+func testEventTracker_Running_Error(t *testing.T) {
+	repo := &mockEventRepo{
+		updateEventStatusFn: func(ctx context.Context, eventID int64, result string) error {
+			return errTest
+		},
+	}
+
+	svc := &EventService{repo: repo, logger: zap.NewNop()}
+	tracker := &EventTracker{eventID: 1, service: svc, logger: zap.NewNop()}
+
+	assert.NotPanics(t, func() { tracker.Running() })
+	assert.Equal(t, 1, repo.updateEventStatusCalls)
+	assert.Equal(t, ResultRunning, repo.lastUpdateStatusResult)
 }
 
 func testEventTracker_Success_OK(t *testing.T) {
