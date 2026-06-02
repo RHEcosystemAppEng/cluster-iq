@@ -79,7 +79,7 @@ export interface ActionResponseApi {
 }
 
 export interface ActionTargetApi {
-  accountName?: string;
+  accountId?: string;
   clusterId?: string;
   instances?: string[];
   region?: string;

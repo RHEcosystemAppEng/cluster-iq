@@ -4,7 +4,7 @@ import "time"
 
 // ActionTarget represents the target resource information for an action.
 type ActionTarget struct {
-	AccountName string   `json:"accountName"`
+	AccountID string   `json:"accountId"`
 	Region      string   `json:"region"`
 	ClusterID   string   `json:"clusterId"`
 	Instances   []string `json:"instances"`
