@@ -5,9 +5,9 @@ import "time"
 // ActionTarget represents the target resource information for an action.
 type ActionTarget struct {
 	AccountID string   `json:"accountId"`
-	Region      string   `json:"region"`
-	ClusterID   string   `json:"clusterId"`
-	Instances   []string `json:"instances"`
+	Region    string   `json:"region"`
+	ClusterID string   `json:"clusterId"`
+	Instances []string `json:"instances"`
 } // @name ActionTarget
 
 // ScheduledAction represents the data transfer object for a scheduled action.
