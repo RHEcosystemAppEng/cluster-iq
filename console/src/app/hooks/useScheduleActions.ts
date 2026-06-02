@@ -10,6 +10,7 @@ export function useScheduleActions() {
       const { data } = await api.schedule.scheduleList({ page: 1, page_size: 10000 }, { signal });
       return data.items || [];
     },
+    refetchInterval: 5_000,
   });
 }
 
