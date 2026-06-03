@@ -8,5 +8,6 @@ export function useAccounts() {
       const { data } = await api.accounts.accountsList({ page: 1, page_size: 10000 }, { signal });
       return data.items || [];
     },
+    refetchInterval: 10_000,
   });
 }

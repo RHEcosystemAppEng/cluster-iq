@@ -8,5 +8,6 @@ export function useClusters() {
       const { data } = await api.clusters.clustersList({ page: 1, page_size: 100000 }, { signal });
       return data.items || [];
     },
+    refetchInterval: 10_000,
   });
 }

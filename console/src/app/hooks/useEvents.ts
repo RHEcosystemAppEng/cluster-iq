@@ -8,5 +8,6 @@ export function useEvents() {
       const { data } = await api.events.eventsList({}, { signal });
       return data.items || [];
     },
+    refetchInterval: 5_000,
   });
 }
