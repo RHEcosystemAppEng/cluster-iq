@@ -39,6 +39,9 @@ spec:
             - name: cron
               mountPath: /var/lib/pgsql/cron.sql
               subPath: cron.sql
+          env:
+            - name: CIQ_MAX_DATA_AGE
+              value: "{{ .Values.database.maxDataAge }}"
           envFrom:
             - secretRef:
                 name: postgresql
@@ -55,6 +58,9 @@ spec:
 
               echo "Creating PG_CRON tasks"
               psql postgresql://postgres:$POSTGRESQL_ADMIN_PASSWORD@{{ $dbHost }}:{{ .Values.database.service.port }}/postgres < /var/lib/pgsql/cron.sql && { echo "Ok"; } || { echo "Cron Tasks creation Failed"; exit 1; }
+
+              echo "Configuring purge retention (${CIQ_MAX_DATA_AGE:-365} days)"
+              psql postgresql://postgres:$POSTGRESQL_ADMIN_PASSWORD@{{ $dbHost }}:{{ .Values.database.service.port }}/postgres -c "UPDATE cron.job SET command = \$\$SELECT purge_expired_clusters(${CIQ_MAX_DATA_AGE:-365})\$\$ WHERE jobname = \$\$purge_expired_clusters\$\$;"
 
               echo "Done!"
       restartPolicy: OnFailure

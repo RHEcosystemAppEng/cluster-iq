@@ -34,6 +34,14 @@ SELECT cron.schedule_in_database(
   'clusteriq'
 );
 
+-- pg_cron task for purging expired terminated clusters daily at midnight
+SELECT cron.schedule_in_database(
+  'purge_expired_clusters',
+  '0 0 * * *',
+  $$SELECT purge_expired_clusters();$$,
+  'clusteriq'
+);
+
 -- Function to check easier how the pg_cron tasks went
 CREATE OR REPLACE FUNCTION pg_cron_history(p_limit int DEFAULT 20)
 RETURNS TABLE(

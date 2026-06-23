@@ -412,6 +412,9 @@ database:
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
   replicaCount: 1
 
+  # Maximum age in days for terminated clusters before they are purged from the database
+  maxDataAge: "365"
+
   # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
   image:
     repository: quay.io/ecosystem-appeng/cluster-iq-pgsql

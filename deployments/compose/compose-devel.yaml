@@ -142,6 +142,9 @@ services:
         echo "Creating PG_CRON tasks"
         psql postgresql://postgres:admin@pgsql:5432/postgres < /cron.sql && { echo "Ok"; } || { echo "Cron Tasks creation Failed"; exit 1; }
 
+        echo "Configuring purge retention (${CIQ_MAX_DATA_AGE:-365} days)"
+        psql postgresql://postgres:admin@pgsql:5432/postgres -c "UPDATE cron.job SET command = \$\$SELECT purge_expired_clusters(${CIQ_MAX_DATA_AGE:-365})\$\$ WHERE jobname = \$\$purge_expired_clusters\$\$;"
+
         if [[ $CIQ_DB_PRELOAD_DATA == "true" ]]; then
           echo "Initializing DB with fake data"
           psql postgresql://user:password@pgsql:5432/clusteriq < /load_example_data.sql && { echo "Ok"; } || { echo "Initialization Failed"; exit 1; }
@@ -150,6 +153,7 @@ services:
         echo "Done!"
       '
     environment:
+      CIQ_MAX_DATA_AGE: "365"
       CIQ_DB_PRELOAD_DATA: "false"
     volumes:
       - ./../../db/sql/init.sql:/init.sql:ro,Z
