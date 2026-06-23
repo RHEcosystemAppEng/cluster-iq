@@ -162,11 +162,6 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 	return nil
 }
 
-// PrintStock prints the stock (account) of the AWSBillingStocker as a string
-func (s AWSBillingStocker) PrintStock() {
-	s.Account.PrintAccount()
-}
-
 // GetAccount returns the account configured for this stocker
 func (s AWSBillingStocker) GetAccount() inventory.Account {
 	return *s.Account

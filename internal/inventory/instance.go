@@ -2,7 +2,6 @@ package inventory
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -109,22 +108,4 @@ func (i *Instance) AddExpense(expense *Expense) error {
 	i.Expenses = append(i.Expenses, *expense)
 
 	return nil
-}
-
-// String as ToString func
-func (i Instance) String() string {
-	return fmt.Sprintf("(%s): [%s][%s][%s][%s][%s][%d]",
-		i.InstanceName,
-		i.Provider,
-		i.InstanceType,
-		i.AvailabilityZone,
-		i.Status,
-		i.ClusterID,
-		len(i.Expenses),
-	)
-}
-
-// PrintInstance prints Instance details
-func (i Instance) PrintInstance() {
-	fmt.Printf("\t\t\tInstance: %s\n", i.String())
 }

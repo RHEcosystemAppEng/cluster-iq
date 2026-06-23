@@ -26,11 +26,6 @@ func (s AzureStocker) MakeStock() error {
 	return fmt.Errorf("AzureStocker.MakeStock not implemented")
 }
 
-// PrintStock prints by stdout the account object belongs to this stocker
-func (s AzureStocker) PrintStock() {
-	s.Account.PrintAccount()
-}
-
 // GetAccount resturns the scanned results on this stocker instance
 func (s AzureStocker) GetAccount() inventory.Account {
 	return s.Account

@@ -349,7 +349,11 @@ func (s *Scanner) ExecuteScan(accountIDs []string, selectAll bool) (int, error) 
 		return 0, fmt.Errorf("failed to run stockers: %w", err)
 	}
 
-	inv.PrintInventory()
+	s.logger.Info("Inventory scan complete",
+		zap.Int("accounts", len(inv.Accounts)),
+		zap.Int("clusters", inv.TotalClusters()),
+		zap.Int("instances", inv.TotalInstances()),
+	)
 	if err := postScannerInventory(inv, s.logger); err != nil {
 		return 0, fmt.Errorf("failed to post inventory: %w", err)
 	}

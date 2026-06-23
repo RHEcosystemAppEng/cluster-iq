@@ -44,10 +44,22 @@ func (i *Inventory) AddAccount(account *Account) error {
 	return nil
 }
 
-// PrintInventory prints the entire Inventory content
-func (i Inventory) PrintInventory() {
-	fmt.Printf("Inventory created at: %s\nAccounts:\n", i.CreatedAt)
+// TotalClusters returns the total number of clusters across all accounts
+func (i Inventory) TotalClusters() int {
+	total := 0
 	for _, account := range i.Accounts {
-		account.PrintAccount()
+		total += len(account.Clusters)
 	}
+	return total
+}
+
+// TotalInstances returns the total number of instances across all accounts and clusters
+func (i Inventory) TotalInstances() int {
+	total := 0
+	for _, account := range i.Accounts {
+		for _, cluster := range account.Clusters {
+			total += len(cluster.Instances)
+		}
+	}
+	return total
 }
