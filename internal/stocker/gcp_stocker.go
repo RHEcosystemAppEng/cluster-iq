@@ -26,11 +26,6 @@ func (s GCPStocker) MakeStock() error {
 	return fmt.Errorf("GCPStocker.MakeStock not implemented")
 }
 
-// PrintStock prints by stdout the account object belongs to this stocker
-func (s GCPStocker) PrintStock() {
-	s.Account.PrintAccount()
-}
-
 // GetAccount resturns the scanned results on this stocker instance
 func (s GCPStocker) GetAccount() inventory.Account {
 	return s.Account

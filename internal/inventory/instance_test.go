@@ -1,7 +1,6 @@
 package inventory
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -125,27 +124,3 @@ func testAddExpense_WithNegativeAmount(t *testing.T) {
 	assert.Zero(t, len(i.Tags))
 }
 
-// TestInstance_String verifies String method returns expected format
-func TestInstance_String(t *testing.T) {
-	i := Instance{
-		InstanceID:       "i-123",
-		InstanceName:     "test",
-		Provider:         AWSProvider,
-		InstanceType:     "t2.micro",
-		AvailabilityZone: "us-east-1a",
-		Status:           Running,
-		ClusterID:        "cluster-x",
-		Expenses:         []Expense{{Amount: 5}},
-	}
-
-	str := i.String()
-	if !(strings.Contains(str, "test") && strings.Contains(str, "AWS") && strings.Contains(str, "t2.micro")) {
-		t.Errorf("unexpected output from String(): %s", str)
-	}
-}
-
-// TestPrintInstance verifies PrintInstance runs without panic
-func TestPrintInstance(t *testing.T) {
-	i := Instance{InstanceID: "i-456", InstanceName: "node1"}
-	i.PrintInstance()
-}

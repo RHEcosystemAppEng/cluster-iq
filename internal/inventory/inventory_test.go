@@ -79,15 +79,42 @@ func testAddAccount_Repeated(t *testing.T) {
 	assert.ErrorContains(t, err, ErrorAddingAccountToInventory.Error())
 }
 
-func TestPrintInventory(t *testing.T) {
+func TestTotalClusters(t *testing.T) {
 	inv := NewInventory()
-	acc := Account{
-		AccountID:   "id-account",
-		AccountName: "testAccount",
-		Provider:    UnknownProvider,
-	}
 
-	inv.AddAccount(&acc)
+	acc1 := &Account{AccountID: "acc-1", Clusters: map[string]*Cluster{
+		"c1": {ClusterID: "c1"},
+		"c2": {ClusterID: "c2"},
+	}}
+	acc2 := &Account{AccountID: "acc-2", Clusters: map[string]*Cluster{
+		"c3": {ClusterID: "c3"},
+	}}
 
-	inv.PrintInventory()
+	inv.AddAccount(acc1)
+	inv.AddAccount(acc2)
+
+	assert.Equal(t, 3, inv.TotalClusters())
+}
+
+func TestTotalInstances(t *testing.T) {
+	inv := NewInventory()
+
+	acc := &Account{AccountID: "acc-1", Clusters: map[string]*Cluster{
+		"c1": {ClusterID: "c1", Instances: []Instance{{InstanceID: "i1"}, {InstanceID: "i2"}}},
+		"c2": {ClusterID: "c2", Instances: []Instance{{InstanceID: "i3"}}},
+	}}
+
+	inv.AddAccount(acc)
+
+	assert.Equal(t, 3, inv.TotalInstances())
+}
+
+func TestTotalClusters_Empty(t *testing.T) {
+	inv := NewInventory()
+	assert.Equal(t, 0, inv.TotalClusters())
+}
+
+func TestTotalInstances_Empty(t *testing.T) {
+	inv := NewInventory()
+	assert.Equal(t, 0, inv.TotalInstances())
 }

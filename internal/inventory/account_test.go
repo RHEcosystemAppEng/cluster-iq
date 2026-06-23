@@ -207,27 +207,3 @@ func testIsBillingEnabled_False(t *testing.T) {
 	assert.False(t, account.billingEnabled, account.IsBillingEnabled())
 }
 
-func TestPrintAccount(t *testing.T) {
-	t.Run("Print Account ", func(t *testing.T) { testPrintAccount_Correct(t) })
-	t.Run("Print Account No clusters", func(t *testing.T) { testPrintAccount_NoClusters(t) })
-}
-
-func testPrintAccount_Correct(t *testing.T) {
-	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
-	assert.Nil(t, err)
-	assert.NotNil(t, account)
-
-	cluster, err := NewCluster("testCluster-1", "XXXX1", AWSProvider, "eu-west-1", "https://url.com", "John Doe")
-	assert.Nil(t, err)
-	account.AddCluster(cluster)
-
-	account.PrintAccount()
-}
-
-func testPrintAccount_NoClusters(t *testing.T) {
-	account, err := NewAccount("0000-11A", "testAccount", AWSProvider, "user", "password")
-	assert.Nil(t, err)
-	assert.NotNil(t, account)
-
-	account.PrintAccount()
-}

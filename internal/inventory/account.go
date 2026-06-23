@@ -130,12 +130,3 @@ func (a *Account) DisableBilling() {
 func (a *Account) IsBillingEnabled() bool {
 	return a.billingEnabled
 }
-
-// PrintAccount prints account info and every cluster on it by stdout
-func (a Account) PrintAccount() {
-	fmt.Printf("\t - Account: %s[%s] #Clusters: %d\n", a.AccountName, a.AccountID, len(a.Clusters))
-
-	for _, cluster := range a.Clusters {
-		cluster.PrintCluster()
-	}
-}

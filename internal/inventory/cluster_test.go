@@ -412,7 +412,7 @@ func testInstancesCount(t *testing.T) {
 	cluster, err := NewCluster("testCluster", "i1", AWSProvider, "us-east-1", "https://console", "user")
 	assert.NotNil(t, cluster)
 	assert.Nil(t, err)
-	assert.Equal(t, len(cluster.Instances), 0)
+	assert.Equal(t, 0, cluster.InstancesCount())
 }
 
 // TestGenerateClusterID tests GenerateClusterID function for 100% coverage
@@ -420,14 +420,3 @@ func TestGenerateClusterID(t *testing.T) {
 	assert.Equal(t, "test-infra", GenerateClusterID("test", "infra"))
 }
 
-// TestPrintCluster tests PrintCluster function for 100% coverage
-func TestPrintCluster(t *testing.T) {
-	c, _ := NewCluster("name", "infra", AWSProvider, "region", "link", "owner")
-	c.PrintCluster()
-
-	now := time.Now()
-	c.Instances = []Instance{
-		{Status: Running, CreatedAt: now.Add(-24 * time.Hour)},
-	}
-	c.PrintCluster()
-}

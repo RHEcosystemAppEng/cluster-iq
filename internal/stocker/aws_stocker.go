@@ -71,11 +71,6 @@ func (s *AWSStocker) MakeStock() error {
 	return nil
 }
 
-// PrintStock Prints the Account Stock
-func (s AWSStocker) PrintStock() {
-	s.Account.PrintAccount()
-}
-
 // GetAccount Returns the Account was scanned on this stocker
 func (s AWSStocker) GetAccount() inventory.Account {
 	return *s.Account
