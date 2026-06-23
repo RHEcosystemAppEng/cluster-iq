@@ -103,7 +103,10 @@ func NewExecutorAgentService(cfg *config.ExecutorAgentServiceConfig, actionsChan
 func (e *ExecutorAgentService) readCloudProviderAccounts() ([]credentials.AccountConfig, error) {
 	accounts, err := credentials.ReadCloudAccounts(e.cfg.Credentials.CredentialsFile)
 	if err != nil {
-		return nil, err
+		if len(accounts) == 0 {
+			return nil, err
+		}
+		e.logger.Warn("Some accounts were skipped due to invalid credentials", zap.Error(err))
 	}
 
 	return accounts, nil

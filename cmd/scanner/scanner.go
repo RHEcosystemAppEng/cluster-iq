@@ -100,7 +100,10 @@ func init() {
 func (s *Scanner) loadAccounts() error {
 	accountConfigs, err := credentials.ReadCloudAccounts(s.cfg.CredentialsFile)
 	if err != nil {
-		return fmt.Errorf("failed to read cloud accounts: %w", err)
+		if len(accountConfigs) == 0 {
+			return fmt.Errorf("failed to read cloud accounts: %w", err)
+		}
+		s.logger.Warn("Some accounts were skipped due to invalid credentials", zap.Error(err))
 	}
 
 	for _, ac := range accountConfigs {

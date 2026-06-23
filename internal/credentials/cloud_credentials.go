@@ -1,8 +1,15 @@
 package credentials
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/inventory"
 	ini "gopkg.in/ini.v1"
+)
+
+var (
+	ErrMissingCredentials = errors.New("missing credentials")
 )
 
 type AccountConfig struct {
@@ -26,17 +33,26 @@ func ReadCloudAccounts(credsFile string) ([]AccountConfig, error) {
 
 	cfg.DeleteSection(ini.DefaultSection)
 	var accounts []AccountConfig
+	var skipped []error
 	for _, section := range cfg.Sections() {
+		user := section.Key("user").String()
+		key := section.Key("key").String()
+
+		if user == "" || key == "" {
+			skipped = append(skipped, fmt.Errorf("%w: account %q has empty user or key", ErrMissingCredentials, section.Name()))
+			continue
+		}
+
 		account := AccountConfig{
 			ID:             section.Name(),
-			Name:           section.Key("name").MustString(section.Name()), // If `name` is empty, the id is used as replacement
+			Name:           section.Key("name").MustString(section.Name()),
 			Provider:       inventory.GetProvider(section.Key("provider").String()),
-			User:           section.Key("user").String(),
-			Key:            section.Key("key").String(),
+			User:           user,
+			Key:            key,
 			BillingEnabled: section.Key("billing_enabled").MustBool(),
 		}
 		accounts = append(accounts, account)
 	}
 
-	return accounts, nil
+	return accounts, errors.Join(skipped...)
 }

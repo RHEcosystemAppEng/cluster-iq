@@ -77,3 +77,67 @@ func testReadCloudAccounts_EmptyFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, accounts, 0)
 }
+
+func TestReadCloudAccounts_MissingUser(t *testing.T) {
+	content := `
+[acc-1]
+name = No User Account
+provider = aws
+key = secret
+`
+	tmpDir := t.TempDir()
+	file := filepath.Join(tmpDir, "creds.ini")
+	err := os.WriteFile(file, []byte(content), 0600)
+	assert.NoError(t, err)
+
+	accounts, err := ReadCloudAccounts(file)
+
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrMissingCredentials)
+	assert.Len(t, accounts, 0)
+}
+
+func TestReadCloudAccounts_MissingKey(t *testing.T) {
+	content := `
+[acc-1]
+name = No Key Account
+provider = aws
+user = admin
+`
+	tmpDir := t.TempDir()
+	file := filepath.Join(tmpDir, "creds.ini")
+	err := os.WriteFile(file, []byte(content), 0600)
+	assert.NoError(t, err)
+
+	accounts, err := ReadCloudAccounts(file)
+
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrMissingCredentials)
+	assert.Len(t, accounts, 0)
+}
+
+func TestReadCloudAccounts_MixedValidAndInvalid(t *testing.T) {
+	content := `
+[valid-acc]
+name = Valid Account
+provider = aws
+user = admin
+key = secret
+
+[invalid-acc]
+name = Invalid Account
+provider = aws
+user = admin
+`
+	tmpDir := t.TempDir()
+	file := filepath.Join(tmpDir, "creds.ini")
+	err := os.WriteFile(file, []byte(content), 0600)
+	assert.NoError(t, err)
+
+	accounts, err := ReadCloudAccounts(file)
+
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrMissingCredentials)
+	assert.Len(t, accounts, 1)
+	assert.Equal(t, "valid-acc", accounts[0].ID)
+}
