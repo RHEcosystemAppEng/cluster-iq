@@ -773,3 +773,27 @@ BEGIN
   REFRESH MATERIALIZED VIEW m_instances_full_view_with_tags;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Purges terminated clusters whose last_scan_ts is older than retention_days.
+-- Cascading FKs handle deletion of instances, tags, expenses, targets, schedules, and action_runs.
+-- Triggers handle deletion of associated events.
+CREATE OR REPLACE FUNCTION purge_expired_clusters(retention_days INTEGER DEFAULT 365)
+RETURNS INTEGER AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  WITH deleted AS (
+    DELETE FROM clusters
+    WHERE status = 'Terminated'
+      AND last_scan_ts < NOW() - (retention_days || ' days')::INTERVAL
+    RETURNING id
+  )
+  SELECT COUNT(*) INTO deleted_count FROM deleted;
+
+  IF deleted_count > 0 THEN
+    PERFORM refresh_materialized_views();
+  END IF;
+
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
