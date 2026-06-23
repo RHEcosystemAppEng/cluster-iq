@@ -18,7 +18,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -194,14 +193,14 @@ func LoggingInterceptor(
 		logger.Info("Client connected", zap.String("ip", p.Addr.String()))
 	}
 
-	log.Printf("Invoked method: %s", info.FullMethod)
+	logger.Info("Invoked method", zap.String("method", info.FullMethod))
 
 	resp, err := handler(ctx, req)
 
 	if err != nil {
-		log.Printf("Error in method %s: %v", info.FullMethod, err)
+		logger.Error("Method failed", zap.String("method", info.FullMethod), zap.Error(err))
 	} else {
-		log.Printf("Method %s executed successfully", info.FullMethod)
+		logger.Info("Method executed successfully", zap.String("method", info.FullMethod))
 	}
 
 	return resp, err
