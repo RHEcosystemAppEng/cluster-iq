@@ -3,6 +3,8 @@ import { parseNumberToCurrency, parseScanTimestamp } from '@app/utils/parseFuncs
 import { renderStatusLabel, ResourceLabel } from '@app/utils/renderUtils';
 import { ClusterResponseApi, TagResponseApi } from '@api';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
   Flex,
   FlexItem,
   Title,
@@ -19,12 +21,13 @@ import {
   TabContent,
 } from '@patternfly/react-core';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ClusterDetailsDropdown } from './ClusterDetailsDropdown';
 import { ClusterDetailsEvents } from './ClusterDetailsEvents';
 import { api } from '@api';
 import ClusterDetailsInstances from './ClusterDetailsInstances';
 import { LabelGroupOverflow } from '@app/components/common/LabelGroupOverflow';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 const ClusterDetailsOverview: React.FunctionComponent = () => {
   const { clusterID } = useParams();
@@ -32,6 +35,7 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
   const [tags, setTagData] = useState<TagResponseApi[]>([]);
   const [cluster, setClusterData] = useState<ClusterResponseApi | null>(null);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle(`${cluster?.clusterName || clusterID || ''} — ClusterIQ`);
 
   useEffect(() => {
     if (!clusterID) return;
@@ -177,6 +181,15 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
   return (
     <React.Fragment>
       <PageSection hasBodyWrapper={false}>
+        <Breadcrumb>
+          <BreadcrumbItem>
+            <Link to="/">Home</Link>
+          </BreadcrumbItem>
+          <BreadcrumbItem>
+            <Link to="/clusters">Clusters</Link>
+          </BreadcrumbItem>
+          <BreadcrumbItem isActive>{cluster?.clusterName || clusterID}</BreadcrumbItem>
+        </Breadcrumb>
         <Flex
           spaceItems={{ default: 'spaceItemsMd' }}
           alignItems={{ default: 'alignItemsFlexStart' }}
@@ -198,7 +211,7 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
         <Divider />
         <Tabs activeKey={activeTabKey} onSelect={handleTabClick} usePageInsets id="open-tabs-example-tabs-list">
           <Tab eventKey={0} title={<TabTitleText>Details</TabTitleText>} tabContentId={`tabContent${0}`} />
-          <Tab eventKey={1} title={<TabTitleText>Servers</TabTitleText>} tabContentId={`tabContent${1}`} />
+          <Tab eventKey={1} title={<TabTitleText>Nodes</TabTitleText>} tabContentId={`tabContent${1}`} />
           <Tab eventKey={2} title={<TabTitleText>Events</TabTitleText>} tabContentId={`tabContent${2}`} />
         </Tabs>
       </PageSection>
