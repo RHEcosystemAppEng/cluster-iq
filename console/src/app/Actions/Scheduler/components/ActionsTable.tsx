@@ -10,7 +10,7 @@ import React, { useEffect, useMemo } from 'react';
 import { ActionStatus, ActionOperations, ActionTypes } from '@app/types/types';
 import { parseScanTimestamp } from '@app/utils/parseFuncs';
 import cronstrue from 'cronstrue';
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { TablePagination } from '@app/components/common/TablesPagination';
 import { ActionsColumn } from '@patternfly/react-table';
 import { rowActions } from './ActionsKebabMenu';
@@ -82,7 +82,7 @@ export const ScheduleActionsTable: React.FunctionComponent<{
   return (
     <>
       {isLoading ? (
-        <LoadingSpinner />
+        <TableSkeleton columns={9} />
       ) : (
         <Table aria-label="ScheduleActions table">
           <Thead>

@@ -11,7 +11,7 @@ import {
   EmptyStateVariant,
 } from '@patternfly/react-core';
 import { CubesIcon } from '@patternfly/react-icons';
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { ClustersTable } from './ClustersTable';
 import { api, ClusterResponseApi } from '@api';
 import { debug } from '@app/utils/debugLogs';
@@ -47,7 +47,7 @@ export const AccountClusters: React.FunctionComponent = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return <TableSkeleton columns={5} />;
   }
 
   return (

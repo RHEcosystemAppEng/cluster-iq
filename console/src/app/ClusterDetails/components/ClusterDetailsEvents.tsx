@@ -1,4 +1,4 @@
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { ResultStatus } from '@app/types/types';
 import { api, SystemEventResponseApi } from '@api';
 import { ThProps, Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
@@ -106,7 +106,7 @@ export const ClusterDetailsEvents: React.FunctionComponent = () => {
   };
 
   const { sortedData, getSortParams } = useTableSort<SystemEventResponseApi>(data, getSortableRowValues, 5, 'desc');
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <TableSkeleton columns={6} />;
   if (sortedData.length === 0) return <EmptyStateNoFound />;
   return <TableEvents data={sortedData} getSortParams={getSortParams} />;
 };

@@ -1,4 +1,4 @@
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { renderStatusLabel } from '@app/utils/renderUtils';
 import { sortItems } from '@app/utils/tableFilters';
 import { api, InstanceResponseApi } from '@api';
@@ -33,7 +33,7 @@ const ClusterDetailsInstances: React.FunctionComponent = () => {
   }, [clusterID]);
 
   if (!clusterID) {
-    return <LoadingSpinner />;
+    return <TableSkeleton columns={5} />;
   }
 
   console.log('Rendered with data:', data);
@@ -66,7 +66,7 @@ const ClusterDetailsInstances: React.FunctionComponent = () => {
   return (
     <React.Fragment>
       {loading ? (
-        <LoadingSpinner />
+        <TableSkeleton columns={5} />
       ) : (
         <Table aria-label="Simple table">
           <Thead>
