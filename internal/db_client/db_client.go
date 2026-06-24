@@ -92,6 +92,11 @@ func (d *DBClient) QueryRowContext(ctx context.Context, dest interface{}, query 
 	return d.db.GetContext(ctx, dest, query, args...)
 }
 
+// QuerySelectContext executes a raw SQL query and scans the result rows into dest (a slice pointer).
+func (d *DBClient) QuerySelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+	return d.db.SelectContext(ctx, dest, query, args...)
+}
+
 func (d *DBClient) SelectWithContext(ctx context.Context, dest interface{}, table string, opts models.ListOptions, orderColumn string, columns ...string) error {
 	builder := d.NewSelectBuilder(columns...).From(table)
 

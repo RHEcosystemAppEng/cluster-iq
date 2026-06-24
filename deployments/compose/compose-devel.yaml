@@ -154,7 +154,7 @@ services:
       '
     environment:
       CIQ_MAX_DATA_AGE: "365"
-      CIQ_DB_PRELOAD_DATA: "false"
+      CIQ_DB_PRELOAD_DATA: "true"
     volumes:
       - ./../../db/sql/init.sql:/init.sql:ro,Z
       - ./../../db/sql/cron.sql:/cron.sql:ro,Z

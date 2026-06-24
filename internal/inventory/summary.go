@@ -4,10 +4,14 @@ import "time"
 
 // OverviewSummary represents the comprehensive overview of the system's inventory.
 type OverviewSummary struct {
-	Clusters  ClustersSummary
-	Instances InstancesSummary
-	Providers ProvidersSummary
-	Scanner   Scanner
+	Clusters          ClustersSummary
+	Instances         InstancesSummary
+	Providers         ProvidersSummary
+	Scanner           Scanner
+	TopRegions        []TopItem
+	TopOwners         []TopItem
+	ClustersByPartner []TopItem
+	CostPerAccount    []AccountCost
 }
 
 // ClustersSummary provides a summary of cluster counts by status.
@@ -35,6 +39,18 @@ type ProvidersSummary struct {
 type ProviderDetails struct {
 	AccountCount int
 	ClusterCount int
+}
+
+// TopItem represents a ranked item with a name and cluster count.
+type TopItem struct {
+	Name         string `db:"name"`
+	ClusterCount int    `db:"cluster_count"`
+}
+
+// AccountCost represents an account with its current month cost.
+type AccountCost struct {
+	AccountName      string  `db:"account_name"`
+	CurrentMonthCost float64 `db:"current_month_so_far_cost"`
 }
 
 // Scanner provides information about the last inventory scan.

@@ -9,6 +9,8 @@ import (
 	"github.com/RHEcosystemAppEng/cluster-iq/internal/repositories"
 )
 
+const defaultTopLimit = 5
+
 // OverviewService defines the interface for overview-related business logic.
 type OverviewService interface {
 	GetOverview(ctx context.Context) (inventory.OverviewSummary, error)
@@ -59,6 +61,30 @@ func (s *overviewServiceImpl) GetOverview(ctx context.Context) (inventory.Overvi
 		return inventory.OverviewSummary{}, fmt.Errorf("failed to get scanner timestamp: %w", err)
 	}
 	overview.Scanner.LastScanTimestamp = scannerTimestamp
+
+	topRegions, err := s.clusterRepo.GetTopRegions(ctx, defaultTopLimit)
+	if err != nil {
+		return inventory.OverviewSummary{}, fmt.Errorf("failed to get top regions: %w", err)
+	}
+	overview.TopRegions = topRegions
+
+	topOwners, err := s.clusterRepo.GetTopOwners(ctx, defaultTopLimit)
+	if err != nil {
+		return inventory.OverviewSummary{}, fmt.Errorf("failed to get top owners: %w", err)
+	}
+	overview.TopOwners = topOwners
+
+	clustersByPartner, err := s.clusterRepo.GetClustersByPartner(ctx)
+	if err != nil {
+		return inventory.OverviewSummary{}, fmt.Errorf("failed to get clusters by partner: %w", err)
+	}
+	overview.ClustersByPartner = clustersByPartner
+
+	costPerAccount, err := s.accountRepo.GetCostPerAccount(ctx)
+	if err != nil {
+		return inventory.OverviewSummary{}, fmt.Errorf("failed to get cost per account: %w", err)
+	}
+	overview.CostPerAccount = costPerAccount
 
 	return overview, nil
 }
