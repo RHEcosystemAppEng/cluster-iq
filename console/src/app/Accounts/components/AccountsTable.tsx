@@ -2,9 +2,11 @@ import { ThProps, Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-tabl
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AccountResponseApi, ProviderApi } from '@api';
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { TablePagination } from '@app/components/common/TablesPagination';
 import { searchItems, filterByProvider, sortItems } from '@app/utils/tableFilters';
+import { ResourceBadge, renderProviderIcon } from '@app/utils/renderUtils';
+import { parseNumberToCurrency, parseScanTimestamp } from '@app/utils/parseFuncs';
 import { useAccounts } from '@app/hooks/useAccounts';
 import { useTablePagination } from '@app/hooks/useTablePagination';
 
@@ -23,7 +25,13 @@ export const AccountsTable: React.FunctionComponent<{
     result = filterByProvider(result, providerSelections);
 
     if (activeSortIndex !== undefined && activeSortDirection) {
-      const sortFields: (keyof AccountResponseApi)[] = ['accountName', 'provider', 'clusterCount'];
+      const sortFields: (keyof AccountResponseApi)[] = [
+        'accountName',
+        'provider',
+        'clusterCount',
+        'last15DaysCost',
+        'lastScanTimestamp',
+      ];
       result = sortItems(result, sortFields[activeSortIndex], activeSortDirection);
     }
 
@@ -51,31 +59,38 @@ export const AccountsTable: React.FunctionComponent<{
 
   const columnNames = {
     name: 'Name',
-    cloudProvider: 'Cloud Provider',
+    provider: 'Provider',
     clusterCount: 'Cluster Count',
+    cost15d: 'Cost (15d)',
+    lastScan: 'Last Scan',
   };
 
   return (
     <>
       {isLoading ? (
-        <LoadingSpinner />
+        <TableSkeleton columns={5} />
       ) : (
         <Table aria-label="Accounts table">
           <Thead>
             <Tr>
               <Th sort={getSortParams(0)}>{columnNames.name}</Th>
-              <Th sort={getSortParams(1)}>{columnNames.cloudProvider}</Th>
+              <Th sort={getSortParams(1)}>{columnNames.provider}</Th>
               <Th sort={getSortParams(2)}>{columnNames.clusterCount}</Th>
+              <Th sort={getSortParams(3)}>{columnNames.cost15d}</Th>
+              <Th sort={getSortParams(4)}>{columnNames.lastScan}</Th>
             </Tr>
           </Thead>
           <Tbody>
             {paginatedData.map(account => (
               <Tr key={account.accountId}>
                 <Td dataLabel={columnNames.name}>
+                  <ResourceBadge label="A" color="#c9190b" />{' '}
                   <Link to={`/accounts/${account.accountId}`}>{account.accountName}</Link>
                 </Td>
-                <Td dataLabel={columnNames.cloudProvider}>{account.provider}</Td>
+                <Td dataLabel={columnNames.provider}>{renderProviderIcon(account.provider)}</Td>
                 <Td dataLabel={columnNames.clusterCount}>{account.clusterCount}</Td>
+                <Td dataLabel={columnNames.cost15d}>{parseNumberToCurrency(account.last15DaysCost)}</Td>
+                <Td dataLabel={columnNames.lastScan}>{parseScanTimestamp(account.lastScanTimestamp)}</Td>
               </Tr>
             ))}
           </Tbody>
