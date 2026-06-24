@@ -80,10 +80,8 @@ func (s *AWSBillingStocker) MakeStock() error {
 
 // getInstanceExpenses gets from the AWS CostExplorer API the expenses of a given Instance.
 func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) error {
-	// Logic for Setting the period to fetch the Expenses within
-	// End date is equivalent to today's date
+	// 14-day rolling window: the maximum range AWS Cost Explorer supports at daily resource-level granularity.
 	startDate := time.Now().AddDate(0, 0, -14).Format("2006-01-02")
-	// Start date is equivalent to today's date
 	endDate := time.Now().Format("2006-01-02")
 
 	s.logger.Debug("Getting expenses for instance",
