@@ -2,6 +2,7 @@ import { PageSection, Panel, Content } from '@patternfly/react-core';
 import React from 'react';
 import AccountsToolbar from './components/AccountsToolbar';
 import AccountsTable from './components/AccountsTable';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 import { parseAsArrayOf, parseAsString, parseAsStringEnum, useQueryStates } from 'nuqs';
 import { ProviderApi } from '@api';
 
@@ -11,6 +12,7 @@ const filterParams = {
 };
 
 const Accounts: React.FunctionComponent = () => {
+  useDocumentTitle('Accounts — ClusterIQ');
   const [{ provider, accountName }, setQuery] = useQueryStates(filterParams);
 
   return (

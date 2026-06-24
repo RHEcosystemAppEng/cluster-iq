@@ -5,6 +5,7 @@ import { parseAsArrayOf, parseAsString, parseAsStringEnum, useQueryStates } from
 import { ActionOperations, ResultStatus } from '@app/types/types.tsx';
 import { ProviderApi } from '@api';
 import { AuditLogsTable } from './AuditLogsTable.tsx';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 const filterParams = {
   accountName: parseAsString.withDefault(''),
@@ -15,6 +16,7 @@ const filterParams = {
 };
 
 const AuditLogs: React.FunctionComponent = () => {
+  useDocumentTitle('Audit Logs — ClusterIQ');
   const [{ accountName, action, provider, result, requester }, setQuery] = useQueryStates(filterParams);
 
   return (

@@ -6,10 +6,12 @@ import AccountsTabs from './components/AccountTabs';
 import { AccountDetailsContent } from './components/AccountDetailsContent';
 import { debug } from '@app/utils/debugLogs';
 import { AccountClusters } from './components/AccountClusters';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 const AccountDetails: React.FunctionComponent = () => {
   const { accountId } = useParams() as { accountId: string };
   const [accountData, setAccountData] = useState<AccountResponseApi | null>(null);
+  useDocumentTitle(`${accountData?.accountName || accountId} — ClusterIQ`);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     const fetchData = async () => {
