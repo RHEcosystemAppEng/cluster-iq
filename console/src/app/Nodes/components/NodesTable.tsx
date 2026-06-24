@@ -1,18 +1,18 @@
-import { renderStatusLabel } from '@app/utils/renderUtils';
+import { renderStatusLabel, ResourceBadge } from '@app/utils/renderUtils';
 import { EmptyState, EmptyStateVariant, EmptyStateBody, Title } from '@patternfly/react-core';
 import { ThProps, Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ServersTableProps } from '../types';
+import { NodesTableProps } from '../types';
 import { InstanceResponseApi } from '@api';
 import { TablePagination } from '@app/components/common/TablesPagination';
 import { searchItems, filterByStatus, filterByProvider, sortItems } from '@app/utils/tableFilters';
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { ServerIcon } from '@patternfly/react-icons';
 import { useInstances } from '@app/hooks/useInstances';
 import { useTablePagination } from '@app/hooks/useTablePagination';
 
-export const ServersTable: React.FunctionComponent<ServersTableProps> = ({
+export const NodesTable: React.FunctionComponent<NodesTableProps> = ({
   searchValue,
   statusSelection,
   providerSelections,
@@ -87,7 +87,7 @@ export const ServersTable: React.FunctionComponent<ServersTableProps> = ({
   };
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <TableSkeleton columns={6} />;
   }
 
   if (filtered.length === 0) {
@@ -95,7 +95,7 @@ export const ServersTable: React.FunctionComponent<ServersTableProps> = ({
       <EmptyState
         titleText={
           <Title headingLevel="h4" size="md">
-            No instances found
+            No nodes found
           </Title>
         }
         icon={ServerIcon}
@@ -104,12 +104,12 @@ export const ServersTable: React.FunctionComponent<ServersTableProps> = ({
         <EmptyStateBody>
           {!showTerminated ? (
             <>
-              There are no active instances.
+              There are no active nodes.
               <br />
-              Toggle &apos;Show terminated instances&apos; to view all instances.
+              Toggle &apos;Show terminated nodes&apos; to view all nodes.
             </>
           ) : (
-            'No instances found.'
+            'No nodes match the current filters.'
           )}
         </EmptyStateBody>
       </EmptyState>
@@ -118,7 +118,7 @@ export const ServersTable: React.FunctionComponent<ServersTableProps> = ({
 
   return (
     <React.Fragment>
-      <Table aria-label="Servers table">
+      <Table aria-label="Nodes table">
         <Thead>
           <Tr>
             <Th sort={getSortParams(0)}>{columnNames.id}</Th>
@@ -133,6 +133,7 @@ export const ServersTable: React.FunctionComponent<ServersTableProps> = ({
           {paginatedData.map(instance => (
             <Tr key={instance.instanceId}>
               <Td dataLabel={columnNames.id} width={15}>
+                <ResourceBadge label="N" color="#4cb140" />{' '}
                 <Link to={`/instances/${instance.instanceId}`}>{instance.instanceId}</Link>
               </Td>
               <Td dataLabel={columnNames.name} width={30}>
@@ -157,4 +158,4 @@ export const ServersTable: React.FunctionComponent<ServersTableProps> = ({
   );
 };
 
-export default ServersTable;
+export default NodesTable;

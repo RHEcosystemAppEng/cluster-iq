@@ -37,7 +37,7 @@ const SidebarNavigation: React.FunctionComponent = () => {
             <NavLink to="/clusters">Clusters</NavLink>
           </NavItem>
           <NavItem groupId="inventory-group" itemId="instances" isActive={location.pathname.startsWith('/instances')}>
-            <NavLink to="/instances">Instances</NavLink>
+            <NavLink to="/instances">Nodes</NavLink>
           </NavItem>
         </NavExpandable>
 

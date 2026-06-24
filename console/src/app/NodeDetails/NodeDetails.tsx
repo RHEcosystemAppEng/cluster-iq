@@ -3,6 +3,8 @@ import { renderStatusLabel, ResourceLabel } from '@app/utils/renderUtils';
 import { parseScanTimestamp, parseNumberToCurrency } from 'src/app/utils/parseFuncs';
 import { useParams } from 'react-router-dom';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
   PageSection,
   Tabs,
   Tab,
@@ -23,6 +25,7 @@ import {
 } from '@patternfly/react-core';
 import { api, InstanceResponseApi, TagResponseApi } from '@api';
 import { Link } from 'react-router-dom';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 interface LabelGroupOverflowProps {
   labels: Array<TagResponseApi>;
@@ -38,11 +41,12 @@ const LabelGroupOverflow: React.FunctionComponent<LabelGroupOverflowProps> = ({ 
   </LabelGroup>
 );
 
-const ServerDetails: React.FunctionComponent = () => {
+const NodeDetails: React.FunctionComponent = () => {
   const { instanceID } = useParams();
   const [activeTabKey, setActiveTabKey] = React.useState(0);
   const [instanceData, setInstanceData] = useState<InstanceResponseApi | null>(null);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle(`${instanceData?.instanceName || instanceID || ''} — ClusterIQ`);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -75,7 +79,7 @@ const ServerDetails: React.FunctionComponent = () => {
         <Flex direction={{ default: 'column' }}>
           <FlexItem spacer={{ default: 'spacerLg' }}>
             <Title headingLevel="h2" size="lg" className="pf-v6-u-mt-sm" id="open-tabs-example-tabs-list-details-title">
-              Server details
+              Node details
             </Title>
           </FlexItem>
 
@@ -131,8 +135,17 @@ const ServerDetails: React.FunctionComponent = () => {
     <React.Fragment>
       {/* Page header */}
       <PageSection hasBodyWrapper={false}>
+        <Breadcrumb>
+          <BreadcrumbItem>
+            <Link to="/">Home</Link>
+          </BreadcrumbItem>
+          <BreadcrumbItem>
+            <Link to="/instances">Nodes</Link>
+          </BreadcrumbItem>
+          <BreadcrumbItem isActive>{instanceData?.instanceName || instanceID}</BreadcrumbItem>
+        </Breadcrumb>
         <Title headingLevel="h1" size="2xl">
-          <ResourceLabel label="Instance" color="#4cb140" /> {instanceData?.instanceName || instanceID}
+          <ResourceLabel label="Node" color="#4cb140" /> {instanceData?.instanceName || instanceID}
         </Title>
         {/* Page tabs */}
       </PageSection>
@@ -157,4 +170,4 @@ const ServerDetails: React.FunctionComponent = () => {
   );
 };
 
-export default ServerDetails;
+export default NodeDetails;

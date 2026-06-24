@@ -176,9 +176,12 @@ export function renderProviderIcon(provider: string | null | undefined): React.R
   }
 }
 
+const NODE_BADGE = { label: 'N', color: '#4cb140' };
+
 const RESOURCE_BADGE_MAP: Record<string, { label: string; color: string }> = {
   Cluster: { label: 'C', color: '#0066cc' },
-  Instance: { label: 'I', color: '#4cb140' },
+  Node: NODE_BADGE,
+  Instance: NODE_BADGE,
   Account: { label: 'A', color: '#c9190b' },
 };
 
