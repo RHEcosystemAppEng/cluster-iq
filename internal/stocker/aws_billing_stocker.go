@@ -133,8 +133,12 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 					return err
 				}
 
-				// Getting Expense Date as Time
+				// AWS Cost Explorer DateInterval uses pattern (\d{4}-\d{2}-\d{2})(T\d{2}:\d{2}:\d{2}Z)?
+				// DAILY granularity typically returns "YYYY-MM-DD" but may include "T00:00:00Z".
 				expenseDate, err := time.Parse(time.RFC3339, *resultByTime.TimePeriod.Start)
+				if err != nil {
+					expenseDate, err = time.Parse("2006-01-02", *resultByTime.TimePeriod.Start)
+				}
 				if err != nil {
 					s.logger.Error("Error parsing start date",
 						zap.String("account", s.Account.AccountName),
