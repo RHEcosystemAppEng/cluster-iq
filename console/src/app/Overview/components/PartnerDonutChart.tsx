@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardBody, CardTitle } from '@patternfly/react-core';
 import { ChartDonut, ChartThemeColor } from '@patternfly/react-charts/victory';
+import { HandshakeIcon } from '@patternfly/react-icons';
 import { TopItemApi } from '@api';
 
 interface PartnerDonutChartProps {
@@ -19,7 +20,10 @@ export const PartnerDonutChart: React.FC<PartnerDonutChartProps> = ({ data }) =>
 
   return (
     <Card component="div" isFullHeight className="overview-card">
-      <CardTitle className="pf-v6-u-text-align-center">Clusters by Partner</CardTitle>
+      <CardTitle className="pf-v6-u-text-align-center">
+        <HandshakeIcon style={{ marginRight: '0.4rem' }} />
+        Clusters by Partner
+      </CardTitle>
       <CardBody style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {chartData.length === 0 ? (
           <span className="pf-v6-u-color-200">No partner data available</span>

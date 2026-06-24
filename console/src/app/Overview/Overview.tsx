@@ -14,7 +14,7 @@ import {
   EmptyStateFooter,
   EmptyStateActions,
 } from '@patternfly/react-core';
-import { CubesIcon } from '@patternfly/react-icons';
+import { CubesIcon, DollarSignIcon, GlobeIcon, UserIcon, HandshakeIcon, HistoryIcon } from '@patternfly/react-icons';
 import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
 import { generateCards } from './components/CardData';
 import { PartnerDonutChart } from './components/PartnerDonutChart';
@@ -23,10 +23,12 @@ import { ProviderApi, TopItemApi } from '@api';
 import { renderContent } from './utils/cardRendererUtils.tsx';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useEventsData } from './hooks/useEventsData';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 import { DashboardState } from './types';
 import './Overview.css';
 
 const AggregateStatusCards: React.FunctionComponent = () => {
+  useDocumentTitle('Overview — ClusterIQ');
   const { inventoryData, loading, error } = useDashboardData();
   const { events, loading: eventsLoading, error: eventsError } = useEventsData();
 
@@ -119,16 +121,28 @@ const AggregateStatusCards: React.FunctionComponent = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <PartnerDonutChart data={dashboardState.clustersByPartner} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <TopMetricCard title="Cost per Account" items={costAsTopItems} formatValue={formatCost} />
-              <TopMetricCard title="Top Regions" items={dashboardState.topRegions} />
-              <TopMetricCard title="Top Owners" items={dashboardState.topOwners} />
-              <TopMetricCard title="Top Partners" items={dashboardState.clustersByPartner.slice(0, 5)} />
+              <TopMetricCard
+                title="Cost per Account"
+                items={costAsTopItems}
+                formatValue={formatCost}
+                icon={<DollarSignIcon />}
+              />
+              <TopMetricCard title="Top Regions" items={dashboardState.topRegions} icon={<GlobeIcon />} />
+              <TopMetricCard title="Top Owners" items={dashboardState.topOwners} icon={<UserIcon />} />
+              <TopMetricCard
+                title="Top Partners"
+                items={dashboardState.clustersByPartner.slice(0, 5)}
+                icon={<HandshakeIcon />}
+              />
             </div>
           </div>
 
           {/* Row 4: Recent Events */}
           <Card className="pf-v6-u-min-height overview-card" component="div">
-            <CardTitle className="pf-v6-u-text-align-center">{cardData.activityCards[0].title}</CardTitle>
+            <CardTitle className="pf-v6-u-text-align-center">
+              <HistoryIcon style={{ marginRight: '0.4rem' }} />
+              {cardData.activityCards[0].title}
+            </CardTitle>
             <CardBody className="pf-v6-u-p-md">
               {eventsLoading ? (
                 <LoadingSpinner />

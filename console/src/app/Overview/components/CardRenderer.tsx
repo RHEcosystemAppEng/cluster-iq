@@ -15,7 +15,7 @@ export const RenderMultiIcon: React.FunctionComponent<{ content: any[]; totalCou
       {content.map(({ icon, value, ref }, index) => (
         <React.Fragment key={index}>
           <Flex spaceItems={{ default: 'spaceItemsSm' }}>
-            <FlexItem>{icon}</FlexItem>
+            <FlexItem style={{ fontSize: '1.3em' }}>{icon}</FlexItem>
             <FlexItem>{ref ? <a href={ref}>{value}</a> : <span>{value}</span>}</FlexItem>
           </Flex>
           {content.length > 1 && index < content.length - 1 && <Divider orientation={{ default: 'vertical' }} />}

@@ -6,13 +6,17 @@ interface TopMetricCardProps {
   title: string;
   items: TopItemApi[];
   formatValue?: (value: number) => string;
+  icon?: React.ReactNode;
 }
 
-export const TopMetricCard: React.FC<TopMetricCardProps> = ({ title, items, formatValue }) => {
+export const TopMetricCard: React.FC<TopMetricCardProps> = ({ title, items, formatValue, icon }) => {
   if (!items || items.length === 0) {
     return (
       <Card component="div" isFullHeight className="overview-card">
-        <CardTitle className="pf-v6-u-text-align-center">{title}</CardTitle>
+        <CardTitle className="pf-v6-u-text-align-center">
+          {icon && <span style={{ marginRight: '0.4rem' }}>{icon}</span>}
+          {title}
+        </CardTitle>
         <CardBody>
           <span className="pf-v6-u-color-200">No data available</span>
         </CardBody>
@@ -22,7 +26,10 @@ export const TopMetricCard: React.FC<TopMetricCardProps> = ({ title, items, form
 
   return (
     <Card component="div" isFullHeight className="overview-card">
-      <CardTitle className="pf-v6-u-text-align-center">{title}</CardTitle>
+      <CardTitle className="pf-v6-u-text-align-center">
+        {icon && <span style={{ marginRight: '0.4rem' }}>{icon}</span>}
+        {title}
+      </CardTitle>
       <CardBody>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           {items.map((item, index) => (
