@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -55,26 +56,45 @@ func testGetOverview(t *testing.T) {
 		Scanner: dto.Scanner{
 			LastScanTimestamp: lastScanTS,
 		},
+		TopRegions:        []dto.TopItem{},
+		TopOwners:         []dto.TopItem{},
+		ClustersByPartner: []dto.TopItem{},
+		CostPerAccount: []dto.AccountCost{
+			{AccountName: "aws-account-demo", CurrentMonthCost: 0},
+			{AccountName: "azure-sub-demo", CurrentMonthCost: 0},
+			{AccountName: "gcp-project-demo", CurrentMonthCost: 0},
+		},
 	}
 
-	// Getting accounts data
 	resp, err := http.Get(APIOverviewURL)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Check response code
 	checkHTTPResponseCode(t, resp, expectedHTTPCode)
 
-	// Decode the JSON response
 	var response dto.OverviewSummary
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response body: %v", err)
 	}
 
-	// Comparing data
+	sortAccountCosts(response.CostPerAccount)
+	sortAccountCosts(expectedOverviewResponse.CostPerAccount)
+
 	if !reflect.DeepEqual(response, expectedOverviewResponse) {
 		t.Fatalf("Expected Overview: '%+v', got: '%+v'", expectedOverviewResponse, response)
 	}
+}
+
+func sortAccountCosts(costs []dto.AccountCost) {
+	slices.SortFunc(costs, func(a, b dto.AccountCost) int {
+		if a.AccountName < b.AccountName {
+			return -1
+		}
+		if a.AccountName > b.AccountName {
+			return 1
+		}
+		return 0
+	})
 }
