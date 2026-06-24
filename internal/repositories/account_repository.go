@@ -52,6 +52,7 @@ type AccountRepository interface {
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstancePendingExpenseDB, error)
 	GetScannerTimestamp(ctx context.Context) (time.Time, error)
+	GetCostPerAccount(ctx context.Context) ([]inventory.AccountCost, error)
 	CreateAccount(ctx context.Context, accounts []inventory.Account) error
 	UpdateAccount(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
 	DeleteAccount(ctx context.Context, accountID string) error
@@ -179,6 +180,18 @@ func (r *accountRepositoryImpl) GetExpenseUpdateInstances(ctx context.Context, a
 	}
 
 	return instances, nil
+}
+
+// GetCostPerAccount returns all accounts with their current month cost.
+func (r *accountRepositoryImpl) GetCostPerAccount(ctx context.Context) ([]inventory.AccountCost, error) {
+	var costs []inventory.AccountCost
+	query := `SELECT account_name, current_month_so_far_cost
+		FROM m_accounts_full_view
+		ORDER BY current_month_so_far_cost DESC`
+	if err := r.db.QuerySelectContext(ctx, &costs, query); err != nil {
+		return nil, fmt.Errorf("failed to get cost per account: %w", err)
+	}
+	return costs, nil
 }
 
 // Create inserts multiple accounts into the database in a transaction.

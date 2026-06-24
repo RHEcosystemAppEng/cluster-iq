@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProviderApi } from '@api';
+import { ProviderApi, TopItemApi, AccountCostApi } from '@api';
 
 export enum CardLayout {
   SINGLE_ICON = 'icon',
@@ -29,9 +29,11 @@ export interface CardDefinition {
 
 export interface DashboardState {
   clustersByStatus: Record<string, number>;
-  instancesByStatus: Record<string, number>;
   clustersByProvider: Record<ProviderApi, number>;
   accountsByProvider: Record<ProviderApi, number>;
-  instances: number;
   lastScanTimestamp?: string;
+  topRegions: TopItemApi[];
+  topOwners: TopItemApi[];
+  clustersByPartner: TopItemApi[];
+  costPerAccount: AccountCostApi[];
 }

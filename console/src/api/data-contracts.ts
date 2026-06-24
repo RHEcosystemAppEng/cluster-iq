@@ -237,11 +237,25 @@ export interface InstancesSummaryApi {
   stopped?: number;
 }
 
+export interface TopItemApi {
+  name?: string;
+  clusterCount?: number;
+}
+
+export interface AccountCostApi {
+  accountName?: string;
+  currentMonthCost?: number;
+}
+
 export interface OverviewSummaryApi {
   clusters?: ClusterSummaryApi;
   instances?: InstancesSummaryApi;
   providers?: ProvidersSummaryApi;
   scanner?: ScannerApi;
+  topRegions?: TopItemApi[];
+  topOwners?: TopItemApi[];
+  clustersByPartner?: TopItemApi[];
+  costPerAccount?: AccountCostApi[];
 }
 
 export interface PostResponseApi {

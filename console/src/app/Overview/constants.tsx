@@ -23,9 +23,9 @@ const PATTERNFLY_COLORS = {
 const CLUSTER_ICON = <OpenshiftIcon color={PATTERNFLY_COLORS.danger} />;
 
 const PROVIDER_ICONS = {
-  [ProviderApi.AWSProvider]: <AwsIcon color={PATTERNFLY_COLORS.danger} />,
-  [ProviderApi.GCPProvider]: <GoogleIcon color={PATTERNFLY_COLORS.danger} />,
-  [ProviderApi.AzureProvider]: <AzureIcon color={PATTERNFLY_COLORS.danger} />,
+  [ProviderApi.AWSProvider]: <AwsIcon color={PATTERNFLY_COLORS.danger} style={{ fontSize: '1.4em' }} />,
+  [ProviderApi.GCPProvider]: <GoogleIcon color={PATTERNFLY_COLORS.danger} style={{ fontSize: '1.4em' }} />,
+  [ProviderApi.AzureProvider]: <AzureIcon color={PATTERNFLY_COLORS.danger} style={{ fontSize: '1.4em' }} />,
 } as const;
 
 export const STATUSES = {

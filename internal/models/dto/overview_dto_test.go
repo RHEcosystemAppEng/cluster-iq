@@ -35,6 +35,10 @@ func testToOverviewSummaryDTO_Correct(t *testing.T) {
 		Scanner: inventory.Scanner{
 			LastScanTimestamp: now,
 		},
+		TopRegions:        []inventory.TopItem{{Name: "us-east-1", ClusterCount: 8}},
+		TopOwners:         []inventory.TopItem{{Name: "jsmith", ClusterCount: 5}},
+		ClustersByPartner: []inventory.TopItem{{Name: "Acme", ClusterCount: 3}},
+		CostPerAccount:    []inventory.AccountCost{{AccountName: "my-account", CurrentMonthCost: 1234.56}},
 	}
 
 	dto := ToOverviewSummaryDTO(model)
@@ -54,8 +58,21 @@ func testToOverviewSummaryDTO_Correct(t *testing.T) {
 	assert.Equal(t, 5, dto.Providers.Azure.AccountCount)
 	assert.Equal(t, 6, dto.Providers.Azure.ClusterCount)
 
-	// inventory.Scanner uses *time.Time, DTO uses time.Time
 	assert.Equal(t, now, dto.Scanner.LastScanTimestamp)
+
+	assert.Len(t, dto.TopRegions, 1)
+	assert.Equal(t, "us-east-1", dto.TopRegions[0].Name)
+	assert.Equal(t, 8, dto.TopRegions[0].ClusterCount)
+
+	assert.Len(t, dto.TopOwners, 1)
+	assert.Equal(t, "jsmith", dto.TopOwners[0].Name)
+
+	assert.Len(t, dto.ClustersByPartner, 1)
+	assert.Equal(t, "Acme", dto.ClustersByPartner[0].Name)
+
+	assert.Len(t, dto.CostPerAccount, 1)
+	assert.Equal(t, "my-account", dto.CostPerAccount[0].AccountName)
+	assert.InDelta(t, 1234.56, dto.CostPerAccount[0].CurrentMonthCost, 0.01)
 }
 
 // TestToClusterSummaryDTO verifies toClusterSummaryDTO conversion.
@@ -132,4 +149,48 @@ func testToScannerDTO_Correct(t *testing.T) {
 	dto := toScannerDTO(model)
 
 	assert.Equal(t, now, dto.LastScanTimestamp)
+}
+
+// TestToTopItemsDTO verifies toTopItemsDTO conversion.
+func TestToTopItemsDTO(t *testing.T) {
+	t.Run("Convert TopItems", func(t *testing.T) {
+		items := []inventory.TopItem{
+			{Name: "us-east-1", ClusterCount: 8},
+			{Name: "eu-west-1", ClusterCount: 3},
+		}
+		result := toTopItemsDTO(items)
+
+		assert.Len(t, result, 2)
+		assert.Equal(t, "us-east-1", result[0].Name)
+		assert.Equal(t, 8, result[0].ClusterCount)
+		assert.Equal(t, "eu-west-1", result[1].Name)
+		assert.Equal(t, 3, result[1].ClusterCount)
+	})
+
+	t.Run("Convert empty TopItems", func(t *testing.T) {
+		result := toTopItemsDTO([]inventory.TopItem{})
+		assert.Len(t, result, 0)
+	})
+}
+
+// TestToAccountCostsDTO verifies toAccountCostsDTO conversion.
+func TestToAccountCostsDTO(t *testing.T) {
+	t.Run("Convert AccountCosts", func(t *testing.T) {
+		costs := []inventory.AccountCost{
+			{AccountName: "prod", CurrentMonthCost: 5000.50},
+			{AccountName: "dev", CurrentMonthCost: 1200.00},
+		}
+		result := toAccountCostsDTO(costs)
+
+		assert.Len(t, result, 2)
+		assert.Equal(t, "prod", result[0].AccountName)
+		assert.InDelta(t, 5000.50, result[0].CurrentMonthCost, 0.01)
+		assert.Equal(t, "dev", result[1].AccountName)
+		assert.InDelta(t, 1200.00, result[1].CurrentMonthCost, 0.01)
+	})
+
+	t.Run("Convert empty AccountCosts", func(t *testing.T) {
+		result := toAccountCostsDTO([]inventory.AccountCost{})
+		assert.Len(t, result, 0)
+	})
 }

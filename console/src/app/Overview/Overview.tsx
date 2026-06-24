@@ -5,8 +5,6 @@ import {
   CardBody,
   CardTitle,
   Gallery,
-  Grid,
-  GridItem,
   PageSection,
   Content,
   Alert,
@@ -19,11 +17,14 @@ import {
 import { CubesIcon } from '@patternfly/react-icons';
 import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
 import { generateCards } from './components/CardData';
-import { ProviderApi } from '@api';
+import { PartnerDonutChart } from './components/PartnerDonutChart';
+import { TopMetricCard } from './components/TopMetricCard';
+import { ProviderApi, TopItemApi } from '@api';
 import { renderContent } from './utils/cardRendererUtils.tsx';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useEventsData } from './hooks/useEventsData';
 import { DashboardState } from './types';
+import './Overview.css';
 
 const AggregateStatusCards: React.FunctionComponent = () => {
   const { inventoryData, loading, error } = useDashboardData();
@@ -56,11 +57,6 @@ const AggregateStatusCards: React.FunctionComponent = () => {
       stopped: inventoryData?.clusters?.stopped || 0,
       terminated: inventoryData?.clusters?.archived || 0,
     },
-    instancesByStatus: {
-      running: inventoryData?.instances?.running || 0,
-      stopped: inventoryData?.instances?.stopped || 0,
-      terminated: inventoryData?.instances?.archived || 0,
-    },
     clustersByProvider: {
       [ProviderApi.AWSProvider]: inventoryData.providers?.aws?.clusterCount || 0,
       [ProviderApi.GCPProvider]: inventoryData.providers?.gcp?.clusterCount || 0,
@@ -73,9 +69,18 @@ const AggregateStatusCards: React.FunctionComponent = () => {
       [ProviderApi.AzureProvider]: inventoryData.providers?.azure?.accountCount || 0,
       [ProviderApi.UnknownProvider]: 0,
     },
-    instances: (inventoryData?.instances?.running || 0) + (inventoryData?.instances?.stopped || 0),
     lastScanTimestamp: inventoryData?.scanner?.lastScanTimestamp,
+    topRegions: inventoryData?.topRegions || [],
+    topOwners: inventoryData?.topOwners || [],
+    clustersByPartner: inventoryData?.clustersByPartner || [],
+    costPerAccount: inventoryData?.costPerAccount || [],
   };
+
+  const costAsTopItems: TopItemApi[] = (dashboardState.costPerAccount || []).map(a => ({
+    name: a.accountName,
+    clusterCount: a.currentMonthCost,
+  }));
+  const formatCost = (v: number) => `$${v.toFixed(2)}`;
 
   const cardData = generateCards(dashboardState, events);
 
@@ -87,54 +92,63 @@ const AggregateStatusCards: React.FunctionComponent = () => {
         </Content>
       </PageSection>
       <PageSection hasBodyWrapper={false}>
-        <Grid hasGutter>
-          {Object.entries(cardData).map(([groupName, cards], groupIndex) => (
-            <GridItem key={groupIndex} span={groupName === 'activityCards' ? 12 : undefined}>
-              {groupName === 'activityCards' ? (
-                // Full width Activity card with double height
-                <Card className="pf-v6-u-min-height" component="div">
-                  <CardTitle className="pf-v6-u-text-align-center">{cards[0].title}</CardTitle>
-                  <CardBody className="pf-v6-u-p-md">
-                    {eventsLoading ? (
-                      <LoadingSpinner />
-                    ) : eventsError ? (
-                      <Alert variant="danger" title="Unable to load events" isInline>
-                        <p>{eventsError}</p>
-                        <p>Check the console for more details or try refreshing the page.</p>
-                      </Alert>
-                    ) : cards[0].customComponent ? (
-                      cards[0].customComponent
-                    ) : (
-                      renderContent(cards[0].content, cards[0].layout, cards[0].totalCount)
-                    )}
-                  </CardBody>
-                </Card>
-              ) : (
-                // Regular cards in Gallery
-                <Gallery
-                  hasGutter
-                  style={
-                    {
-                      '--pf-v6-l-gallery--GridTemplateColumns--min': '30%',
-                    } as any
-                  }
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Row 1: Summary cards */}
+          <Gallery
+            hasGutter
+            style={
+              {
+                '--pf-v6-l-gallery--GridTemplateColumns--min': '22%',
+              } as any
+            }
+          >
+            {cardData.summaryCards.map((card, cardIndex) => (
+              <Card key={cardIndex} component="div" className="pf-v6-u-min-height overview-card">
+                <CardTitle
+                  className="pf-v6-u-text-align-center"
+                  style={{ textAlign: 'center', justifyContent: 'center' }}
                 >
-                  {cards.map((card, cardIndex) => (
-                    <Card key={`${groupIndex}${cardIndex}`} component="div" className="pf-v6-u-min-height">
-                      <CardTitle
-                        className="pf-v6-u-text-align-center"
-                        style={{ textAlign: 'center', justifyContent: 'center' }}
-                      >
-                        {card.title}
-                      </CardTitle>
-                      <CardBody>{renderContent(card.content, card.layout, card.totalCount)}</CardBody>
-                    </Card>
-                  ))}
-                </Gallery>
+                  {card.title}
+                </CardTitle>
+                <CardBody>{renderContent(card.content, card.layout, card.totalCount)}</CardBody>
+              </Card>
+            ))}
+          </Gallery>
+
+          {/* Row 2: Partner chart + ranked lists */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <PartnerDonutChart data={dashboardState.clustersByPartner} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <TopMetricCard title="Cost per Account" items={costAsTopItems} formatValue={formatCost} />
+              <TopMetricCard title="Top Regions" items={dashboardState.topRegions} />
+              <TopMetricCard title="Top Owners" items={dashboardState.topOwners} />
+              <TopMetricCard title="Top Partners" items={dashboardState.clustersByPartner.slice(0, 5)} />
+            </div>
+          </div>
+
+          {/* Row 4: Recent Events */}
+          <Card className="pf-v6-u-min-height overview-card" component="div">
+            <CardTitle className="pf-v6-u-text-align-center">{cardData.activityCards[0].title}</CardTitle>
+            <CardBody className="pf-v6-u-p-md">
+              {eventsLoading ? (
+                <LoadingSpinner />
+              ) : eventsError ? (
+                <Alert variant="danger" title="Unable to load events" isInline>
+                  <p>{eventsError}</p>
+                  <p>Check the console for more details or try refreshing the page.</p>
+                </Alert>
+              ) : cardData.activityCards[0].customComponent ? (
+                cardData.activityCards[0].customComponent
+              ) : (
+                renderContent(
+                  cardData.activityCards[0].content,
+                  cardData.activityCards[0].layout,
+                  cardData.activityCards[0].totalCount
+                )
               )}
-            </GridItem>
-          ))}
-        </Grid>
+            </CardBody>
+          </Card>
+        </div>
       </PageSection>
     </React.Fragment>
   );

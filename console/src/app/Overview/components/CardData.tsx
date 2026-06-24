@@ -12,12 +12,44 @@ export const generateCards = (
   const scannerContent = isValidTimestamp
     ? `${new Date(state.lastScanTimestamp!).toLocaleString()}`
     : 'No scan data available';
-  const totalClusters = (state.clustersByStatus.running || 0) + (state.clustersByStatus.stopped || 0);
-  const totalInstances = state.instances || 0;
 
-  const statusCards = [
+  const totalAccounts = Object.values(state.accountsByProvider).reduce((sum, count) => sum + count, 0);
+  const totalClustersByProvider =
+    Object.values(state.clustersByProvider).reduce((sum, count) => sum + count, 0) -
+    (state.clustersByStatus.terminated || 0);
+  const totalClustersByStatus = (state.clustersByStatus.running || 0) + (state.clustersByStatus.stopped || 0);
+
+  const summaryCards: CardDefinition[] = [
     {
-      title: 'Clusters',
+      title: 'Accounts',
+      content: Object.values(CLOUD_PROVIDERS).map(provider => ({
+        icon: provider.providerIcon,
+        value: state.accountsByProvider[provider.key] ?? 0,
+        ref: `/accounts?provider=${provider.key}`,
+      })),
+      layout: CardLayout.MULTI_ICON,
+      totalCount: {
+        icon: TOTAL_COUNT_ICONS.clusters,
+        value: totalAccounts,
+        label: 'Total',
+      },
+    },
+    {
+      title: 'Clusters by Provider',
+      content: Object.values(CLOUD_PROVIDERS).map(provider => ({
+        icon: provider.icon,
+        value: state.clustersByProvider[provider.key] ?? 0,
+        ref: `/clusters?provider=${provider.key}`,
+      })),
+      layout: CardLayout.MULTI_ICON,
+      totalCount: {
+        icon: TOTAL_COUNT_ICONS.clusters,
+        value: totalClustersByProvider,
+        label: 'Total',
+      },
+    },
+    {
+      title: 'Clusters by Status',
       content: Object.entries(STATUSES).map(([key, status]) => ({
         icon: status.icon,
         value: state.clustersByStatus[key] || 0,
@@ -26,21 +58,7 @@ export const generateCards = (
       layout: CardLayout.MULTI_ICON,
       totalCount: {
         icon: TOTAL_COUNT_ICONS.clusters,
-        value: totalClusters,
-        label: 'Total',
-      },
-    },
-    {
-      title: 'Instances',
-      content: Object.entries(STATUSES).map(([key, status]) => ({
-        icon: status.icon,
-        value: state.instancesByStatus[key] || 0,
-        ref: status.route,
-      })),
-      layout: CardLayout.MULTI_ICON,
-      totalCount: {
-        icon: TOTAL_COUNT_ICONS.instances,
-        value: totalInstances,
+        value: totalClustersByStatus,
         label: 'Total',
       },
     },
@@ -51,35 +69,17 @@ export const generateCards = (
     },
   ];
 
-  const providerCards = Object.values(CLOUD_PROVIDERS).map(provider => ({
-    title: provider.title,
-    content: [
-      {
-        value: `${state.clustersByProvider[provider.key] ?? 0} Cluster(s)`,
-        icon: provider.icon,
-        ref: `/clusters?provider=${provider.key}`,
-      },
-      {
-        value: `${state.accountsByProvider[provider.key] ?? 0} Account(s)`,
-        icon: provider.providerIcon,
-        ref: `/accounts?provider=${provider.key}`,
-      },
-    ],
-    layout: CardLayout.MULTI_ICON,
-  }));
-
-  const activityCards = [
+  const activityCards: CardDefinition[] = [
     {
       title: 'Recent events',
-      content: [], // Empty content since we're using customComponent
+      content: [],
       layout: CardLayout.MULTI_ICON,
       customComponent: <ActivityTable events={events} />,
     },
   ];
 
   return {
-    statusCards,
-    providerCards,
+    summaryCards,
     activityCards,
   };
 };

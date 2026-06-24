@@ -74,6 +74,9 @@ type ClusterRepository interface {
 	GetClustersOnAccount(ctx context.Context, accountName string) ([]db.ClusterDBResponse, error)
 	GetInstancesOnCluster(ctx context.Context, clusterID string) ([]db.InstanceDBResponse, error)
 	GetClustersOverview(ctx context.Context) (inventory.ClustersSummary, error)
+	GetTopRegions(ctx context.Context, limit int) ([]inventory.TopItem, error)
+	GetTopOwners(ctx context.Context, limit int) ([]inventory.TopItem, error)
+	GetClustersByPartner(ctx context.Context) ([]inventory.TopItem, error)
 	CreateClusters(ctx context.Context, clusters []inventory.Cluster) error
 	UpdateCluster(ctx context.Context, clusterID string, patch dto.ClusterPatchRequest) error
 	UpdateClusterStatusByClusterID(ctx context.Context, status string, clusterID string) error
@@ -279,6 +282,52 @@ func (r *clusterRepositoryImpl) GetClustersOverview(ctx context.Context) (invent
 	}
 
 	return countsDB, nil
+}
+
+// GetTopRegions returns the top N regions by cluster count, excluding terminated clusters.
+func (r *clusterRepositoryImpl) GetTopRegions(ctx context.Context, limit int) ([]inventory.TopItem, error) {
+	var items []inventory.TopItem
+	query := `SELECT region AS name, COUNT(*) AS cluster_count
+		FROM clusters
+		WHERE status != 'Terminated'
+		GROUP BY region
+		ORDER BY cluster_count DESC
+		LIMIT $1`
+	if err := r.db.QuerySelectContext(ctx, &items, query, limit); err != nil {
+		return nil, fmt.Errorf("failed to get top regions: %w", err)
+	}
+	return items, nil
+}
+
+// GetTopOwners returns the top N owners by cluster count, excluding terminated clusters.
+func (r *clusterRepositoryImpl) GetTopOwners(ctx context.Context, limit int) ([]inventory.TopItem, error) {
+	var items []inventory.TopItem
+	query := `SELECT owner AS name, COUNT(*) AS cluster_count
+		FROM clusters
+		WHERE status != 'Terminated' AND owner != ''
+		GROUP BY owner
+		ORDER BY cluster_count DESC
+		LIMIT $1`
+	if err := r.db.QuerySelectContext(ctx, &items, query, limit); err != nil {
+		return nil, fmt.Errorf("failed to get top owners: %w", err)
+	}
+	return items, nil
+}
+
+// GetClustersByPartner returns cluster counts grouped by the Partner tag.
+func (r *clusterRepositoryImpl) GetClustersByPartner(ctx context.Context) ([]inventory.TopItem, error) {
+	var items []inventory.TopItem
+	query := `SELECT t.value AS name, COUNT(DISTINCT c.cluster_id) AS cluster_count
+		FROM tags t
+		JOIN instances i ON t.instance_id = i.id
+		JOIN clusters c ON i.cluster_id = c.id
+		WHERE t.key = 'Partner' AND c.status != 'Terminated'
+		GROUP BY t.value
+		ORDER BY cluster_count DESC`
+	if err := r.db.QuerySelectContext(ctx, &items, query); err != nil {
+		return nil, fmt.Errorf("failed to get clusters by partner: %w", err)
+	}
+	return items, nil
 }
 
 // CreateClusters inserts a list of clusters into the database in a transaction.
