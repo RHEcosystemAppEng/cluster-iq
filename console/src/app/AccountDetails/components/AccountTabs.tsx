@@ -2,7 +2,11 @@ import { PageSection, Tab, TabContent, TabContentBody, Tabs, TabTitleText } from
 import React from 'react';
 import { AccountsTabsProps } from './types';
 
-export const AccountsTabs: React.FunctionComponent<AccountsTabsProps> = ({ detailsTabContent, clustersTabContent }) => {
+export const AccountsTabs: React.FunctionComponent<AccountsTabsProps> = ({
+  detailsTabContent,
+  clustersTabContent,
+  costsTabContent,
+}) => {
   const [activeTabKey, setActiveTabKey] = React.useState(0);
   const handleTabClick = (_event: React.MouseEvent, eventKey: string | number) => {
     setActiveTabKey(eventKey as number);
@@ -14,6 +18,7 @@ export const AccountsTabs: React.FunctionComponent<AccountsTabsProps> = ({ detai
         <Tabs activeKey={activeTabKey} onSelect={handleTabClick} usePageInsets id="open-tabs-example-tabs-list">
           <Tab eventKey={0} title={<TabTitleText>Details</TabTitleText>} tabContentId={`tabContent${0}`} />
           <Tab eventKey={1} title={<TabTitleText>Clusters</TabTitleText>} tabContentId={`tabContent${1}`} />
+          <Tab eventKey={2} title={<TabTitleText>Cost Evolution</TabTitleText>} tabContentId={`tabContent${2}`} />
         </Tabs>
       </PageSection>
       <PageSection hasBodyWrapper={false} isFilled>
@@ -22,6 +27,9 @@ export const AccountsTabs: React.FunctionComponent<AccountsTabsProps> = ({ detai
         </TabContent>
         <TabContent key={1} eventKey={1} id={`tabContent${1}`} activeKey={activeTabKey} hidden={1 !== activeTabKey}>
           <TabContentBody>{clustersTabContent}</TabContentBody>
+        </TabContent>
+        <TabContent key={2} eventKey={2} id={`tabContent${2}`} activeKey={activeTabKey} hidden={2 !== activeTabKey}>
+          <TabContentBody>{costsTabContent}</TabContentBody>
         </TabContent>
       </PageSection>
     </>

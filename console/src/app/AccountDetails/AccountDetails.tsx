@@ -4,6 +4,7 @@ import { api, AccountResponseApi } from '@api';
 import AccountsHeader from './components/AccountHeader';
 import AccountsTabs from './components/AccountTabs';
 import { AccountDetailsContent } from './components/AccountDetailsContent';
+import { AccountCostChart } from './components/AccountCostChart';
 import { debug } from '@app/utils/debugLogs';
 import { AccountClusters } from './components/AccountClusters';
 import { useDocumentTitle } from '@app/utils/useDocumentTitle';
@@ -36,6 +37,7 @@ const AccountDetails: React.FunctionComponent = () => {
       <AccountsTabs
         detailsTabContent={<AccountDetailsContent loading={loading} accountData={accountData} />}
         clustersTabContent={<AccountClusters />}
+        costsTabContent={<AccountCostChart accountId={accountId} />}
       />
     </React.Fragment>
   );

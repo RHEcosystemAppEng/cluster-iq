@@ -343,3 +343,13 @@ export interface TagResponseApi {
   key?: string;
   value?: string;
 }
+
+export interface DailyCostApi {
+  date?: string;
+  amount?: number;
+}
+
+export interface DailyCostListResponseApi {
+  count?: number;
+  items?: DailyCostApi[];
+}

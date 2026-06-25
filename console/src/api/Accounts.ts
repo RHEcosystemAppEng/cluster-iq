@@ -15,6 +15,7 @@ import {
   AccountRequestApi,
   AccountResponseApi,
   ClusterListResponseApi,
+  DailyCostListResponseApi,
   GenericErrorResponseApi,
   InstanceListResponseApi,
   PostResponseApi,
@@ -152,6 +153,22 @@ export class Accounts<SecurityDataType = unknown> {
   expenseUpdateInstancesList = (id: string, params: RequestParams = {}) =>
     this.http.request<InstanceListResponseApi, GenericErrorResponseApi>({
       path: `/accounts/${id}/expense_update_instances`,
+      method: 'GET',
+      type: ContentType.Json,
+      format: 'json',
+      ...params,
+    });
+  /**
+   * @description Return the aggregated daily costs for the specified account over the last 6 months.
+   *
+   * @tags Accounts
+   * @name DailyCostsList
+   * @summary Get daily costs for an account
+   * @request GET:/accounts/{id}/daily-costs
+   */
+  dailyCostsList = (id: string, params: RequestParams = {}) =>
+    this.http.request<DailyCostListResponseApi, GenericErrorResponseApi>({
+      path: `/accounts/${id}/daily-costs`,
       method: 'GET',
       type: ContentType.Json,
       format: 'json',
