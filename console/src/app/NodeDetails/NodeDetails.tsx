@@ -46,21 +46,26 @@ const NodeDetails: React.FunctionComponent = () => {
   const [loading, setLoading] = useState(true);
   useDocumentTitle(`${instanceData?.instanceName || instanceID || ''} — ClusterIQ`);
   useEffect(() => {
+    if (!instanceID) return;
+    let cancelled = false;
     const fetchData = async () => {
       try {
         console.log('Fetching Account Clusters ', instanceID);
-        if (!instanceID) return;
         const { data: fetchedInstance } = await api.instances.instancesDetail(instanceID);
+        if (cancelled) return;
         setInstanceData(fetchedInstance);
         console.log('Fetched Account Clusters data:', instanceID);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if (!cancelled) console.error('Error fetching data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [instanceID]);
 
   const handleTabClick = (_event, tabIndex) => {

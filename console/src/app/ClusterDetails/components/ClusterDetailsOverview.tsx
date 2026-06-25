@@ -37,21 +37,27 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
 
   useEffect(() => {
     if (!clusterID) return;
+    let cancelled = false;
 
     const fetchData = async () => {
       try {
         const { data: fetchedCluster } = await api.clusters.clustersDetail(clusterID!);
+        if (cancelled) return;
         setClusterData(fetchedCluster);
         const { data: fetchedTags } = await api.clusters.tagsList(clusterID!);
+        if (cancelled) return;
         setTagData(fetchedTags);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if (!cancelled) console.error('Error fetching data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [clusterID]);
 
   const filterTagsByKey = key => {

@@ -16,20 +16,25 @@ const ClusterDetailsInstances: React.FunctionComponent = () => {
   const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       try {
         console.log('Fetching data...');
         const { data: fetchedInstancesPerCluster } = await api.clusters.instancesList(clusterID!);
+        if (cancelled) return;
         console.log('Fetched data:', fetchedInstancesPerCluster);
         setData(fetchedInstancesPerCluster);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if (!cancelled) console.error('Error fetching data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [clusterID]);
 
   if (!clusterID) {

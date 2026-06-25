@@ -23,20 +23,25 @@ export const AccountClusters: React.FunctionComponent = () => {
   const { accountId } = useParams();
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       try {
         debug('Fetching data...');
         const { data } = await api.accounts.clustersList(accountId);
+        if (cancelled) return;
         debug('Fetched Account data:', data);
         setClusters(data.items || []);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if (!cancelled) console.error('Error fetching data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [accountId]);
 
   // Filter terminated clusters

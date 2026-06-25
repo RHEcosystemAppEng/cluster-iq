@@ -41,22 +41,27 @@ export const AccountCostChart: React.FC<AccountCostChartProps> = ({ accountId })
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       try {
         const [costsRes, clustersRes] = await Promise.all([
           api.accounts.dailyCostsList(accountId),
           api.accounts.clustersList(accountId),
         ]);
+        if (cancelled) return;
         setDailyCosts(costsRes.data.items || []);
         setClusters(clustersRes.data.items || []);
       } catch (error) {
-        console.error('Error fetching cost evolution data:', error);
+        if (!cancelled) console.error('Error fetching cost evolution data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [accountId]);
 
   const dailyChartData = useMemo(
