@@ -70,6 +70,12 @@ type AccountDTOResponse struct {
 	CurrentMonthSoFarCost float64            `json:"currentMonthSoFarCost"`
 } // @name AccountResponse
 
+// DailyCostDTOResponse represents a single day's aggregated cost.
+type DailyCostDTOResponse struct {
+	Date   string  `json:"date"`
+	Amount float64 `json:"amount"`
+} // @name DailyCostResponse
+
 // AccountPatchRequest represents mutable fields for partial account updates.
 // Only fields present in the request will be updated (using pointers to distinguish null from empty).
 type AccountPatchRequest struct {

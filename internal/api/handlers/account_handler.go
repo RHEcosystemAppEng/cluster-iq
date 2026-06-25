@@ -208,6 +208,49 @@ func (h *AccountHandler) GetExpensesUpdateInstances(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetDailyCosts returns the daily cost evolution for an account (last 6 months).
+//
+//	@Summary		Get daily costs for an account
+//	@Description	Return the aggregated daily costs for the specified account over the last 6 months.
+//	@Tags			Accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Account ID"
+//	@Success		200	{object}	responsetypes.ListResponse[dto.DailyCostDTOResponse]
+//	@Failure		404	{object}	responsetypes.GenericErrorResponse
+//	@Failure		500	{object}	responsetypes.GenericErrorResponse
+//	@Router			/accounts/{id}/daily-costs [get]
+func (h *AccountHandler) GetDailyCosts(c *gin.Context) {
+	accountID := c.Param("id")
+
+	costs, err := h.service.GetDailyCosts(c.Request.Context(), accountID)
+	if err != nil {
+		h.logger.Error("error getting daily costs", zap.String("account_id", accountID), zap.Error(err))
+		if errors.Is(err, repositories.ErrNotFound) {
+			c.JSON(http.StatusNotFound, responsetypes.GenericErrorResponse{
+				Message: "Account not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, responsetypes.GenericErrorResponse{
+			Message: "Failed to retrieve daily costs",
+		})
+		return
+	}
+
+	items := make([]dto.DailyCostDTOResponse, len(costs))
+	for i, cost := range costs {
+		items[i] = dto.DailyCostDTOResponse{
+			Date:   cost.Date.Format("2006-01-02"),
+			Amount: cost.Amount,
+		}
+	}
+
+	response := responsetypes.NewListResponse(items, len(items))
+	c.JSON(http.StatusOK, response)
+}
+
 // Create creates one or more accounts.
 //
 //	@Summary		Create accounts

@@ -52,6 +52,7 @@ func setupAccountRoutes(group *gin.RouterGroup, handler *handlers.AccountHandler
 		accounts.GET("/:id", handler.GetByID)
 		accounts.GET("/:id/clusters", handler.GetAccountClustersByID)
 		accounts.GET("/:id/expense_update", handler.GetExpensesUpdateInstances)
+		accounts.GET("/:id/daily-costs", handler.GetDailyCosts)
 		accounts.PATCH("/:id", handler.Update)
 		accounts.DELETE("/:id", handler.Delete)
 	}
