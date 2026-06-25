@@ -1,10 +1,11 @@
-import { renderStatusLabel } from '@app/utils/renderUtils';
+import { renderStatusLabel, ResourceBadge, renderProviderIcon } from '@app/utils/renderUtils';
+import { parseNumberToCurrency } from '@app/utils/parseFuncs';
 import { ThProps, Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ClusterResponseApi } from '@api';
 import { ClustersTableProps } from '../types';
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { TablePagination } from '@app/components/common/TablesPagination';
 import { searchItems, filterByStatus, filterByProvider, sortItems } from '@app/utils/tableFilters';
 import { EmptyState, EmptyStateVariant, EmptyStateBody, Title } from '@patternfly/react-core';
@@ -50,7 +51,7 @@ export const ClustersTable: React.FunctionComponent<ClustersTableProps> = ({
         'accountId',
         'provider',
         'region',
-        'instanceCount',
+        'last15DaysCost',
         'consoleLink',
       ];
       processed = sortItems(processed, sortFields[activeSortIndex], activeSortDirection);
@@ -78,9 +79,9 @@ export const ClustersTable: React.FunctionComponent<ClustersTableProps> = ({
     name: 'Name',
     status: 'Status',
     account: 'Account',
-    cloudProvider: 'Cloud Provider',
+    provider: 'Provider',
     region: 'Region',
-    nodes: 'Nodes',
+    cost15d: 'Cost (15d)',
     console: 'Web console',
   };
 
@@ -98,7 +99,7 @@ export const ClustersTable: React.FunctionComponent<ClustersTableProps> = ({
   });
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <TableSkeleton columns={8} />;
   }
 
   if (filtered.length === 0) {
@@ -120,7 +121,7 @@ export const ClustersTable: React.FunctionComponent<ClustersTableProps> = ({
               Toggle &apos;Show terminated clusters&apos; to view all clusters.
             </>
           ) : (
-            'No clusters found.'
+            'No clusters match the current filters.'
           )}
         </EmptyStateBody>
       </EmptyState>
@@ -136,9 +137,9 @@ export const ClustersTable: React.FunctionComponent<ClustersTableProps> = ({
             <Th sort={getSortParams(1)}>{columnNames.name}</Th>
             <Th>{columnNames.status}</Th>
             <Th sort={getSortParams(3)}>{columnNames.account}</Th>
-            <Th sort={getSortParams(4)}>{columnNames.cloudProvider}</Th>
+            <Th sort={getSortParams(4)}>{columnNames.provider}</Th>
             <Th sort={getSortParams(5)}>{columnNames.region}</Th>
-            <Th sort={getSortParams(6)}>{columnNames.nodes}</Th>
+            <Th sort={getSortParams(6)}>{columnNames.cost15d}</Th>
             <Th>{columnNames.console}</Th>
           </Tr>
         </Thead>
@@ -146,6 +147,7 @@ export const ClustersTable: React.FunctionComponent<ClustersTableProps> = ({
           {paginatedData.map(cluster => (
             <Tr key={cluster.clusterId}>
               <Td dataLabel={columnNames.id}>
+                <ResourceBadge label="C" color="#0066cc" />{' '}
                 <Link to={`/clusters/${cluster.clusterId}`}>{cluster.clusterId}</Link>
               </Td>
               <Td dataLabel={columnNames.name}>{cluster.clusterName}</Td>
@@ -153,9 +155,9 @@ export const ClustersTable: React.FunctionComponent<ClustersTableProps> = ({
               <Td dataLabel={columnNames.account}>
                 <Link to={`/accounts/${cluster.accountId}`}>{cluster.accountName}</Link>
               </Td>
-              <Td dataLabel={columnNames.cloudProvider}>{cluster.provider}</Td>
+              <Td dataLabel={columnNames.provider}>{renderProviderIcon(cluster.provider)}</Td>
               <Td dataLabel={columnNames.region}>{cluster.region}</Td>
-              <Td dataLabel={columnNames.nodes}>{cluster.instanceCount}</Td>
+              <Td dataLabel={columnNames.cost15d}>{parseNumberToCurrency(cluster.last15DaysCost)}</Td>
               <Td dataLabel={columnNames.console}>
                 <a href={cluster.consoleLink} target="_blank" rel="noopener noreferrer">
                   Console

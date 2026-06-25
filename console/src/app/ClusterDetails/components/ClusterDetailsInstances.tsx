@@ -1,10 +1,11 @@
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { renderStatusLabel } from '@app/utils/renderUtils';
 import { sortItems } from '@app/utils/tableFilters';
 import { api, InstanceResponseApi } from '@api';
 import { ThProps, Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { debug } from '@app/utils/debugLogs';
 
 const ClusterDetailsInstances: React.FunctionComponent = () => {
   const { clusterID } = useParams();
@@ -16,27 +17,32 @@ const ClusterDetailsInstances: React.FunctionComponent = () => {
   const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       try {
-        console.log('Fetching data...');
+        debug('Fetching data...');
         const { data: fetchedInstancesPerCluster } = await api.clusters.instancesList(clusterID!);
-        console.log('Fetched data:', fetchedInstancesPerCluster);
+        if (cancelled) return;
+        debug('Fetched data:', fetchedInstancesPerCluster);
         setData(fetchedInstancesPerCluster);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if (!cancelled) console.error('Error fetching data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [clusterID]);
 
   if (!clusterID) {
-    return <LoadingSpinner />;
+    return <TableSkeleton columns={5} />;
   }
 
-  console.log('Rendered with data:', data);
+  debug('Rendered with data:', data);
 
   let sortedData = data;
   if (activeSortIndex !== undefined && activeSortDirection) {
@@ -66,7 +72,7 @@ const ClusterDetailsInstances: React.FunctionComponent = () => {
   return (
     <React.Fragment>
       {loading ? (
-        <LoadingSpinner />
+        <TableSkeleton columns={5} />
       ) : (
         <Table aria-label="Simple table">
           <Thead>

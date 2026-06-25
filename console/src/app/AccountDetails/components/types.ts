@@ -9,6 +9,7 @@ export interface AccountsHeaderProps {
 export interface AccountsTabsProps {
   detailsTabContent: React.ReactNode;
   clustersTabContent: React.ReactNode;
+  costsTabContent: React.ReactNode;
 }
 
 export interface AccountDetailsContentProps {

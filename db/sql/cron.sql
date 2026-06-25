@@ -10,18 +10,18 @@ SELECT cron.schedule_in_database(
   'clusteriq'
 );
 
--- pg_cron task for creating a new monthly partition for 'Expenses' table every Sunday
+-- pg_cron task for creating a new monthly partition for 'Expenses' table daily
 SELECT cron.schedule_in_database(
   'expenses_partitioning',
-  '0 0 * * 6',
+  '0 0 * * *',
   $$SELECT create_next_month_expenses_partition();$$,
   'clusteriq'
 );
 
--- pg_cron task for creating a new monthly partition for 'audit_logs' table every Sunday
+-- pg_cron task for creating a new monthly partition for 'audit_logs' table daily
 SELECT cron.schedule_in_database(
   'events_partitioning',
-  '0 0 * * 6',
+  '0 0 * * *',
   $$SELECT create_next_month_events_partition();$$,
   'clusteriq'
 );

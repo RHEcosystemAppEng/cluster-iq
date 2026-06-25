@@ -4,6 +4,7 @@ import ClustersTable from './components/ClustersTable';
 import ClustersTableToolbar from './components/ClustersTableToolbar';
 import { parseAsArrayOf, parseAsString, parseAsStringEnum, parseAsBoolean, useQueryStates } from 'nuqs';
 import { ResourceStatusApi, ProviderApi } from '@api';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 const filterParams = {
   status: {
@@ -17,6 +18,7 @@ const filterParams = {
 };
 
 const Clusters: React.FunctionComponent = () => {
+  useDocumentTitle('Clusters — ClusterIQ');
   const [{ status, provider, clusterName, accountName, showTerminated }, setQuery] = useQueryStates(filterParams);
 
   return (

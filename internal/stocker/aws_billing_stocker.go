@@ -80,11 +80,11 @@ func (s *AWSBillingStocker) MakeStock() error {
 
 // getInstanceExpenses gets from the AWS CostExplorer API the expenses of a given Instance.
 func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) error {
-	// Logic for Setting the period to fetch the Expenses within
-	// End date is equivalent to today's date
-	startDate := time.Now().AddDate(0, 0, -14).Format("2006-01-02")
-	// Start date is equivalent to today's date
-	endDate := time.Now().Format("2006-01-02")
+	// 14-day rolling window: the maximum range AWS Cost Explorer supports at daily resource-level granularity.
+	// UTC is required because AWS Cost Explorer uses UTC internally for date boundaries.
+	now := time.Now().UTC()
+	startDate := now.AddDate(0, 0, -14).Format("2006-01-02")
+	endDate := now.Format("2006-01-02")
 
 	s.logger.Debug("Getting expenses for instance",
 		zap.String("account", s.Account.AccountName),
@@ -133,8 +133,12 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 					return err
 				}
 
-				// Getting Expense Date as Time
+				// AWS Cost Explorer DateInterval uses pattern (\d{4}-\d{2}-\d{2})(T\d{2}:\d{2}:\d{2}Z)?
+				// DAILY granularity typically returns "YYYY-MM-DD" but may include "T00:00:00Z".
 				expenseDate, err := time.Parse(time.RFC3339, *resultByTime.TimePeriod.Start)
+				if err != nil {
+					expenseDate, err = time.Parse("2006-01-02", *resultByTime.TimePeriod.Start)
+				}
 				if err != nil {
 					s.logger.Error("Error parsing start date",
 						zap.String("account", s.Account.AccountName),
@@ -143,11 +147,9 @@ func (s *AWSBillingStocker) getInstanceExpenses(instance *inventory.Instance) er
 					return err
 				}
 
+				// NewExpense always returns a valid pointer; negative amounts are clamped to 0.0
+				// by the constructor. AWS Cost Explorer does not return negative costs for instances.
 				expense := inventory.NewExpense(instance.InstanceID, amount, expenseDate)
-				if expense == nil {
-					s.logger.Error("error creating expense during billing scan. Check if amount is lower than 0.0")
-					continue
-				}
 				if err := instance.AddExpense(expense); err != nil {
 					s.logger.Error("error when adding an expense to an instance",
 						zap.String("instance_id", instance.InstanceID),

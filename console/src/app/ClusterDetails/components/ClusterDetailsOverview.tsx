@@ -25,6 +25,7 @@ import { ClusterDetailsEvents } from './ClusterDetailsEvents';
 import { api } from '@api';
 import ClusterDetailsInstances from './ClusterDetailsInstances';
 import { LabelGroupOverflow } from '@app/components/common/LabelGroupOverflow';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 const ClusterDetailsOverview: React.FunctionComponent = () => {
   const { clusterID } = useParams();
@@ -32,24 +33,31 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
   const [tags, setTagData] = useState<TagResponseApi[]>([]);
   const [cluster, setClusterData] = useState<ClusterResponseApi | null>(null);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle(`${cluster?.clusterName || clusterID || ''} — ClusterIQ`);
 
   useEffect(() => {
     if (!clusterID) return;
+    let cancelled = false;
 
     const fetchData = async () => {
       try {
         const { data: fetchedCluster } = await api.clusters.clustersDetail(clusterID!);
+        if (cancelled) return;
         setClusterData(fetchedCluster);
         const { data: fetchedTags } = await api.clusters.tagsList(clusterID!);
+        if (cancelled) return;
         setTagData(fetchedTags);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if (!cancelled) console.error('Error fetching data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [clusterID]);
 
   const filterTagsByKey = key => {
@@ -198,7 +206,7 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
         <Divider />
         <Tabs activeKey={activeTabKey} onSelect={handleTabClick} usePageInsets id="open-tabs-example-tabs-list">
           <Tab eventKey={0} title={<TabTitleText>Details</TabTitleText>} tabContentId={`tabContent${0}`} />
-          <Tab eventKey={1} title={<TabTitleText>Servers</TabTitleText>} tabContentId={`tabContent${1}`} />
+          <Tab eventKey={1} title={<TabTitleText>Nodes</TabTitleText>} tabContentId={`tabContent${1}`} />
           <Tab eventKey={2} title={<TabTitleText>Events</TabTitleText>} tabContentId={`tabContent${2}`} />
         </Tabs>
       </PageSection>

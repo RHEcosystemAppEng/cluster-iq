@@ -53,6 +53,7 @@ type AccountRepository interface {
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstancePendingExpenseDB, error)
 	GetScannerTimestamp(ctx context.Context) (time.Time, error)
 	GetCostPerAccount(ctx context.Context) ([]inventory.AccountCost, error)
+	GetDailyCosts(ctx context.Context, accountID string) ([]db.DailyCostDBResponse, error)
 	CreateAccount(ctx context.Context, accounts []inventory.Account) error
 	UpdateAccount(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
 	DeleteAccount(ctx context.Context, accountID string) error
@@ -191,6 +192,31 @@ func (r *accountRepositoryImpl) GetCostPerAccount(ctx context.Context) ([]invent
 	if err := r.db.QuerySelectContext(ctx, &costs, query); err != nil {
 		return nil, fmt.Errorf("failed to get cost per account: %w", err)
 	}
+	return costs, nil
+}
+
+// GetDailyCosts returns the aggregated daily costs for an account over the last 6 months.
+func (r *accountRepositoryImpl) GetDailyCosts(ctx context.Context, accountID string) ([]db.DailyCostDBResponse, error) {
+	if _, err := r.GetAccountByID(ctx, accountID); err != nil {
+		return nil, err
+	}
+
+	var costs []db.DailyCostDBResponse
+	query := `
+		SELECT e.date, SUM(e.amount) AS amount
+		FROM expenses e
+		JOIN instances i ON e.instance_id = i.id
+		JOIN clusters c ON i.cluster_id = c.id
+		JOIN accounts a ON c.account_id = a.id
+		WHERE a.account_id = $1
+		  AND e.date >= CURRENT_DATE - INTERVAL '6 months'
+		GROUP BY e.date
+		ORDER BY e.date ASC`
+
+	if err := r.db.QuerySelectContext(ctx, &costs, query, accountID); err != nil {
+		return nil, fmt.Errorf("failed to get daily costs for account %s: %w", accountID, err)
+	}
+
 	return costs, nil
 }
 

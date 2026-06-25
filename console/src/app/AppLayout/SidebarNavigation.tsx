@@ -10,14 +10,6 @@ const SidebarNavigation: React.FunctionComponent = () => {
     location.pathname.startsWith('/clusters') ||
     location.pathname.startsWith('/instances');
 
-  //const isScanExpanded = location.pathname.startsWith('/scan');
-  //
-  // <NavExpandable title="Scan" groupId="scan-group" isExpanded={isScanExpanded} isHidden>
-  // <NavItem groupId="scan-group" itemId="scan-scheduler" isActive={location.pathname === '/scan/scheduler'}>
-  // <NavLink to="/scan/scheduler">Schedule</NavLink>
-  // </NavItem>
-  // </NavExpandable>
-  //
   const isActionsExpanded = location.pathname.startsWith('/actions');
 
   return (
@@ -37,7 +29,7 @@ const SidebarNavigation: React.FunctionComponent = () => {
             <NavLink to="/clusters">Clusters</NavLink>
           </NavItem>
           <NavItem groupId="inventory-group" itemId="instances" isActive={location.pathname.startsWith('/instances')}>
-            <NavLink to="/instances">Instances</NavLink>
+            <NavLink to="/instances">Nodes</NavLink>
           </NavItem>
         </NavExpandable>
 

@@ -18,6 +18,9 @@ const http = new HttpClient({
 
 const PAGINATED_ENDPOINTS = ['/accounts', '/clusters', '/instances'];
 
+// Auto-inject default pagination params on list endpoints.
+// The regex excludes detail URLs with two trailing path segments (e.g. /clusters/abc-123 or /accounts/42/clusters)
+// so pagination is only applied to collection endpoints like /clusters or /instances.
 http.instance.interceptors.request.use(config => {
   const isListEndpoint = PAGINATED_ENDPOINTS.some(endpoint => {
     const url = config.url || '';

@@ -11,3 +11,9 @@ type ExpenseDBResponse struct {
 	Amount     float64   `db:"amount"`
 	Date       time.Time `db:"date"`
 }
+
+// DailyCostDBResponse represents a single day's aggregated cost for an account.
+type DailyCostDBResponse struct {
+	Date   time.Time `db:"date"`
+	Amount float64   `db:"amount"`
+}

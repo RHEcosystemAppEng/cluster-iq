@@ -6,19 +6,22 @@ import Overview from './Overview/Overview';
 import Clusters from './Clusters/Clusters';
 import ClusterDetails from './ClusterDetails/ClusterDetails';
 import AccountDetails from './AccountDetails/AccountDetails';
-import ServerDetails from './ServerDetails/ServerDetails';
+import NodeDetails from './NodeDetails/NodeDetails';
 import AuditLogs from './Actions/AuditLogs/AuditLogs';
 import Scheduler from './Actions/Scheduler/Schedule';
-import Servers from './Servers/Servers';
+import Nodes from './Nodes/Nodes';
 import Accounts from './Accounts/Accounts';
+import NotFound from './NotFound/NotFound';
 import { NuqsAdapter } from 'nuqs/adapters/react';
 import { UserProvider } from './Contexts/UserContext';
+import { ErrorBoundary } from '@app/components/common/ErrorBoundary';
+import { debug } from '@app/utils/debugLogs';
 
 const RouteDebugWrapper = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
 
   React.useEffect(() => {
-    console.log('Route changed:', {
+    debug('Route changed:', {
       pathname: location.pathname,
       search: location.search,
       hash: location.hash,
@@ -36,10 +39,11 @@ const AppRoutes = (): React.ReactElement => (
       <Route path="accounts/:accountId" element={<AccountDetails />} />
       <Route path="clusters" element={<Clusters />} />
       <Route path="clusters/:clusterID" element={<ClusterDetails />} />
-      <Route path="instances" element={<Servers />} />
-      <Route path="instances/:instanceID" element={<ServerDetails />} />
+      <Route path="instances" element={<Nodes />} />
+      <Route path="instances/:instanceID" element={<NodeDetails />} />
       <Route path="actions/scheduler" element={<Scheduler />} />
       <Route path="actions/audit-logs" element={<AuditLogs />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   </RouteDebugWrapper>
 );
@@ -49,7 +53,9 @@ const App: React.FunctionComponent = () => (
     <UserProvider>
       <NuqsAdapter>
         <AppLayout>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </AppLayout>
       </NuqsAdapter>
     </UserProvider>

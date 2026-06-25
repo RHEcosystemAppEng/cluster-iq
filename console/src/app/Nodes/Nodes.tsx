@@ -1,9 +1,10 @@
 import { PageSection, Panel, Content } from '@patternfly/react-core';
 import React from 'react';
-import ServersTableToolbar from './components/ServersTableToolbar';
-import ServersTable from './components/ServersTable';
+import NodesTableToolbar from './components/NodesTableToolbar';
+import NodesTable from './components/NodesTable';
 import { parseAsArrayOf, parseAsString, parseAsStringEnum, parseAsBoolean, useQueryStates } from 'nuqs';
 import { ResourceStatusApi, ProviderApi } from '@api';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 const filterParams = {
   status: {
@@ -15,19 +16,20 @@ const filterParams = {
   showTerminated: parseAsBoolean.withDefault(false),
 };
 
-const Servers: React.FunctionComponent = () => {
+const Nodes: React.FunctionComponent = () => {
+  useDocumentTitle('Nodes — ClusterIQ');
   const [{ status, provider, serverName, showTerminated }, setQuery] = useQueryStates(filterParams);
 
   return (
     <React.Fragment>
       <PageSection hasBodyWrapper={false}>
         <Content>
-          <Content component="h1">Servers</Content>
+          <Content component="h1">Nodes</Content>
         </Content>
       </PageSection>
       <PageSection hasBodyWrapper={false} isFilled>
         <Panel>
-          <ServersTableToolbar
+          <NodesTableToolbar
             searchValue={serverName}
             setSearchValue={value => setQuery({ serverName: value })}
             statusSelection={status}
@@ -37,7 +39,7 @@ const Servers: React.FunctionComponent = () => {
             showTerminated={showTerminated}
             setShowTerminated={value => setQuery({ showTerminated: value })}
           />
-          <ServersTable
+          <NodesTable
             searchValue={serverName}
             statusSelection={status}
             providerSelections={provider}
@@ -49,4 +51,4 @@ const Servers: React.FunctionComponent = () => {
   );
 };
 
-export default Servers;
+export default Nodes;

@@ -7,6 +7,7 @@ import { ActionOperations, ActionTypes, ActionStatus } from '@app/types/types';
 import { parseAsArrayOf, parseAsString, parseAsStringEnum, useQueryStates } from 'nuqs';
 
 import { parseAsBooleanNullable } from '@app/utils/parseFuncs';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
 
 // Nullable boolean: "true" -> true, "false" -> false, missing/other -> null
 
@@ -19,6 +20,7 @@ const filterParams = {
 };
 
 const Scheduler: React.FunctionComponent = () => {
+  useDocumentTitle('Scheduler — ClusterIQ');
   const [{ accountId, action, type, status, enabled }, setQuery] = useQueryStates(filterParams);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [reloadFlag, setReloadFlag] = React.useState(0);

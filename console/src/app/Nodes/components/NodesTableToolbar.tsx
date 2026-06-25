@@ -17,12 +17,12 @@ import {
 } from '@patternfly/react-core';
 import { FilterIcon } from '@patternfly/react-icons';
 import React from 'react';
-import { ServersTableToolbarProps } from '../types';
+import { NodesTableToolbarProps } from '../types';
 import { ResourceStatusApi, ProviderApi } from '@api';
 import debounce from 'lodash.debounce';
 import { usePopperContainer } from '@app/hooks/usePopperContainer';
 
-export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarProps> = ({
+export const NodesTableToolbar: React.FunctionComponent<NodesTableToolbarProps> = ({
   searchValue,
   setSearchValue,
   setStatusSelection,
@@ -40,17 +40,15 @@ export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarPro
     };
   }, [debouncedSearch]);
 
-  // Set up name search input
   const searchInput = (
     <SearchInput
-      placeholder="Filter by server name"
+      placeholder="Filter by node name"
       value={searchValue}
       onChange={(_event, value) => debouncedSearch(value)}
       onClear={() => debouncedSearch('')}
     />
   );
 
-  // Set up name input
   const [isStatusMenuOpen, setIsStatusMenuOpen] = React.useState<boolean>(false);
   const statusToggleRef = React.useRef<HTMLButtonElement>(null);
   const statusMenuRef = React.useRef<HTMLDivElement>(null);
@@ -148,7 +146,6 @@ export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarPro
     </div>
   );
 
-  // Set up provider input
   const [isProviderMenuOpen, setIsProviderMenuOpen] = React.useState<boolean>(false);
   const providerToggleRef = React.useRef<HTMLButtonElement>(null);
   const providerMenuRef = React.useRef<HTMLDivElement>(null);
@@ -280,8 +277,7 @@ export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarPro
     </div>
   );
 
-  // Set up attribute selector
-  const [activeAttributeMenu, setActiveAttributeMenu] = React.useState<'Servers' | 'Status' | 'Provider'>('Servers');
+  const [activeAttributeMenu, setActiveAttributeMenu] = React.useState<'Nodes' | 'Status' | 'Provider'>('Nodes');
   const [isAttributeMenuOpen, setIsAttributeMenuOpen] = React.useState(false);
   const attributeToggleRef = React.useRef<HTMLButtonElement>(null);
   const attributeMenuRef = React.useRef<HTMLDivElement>(null);
@@ -351,13 +347,13 @@ export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarPro
     <Menu
       ref={attributeMenuRef}
       onSelect={(_ev, itemId) => {
-        setActiveAttributeMenu(itemId?.toString() as 'Servers' | 'Status' | 'Provider');
+        setActiveAttributeMenu(itemId?.toString() as 'Nodes' | 'Status' | 'Provider');
         setIsAttributeMenuOpen(!isAttributeMenuOpen);
       }}
     >
       <MenuContent>
         <MenuList>
-          <MenuItem itemId="Servers">Servers</MenuItem>
+          <MenuItem itemId="Nodes">Nodes</MenuItem>
           <MenuItem itemId="Status">Status</MenuItem>
           <MenuItem itemId="Provider">Provider</MenuItem>
         </MenuList>
@@ -396,7 +392,7 @@ export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarPro
               deleteLabel={() => setSearchValue('')}
               deleteLabelGroup={() => setSearchValue('')}
               categoryName="Name"
-              showToolbarItem={activeAttributeMenu === 'Servers'}
+              showToolbarItem={activeAttributeMenu === 'Nodes'}
             >
               {searchInput}
             </ToolbarFilter>
@@ -422,8 +418,8 @@ export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarPro
         </ToolbarToggleGroup>
         <ToolbarItem>
           <Switch
-            id="show-terminated-instances"
-            label="Show terminated instances"
+            id="show-terminated-nodes"
+            label="Show terminated nodes"
             isChecked={showTerminated}
             onChange={(_event, checked) => setShowTerminated(checked)}
           />
@@ -433,4 +429,4 @@ export const ServersTableToolbar: React.FunctionComponent<ServersTableToolbarPro
   );
 };
 
-export default ServersTableToolbar;
+export default NodesTableToolbar;

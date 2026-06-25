@@ -1,4 +1,4 @@
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { ActionOperations, ResultStatus } from '@app/types/types';
 import { SystemEventResponseApi } from '@api';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
@@ -95,7 +95,7 @@ export const AuditLogsTable: React.FunctionComponent<AuditLogsTableProps> = ({
     'desc'
   );
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <TableSkeleton columns={7} />;
   if (totalItems === 0) return <EmptyStateNoFound />;
 
   return (

@@ -1,9 +1,12 @@
-import { parseISO, format } from 'date-fns';
+import { parseISO, format, formatDistanceToNow } from 'date-fns';
 import { createParser } from 'nuqs';
 
 export function parseScanTimestamp(ts: string | undefined) {
   if (!ts || ts.startsWith('0001-01-01')) return 'Never';
-  return format(parseISO(ts), 'HH:mm:ss - dd/MM/yyyy');
+  const date = parseISO(ts);
+  const absolute = format(date, 'HH:mm:ss - dd/MM/yyyy');
+  const relative = formatDistanceToNow(date, { addSuffix: true });
+  return `${absolute} (${relative})`;
 }
 
 export function parseNumberToCurrency(value: number | undefined) {

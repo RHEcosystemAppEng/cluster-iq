@@ -23,6 +23,8 @@ import {
 } from '@patternfly/react-core';
 import { api, InstanceResponseApi, TagResponseApi } from '@api';
 import { Link } from 'react-router-dom';
+import { useDocumentTitle } from '@app/utils/useDocumentTitle';
+import { debug } from '@app/utils/debugLogs';
 
 interface LabelGroupOverflowProps {
   labels: Array<TagResponseApi>;
@@ -38,27 +40,33 @@ const LabelGroupOverflow: React.FunctionComponent<LabelGroupOverflowProps> = ({ 
   </LabelGroup>
 );
 
-const ServerDetails: React.FunctionComponent = () => {
+const NodeDetails: React.FunctionComponent = () => {
   const { instanceID } = useParams();
   const [activeTabKey, setActiveTabKey] = React.useState(0);
   const [instanceData, setInstanceData] = useState<InstanceResponseApi | null>(null);
   const [loading, setLoading] = useState(true);
+  useDocumentTitle(`${instanceData?.instanceName || instanceID || ''} — ClusterIQ`);
   useEffect(() => {
+    if (!instanceID) return;
+    let cancelled = false;
     const fetchData = async () => {
       try {
-        console.log('Fetching Account Clusters ', instanceID);
-        if (!instanceID) return;
+        debug('Fetching instance detail:', instanceID);
         const { data: fetchedInstance } = await api.instances.instancesDetail(instanceID);
+        if (cancelled) return;
         setInstanceData(fetchedInstance);
-        console.log('Fetched Account Clusters data:', instanceID);
+        debug('Fetched instance detail:', instanceID);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        if (!cancelled) console.error('Error fetching data:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [instanceID]);
 
   const handleTabClick = (_event, tabIndex) => {
@@ -75,7 +83,7 @@ const ServerDetails: React.FunctionComponent = () => {
         <Flex direction={{ default: 'column' }}>
           <FlexItem spacer={{ default: 'spacerLg' }}>
             <Title headingLevel="h2" size="lg" className="pf-v6-u-mt-sm" id="open-tabs-example-tabs-list-details-title">
-              Server details
+              Node details
             </Title>
           </FlexItem>
 
@@ -132,7 +140,7 @@ const ServerDetails: React.FunctionComponent = () => {
       {/* Page header */}
       <PageSection hasBodyWrapper={false}>
         <Title headingLevel="h1" size="2xl">
-          <ResourceLabel label="Instance" color="#4cb140" /> {instanceData?.instanceName || instanceID}
+          <ResourceLabel label="Node" color="#4cb140" /> {instanceData?.instanceName || instanceID}
         </Title>
         {/* Page tabs */}
       </PageSection>
@@ -157,4 +165,4 @@ const ServerDetails: React.FunctionComponent = () => {
   );
 };
 
-export default ServerDetails;
+export default NodeDetails;

@@ -1,4 +1,4 @@
-import { LoadingSpinner } from '@app/components/common/LoadingSpinner';
+import { TableSkeleton } from '@app/components/common/TableSkeleton';
 import { ResultStatus } from '@app/types/types';
 import { api, SystemEventResponseApi } from '@api';
 import { ThProps, Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
@@ -8,6 +8,7 @@ import { getResultIcon } from '@app/utils/renderUtils';
 import { useTableSort } from '@app/hooks/useTableSort.tsx';
 import { EmptyState } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons';
+import { debug } from '@app/utils/debugLogs';
 
 interface TableEventsProps {
   data: SystemEventResponseApi[];
@@ -74,13 +75,11 @@ export const ClusterDetailsEvents: React.FunctionComponent = () => {
       try {
         const { data: clusterEvents } = await api.clusters.eventsList(clusterID);
         if (!cancelled) {
-          // TODO. Move to debug
-          console.log('Fetched events:', clusterEvents);
+          debug('Fetched events:', clusterEvents);
           setData(clusterEvents.items || []);
         }
       } catch (error) {
         if (!cancelled) {
-          // TODO. Move to debug
           console.error('Error fetching events:', error);
         }
       } finally {
@@ -97,8 +96,7 @@ export const ClusterDetailsEvents: React.FunctionComponent = () => {
     };
   }, [clusterID]);
 
-  // TODO. Move to debug
-  console.log('Rendered events data:', data);
+  debug('Rendered events data:', data);
 
   const getSortableRowValues = (event: SystemEventResponseApi): (string | number | null)[] => {
     const { action, result, severity, requester, description: description, timestamp } = event;
@@ -106,7 +104,7 @@ export const ClusterDetailsEvents: React.FunctionComponent = () => {
   };
 
   const { sortedData, getSortParams } = useTableSort<SystemEventResponseApi>(data, getSortableRowValues, 5, 'desc');
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <TableSkeleton columns={6} />;
   if (sortedData.length === 0) return <EmptyStateNoFound />;
   return <TableEvents data={sortedData} getSortParams={getSortParams} />;
 };

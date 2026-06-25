@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Checkbox,
   FormHelperText,
@@ -45,6 +46,7 @@ export const ModalCreateAction: React.FunctionComponent<ModalCreateActionProps> 
 
   const [allAccounts, setAllAccounts] = React.useState<AccountResponseApi[]>([]);
   const [allClusters, setAllClusters] = React.useState<ClusterResponseApi[]>([]);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const isScan = actionOperation === ActionOperations.SCAN;
 
@@ -138,6 +140,7 @@ export const ModalCreateAction: React.FunctionComponent<ModalCreateActionProps> 
     setSelectedAccount(null);
     setSelectedCluster(null);
     setAllClusters([]);
+    setSubmitError(null);
   }, [isOpen]);
 
   const handlerConfirmActionCreation = async () => {
@@ -165,9 +168,13 @@ export const ModalCreateAction: React.FunctionComponent<ModalCreateActionProps> 
     }
 
     debug('Creating action', actionRequest);
-    await api.actions.actionsCreate([actionRequest]);
-    onCreated();
-    onClose();
+    try {
+      await api.actions.actionsCreate([actionRequest]);
+      onCreated();
+      onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to create action');
+    }
   };
 
   if (!isOpen) {
@@ -190,6 +197,11 @@ export const ModalCreateAction: React.FunctionComponent<ModalCreateActionProps> 
       ]}
       appendTo={document.body}
     >
+      {submitError && (
+        <Alert variant="danger" title="Action creation failed" isInline className="pf-v6-u-mb-md">
+          {submitError}
+        </Alert>
+      )}
       <Form>
         {/* Operation selection */}
         <FormGroup

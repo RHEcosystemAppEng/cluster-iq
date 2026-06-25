@@ -17,6 +17,7 @@ type AccountService interface {
 	GetByID(ctx context.Context, accountID string) (db.AccountDBResponse, error)
 	GetAccountClustersByID(ctx context.Context, accountID string) ([]db.ClusterDBResponse, error)
 	GetExpenseUpdateInstances(ctx context.Context, accountID string) ([]db.InstancePendingExpenseDB, error)
+	GetDailyCosts(ctx context.Context, accountID string) ([]db.DailyCostDBResponse, error)
 	Create(ctx context.Context, accounts []inventory.Account) error
 	Update(ctx context.Context, accountID string, patch dto.AccountPatchRequest) error
 	Delete(ctx context.Context, accountID string) error
@@ -63,6 +64,15 @@ func (s *accountServiceImpl) GetExpenseUpdateInstances(ctx context.Context, acco
 		return instances, fmt.Errorf("get expense update instances for account %s: %w", accountID, err)
 	}
 	return instances, nil
+}
+
+// GetDailyCosts retrieves the aggregated daily costs for an account over the last 6 months.
+func (s *accountServiceImpl) GetDailyCosts(ctx context.Context, accountID string) ([]db.DailyCostDBResponse, error) {
+	costs, err := s.repo.GetDailyCosts(ctx, accountID)
+	if err != nil {
+		return costs, fmt.Errorf("get daily costs for account %s: %w", accountID, err)
+	}
+	return costs, nil
 }
 
 // Create creates one or more new accounts.

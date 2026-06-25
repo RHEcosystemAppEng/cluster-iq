@@ -3,15 +3,13 @@ import { CardDefinition, CardLayout, DashboardState } from '../types';
 import { CLOUD_PROVIDERS, STATUSES, TOTAL_COUNT_ICONS } from '../constants';
 import { SystemEventResponseApi } from '@api';
 import { ActivityTable } from './ActivityTable';
+import { parseScanTimestamp } from '@app/utils/parseFuncs';
 
 export const generateCards = (
   state: DashboardState,
   events: SystemEventResponseApi[] = []
 ): Record<string, CardDefinition[]> => {
-  const isValidTimestamp = state.lastScanTimestamp && state.lastScanTimestamp !== '0001-01-01T00:00:00Z';
-  const scannerContent = isValidTimestamp
-    ? `${new Date(state.lastScanTimestamp!).toLocaleString()}`
-    : 'No scan data available';
+  const scannerContent = parseScanTimestamp(state.lastScanTimestamp);
 
   const totalAccounts = Object.values(state.accountsByProvider).reduce((sum, count) => sum + count, 0);
   const totalClustersByProvider =

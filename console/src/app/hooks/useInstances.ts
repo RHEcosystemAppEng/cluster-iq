@@ -5,7 +5,7 @@ export function useInstances() {
   return useQuery<InstanceResponseApi[]>({
     queryKey: ['instances'],
     queryFn: async ({ signal }) => {
-      const { data } = await api.instances.instancesList({ page: 1, page_size: 100000 }, { signal });
+      const { data } = await api.instances.instancesList({ page: 1, page_size: 10000 }, { signal });
       return data.items || [];
     },
     refetchInterval: 10_000,
