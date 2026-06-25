@@ -16,19 +16,16 @@ export function useTableSort<T>(
 
   let sortedData = filteredData;
   if (typeof activeSortIndex === 'number' && activeSortIndex !== null) {
-    sortedData = filteredData.sort((a, b) => {
-      const aValue = getSortableRowValues(a)[activeSortIndex];
-      const bValue = getSortableRowValues(b)[activeSortIndex];
+    sortedData = [...filteredData].sort((a, b) => {
+      const aValue = getSortableRowValues(a)[activeSortIndex] ?? '';
+      const bValue = getSortableRowValues(b)[activeSortIndex] ?? '';
 
-      if (typeof aValue === 'number') {
-        return activeSortDirection === 'asc'
-          ? (aValue as number) - (bValue as number)
-          : (bValue as number) - (aValue as number);
-      } else {
-        return activeSortDirection === 'asc'
-          ? (aValue as string).localeCompare(bValue as string)
-          : (bValue as string).localeCompare(aValue as string);
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return activeSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       }
+      const aStr = String(aValue);
+      const bStr = String(bValue);
+      return activeSortDirection === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
     });
   }
 
