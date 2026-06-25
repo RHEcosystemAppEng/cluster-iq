@@ -18,11 +18,11 @@ const AccountDetails: React.FunctionComponent = () => {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        debug('Fetching Account Clusters ', accountId);
+        debug('Fetching account detail:', accountId);
         const { data: fetchedAccount } = await api.accounts.accountsDetail(accountId);
         if (cancelled) return;
         setAccountData(fetchedAccount);
-        debug('Fetched Account Clusters data:', fetchedAccount);
+        debug('Fetched account detail:', fetchedAccount);
       } catch (error) {
         if (!cancelled) console.error('Error fetching data:', error);
       } finally {

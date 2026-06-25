@@ -51,11 +51,11 @@ const NodeDetails: React.FunctionComponent = () => {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        debug('Fetching Account Clusters ', instanceID);
+        debug('Fetching instance detail:', instanceID);
         const { data: fetchedInstance } = await api.instances.instancesDetail(instanceID);
         if (cancelled) return;
         setInstanceData(fetchedInstance);
-        debug('Fetched Account Clusters data:', instanceID);
+        debug('Fetched instance detail:', instanceID);
       } catch (error) {
         if (!cancelled) console.error('Error fetching data:', error);
       } finally {

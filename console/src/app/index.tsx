@@ -14,6 +14,7 @@ import Accounts from './Accounts/Accounts';
 import NotFound from './NotFound/NotFound';
 import { NuqsAdapter } from 'nuqs/adapters/react';
 import { UserProvider } from './Contexts/UserContext';
+import { ErrorBoundary } from '@app/components/common/ErrorBoundary';
 import { debug } from '@app/utils/debugLogs';
 
 const RouteDebugWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -52,7 +53,9 @@ const App: React.FunctionComponent = () => (
     <UserProvider>
       <NuqsAdapter>
         <AppLayout>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </AppLayout>
       </NuqsAdapter>
     </UserProvider>
