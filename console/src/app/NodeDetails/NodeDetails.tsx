@@ -24,6 +24,7 @@ import {
 import { api, InstanceResponseApi, TagResponseApi } from '@api';
 import { Link } from 'react-router-dom';
 import { useDocumentTitle } from '@app/utils/useDocumentTitle';
+import { debug } from '@app/utils/debugLogs';
 
 interface LabelGroupOverflowProps {
   labels: Array<TagResponseApi>;
@@ -50,11 +51,11 @@ const NodeDetails: React.FunctionComponent = () => {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        console.log('Fetching Account Clusters ', instanceID);
+        debug('Fetching Account Clusters ', instanceID);
         const { data: fetchedInstance } = await api.instances.instancesDetail(instanceID);
         if (cancelled) return;
         setInstanceData(fetchedInstance);
-        console.log('Fetched Account Clusters data:', instanceID);
+        debug('Fetched Account Clusters data:', instanceID);
       } catch (error) {
         if (!cancelled) console.error('Error fetching data:', error);
       } finally {

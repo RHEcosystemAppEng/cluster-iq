@@ -14,12 +14,13 @@ import Accounts from './Accounts/Accounts';
 import NotFound from './NotFound/NotFound';
 import { NuqsAdapter } from 'nuqs/adapters/react';
 import { UserProvider } from './Contexts/UserContext';
+import { debug } from '@app/utils/debugLogs';
 
 const RouteDebugWrapper = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
 
   React.useEffect(() => {
-    console.log('Route changed:', {
+    debug('Route changed:', {
       pathname: location.pathname,
       search: location.search,
       hash: location.hash,

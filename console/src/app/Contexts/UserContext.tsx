@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import * as React from 'react';
+import { debug } from '@app/utils/debugLogs';
 
 interface UserContextType {
   userEmail: string | null;
@@ -19,7 +20,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .then(response => {
         const email = response.headers.get('gap-auth');
         setUserEmail(email || 'clusteriq@dev');
-        console.log('User email:', email || 'clusteriq@dev (fallback)');
+        debug('User email:', email || 'clusteriq@dev (fallback)');
       })
       .catch(error => console.error('Error fetching headers:', error));
   }, []);

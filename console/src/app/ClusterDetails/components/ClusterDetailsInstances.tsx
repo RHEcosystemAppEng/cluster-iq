@@ -5,6 +5,7 @@ import { api, InstanceResponseApi } from '@api';
 import { ThProps, Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { debug } from '@app/utils/debugLogs';
 
 const ClusterDetailsInstances: React.FunctionComponent = () => {
   const { clusterID } = useParams();
@@ -19,10 +20,10 @@ const ClusterDetailsInstances: React.FunctionComponent = () => {
     let cancelled = false;
     const fetchData = async () => {
       try {
-        console.log('Fetching data...');
+        debug('Fetching data...');
         const { data: fetchedInstancesPerCluster } = await api.clusters.instancesList(clusterID!);
         if (cancelled) return;
-        console.log('Fetched data:', fetchedInstancesPerCluster);
+        debug('Fetched data:', fetchedInstancesPerCluster);
         setData(fetchedInstancesPerCluster);
       } catch (error) {
         if (!cancelled) console.error('Error fetching data:', error);
@@ -41,7 +42,7 @@ const ClusterDetailsInstances: React.FunctionComponent = () => {
     return <TableSkeleton columns={5} />;
   }
 
-  console.log('Rendered with data:', data);
+  debug('Rendered with data:', data);
 
   let sortedData = data;
   if (activeSortIndex !== undefined && activeSortDirection) {
