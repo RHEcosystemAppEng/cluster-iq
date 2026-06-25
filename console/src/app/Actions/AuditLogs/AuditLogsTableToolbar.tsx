@@ -36,17 +36,19 @@ export const AuditLogsTableToolbar: React.FunctionComponent<AuditLogsTableToolba
   providerSelections,
   setProviderSelections,
 }) => {
-  const debouncedSearch = React.useMemo(() => debounce(setSearchValue, 300), [setSearchValue]);
-  const debouncedRequester = React.useMemo(() => debounce(setRequester, 300), [setRequester]);
-  const debouncedResult = React.useMemo(() => debounce(setResult, 300), [setResult]);
-
+  const debouncedSearchRef = React.useRef(debounce(setSearchValue, 300));
   React.useEffect(() => {
-    return () => {
-      debouncedSearch.cancel();
-      debouncedRequester.cancel();
-      debouncedResult.cancel();
-    };
-  }, [debouncedSearch, debouncedRequester, debouncedResult]);
+    debouncedSearchRef.current = debounce(setSearchValue, 300);
+    return () => debouncedSearchRef.current.cancel();
+  }, [setSearchValue]);
+  const debouncedSearch = React.useCallback((v: string) => debouncedSearchRef.current(v), []);
+
+  const debouncedRequesterRef = React.useRef(debounce(setRequester, 300));
+  React.useEffect(() => {
+    debouncedRequesterRef.current = debounce(setRequester, 300);
+    return () => debouncedRequesterRef.current.cancel();
+  }, [setRequester]);
+  const debouncedRequester = React.useCallback((v: string) => debouncedRequesterRef.current(v), []);
 
   // Set up name search input
   const searchInput = (

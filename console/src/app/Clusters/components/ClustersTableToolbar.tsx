@@ -34,15 +34,19 @@ export const ClustersTableToolbar: React.FunctionComponent<ClustersTableToolbarP
   showTerminated,
   setShowTerminated,
 }) => {
-  const debouncedClusterSearch = React.useMemo(() => debounce(setClusterNameSearch, 300), [setClusterNameSearch]);
-  const debouncedAccountSearch = React.useMemo(() => debounce(setAccountNameSearch, 300), [setAccountNameSearch]);
-
+  const debouncedClusterSearchRef = React.useRef(debounce(setClusterNameSearch, 300));
   React.useEffect(() => {
-    return () => {
-      debouncedClusterSearch.cancel();
-      debouncedAccountSearch.cancel();
-    };
-  }, [debouncedClusterSearch, debouncedAccountSearch]);
+    debouncedClusterSearchRef.current = debounce(setClusterNameSearch, 300);
+    return () => debouncedClusterSearchRef.current.cancel();
+  }, [setClusterNameSearch]);
+  const debouncedClusterSearch = React.useCallback((v: string) => debouncedClusterSearchRef.current(v), []);
+
+  const debouncedAccountSearchRef = React.useRef(debounce(setAccountNameSearch, 300));
+  React.useEffect(() => {
+    debouncedAccountSearchRef.current = debounce(setAccountNameSearch, 300);
+    return () => debouncedAccountSearchRef.current.cancel();
+  }, [setAccountNameSearch]);
+  const debouncedAccountSearch = React.useCallback((v: string) => debouncedAccountSearchRef.current(v), []);
 
   const [activeAttributeMenu, setActiveAttributeMenu] = React.useState<
     'Cluster Name' | 'Account Name' | 'Status' | 'Provider'
