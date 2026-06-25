@@ -34,7 +34,7 @@ export const TopMetricCard: React.FC<TopMetricCardProps> = ({ title, items, form
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           {items.map((item, index) => (
             <div
-              key={index}
+              key={item.name}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
