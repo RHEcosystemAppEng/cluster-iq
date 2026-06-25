@@ -3,8 +3,6 @@ import { parseNumberToCurrency, parseScanTimestamp } from '@app/utils/parseFuncs
 import { renderStatusLabel, ResourceLabel } from '@app/utils/renderUtils';
 import { ClusterResponseApi, TagResponseApi } from '@api';
 import {
-  Breadcrumb,
-  BreadcrumbItem,
   Flex,
   FlexItem,
   Title,
@@ -21,7 +19,7 @@ import {
   TabContent,
 } from '@patternfly/react-core';
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ClusterDetailsDropdown } from './ClusterDetailsDropdown';
 import { ClusterDetailsEvents } from './ClusterDetailsEvents';
 import { api } from '@api';
@@ -181,15 +179,6 @@ const ClusterDetailsOverview: React.FunctionComponent = () => {
   return (
     <React.Fragment>
       <PageSection hasBodyWrapper={false}>
-        <Breadcrumb>
-          <BreadcrumbItem>
-            <Link to="/">Home</Link>
-          </BreadcrumbItem>
-          <BreadcrumbItem>
-            <Link to="/clusters">Clusters</Link>
-          </BreadcrumbItem>
-          <BreadcrumbItem isActive>{cluster?.clusterName || clusterID}</BreadcrumbItem>
-        </Breadcrumb>
         <Flex
           spaceItems={{ default: 'spaceItemsMd' }}
           alignItems={{ default: 'alignItemsFlexStart' }}

@@ -3,8 +3,6 @@ import { renderStatusLabel, ResourceLabel } from '@app/utils/renderUtils';
 import { parseScanTimestamp, parseNumberToCurrency } from 'src/app/utils/parseFuncs';
 import { useParams } from 'react-router-dom';
 import {
-  Breadcrumb,
-  BreadcrumbItem,
   PageSection,
   Tabs,
   Tab,
@@ -135,15 +133,6 @@ const NodeDetails: React.FunctionComponent = () => {
     <React.Fragment>
       {/* Page header */}
       <PageSection hasBodyWrapper={false}>
-        <Breadcrumb>
-          <BreadcrumbItem>
-            <Link to="/">Home</Link>
-          </BreadcrumbItem>
-          <BreadcrumbItem>
-            <Link to="/instances">Nodes</Link>
-          </BreadcrumbItem>
-          <BreadcrumbItem isActive>{instanceData?.instanceName || instanceID}</BreadcrumbItem>
-        </Breadcrumb>
         <Title headingLevel="h1" size="2xl">
           <ResourceLabel label="Node" color="#4cb140" /> {instanceData?.instanceName || instanceID}
         </Title>
