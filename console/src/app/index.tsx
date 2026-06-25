@@ -11,6 +11,7 @@ import AuditLogs from './Actions/AuditLogs/AuditLogs';
 import Scheduler from './Actions/Scheduler/Schedule';
 import Nodes from './Nodes/Nodes';
 import Accounts from './Accounts/Accounts';
+import NotFound from './NotFound/NotFound';
 import { NuqsAdapter } from 'nuqs/adapters/react';
 import { UserProvider } from './Contexts/UserContext';
 
@@ -40,6 +41,7 @@ const AppRoutes = (): React.ReactElement => (
       <Route path="instances/:instanceID" element={<NodeDetails />} />
       <Route path="actions/scheduler" element={<Scheduler />} />
       <Route path="actions/audit-logs" element={<AuditLogs />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   </RouteDebugWrapper>
 );
