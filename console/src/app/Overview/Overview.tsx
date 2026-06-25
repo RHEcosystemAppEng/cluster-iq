@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import {
   Card,
@@ -101,7 +100,7 @@ const AggregateStatusCards: React.FunctionComponent = () => {
             style={
               {
                 '--pf-v6-l-gallery--GridTemplateColumns--min': '22%',
-              } as any
+              } as React.CSSProperties
             }
           >
             {cardData.summaryCards.map((card, cardIndex) => (
