@@ -16,6 +16,7 @@ interface AccountCostChartProps {
 
 const axisTextStyle = { fill: 'var(--pf-t--global--text--color--regular)' };
 
+// Date formatters: tickFormatDate for axis labels ("Jun 5"), formatFullDate for tooltips ("05/06/2026"), buildDateRange for card titles ("05/01/2026 — 05/06/2026")
 const tickFormatDate = (t: Date) => {
   const month = t.toLocaleString('default', { month: 'short' });
   const day = t.getDate();

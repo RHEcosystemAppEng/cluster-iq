@@ -40,11 +40,10 @@ const AppLayout: React.FunctionComponent<IAppLayout> = ({ children }) => {
   const [isHelpMenuOpen, setIsHelpMenuOpen] = React.useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = React.useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = React.useState(false);
+  // Theme priority: localStorage ("theme" key) > OS preference (prefers-color-scheme) > light
   const [isDarkTheme, setIsDarkTheme] = React.useState(() => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
-
-    // Fallback to browser preference
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
   const isDesktop = () => window.innerWidth >= PF_BREAKPOINT_XL;
